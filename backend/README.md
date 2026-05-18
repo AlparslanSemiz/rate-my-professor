@@ -26,11 +26,16 @@
 <details>
 <summary><strong>Login Database</strong></summary>
 
+Database: PostgreSQL
+
+Login Table Attributes
 - id: Integer [PrimaryKey]
 - email: String
 - token: Text
 - expires_AT: Time
 - used: boolean
+
+
 
 </details>
 
@@ -38,6 +43,8 @@
 
 <details>
 <summary><strong>Server Endpoint (to send Data from Client)</strong></summary>
+
+With REST API 
 
 - POST: `{"email" = uabcd@student.kit.edu}`
 
@@ -81,5 +88,10 @@
 - `GET /auth/magic?token=abc123`
 
 </details>
+
+## Used Software/Frameworks
+
+- Spring Boot
+- PostgreSQL
 
 Note: used AI to format this markdown File
