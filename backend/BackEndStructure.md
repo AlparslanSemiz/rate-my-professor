@@ -97,4 +97,92 @@ Not installed:
 - Spring Boot
 - PostgreSQL
 
+## Done
+
+<details><summary>Synced Server with Gitlab Repo</summary>
+
+
+> Synchranisation is **not** yet automated!
+
+> **Only** `backend` folder is snycronized! (as it should)
+
+
+### Standard Usage
+
+Get Repo:
+- `git pull`
+
+Push changes:
+- `git add file.java`
+- `git commit -m "new feature"`
+- `git push`
+
+</details>
+
+<details><summary>PostgreSQL installed</summary>
+
+### Useful commands:
+
+Start PostgreSQL
+- `sudo systemctl start postgresql`
+
+Stop PostgreSQL
+- `sudo systemctl stop postgresql`
+
+Open PostgreSQL
+- `sudo -u postgres psql`
+
+Show all Tables
+- `\dt`
+
+Show Table contents
+-  `SELECT * FROM magic_login_tokens;`
+
+Quit Viewer
+- `press q `
+
+Other:
+- Use standard SQL Commands
+</details>
+
+
+<details><summary>PostgreSQL Login Table created</summary>
+
+
+- table `magic_login_tokens` created
+</details>
+
+
+Spring Boot
+
+`https://start.spring.io/`
+
+```
+Settings:
+Project: Maven
+Language: Java
+Spring Boot: 4.0.6
+Packaging: Jar
+Java: 21
+
+Dependencies:
+- Spring Web
+```
+
+
+
+
+
+<details><summary>Minor changes</summary>
+
+- Changed Timezone to Berlin instead of UTC +0
+- Installed java on Server
+
+</details>
+
+
+
+
+
+
 Note: used AI to format this markdown File
