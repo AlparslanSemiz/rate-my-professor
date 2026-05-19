@@ -157,7 +157,8 @@ Other:
 </details>
 
 
-Spring Boot
+<details><summary>Spring Boot</summary>
+
 
 `https://start.spring.io/`
 
@@ -172,6 +173,12 @@ Java: 21
 Dependencies:
 - Spring Web
 ```
+Starten:
+
+`./mvnw spring-boot:run`
+
+if necessary `chmod +x mvnw` (For Permissions)
+</details>
 
 
 
