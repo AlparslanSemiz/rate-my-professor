@@ -181,6 +181,21 @@ if necessary `chmod +x mvnw` (For Permissions)
 </details>
 
 
+Postfix (sending mail)
+
+Config file is located in `/etc/postfix/main.cf`
+
+Big problems with spam filters, since we dont have own dns 
+
+Oh oh 
+> 554-Externer Mailversand per SMTP ist im Netz des KIT geblockt! 554-Bitte verwenden Sie die Mailserver des SCC; Hilfe und Informationen bekommen Sie beim 554 ServiceDesk unter +49 (721) 608-8000 und auf https://www.scc.kit.edu/sl/sendmail)
+
+Mail Server from SCC ist goated und funtkioniert
+
+
+To Send Mail:
+
+`echo "Email Body" | mail \ -a "From: RateMyProfApp <noreply@student.kit.edu>" \ -s "Betreff" \ sendMeMail@email.de`
 
 
 
