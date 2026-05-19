@@ -11,7 +11,7 @@
 
 >- [ ] User enters E-Mail  
 >- [ ] Backend creates one time Token  
->- [ ] Backend sends Token to E-Mail adress  
+>- [✅] Backend sends Token to E-Mail adress  
 >- [ ] User clicks link  
 >- [ ] Backend checks Token  
 >- [ ] Backend creates session or similar  
