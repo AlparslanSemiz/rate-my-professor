@@ -110,12 +110,16 @@ Not installed:
 ### Standard Usage
 
 Get Repo:
+- `git checkout main`
 - `git pull`
 
 Push changes:
-- `git add file.java`
-- `git commit -m "new feature"`
-- `git push`
+
+- `git checkout -b add-login-endpoint`
+- `git add .`
+- `git commit -m "added login endpoint"`
+- `git push -u origin add-login-endpoint`
+
 
 </details>
 
