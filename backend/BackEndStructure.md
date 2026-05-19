@@ -181,7 +181,8 @@ if necessary `chmod +x mvnw` (For Permissions)
 </details>
 
 
-Postfix (sending mail)
+<details><summary>Postfix (sending mail)</summary>
+
 
 Config file is located in `/etc/postfix/main.cf`
 
@@ -193,9 +194,11 @@ Oh oh
 Mail Server from SCC ist goated und funtkioniert
 
 
-To Send Mail:
+To Send Mail: (may end up in spam (will for sure))
 
 `echo "Email Body" | mail \ -a "From: RateMyProfApp <noreply@student.kit.edu>" \ -s "Betreff" \ sendMeMail@email.de`
+</details>
+
 
 
 
