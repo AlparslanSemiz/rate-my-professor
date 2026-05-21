@@ -80,13 +80,13 @@ public class AuthController {
     @GetMapping("/me")
     public String me(HttpSession session) {
 
-        boolean authenticated = (boolean) session.getAttribute("authenticated");
+        Boolean authenticated = (Boolean) session.getAttribute("authenticated");
 
-        if (!authenticated || authenticated == null) {
+        if (authenticated == null || !authenticated) {
             return "Not logged in";
         }
 
-        return "Logged in as: " + session.getAttribute("email");;
+        return "Logged in as: " + session.getAttribute("email");
     }
 
     public record LoginRequest(String email, String token) {}
