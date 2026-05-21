@@ -206,6 +206,18 @@ To Send Mail: (may end up in spam (will for sure))
 </details>
 
 
+Authentication Process:
+
+User requests Login by entering email 
+Backend creates secure token:
+- stores it in Database
+- sends it to users email
+
+
+User can "login" with this token
+Backend checks if token is valid  
+    if yes: Session is created and saved in cookie
+    if no: 
 
 
 <details><summary>Minor changes</summary>
