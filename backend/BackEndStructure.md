@@ -9,13 +9,13 @@
 <details>
 <summary><strong>Example Interaction</strong></summary>
 
->- [ ] User enters E-Mail  
->- [ ] Backend creates one time Token  
+>- [x] User enters E-Mail  
+>- [x] Backend creates one time Token  
 >- [x] Backend sends Token to E-Mail adress  
 >- [ ] User clicks link  
->- [ ] Backend checks Token  
->- [ ] Backend creates session or similar  
->- [ ] User is logged in  
+>- [x] Backend checks Token  
+>- [x] Backend creates session or similar  
+>- [x] User is logged in  
 
 </details>
 
@@ -147,6 +147,12 @@ Quit Viewer
 
 Other:
 - Use standard SQL Commands
+
+```
+spring.datasource.username=postgres
+spring.datasource.password=REDACTED
+```
+
 </details>
 
 
