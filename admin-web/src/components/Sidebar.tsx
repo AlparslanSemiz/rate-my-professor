@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 const navItems = [
   { label: 'Dashboard', path: '/dashboard' },
   { label: 'Users', path: '/users' },
-  { label: 'Feedback', path: '/feedback' },
+  { label: 'Bug Reports', path: '/feedback' },
 ]
 
 export default function Sidebar() {
