@@ -19,7 +19,7 @@ public class TokenGenerator {
         secureRandom.nextBytes(bytes);
         
         //TODO: OVERWRITE FOR TESTING PURPOSES
-        return "123456789";
+        return "12345678910";
 
         /* 
         return Base64.getUrlEncoder()
