@@ -1,4 +1,4 @@
-package app.src.main.java.com.example.myapplication_java.ServerCommunication;
+package com.example.myapplication_java.ServerCommunication;
 
 import retrofit2.Call;
 import retrofit2.http.Body;

@@ -16,7 +16,7 @@
         android:theme="@style/Theme.MyApplication_Java"
         android:usesCleartextTraffic="true">
         <activity
-            android:name=".Activities.LoggedActivity"
+            android:name=".Activities.HomeScreenActivity"
             android:exported="false" />
         <activity
             android:name=".Activities.LoginActivity"
@@ -30,6 +30,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
     </application>
 
 </manifest>

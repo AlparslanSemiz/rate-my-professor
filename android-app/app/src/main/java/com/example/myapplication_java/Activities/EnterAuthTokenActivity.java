@@ -1,4 +1,4 @@
-package app.src.main.java.com.example.myapplication_java.Activities;
+package com.example.myapplication_java.Activities;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -14,7 +14,6 @@ import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.databinding.ActivityEnterAuthTokenBinding;
-import com.example.myapplication_java.databinding.ActivityLoginBinding;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -52,7 +51,7 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
 
             Call<String> call = apiService.login(request);
 
-            Intent enterLoggedActivity = new Intent(this, LoggedActivity.class);
+            Intent enterHomeScreenActivity = new Intent(this, HomeScreenActivity.class);
 
             call.enqueue(new Callback<String>() {
                 @Override
@@ -60,7 +59,7 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
                     if(response.body().equals("Invalid Token")) { // maybe server should return a boolean if possible lmao
                         // TODO: Text with 'wrong code' or something like that
                     } else {
-                        EnterAuthTokenActivity.this.startActivity(enterLoggedActivity);
+                        EnterAuthTokenActivity.this.startActivity(enterHomeScreenActivity);
                     }
 
                 }

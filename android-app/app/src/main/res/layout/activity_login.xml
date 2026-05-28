@@ -3,45 +3,61 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
-    android:layout_width="wrap_content"
+    android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".Activities.LoginActivity">
+    android:background="#000000"
+    tools:context=".Activities.LoginActivity" >
 
     <TextView
-        android:id="@+id/counterText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="104dp"
-        android:text="Enter your KIT-Student E-Mail"
-        android:textColor="#000000"
-        android:textSize="28sp"
+        android:id="@+id/input_background"
+        android:layout_width="0dp"
+        android:layout_height="128dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/rounded_box"
+        android:fontFamily="@font/inter_bold"
+        android:text="Verify your KIT E-Mail"
+        android:textAlignment="center"
+        android:textColor="#FAF9F9"
+        android:textSize="30sp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.447"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.499" />
 
     <EditText
-        android:id="@+id/input_email"
-        android:layout_width="wrap_content"
+        android:id="@+id/mail_input"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="80dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/rounded_box_very_light"
         android:ems="10"
-        android:hint="Enter your E-Mail"
+        android:fontFamily="@font/inter_bold"
         android:inputType="text"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/counterText" />
+        android:lineSpacingExtra="8sp"
+        android:text="   mail adress"
+        android:textAlignment="textStart"
+        android:textColor="#282828"
+        android:textSize="30dp"
+        app:layout_constraintBottom_toBottomOf="@+id/input_background"
+        app:layout_constraintEnd_toEndOf="@+id/input_background"
+        app:layout_constraintStart_toStartOf="@+id/input_background" />
 
-    <Button
-        android:id="@+id/enter"
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/verify_button"
+        style="@style/text_style"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="288dp"
-        android:text="Enter"
-        android:textAllCaps="false"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.501"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/counterText" />
-
+        android:layout_marginTop="24dp"
+        android:backgroundTint="#282828"
+        android:letterSpacing="0"
+        android:text="Verify"
+        android:textSize="24sp"
+        app:cornerRadius="24dp"
+        app:layout_constraintEnd_toEndOf="@+id/input_background"
+        app:layout_constraintTop_toBottomOf="@+id/input_background" />
 </androidx.constraintlayout.widget.ConstraintLayout>

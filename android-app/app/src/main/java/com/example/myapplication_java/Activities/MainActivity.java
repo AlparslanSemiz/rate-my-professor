@@ -1,4 +1,4 @@
-package app.src.main.java.com.example.myapplication_java.Activities;
+package com.example.myapplication_java.Activities;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
         Intent loginActivity = new Intent(this, LoginActivity.class);
-        Intent loggedActivity = new Intent(this, LoggedActivity.class);
+        Intent loggedActivity = new Intent(this, HomeScreenActivity.class);
         Button button = binding.button;
         button.setOnClickListener(new View.OnClickListener() {
             @Override
