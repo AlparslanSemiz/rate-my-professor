@@ -37,7 +37,7 @@ public class AuthController {
      * Creates and saves token, and sends it to users mail
      */
     @PostMapping("/request-login")
-    public String requestLogin(@RequestBody LoginRequest request, HttpSession session) {
+    public JSONResponse requestLogin(@RequestBody LoginRequest request, HttpSession session) {
 
 
         //TODO check if email ends with "@student.kit.edu"
@@ -50,7 +50,7 @@ public class AuthController {
         mailService.sendLoginMail(request.email(), token);
 
         //FOR FUTURE: Dont tell, whether user has an existing account (only e.g. if user has account email has been sent)
-        return "Login Token sent to: " + request.email(); 
+        return new JSONResponse("Login Token sent to: " + request.email(), true); 
     
     }
 
@@ -58,19 +58,19 @@ public class AuthController {
      * Server checks whether token and email are valid in database
      */
     @PostMapping("/login")
-    public String login(@RequestBody LoginRequest request, HttpSession session) {
+    public JSONResponse login(@RequestBody LoginRequest request, HttpSession session) {
 
     boolean valid = tokenService.verifyToken(request.email(), request.token());
 
         if (!valid) {
             //TODO: More fine-grained error message (e.g. token expired...)
-            return "Invalid token";
+            return new JSONResponse("Invalid token", false);
         }
 
         session.setAttribute("email", request.email());
         session.setAttribute("authenticated", true);
 
-        return "Logged in with " + request.email() + " and Token: " + request.token();
+        return new JSONResponse("Logged in with " + request.email() + " and Token: " + request.token(), true);
     }
 
 
@@ -78,15 +78,15 @@ public class AuthController {
      * Checks whether user is logged in (using only the session)
      */
     @GetMapping("/me")
-    public String me(HttpSession session) {
+    public JSONResponse me(HttpSession session) {
 
         Boolean authenticated = (Boolean) session.getAttribute("authenticated");
 
         if (authenticated == null || !authenticated) {
-            return "Not logged in";
+            return new JSONResponse("Not logged in", false);
         }
 
-        return "Logged in as: " + session.getAttribute("email");
+        return new JSONResponse("Logged in as: " + session.getAttribute("email"), true);
     }
 
     public record LoginRequest(String email, String token) {}
