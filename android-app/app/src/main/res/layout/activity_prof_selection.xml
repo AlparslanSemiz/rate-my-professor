@@ -46,7 +46,7 @@
         android:layout_width="300dp"
         android:layout_height="50dp"
         android:layout_marginBottom="30dp"
-        android:background="@drawable/rounded_box"
+        android:background="@drawable/bottom_nav_background"
         app:itemIconTint="#FFFFFF"
         app:itemTextColor="#FFFFFF"
         app:layout_constraintBottom_toBottomOf="parent"
