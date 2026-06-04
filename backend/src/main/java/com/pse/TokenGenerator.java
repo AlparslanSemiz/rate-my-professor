@@ -1,6 +1,7 @@
 package com.pse;
 
 import java.security.SecureRandom;
+import java.util.Base64;
 
 
 /**
@@ -19,7 +20,8 @@ public class TokenGenerator {
         secureRandom.nextBytes(bytes);
         
         //TODO: OVERWRITE FOR TESTING PURPOSES
-        return "123456789";
+        return Base64.getUrlEncoder()
+                .encodeToString(bytes);
 
         /* 
         return Base64.getUrlEncoder()
