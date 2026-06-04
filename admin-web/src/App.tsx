@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Users from './pages/Users'
 import FeedbackPage from './pages/Feedback'
+import CommentsPage from './pages/Comments'
 
 function AdminLayout() {
   return (
@@ -19,6 +20,7 @@ function AdminLayout() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/users" element={<Users />} />
           <Route path="/feedback" element={<FeedbackPage />} />
+          <Route path="/comments" element={<CommentsPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AppShell.Main>

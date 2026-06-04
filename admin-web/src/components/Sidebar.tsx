@@ -6,6 +6,7 @@ const navItems = [
   { label: 'Dashboard', path: '/dashboard' },
   { label: 'Users', path: '/users' },
   { label: 'Bug Reports', path: '/feedback' },
+  { label: 'Comments', path: '/comments' },
 ]
 
 export default function Sidebar() {
