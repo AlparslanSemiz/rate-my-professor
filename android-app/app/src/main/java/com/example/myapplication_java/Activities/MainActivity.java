@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
         Intent loginActivity = new Intent(this, LoginActivity.class);
-        Intent loggedActivity = new Intent(this, HomeScreenActivity.class);
+        Intent loggedActivity = new Intent(this, LoggedActivity.class);
         Button button = binding.button;
         button.setOnClickListener(new View.OnClickListener() {
             @Override
