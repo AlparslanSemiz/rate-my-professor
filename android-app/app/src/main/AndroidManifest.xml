@@ -22,6 +22,12 @@
             android:name=".Activities.LoginActivity"
             android:exported="false" />
         <activity
+            android:name=".Activities.EnterAuthTokenActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activities.LoggedActivity"
+            android:exported="false" />
+        <activity
             android:name=".Activities.MainActivity"
             android:exported="true">
             <intent-filter>
