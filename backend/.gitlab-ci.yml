@@ -4,70 +4,48 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
 stages:
-  - check
   - test
   - build
   - package
   - deploy
 
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  IMAGE_TAG: "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
+
 default:
   cache:
-    policy: pull-push
-
-server:check:
-  stage: check
-  image: node:22-bookworm
-  variables:
-    NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/server/.npm"
-  cache:
-    key: "server-npm-${CI_COMMIT_REF_SLUG}"
+    key: "maven-${CI_COMMIT_REF_SLUG}"
     paths:
-      - server/.npm/
-  before_script:
-    - npm ci
-  script:
-    - npx tsc --noEmit -p tsconfig.json
+      - .m2/repository/
+    policy: pull-push
 
 server:test:
   stage: test
-  image: node:22-bookworm
-  variables:
-    NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/server/.npm"
-  cache:
-    key: "server-npm-${CI_COMMIT_REF_SLUG}"
-    paths:
-      - server/.npm/
-  before_script:
-    - npm ci
+  image: maven:3.9-eclipse-temurin-21
   script:
-    - npm test
+    - ./mvnw test
 
 server:build:
   stage: build
-  image: node:22-bookworm
-  variables:
-    NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/server/.npm"
-  cache:
-    key: "server-npm-${CI_COMMIT_REF_SLUG}"
-    paths:
-      - server/.npm/
-  before_script:
-    - npm ci
+  image: maven:3.9-eclipse-temurin-21
   script:
-    - npm run build
+    - ./mvnw package -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 week
 
 server:package:
   stage: package
   image:
     name: gcr.io/kaniko-project/executor:v1.23.2-debug
     entrypoint: [""]
-  variables:
-    IMAGE_TAG: "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
   before_script:
     - mkdir -p /kaniko/.docker
     - printf '{"auths":{"%s":{"username":"%s","password":"%s"}}}' "$CI_REGISTRY" "$CI_REGISTRY_USER" "$CI_REGISTRY_PASSWORD" > /kaniko/.docker/config.json
   script:
-    - /kaniko/executor --context "$CI_PROJECT_DIR/server" --dockerfile "$CI_PROJECT_DIR/server/Dockerfile" --destination "$IMAGE_TAG"
+    - /kaniko/executor --context "$CI_PROJECT_DIR" --dockerfile "$CI_PROJECT_DIR/src/Dockerfile" --destination "$IMAGE_TAG"
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
 
@@ -78,7 +56,7 @@ server:deploy:staging:
     - server:package
   variables:
     DEPLOY_CONTAINER_NAME: app-server
-    DEPLOY_DOCKER_ARGS: "-p 3000:3000 --restart unless-stopped"
+    DEPLOY_DOCKER_ARGS: "-p 8080:8080 --restart unless-stopped"
   before_script:
     - apk add --no-cache openssh-client
     - chmod 400 "$SSH_PRIVATE_KEY"
@@ -92,10 +70,10 @@ server:deploy:staging:
       mkdir -p \"$DEPLOY_PATH\";
       cd \"$DEPLOY_PATH\";
       echo \"$CI_REGISTRY_PASSWORD\" | docker login \"$CI_REGISTRY\" -u \"$CI_REGISTRY_USER\" --password-stdin;
-      docker pull $CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA;
+      docker pull $IMAGE_TAG;
       docker stop $DEPLOY_CONTAINER_NAME || true;
       docker rm $DEPLOY_CONTAINER_NAME || true;
-      docker run -d --name $DEPLOY_CONTAINER_NAME $DEPLOY_DOCKER_ARGS $CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
+      docker run -d --name $DEPLOY_CONTAINER_NAME $DEPLOY_DOCKER_ARGS $IMAGE_TAG"
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
