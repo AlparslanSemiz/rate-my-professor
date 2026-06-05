@@ -2,9 +2,9 @@ package com.example.myapplication_java.ServerCommunication;
 
 public class LoginRequest {
     public String email;
-    public String token;
-    public LoginRequest(String email, String token) {
+    public String loginToken;
+    public LoginRequest(String email, String loginToken) {
         this.email = email;
-        this.token = token;
+        this.loginToken = loginToken;
     }
 }
