@@ -1,0 +1,146 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+stages:
+  - check
+  - test
+  - build
+  - package
+  - deploy
+
+default:
+  cache:
+    policy: pull-push
+
+server:check:
+  stage: check
+  image: node:22-bookworm
+  variables:
+    NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/server/.npm"
+  cache:
+    key: "server-npm-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - server/.npm/
+  before_script:
+    - cd server
+    - npm ci
+  script:
+    - npx tsc --noEmit -p tsconfig.json
+
+client:check:
+  stage: check
+  image: ghcr.io/cirruslabs/android-sdk:36
+  cache:
+    key: "client-gradle-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - client/.gradle/wrapper/
+      - client/.gradle/caches/
+  before_script:
+    - cd client
+    - chmod +x ./gradlew
+  script:
+    - ./gradlew check --no-daemon
+
+server:test:
+  stage: test
+  image: node:22-bookworm
+  variables:
+    NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/server/.npm"
+  cache:
+    key: "server-npm-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - server/.npm/
+  before_script:
+    - cd server
+    - npm ci
+  script:
+    - npm test
+
+client:test:
+  stage: test
+  image: ghcr.io/cirruslabs/android-sdk:36
+  cache:
+    key: "client-gradle-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - client/.gradle/wrapper/
+      - client/.gradle/caches/
+  before_script:
+    - cd client
+    - chmod +x ./gradlew
+  script:
+    - ./gradlew test --no-daemon
+
+server:build:
+  stage: build
+  image: node:22-bookworm
+  variables:
+    NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/server/.npm"
+  cache:
+    key: "server-npm-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - server/.npm/
+  before_script:
+    - cd server
+    - npm ci
+  script:
+    - npm run build
+
+client:build:
+  stage: build
+  image: ghcr.io/cirruslabs/android-sdk:36
+  cache:
+    key: "client-gradle-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - client/.gradle/wrapper/
+      - client/.gradle/caches/
+  before_script:
+    - cd client
+    - chmod +x ./gradlew
+  script:
+    - ./gradlew build -x test --no-daemon
+
+server:package:
+  stage: package
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [""]
+  variables:
+    IMAGE_TAG: "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
+  before_script:
+    - mkdir -p /kaniko/.docker
+    - printf '{"auths":{"%s":{"username":"%s","password":"%s"}}}' "$CI_REGISTRY" "$CI_REGISTRY_USER" "$CI_REGISTRY_PASSWORD" > /kaniko/.docker/config.json
+  script:
+    - /kaniko/executor --context "$CI_PROJECT_DIR/server" --dockerfile "$CI_PROJECT_DIR/server/Dockerfile" --destination "$IMAGE_TAG"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+server:deploy:staging:
+  stage: deploy
+  image: alpine:3.20
+  needs:
+    - server:package
+  variables:
+    DEPLOY_CONTAINER_NAME: app-server
+    DEPLOY_DOCKER_ARGS: "-p 3000:3000 --restart unless-stopped"
+  before_script:
+    - apk add --no-cache openssh-client
+    - chmod 400 "$SSH_PRIVATE_KEY"
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+  script:
+    - >
+      ssh -i "$SSH_PRIVATE_KEY" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST"
+      "set -e;
+      mkdir -p \"$DEPLOY_PATH\";
+      cd \"$DEPLOY_PATH\";
+      echo \"$CI_REGISTRY_PASSWORD\" | docker login \"$CI_REGISTRY\" -u \"$CI_REGISTRY_USER\" --password-stdin;
+      docker pull $CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA;
+      docker stop $DEPLOY_CONTAINER_NAME || true;
+      docker rm $DEPLOY_CONTAINER_NAME || true;
+      docker run -d --name $DEPLOY_CONTAINER_NAME $DEPLOY_DOCKER_ARGS $CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
