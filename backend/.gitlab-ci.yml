@@ -24,24 +24,9 @@ server:check:
     paths:
       - server/.npm/
   before_script:
-    - cd server
     - npm ci
   script:
     - npx tsc --noEmit -p tsconfig.json
-
-client:check:
-  stage: check
-  image: ghcr.io/cirruslabs/android-sdk:36
-  cache:
-    key: "client-gradle-${CI_COMMIT_REF_SLUG}"
-    paths:
-      - client/.gradle/wrapper/
-      - client/.gradle/caches/
-  before_script:
-    - cd client
-    - chmod +x ./gradlew
-  script:
-    - ./gradlew check --no-daemon
 
 server:test:
   stage: test
@@ -53,24 +38,9 @@ server:test:
     paths:
       - server/.npm/
   before_script:
-    - cd server
     - npm ci
   script:
     - npm test
-
-client:test:
-  stage: test
-  image: ghcr.io/cirruslabs/android-sdk:36
-  cache:
-    key: "client-gradle-${CI_COMMIT_REF_SLUG}"
-    paths:
-      - client/.gradle/wrapper/
-      - client/.gradle/caches/
-  before_script:
-    - cd client
-    - chmod +x ./gradlew
-  script:
-    - ./gradlew test --no-daemon
 
 server:build:
   stage: build
@@ -82,24 +52,9 @@ server:build:
     paths:
       - server/.npm/
   before_script:
-    - cd server
     - npm ci
   script:
     - npm run build
-
-client:build:
-  stage: build
-  image: ghcr.io/cirruslabs/android-sdk:36
-  cache:
-    key: "client-gradle-${CI_COMMIT_REF_SLUG}"
-    paths:
-      - client/.gradle/wrapper/
-      - client/.gradle/caches/
-  before_script:
-    - cd client
-    - chmod +x ./gradlew
-  script:
-    - ./gradlew build -x test --no-daemon
 
 server:package:
   stage: package
