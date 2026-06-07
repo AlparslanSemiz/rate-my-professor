@@ -29,7 +29,7 @@ web:test:
   extends: .node-npm
   stage: test
   script:
-    - echo "No test script configured; skipping tests."
+    - npm run test
 
 web:build:
   extends: .node-npm
