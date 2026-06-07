@@ -1,0 +1,55 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+stages:
+  - check
+  - test
+  - build
+  - package
+
+.node-npm:
+  image: node:24-alpine
+  cache:
+    key: "npm-${CI_COMMIT_REF_SLUG}"
+    policy: pull-push
+    paths:
+      - .npm/
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+
+web:check:
+  extends: .node-npm
+  stage: check
+  script:
+    - npm run lint
+
+web:test:
+  extends: .node-npm
+  stage: test
+  script:
+    - echo "No test script configured; skipping tests."
+
+web:build:
+  extends: .node-npm
+  stage: build
+  script:
+    - npm run build
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - dist/
+
+web:package:
+  extends: .node-npm
+  stage: package
+  script:
+    - npm run build
+    - tar -czf admin-web-dist.tar.gz dist/
+  artifacts:
+    expire_in: 1 month
+    paths:
+      - admin-web-dist.tar.gz
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
