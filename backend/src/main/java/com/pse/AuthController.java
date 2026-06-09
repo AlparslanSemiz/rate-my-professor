@@ -4,10 +4,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.servlet.http.HttpSession;
+
 
 
 
@@ -30,23 +31,24 @@ public class AuthController {
     private MailService mailService;
     @Autowired
     private TokenService tokenService;
-
+    
     
 
     /**
      * Creates and saves token, and sends it to users mail
      */
     @PostMapping("/request-login")
-    public JSONResponse requestLogin(@RequestBody LoginRequest request, HttpSession session) {
+    public JSONResponse requestLogin(@RequestBody LoginRequest request) {
 
 
-        //TODO check if email ends with "@student.kit.edu"
-            //For now not important, since via @icloud emails are presumably faster 
+        
+        if (!request.email().toLowerCase().endsWith("@student.kit.edu")) {
+            return new JSONResponse("Email must end with '@student.kit.edu' (was: " + request.email() + ")",false);
+        }
+          
 
-        String token = tokenService.createAndSaveToken(request.email());
+        String token = tokenService.createAndSaveOTToken(request.email());
 
-        //Could store Token ins session here 
-       
         mailService.sendLoginMail(request.email(), token);
 
         //FOR FUTURE: Dont tell, whether user has an existing account (only e.g. if user has account email has been sent)
@@ -55,39 +57,50 @@ public class AuthController {
     }
 
     /**
-     * Server checks whether token and email are valid in database
+     * Server checks whether token and email are valid in database.
+     * Addtionally, if succesfully logined, it creates an auth token
      */
     @PostMapping("/login")
-    public JSONResponse login(@RequestBody LoginRequest request, HttpSession session) {
+    public LoginResponse login(@RequestBody LoginRequest request) {
 
-    boolean valid = tokenService.verifyToken(request.email(), request.token());
+    boolean valid = tokenService.verifyOTToken(request.email(), request.loginToken());
 
         if (!valid) {
             //TODO: More fine-grained error message (e.g. token expired...)
-            return new JSONResponse("Invalid token", false);
+            return new LoginResponse("Invalid token", false, null);        
         }
 
-        session.setAttribute("email", request.email());
-        session.setAttribute("authenticated", true);
+        String authToken = tokenService.createAndSaveAuthToken(request.email());
+        
 
-        return new JSONResponse("Logged in with " + request.email() + " and Token: " + request.token(), true);
+        return new LoginResponse("Login successful", true, authToken);
     }
 
 
     /**
      * Checks whether user is logged in (using only the session)
      */
-    @GetMapping("/me")
-    public JSONResponse me(HttpSession session) {
+     @GetMapping("/me")
+    public JSONResponse me(@RequestHeader("Authorization") String authHeader) {
 
-        Boolean authenticated = (Boolean) session.getAttribute("authenticated");
-
-        if (authenticated == null || !authenticated) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return new JSONResponse("Not logged in", false);
         }
 
-        return new JSONResponse("Logged in as: " + session.getAttribute("email"), true);
+        String token = authHeader.substring("Bearer ".length());
+
+        String email = tokenService.verifyAuthToken(token);
+
+        if (email == null) {
+            return new JSONResponse("Not logged in", false);
+        }
+
+        return new JSONResponse("Logged in as: " + email, true);
     }
 
-    public record LoginRequest(String email, String token) {}
+    public record LoginRequest(String email, String loginToken) {}
+
+    public record LoginResponse(String message, boolean success, String authToken) {}
+
+
 }

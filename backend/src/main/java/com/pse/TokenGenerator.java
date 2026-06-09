@@ -19,15 +19,12 @@ public class TokenGenerator {
         byte[] bytes = new byte[32]; // 256 bits
         secureRandom.nextBytes(bytes);
         
+
+
+        
         //TODO: OVERWRITE FOR TESTING PURPOSES
         return Base64.getUrlEncoder()
                 .encodeToString(bytes);
-
-        /* 
-        return Base64.getUrlEncoder()
-                .withoutPadding()
-                .encodeToString(bytes);
-        */
     }
 
    
