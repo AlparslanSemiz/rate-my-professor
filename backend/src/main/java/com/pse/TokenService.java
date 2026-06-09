@@ -28,17 +28,59 @@ public class TokenService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+
+
+    public String createAndSaveAuthToken(String email) {
+
+        String authToken = TokenGenerator.generateToken();
+
+        ZonedDateTime berlinTime = ZonedDateTime.now(ZoneId.of("Europe/Berlin"));
+        LocalDateTime expiresAt = berlinTime.plusDays(30).toLocalDateTime();
+
+        jdbcTemplate.update("""
+                INSERT INTO auth_tokens(email, token, expires_at, revoked)
+                VALUES (?, ?, ?, false)
+                """,
+                email,
+                authToken,
+                Timestamp.valueOf(expiresAt)
+        );
+
+        return authToken;
+    }
     
+    public String verifyAuthToken(String token) {
+
+        return jdbcTemplate.query("""
+                SELECT email
+                FROM auth_tokens
+                WHERE token = ?
+                  AND revoked = false
+                  AND expires_at > NOW()
+                """,
+                rs -> {
+                    if (rs.next()) {
+                        return rs.getString("email");
+                    }
+
+                    return null;
+                },
+                token
+        );
+    }
+
+
+
     /**
      * Creates the token and saves it in the login table.
      */
-    public String createAndSaveToken(String email) {
+    public String createAndSaveOTToken(String email) {
 
         String token = TokenGenerator.generateToken();
 
         ZonedDateTime berlinTime = ZonedDateTime.now(ZoneId.of("Europe/Berlin"));
 
-        LocalDateTime expiresAt = berlinTime.plusMinutes(5).toLocalDateTime();
+        LocalDateTime expiresAt = berlinTime.plusMinutes(999).toLocalDateTime();
 
         jdbcTemplate.update("""
                 INSERT INTO magic_login_tokens(email, token, expires_at, used)
@@ -55,7 +97,7 @@ public class TokenService {
     /**
      * Verifies the TOken by checking if it exists, is unused, and isnt expired.
      */
-    public boolean verifyToken(String email, String token) {
+    public boolean verifyOTToken(String email, String token) {
 
         Integer count = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
@@ -69,8 +111,9 @@ public class TokenService {
                 email,
                 token
         );
-
+        System.out.println("mail: " + email + " token: " + token + " count: " + count);
         if (count == null || count == 0) {
+            
             return false;
         }
 
@@ -86,6 +129,7 @@ public class TokenService {
 
         return true;
     }
+
 
 
 }

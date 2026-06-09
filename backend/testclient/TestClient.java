@@ -1,5 +1,4 @@
 
-import java.net.CookieManager;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -12,30 +11,27 @@ import java.net.http.HttpResponse;
  * 
  * This class simulates a user who wants to login using the token based login.
  * 
- * WARNING: Token should be unique, therefore creating two identical tokens lead to an exception.
+ * WARNING: Token should be unique, therefore creating two identical tokens leads to an exception.
  */
 public class TestClient {
 
 
     //Should be the Servers IP (192.0.2.10:8080)         
-    private static final String SERVER_IP = "http://localhost:8080";
+    private static final String SERVER_IP = "http://192.0.2.10:8080";
 
-    // Later stores the session using JSESSIONID
-    private static final CookieManager cookieManager = new CookieManager();
+    private static final HttpClient client = HttpClient.newHttpClient();
 
-    private static final HttpClient client = HttpClient.newBuilder()
-            .cookieHandler(cookieManager)
-            .build();
+    private static String authToken = "REDACTED";
+
 
 
     public static void main(String[] args) throws Exception {
 
-        requestLogin();
+        //requestLogin(); 
         System.out.println();
 
-        login("luis@example.org", "12345678910");
+        //login("luis@example.org", "IXLCcU_547qYJm-ZbSDCrCOevaAadaEvL8eWeZpbcfk=");
         System.out.println();
-
 
         me();
     }
@@ -62,11 +58,10 @@ public class TestClient {
                 = client.send(request, HttpResponse.BodyHandlers.ofString());
 
 
-        System.out.println("LOGIN STATUS: " + response.statusCode());
+        System.out.println("REQUEST LOGIN STATUS: " + response.statusCode());
         System.out.println(response.body());
 
-        System.out.println("COOKIES:");
-        System.out.println(cookieManager.getCookieStore().getCookies());
+        
     }
 
     /**
@@ -78,7 +73,7 @@ public class TestClient {
             {
 
                 "email": "%s",
-                "token": "%s"
+                "loginToken": "%s"
             }
             """.formatted(email, token);
 
@@ -94,8 +89,16 @@ public class TestClient {
         System.out.println("AUTH LOGIN STATUS: " + response.statusCode());
         System.out.println(response.body());
 
-        System.out.println("COOKIES:");
-        System.out.println(cookieManager.getCookieStore().getCookies());
+        if (!response.body().contains("\"success\":true")) {
+            System.out.println("Login failed, no auth token.");
+            return;
+        }
+
+        
+        authToken = extractAuthToken(response.body());
+
+        System.out.println("AUTH TOKEN:");
+        System.out.println(authToken);
     }
 
     /**
@@ -103,15 +106,48 @@ public class TestClient {
      */
     public static void me() throws Exception {
 
+        
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(SERVER_IP + "/auth/me"))
-                .GET()
-                .build();
+            .uri(URI.create(SERVER_IP + "/auth/me"))
+            .header("Authorization", "Bearer " + authToken)
+            .GET()
+            .build();
 
-        HttpResponse<String> response
-                = client.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response =
+            client.send(request, HttpResponse.BodyHandlers.ofString());
 
         System.out.println("ME STATUS: " + response.statusCode());
         System.out.println(response.body());
+    }
+    
+
+    /**
+     * Very simple JSON extraction.
+     *
+     * Expected response:
+     * {
+     *   "message": "Login successful",
+     *   "success": true,
+     *   "authToken": "abc..."
+     * }
+     */
+    private static String extractAuthToken(String json) {
+
+        String key = "\"authToken\":\"";
+        int start = json.indexOf(key);
+
+        if (start == -1) {
+            throw new IllegalStateException("No authToken found in response: " + json);
+        }
+
+        start += key.length();
+
+        int end = json.indexOf("\"", start);
+
+        if (end == -1) {
+            throw new IllegalStateException("Invalid authToken JSON: " + json);
+        }
+
+        return json.substring(start, end);
     }
 }

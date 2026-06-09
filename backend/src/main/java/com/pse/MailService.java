@@ -7,11 +7,9 @@ import org.springframework.stereotype.Service;
 
 
 /**
- * Sends emails using the Mailserver from KIT. (See https://www.scc.kit.edu/dienste/9916.php)
- * You can enetr any email as sender with format <...>@student.kit.edu
- * WARNING: Do NOT do anything stupid with this power...
+ * Sends emails using the GMX Freemail
  * 
- * Postfix is used to sent Email
+ * Used Postfix
  */
 @Service
 public class MailService {
@@ -21,7 +19,7 @@ public class MailService {
 
 
     // Login Mail Configuration
-    private final String loginSenderMail = "noreply@student.kit.edu";
+    private final String loginSenderMail = "ratemyprof@gmx.de";
 
     private final String loginSenderName = "RateMyProfApp";
 
@@ -47,7 +45,7 @@ public class MailService {
         String body = formattedLoginEmailBody.formatted(token);
 
         sendMail(to,loginSenderMail, loginSenderName, formattedLoginEmailSubject, body);
-       
+        System.out.println("Sent Mail");
     }
  
 
@@ -62,7 +60,7 @@ public class MailService {
 
         message.setSubject(subject);
 
-        message.setFrom("%s <%s>".formatted(sender, fromEMail));        
+        message.setFrom(fromEMail);        
         //e.g. message.setFrom("RateMyProfApp <noreply@student.kit.edu>");
 
         message.setText(body);
