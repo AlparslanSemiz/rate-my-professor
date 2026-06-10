@@ -23,15 +23,26 @@ public class MailService {
 
     private final String loginSenderName = "RateMyProfApp";
 
-    private final String formattedLoginEmailSubject = "Your Login Token for the RateMyProfApp";
+    private final String formattedLoginEmailSubject = "Your Login Code for RateMyProfApp";
 
     private final String formattedLoginEmailBody = 
             """
-            Keep in mind that your login token
-            will expire in 5 minutes.
+            Hello,
 
-            Your token:
-            %s
+            We received a login request for your RateMyProfApp account.
+
+            Your one-time login code is:
+
+
+                %s
+
+
+            This code is valid for 5 minutes and can only be used once.
+
+            If you did not request this code, you can safely ignore this email.
+
+            Best regards,
+            The RateMyProfApp Team
             """;
 
 
@@ -61,12 +72,14 @@ public class MailService {
         message.setSubject(subject);
 
         message.setFrom(fromEMail);        
-        //e.g. message.setFrom("RateMyProfApp <noreply@student.kit.edu>");
+        message.setFrom("RateMyProfApp <" + loginSenderMail + ">");
 
         message.setText(body);
 
         mailSender.send(message);
 
+
+        System.out.println("Email sent to: " + to);
 
     }
 
