@@ -24,7 +24,18 @@ public class TokenGenerator {
         
         //TODO: OVERWRITE FOR TESTING PURPOSES
         return Base64.getUrlEncoder()
+                .withoutPadding()
                 .encodeToString(bytes);
+    }
+
+    /**
+     * Create 6 Digit One Time Password
+     */
+    public static String generateOneTimePassword() {
+
+        int code = secureRandom.nextInt(1000000); 
+        return String.format("%06d", code);
+
     }
 
    

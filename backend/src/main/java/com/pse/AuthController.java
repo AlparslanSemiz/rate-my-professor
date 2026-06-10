@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 
  * 
  * CONCERNS:
- * - NOT Secure, token AND JSESSION are transported unencrypted 
+ * DONE: Secure HTTPS Transport 
  */
 @RestController
 @RequestMapping("/auth")
@@ -78,7 +78,7 @@ public class AuthController {
 
 
     /**
-     * Checks whether user is logged in (using only the session)
+     * Checks whether user is logged in (using only the auth Token)
      */
      @GetMapping("/me")
     public JSONResponse me(@RequestHeader("Authorization") String authHeader) {
@@ -90,6 +90,10 @@ public class AuthController {
         String token = authHeader.substring("Bearer ".length());
 
         String email = tokenService.verifyAuthToken(token);
+        
+        if (email != null) {
+            email = email.trim(); //Bug: user enetrs email with whitespace trailing
+        }
 
         if (email == null) {
             return new JSONResponse("Not logged in", false);

@@ -76,7 +76,7 @@ public class TokenService {
      */
     public String createAndSaveOTToken(String email) {
 
-        String token = TokenGenerator.generateToken();
+        String token = TokenGenerator.generateOneTimePassword();
 
         ZonedDateTime berlinTime = ZonedDateTime.now(ZoneId.of("Europe/Berlin"));
 
@@ -111,7 +111,9 @@ public class TokenService {
                 email,
                 token
         );
-        System.out.println("mail: " + email + " token: " + token + " count: " + count);
+
+
+        
         if (count == null || count == 0) {
             
             return false;

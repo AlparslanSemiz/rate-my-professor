@@ -17,7 +17,7 @@ public class TestClient {
 
 
     //Should be the Servers IP (192.0.2.10:8080)         
-    private static final String SERVER_IP = "http://192.0.2.10:8080";
+    private static final String SERVER_IP = "https://server.example.org";
 
     private static final HttpClient client = HttpClient.newHttpClient();
 
@@ -27,10 +27,10 @@ public class TestClient {
 
     public static void main(String[] args) throws Exception {
 
-        //requestLogin(); 
+        requestLogin(); 
         System.out.println();
 
-        //login("luis@example.org", "IXLCcU_547qYJm-ZbSDCrCOevaAadaEvL8eWeZpbcfk=");
+        login("u-kisi6@student.kit.edu", "IXLCcU_547qYJm-ZbSDCrCOevaAadaEvL8eWeZpbcfk=");
         System.out.println();
 
         me();
@@ -44,7 +44,7 @@ public class TestClient {
 
         String json = """
                 {
-                    "email": "luis@example.org"
+                    "email": "u-kisi6@student.kit.edu"
                 }
                 """;
 
