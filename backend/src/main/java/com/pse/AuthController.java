@@ -8,15 +8,23 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.pse.request.LoginRequest;
+import com.pse.request.OTPRequest;
+import com.pse.response.BasicResponse;
+import com.pse.response.LoginResponse;
+
+import jakarta.servlet.http.HttpServletRequest;
+
+
 
 
 
 
 /**
  * Handles the authentication of the users.
- * User can request login (ask for Token)
- * User can login (with Email and Token)
- * User can see if they are logged in (with HTTP Session)
+ * User can request login (ask for OTP [OneTimePassword])
+ * User can login (with Email and OTP)
+ * User can see if they are logged in (with Bearer Token)
  * 
  * 
  * CONCERNS:
@@ -35,15 +43,15 @@ public class AuthController {
     
 
     /**
-     * Creates and saves token, and sends it to users mail
+     * Creates and saves OneTimePassword, and sends it to users mail
      */
     @PostMapping("/request-login")
-    public JSONResponse requestLogin(@RequestBody LoginRequest request) {
+    public BasicResponse requestLogin(@RequestBody OTPRequest request) {
 
 
-        
+    
         if (!request.email().toLowerCase().endsWith("@student.kit.edu")) {
-            return new JSONResponse("Email must end with '@student.kit.edu' (was: " + request.email() + ")",false);
+            return new BasicResponse("Email must end with '@student.kit.edu' (was: " + request.email() + ")",false);
         }
           
 
@@ -52,16 +60,16 @@ public class AuthController {
         mailService.sendLoginMail(request.email(), token);
 
         //FOR FUTURE: Dont tell, whether user has an existing account (only e.g. if user has account email has been sent)
-        return new JSONResponse("Login Token sent to: " + request.email(), true); 
+        return new BasicResponse("Login Token sent to: " + request.email(), true); 
     
     }
 
     /**
-     * Server checks whether token and email are valid in database.
+     * Server checks whether OTP and Email are valid in database.
      * Addtionally, if succesfully logined, it creates an auth token
      */
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest request) {
+    public LoginResponse login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
 
     boolean valid = tokenService.verifyOTToken(request.email(), request.loginToken());
 
@@ -73,6 +81,16 @@ public class AuthController {
         String authToken = tokenService.createAndSaveAuthToken(request.email());
         
 
+
+        //Send successful login mail (Try to get ifnormation on ip e.g.)
+        String ip = httpRequest.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isBlank()) {
+            ip = httpRequest.getRemoteAddr();
+        }
+        String userAgent = httpRequest.getHeader("User-Agent");
+        mailService.sendSuccessfulLogin(request.email(), ip, userAgent);
+        
+
         return new LoginResponse("Login successful", true, authToken);
     }
 
@@ -81,30 +99,26 @@ public class AuthController {
      * Checks whether user is logged in (using only the auth Token)
      */
      @GetMapping("/me")
-    public JSONResponse me(@RequestHeader("Authorization") String authHeader) {
+    public BasicResponse me(@RequestHeader("Authorization") String authHeader) {
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return new JSONResponse("Not logged in", false);
+            return new BasicResponse("Not logged in", false);
         }
 
         String token = authHeader.substring("Bearer ".length());
 
         String email = tokenService.verifyAuthToken(token);
-        
+
         if (email != null) {
             email = email.trim(); //Bug: user enetrs email with whitespace trailing
         }
 
         if (email == null) {
-            return new JSONResponse("Not logged in", false);
+            return new BasicResponse("Not logged in", false);
         }
 
-        return new JSONResponse("Logged in as: " + email, true);
+        return new BasicResponse("Logged in as: " + email, true);
     }
-
-    public record LoginRequest(String email, String loginToken) {}
-
-    public record LoginResponse(String message, boolean success, String authToken) {}
 
 
 }

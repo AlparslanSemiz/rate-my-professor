@@ -71,7 +71,6 @@ public class MailService {
 
         message.setSubject(subject);
 
-        message.setFrom(fromEMail);        
         message.setFrom("RateMyProfApp <" + loginSenderMail + ">");
 
         message.setText(body);
@@ -80,6 +79,53 @@ public class MailService {
 
 
         System.out.println("Email sent to: " + to);
+
+    }
+
+
+    public void sendSuccessfulLogin(String email, String ip, String userAgent) {
+
+        //Somebody logged in successfully in your account
+        //At Time XY
+
+        //Used Auth token ending with ...
+        //If this wasnt you logout all devieces (here)
+
+       
+        String subject = "Successful login to your RateMyProfApp account";
+
+        String body = """
+            Hello,
+
+            there was a successful login to your RateMyProfApp account.
+
+            Login details:
+
+            IP address:
+            %s
+
+            Device:
+            %s
+
+            If this was you, no further action is needed.
+
+            If this wasn't you, please log out from all devices immediately
+            and request a new login code.
+
+            Best regards,
+            The RateMyProfApp Team
+            """.formatted(ip, userAgent);
+
+        sendMail(
+                email,
+                loginSenderMail,
+                loginSenderName,
+                subject,
+                body
+        );
+
+
+
 
     }
 
