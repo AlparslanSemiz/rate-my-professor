@@ -1,6 +1,6 @@
 import { NavLink, Stack, Title, Text, Button, Divider } from '@mantine/core'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 
 const navItems = [
   { label: 'Dashboard', path: '/dashboard' },

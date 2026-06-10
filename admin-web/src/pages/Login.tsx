@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Alert } from '@mantine/core'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 import { loginRequest } from '../api/auth'
 
 export default function Login() {
