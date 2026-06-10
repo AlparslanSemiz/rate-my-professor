@@ -27,10 +27,10 @@ public class TestClient {
 
     public static void main(String[] args) throws Exception {
 
-        requestLogin(); 
+        //requestLogin(); 
         System.out.println();
 
-        login("u-kisi6@student.kit.edu", "IXLCcU_547qYJm-ZbSDCrCOevaAadaEvL8eWeZpbcfk=");
+        login("u-kisi6@student.kit.edu", "679475");
         System.out.println();
 
         me();

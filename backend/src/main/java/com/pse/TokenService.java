@@ -30,6 +30,16 @@ public class TokenService {
 
 
 
+    public int invalidateAllAuthTokensForEmail(String email) {
+        return jdbcTemplate.update("""
+            UPDATE auth_tokens
+            SET revoked = true
+            WHERE email = ?
+            """,
+            email
+    );
+}
+
     public String createAndSaveAuthToken(String email) {
 
         String authToken = TokenGenerator.generateToken();
