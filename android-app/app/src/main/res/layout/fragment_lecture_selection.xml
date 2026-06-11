@@ -30,19 +30,6 @@
         app:layout_constraintStart_toEndOf="@+id/profs_button"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNavigationView2"
-        android:layout_width="300dp"
-        android:layout_height="50dp"
-        android:layout_marginBottom="30dp"
-        android:background="@drawable/bottom_nav_background"
-        app:itemIconTint="#FFFFFF"
-        app:itemTextColor="#FFFFFF"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:menu="@menu/bottom_navigation_bar" />
-
     <com.google.android.material.button.MaterialButton
         android:id="@+id/profs_button"
         android:layout_width="wrap_content"
@@ -300,7 +287,7 @@
         app:iconGravity="textStart"
         app:iconSize="50dp"
         app:iconTint="@android:color/white"
-        app:layout_constraintBottom_toTopOf="@+id/bottomNavigationView2"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:srcCompat="@android:drawable/ic_menu_search" />
 
