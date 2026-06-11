@@ -1,6 +1,6 @@
 import { Stack, Text, Box, UnstyledButton, Divider } from '@mantine/core'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 import {
   IconLayoutDashboard,
   IconUsers,

@@ -19,6 +19,12 @@ export async function loginRequest(email: string, password: string): Promise<Log
   const match = MOCK_USERS.find((u) => u.email === email && u.password === password)
   if (!match) throw new Error('Invalid email or password')
 
-  const { password: _, ...user } = match
+  const user = {
+    id: match.id,
+    name: match.name,
+    email: match.email,
+    role: match.role,
+  }
+
   return { token: `mock-token-${user.id}`, user }
 }

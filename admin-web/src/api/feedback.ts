@@ -15,9 +15,14 @@ const MOCK_REPORTS: BugReport[] = []
 
 export async function getReports(): Promise<BugReport[]> {
   await new Promise((r) => setTimeout(r, 400))
-  return MOCK_REPORTS
+  return [...MOCK_REPORTS]
 }
 
-export async function updateReportStatus(_id: number, _status: ReportStatus): Promise<void> {
+export async function updateReportStatus(id: number, status: ReportStatus): Promise<void> {
   await new Promise((r) => setTimeout(r, 300))
+
+  const report = MOCK_REPORTS.find((item) => item.id === id)
+  if (!report) throw new Error(`Report with id ${id} not found`)
+
+  report.status = status
 }
