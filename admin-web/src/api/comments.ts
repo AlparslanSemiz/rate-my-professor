@@ -1,72 +1,70 @@
 export type CommentReportStatus = 'Pending' | 'Reviewed' | 'Dismissed' | 'Removed'
 export type ReportReason = 'Spam' | 'Harassment' | 'Hate Speech' | 'Misinformation' | 'Inappropriate' | 'Other'
 
+export interface CommentUserRef {
+  id: number
+  name: string
+  role: 'Admin' | 'Student' | 'Professor'
+  warningCount: number
+  status: 'Active' | 'Inactive' | 'Blocked'
+}
+
 export interface ReportedComment {
   id: number
   commentText: string
-  commentAuthor: string
-  commentAuthorId: number
-  reportedBy: string
-  reportedById: number
-  reason: ReportReason
-  additionalNote: string
-  reportedAt: string
-  status: CommentReportStatus
   postContext: string
+  reportMessage: string
+  reportedUser: CommentUserRef
+  reportingUser: CommentUserRef
+  reason: ReportReason
+  status: CommentReportStatus
+  reportedAt: string
 }
 
-const MOCK_REPORTED_COMMENTS: ReportedComment[] = [
+let MOCK_REPORTED_COMMENTS: ReportedComment[] = [
   {
     id: 1,
     commentText: 'You are absolutely terrible at this, give up already.',
-    commentAuthor: 'user_john99',
-    commentAuthorId: 12,
-    reportedBy: 'sarah_dev',
-    reportedById: 7,
-    reason: 'Harassment',
-    additionalNote: 'This user has been targeting me across multiple posts.',
-    reportedAt: '2026-06-03T14:22:00Z',
-    status: 'Pending',
     postContext: 'Best practices for code review',
+    reportMessage: 'This user has been consistently attacking others in this thread. Very hostile.',
+    reportedUser: { id: 3, name: 'Carol White', role: 'Student', warningCount: 1, status: 'Active' },
+    reportingUser: { id: 2, name: 'Bob Johnson', role: 'Professor', warningCount: 0, status: 'Active' },
+    reason: 'Harassment',
+    status: 'Pending',
+    reportedAt: '2026-06-03T16:22:00Z',
   },
   {
     id: 2,
     commentText: 'Buy cheap crypto NOW!!! 10000x guaranteed returns, click link in bio.',
-    commentAuthor: 'crypto_king_2024',
-    commentAuthorId: 45,
-    reportedBy: 'mike_admin',
-    reportedById: 3,
-    reason: 'Spam',
-    additionalNote: '',
-    reportedAt: '2026-06-03T11:05:00Z',
-    status: 'Removed',
     postContext: 'Investment strategies discussion',
+    reportMessage: 'Obvious spam link. This user has been posting this same message in multiple threads.',
+    reportedUser: { id: 4, name: 'David Brown', role: 'Student', warningCount: 3, status: 'Blocked' },
+    reportingUser: { id: 1, name: 'Alice Smith', role: 'Admin', warningCount: 0, status: 'Active' },
+    reason: 'Spam',
+    status: 'Removed',
+    reportedAt: '2026-06-03T13:05:00Z',
   },
   {
     id: 3,
     commentText: 'People from that country are all lazy and stupid.',
-    commentAuthor: 'anon_user_x',
-    commentAuthorId: 88,
-    reportedBy: 'sarah_dev',
-    reportedById: 7,
-    reason: 'Hate Speech',
-    additionalNote: 'Very offensive, should be removed immediately.',
-    reportedAt: '2026-06-02T09:41:00Z',
-    status: 'Reviewed',
     postContext: 'Remote work culture differences',
+    reportMessage: 'Very offensive, should be removed immediately. This is clearly hate speech targeting a nationality.',
+    reportedUser: { id: 5, name: 'Emma Davis', role: 'Student', warningCount: 2, status: 'Active' },
+    reportingUser: { id: 2, name: 'Bob Johnson', role: 'Professor', warningCount: 0, status: 'Active' },
+    reason: 'Hate Speech',
+    status: 'Reviewed',
+    reportedAt: '2026-06-02T11:41:00Z',
   },
   {
     id: 4,
     commentText: 'This is 100% proven that vaccines cause autism, do your research!',
-    commentAuthor: 'truth_seeker42',
-    commentAuthorId: 61,
-    reportedBy: 'doc_rahman',
-    reportedById: 19,
-    reason: 'Misinformation',
-    additionalNote: 'Spreading dangerous health misinformation.',
-    reportedAt: '2026-06-02T16:30:00Z',
-    status: 'Pending',
     postContext: 'Healthcare in 2026',
+    reportMessage: 'Spreading dangerous medical misinformation. Could cause real harm to readers.',
+    reportedUser: { id: 7, name: 'Grace Lee', role: 'Student', warningCount: 0, status: 'Inactive' },
+    reportingUser: { id: 6, name: 'Frank Miller', role: 'Professor', warningCount: 0, status: 'Active' },
+    reason: 'Misinformation',
+    status: 'Pending',
+    reportedAt: '2026-06-02T18:30:00Z',
   },
 ]
 
@@ -80,6 +78,7 @@ export async function updateCommentReportStatus(
   status: CommentReportStatus
 ): Promise<void> {
   await new Promise((r) => setTimeout(r, 300))
-  const report = MOCK_REPORTED_COMMENTS.find((r) => r.id === id)
-  if (report) report.status = status
+  MOCK_REPORTED_COMMENTS = MOCK_REPORTED_COMMENTS.map((r) =>
+    r.id === id ? { ...r, status } : r
+  )
 }
