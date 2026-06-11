@@ -95,7 +95,7 @@ const nameToDbName = new Map([
   ...models.map((model) => [model.name, model.dbName]),
 ]);
 
-let mermaid = 'erDiagram\n';
+let mermaid = '%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#e8f2ff", "primaryBorderColor": "#2563eb", "lineColor": "#475569", "fontFamily": "monospace"}}}%%\nerDiagram\n';
 
 for (const enumBlock of enumBlocks) {
   mermaid += `\t${enumBlock.dbName} {\n`;
@@ -151,5 +151,27 @@ for (const relationship of relationships) {
   mermaid += `\t${relationship.from} ${relationship.arrow} ${relationship.to} : ${relationship.label}\n`;
 }
 
-fs.writeFileSync(outputPath, `# Prisma ERD\n\n\`\`\`mermaid\n${mermaid}\`\`\`\n`);
+const prismaVersion = require(path.join(process.cwd(), 'node_modules', 'prisma', 'package.json')).version;
+const datasourceMode = schema.includes('url      = env(\"DATABASE_URL\")')
+  ? 'schema datasource url'
+  : 'prisma.config.ts datasource url';
+const generatedAt = new Date().toISOString();
+
+const markdown = [
+  '# Prisma ERD',
+  '',
+  `Generated from \`prisma/schema.prisma\` at ${generatedAt}.`,
+  '',
+  `- Prisma CLI: ${prismaVersion}`,
+  `- Datasource URL: ${datasourceMode}`,
+  `- Models: ${models.length}`,
+  `- Enums: ${enumBlocks.length}`,
+  '',
+  '```mermaid',
+  mermaid.trimEnd(),
+  '```',
+  '',
+].join('\n');
+
+fs.writeFileSync(outputPath, markdown);
 console.log(`Generated ${path.relative(process.cwd(), outputPath)}`);
