@@ -13,7 +13,10 @@ import com.pse.response.BasicResponse;
 
 
 
-
+/**
+ * Handles all Account related interfaces 
+ * (e.g. logout on all devices, validating account credentials...)
+ */
 @RestController
 @RequestMapping("/account")
 public class AccountController {
@@ -23,7 +26,7 @@ public class AccountController {
 
     
     /**
-     * Invalidates all auth-Tokens in Users Database
+     * Invalidates all auth-Tokens related to User in Database
      * 
      * Request: 
      *  - email
@@ -34,26 +37,18 @@ public class AccountController {
         @RequestBody LogoutRequest request) {
 
 
-        //Check if user is user logged in
-            //check if User has entered correct email
-
-
-
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return new BasicResponse("Error, not logged in", false);
+            return new BasicResponse("Error, no Auth-Token supplied", false);
+        }
+        if (request.email() == null || request.email().isBlank()) {
+            return new BasicResponse("Error, no email supplied", false);
         }
 
         String token = authHeader.substring("Bearer ".length());
-
-    
         String email = tokenService.verifyAuthToken(token);
-        if (email == null) {
-            //User has wrong Auth Token
-            return new BasicResponse("Error, wrong Auth-Token", false);
-        }
 
-        if (request.email() == null) {
-            return new BasicResponse("Error, no email found", false);
+        if (email == null) {
+            return new BasicResponse("Error, wrong Auth-Token", false);
         }
 
         if (!request.email().equals(email)) {
@@ -69,14 +64,13 @@ public class AccountController {
         int count = tokenService.invalidateAllAuthTokensForEmail(email);
 
         return new BasicResponse("Logged out successfully (" + count + " sessions)", true);
-    
     }
 
    
 
 
     /**
-     * Validates the User
+     * Validates the Users credentials (Email fits Auth-Token)
      * 
      * Request: 
      *  - email
@@ -92,21 +86,18 @@ public class AccountController {
         }
 
         String token = authHeader.substring("Bearer ".length());
-
-    
         String email = tokenService.verifyAuthToken(token);
+
         if (email == null) {
-            //User has wrong Auth Token
             return new BasicResponse("Error, wrong Auth-Token", false);
         }
 
-    
-        if (email.equals(request.email())) {
-            return new BasicResponse("Correct auth-Token for email: " + request.email(), true);
+        if (!email.equals(request.email())) {
+            return new BasicResponse("Error, wrong email: " + request.email(), false);
         }
-    
-        return new BasicResponse("Error, wrong email: " + request.email(), false);
-    
+
+        return new BasicResponse("Correct auth-Token for email: " + request.email(), true);
+
     }
 
 

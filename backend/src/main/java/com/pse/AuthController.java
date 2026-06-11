@@ -22,18 +22,14 @@ import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Handles the authentication of the users.
- * User can request login (ask for OTP [OneTimePassword])
- * User can login (with Email and OTP)
- * User can see if they are logged in (with Bearer Token)
+ * - User can request login (ask for OTP [OneTimePassword])
+ * - User can login (with Email and OTP)
+ * - User can see if they are logged in (with Bearer Token)
  * 
- * 
- * CONCERNS:
- * DONE: Secure HTTPS Transport 
  */
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
-
 
     @Autowired
     private MailService mailService;
@@ -41,47 +37,69 @@ public class AuthController {
     private TokenService tokenService;
     
     
-    
-
     /**
-     * Creates and saves OneTimePassword, and sends it to users mail
+     * Creates and saves OTP, and sends it to user's mail
+     * 
+     * Request:
+     * - email
      */
     @PostMapping("/request-login")
     public BasicResponse requestLogin(@RequestBody OTPRequest request) {
 
 
-    
-        if (!request.email().toLowerCase().endsWith("@student.kit.edu")) {
+        if (request.email() == null || request.email().isBlank()) {
+            return new BasicResponse("Error, Email is required", false);
+        }
+
+        String userEmail = request.email().trim().toLowerCase();
+
+        if (!userEmail.endsWith("@student.kit.edu")) {
             return new BasicResponse("Email must end with '@student.kit.edu' (was: " + request.email() + ")",false);
         }
           
 
-        String token = tokenService.createAndSaveOTToken(request.email());
+        String token = tokenService.createAndSaveOTToken(userEmail);
 
-        mailService.sendLoginMail(request.email(), token);
+        mailService.sendLoginMail(userEmail, token);
 
         //FOR FUTURE: Dont tell, whether user has an existing account (only e.g. if user has account email has been sent)
-        return new BasicResponse("Login Token sent to: " + request.email(), true); 
-    
+        return new BasicResponse("Login Token sent to: " + userEmail, true); 
     }
+
 
     /**
      * Server checks whether OTP and Email are valid in database.
      * Addtionally, if succesfully logined, it creates an auth token
+     * 
+     * Request:
+     * - email
+     * - otp
      */
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
 
-    boolean valid = tokenService.verifyOTToken(request.email(), request.loginToken());
+        if (request.email() == null || request.email().isBlank()) {
+            return new LoginResponse("Error, Email is required", false, null);
+        }
+        if (request.loginToken() == null || request.loginToken().isBlank()) {
+            return new LoginResponse("Error, login token is required", false, null);
+        }
+
+
+
+        //Sanitize inputs
+        String userEmail = request.email().trim().toLowerCase();
+        String otp = request.loginToken().trim();
+
+        boolean valid = tokenService.verifyOTToken(userEmail, otp);
 
         if (!valid) {
             //TODO: More fine-grained error message (e.g. token expired...)
             return new LoginResponse("Invalid token", false, null);        
         }
 
-        String authToken = tokenService.createAndSaveAuthToken(request.email());
+        String authToken = tokenService.createAndSaveAuthToken(userEmail);
         
-
 
         //Send successful login mail (Try to get ifnormation on ip e.g.)
         String ip = httpRequest.getHeader("X-Forwarded-For");
@@ -89,7 +107,8 @@ public class AuthController {
             ip = httpRequest.getRemoteAddr();
         }
         String userAgent = httpRequest.getHeader("User-Agent");
-        mailService.sendSuccessfulLogin(request.email(), ip, userAgent);
+
+        mailService.sendSuccessfulLogin(userEmail, ip, userAgent);
         
 
         return new LoginResponse("Login successful", true, authToken);
@@ -109,10 +128,6 @@ public class AuthController {
         String token = authHeader.substring("Bearer ".length());
 
         String email = tokenService.verifyAuthToken(token);
-
-        if (email != null) {
-            email = email.trim(); //Bug: user enetrs email with whitespace trailing
-        }
 
         if (email == null) {
             return new BasicResponse("Not logged in", false);

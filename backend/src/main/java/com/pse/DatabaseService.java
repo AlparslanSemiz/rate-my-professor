@@ -24,30 +24,6 @@ public class DatabaseService {
 
 
 
-    public int invalidateAllAuthTokensForEmail(String email) {
-        return jdbcTemplate.update("""
-            UPDATE auth_tokens
-            SET revoked = true
-            WHERE email = ?
-            """,
-            email
-    );
-    }
-
-
-    public void saveAuthToken(String email, String authToken, LocalDateTime expiresAt){
-
-        jdbcTemplate.update("""
-                INSERT INTO auth_tokens(email, token, expires_at, revoked)
-                VALUES (?, ?, ?, false)
-                """,
-                email,
-                authToken,
-                Timestamp.valueOf(expiresAt)
-        );
-
-    }
-
     public void saveOTP(String email, String otp, LocalDateTime expiresAt){
 
         jdbcTemplate.update("""
@@ -78,6 +54,9 @@ public class DatabaseService {
         );
     }
 
+    /**
+     * Set OTP to used in database
+     */
     public void consumeOTP(String email, String otp) {
 
         jdbcTemplate.update("""
@@ -89,6 +68,20 @@ public class DatabaseService {
                 email,
                 otp
         );
+    }
+
+
+    public void saveAuthToken(String email, String authToken, LocalDateTime expiresAt){
+
+        jdbcTemplate.update("""
+                INSERT INTO auth_tokens(email, token, expires_at, revoked)
+                VALUES (?, ?, ?, false)
+                """,
+                email,
+                authToken,
+                Timestamp.valueOf(expiresAt)
+        );
+
     }
 
     /**
@@ -113,6 +106,22 @@ public class DatabaseService {
         );
     }
 
+
+
+
+
+
+    public int invalidateAllAuthTokensForEmail(String email) {
+        return jdbcTemplate.update("""
+            UPDATE auth_tokens
+            SET revoked = true
+            WHERE email = ?
+            """,
+            email
+        );
+    }
+
+    
     public List<ProfessorResponse> getProfessors() {
 
         return jdbcTemplate.query("""
