@@ -13,8 +13,8 @@ public class RetrofitClient {
         if (retrofit == null) {
 
             retrofit = new Retrofit.Builder()
-                    //TODO Insert Server URL
-                    .baseUrl("http://192.0.2.10:8080")
+
+                    .baseUrl("https://server.example.org")
                     .client(debugClient)
                     .addConverterFactory(
                             GsonConverterFactory.create()

@@ -17,7 +17,6 @@ import com.example.myapplication_java.ServerCommunication.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.ServerResponse;
 import com.example.myapplication_java.databinding.ActivityEnterAuthTokenBinding;
-import com.example.myapplication_java.databinding.ActivityLoginBinding;
 
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
@@ -37,6 +36,8 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
         binding = ActivityEnterAuthTokenBinding.inflate(getLayoutInflater());
         View view = binding.getRoot();
         setContentView(view);
+
+        System.out.println("EnterAuthTokenActivity: line 41");
 
         continueButton = binding.enterButton;
         tokenInput = binding.codeInput;
@@ -61,7 +62,7 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
 
             Call<ServerResponse> call = apiService.login(request);
 
-            Intent enterLoggedActivity = new Intent(this, LoggedActivity.class);
+            Intent mainActivity = new Intent(this, MainActivity.class);
 
             call.enqueue(new Callback<>() {
                 @Override
@@ -71,7 +72,7 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
                         Toast.makeText(EnterAuthTokenActivity.this, response.body().message, Toast.LENGTH_LONG).show();
                     } else {
                         Log.println(Log.DEBUG, "login response ___", "success!!");
-                        EnterAuthTokenActivity.this.startActivity(enterLoggedActivity);
+                        EnterAuthTokenActivity.this.startActivity(mainActivity);
                     }
 
                 }

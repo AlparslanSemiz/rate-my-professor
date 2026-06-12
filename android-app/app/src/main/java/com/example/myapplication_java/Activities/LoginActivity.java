@@ -38,61 +38,75 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        binding = ActivityLoginBinding.inflate(getLayoutInflater());
-        View view = binding.getRoot();
-        setContentView(view);
-        ViewCompat.setOnApplyWindowInsetsListener(binding.main, (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
-        enterButton = binding.verifyButton;
-        emailInput = binding.mailInput;
-        enterButton.setOnClickListener(v -> {
-            String mailAddress = emailInput.getText().toString();
 
-            // This is for debugging purposes, observes the requests sent and logs them.
-            HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-            OkHttpClient client = new OkHttpClient.Builder().addInterceptor(loggingInterceptor).build();
-            APIService apiService =
-                    RetrofitClient
-                            .getClient(client)
-                            .create(APIService.class);
-
-            LoginRequest request = new LoginRequest(mailAddress, "");
-
-            Call<ServerResponse> call = apiService.requestLogin(request);
-
-            Intent enterAuthTokenActivity = new Intent(this, EnterAuthTokenActivity.class);
-
-            /// 'call.enqueue' executes the request to the server.
-            /// 'callback' specifies how to handle the answer of the request.
-            call.enqueue(new Callback<>() {
-                @Override
-                public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
-                    if (response.isSuccessful()) {
-                        /// 'SharedPreferences' is used to save data (at the moment just the email)
-                        /// persistently, even when the app is closed
-                        SharedPreferences persistentEmailSave = getSharedPreferences("savedEmail", MODE_PRIVATE);
-                        SharedPreferences.Editor editor = persistentEmailSave.edit();
-                        editor.putString("mailAddress", mailAddress);
-                        editor.apply();
-
-                        LoginActivity.this.startActivity(enterAuthTokenActivity);
-                    } else {
-                        System.out.println(response.errorBody());
-                    }
-                }
-
-                //Currently the response is broken, the enterAuthTokenActivity entry shouldn't be
-                //here. Fix it later.
-                @Override
-                public void onFailure(Call<ServerResponse> call, Throwable t) {
-                    System.out.println("Error: " + t.getMessage());
-                    LoginActivity.this.startActivity(enterAuthTokenActivity);
-                }
+        Intent mainActivity = new Intent(this, MainActivity.class);
+        boolean authenticated = false; // TODO Ask Server whether to authenticate login again
+        if(authenticated) {
+            LoginActivity.this.startActivity(mainActivity);
+        } else {
+            binding = ActivityLoginBinding.inflate(getLayoutInflater());
+            View view = binding.getRoot();
+            setContentView(view);
+            ViewCompat.setOnApplyWindowInsetsListener(binding.main, (v, insets) -> {
+                Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+                return insets;
             });
-        });
+            enterButton = binding.verifyButton;
+            emailInput = binding.mailInput;
+
+
+            enterButton.setOnClickListener(v -> {
+                String mailAddress = emailInput.getText().toString();
+
+
+                // This is for debugging purposes, observes the requests sent and logs them.
+                HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+                loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+                OkHttpClient client = new OkHttpClient.Builder().addInterceptor(loggingInterceptor).build();
+                APIService apiService =
+                        RetrofitClient
+                                .getClient(client)
+                                .create(APIService.class);
+
+                LoginRequest request = new LoginRequest(mailAddress, "");
+
+                Call<ServerResponse> call = apiService.requestLogin(request);
+
+                Intent enterAuthTokenActivity = new Intent(this, EnterAuthTokenActivity.class);
+
+
+
+                /// 'call.enqueue' executes the request to the server.
+                /// 'callback' specifies how to handle the answer of the request.
+                call.enqueue(new Callback<>() {
+                    @Override
+                    public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                        if (response.isSuccessful()) {
+                            /// 'SharedPreferences' is used to save data (at the moment just the email)
+                            /// persistently, even when the app is closed
+                            SharedPreferences persistentEmailSave = getSharedPreferences("savedEmail", MODE_PRIVATE);
+                            SharedPreferences.Editor editor = persistentEmailSave.edit();
+                            editor.putString("mailAddress", mailAddress);
+                            editor.apply();
+
+                            LoginActivity.this.startActivity(enterAuthTokenActivity);
+                        } else {
+                            System.out.println("HERE SHOULD COME AN ERRROR CODE \n" + response.errorBody());
+                        }
+                    }
+
+                    //Currently the response is broken, the enterAuthTokenActivity entry shouldn't be
+                    //here. Fix it later.
+                    @Override
+                    public void onFailure(Call<ServerResponse> call, Throwable t) {
+                        System.out.println("Error: " + t.getMessage());
+                        LoginActivity.this.startActivity(enterAuthTokenActivity);
+                    }
+                });
+            });
+
+        }
+
     }
 }

@@ -10,36 +10,64 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.Fragment;
 
+import com.example.myapplication_java.Fragments.HomeFragment;
+import com.example.myapplication_java.Fragments.SearchFragment;
+import com.example.myapplication_java.Fragments.SettingsFragment;
+import com.example.myapplication_java.R;
 import com.example.myapplication_java.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.main);
-        ViewCompat.setOnApplyWindowInsetsListener(binding.main, (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
-        Intent loginActivity = new Intent(this, LoginActivity.class);
-        Intent loggedActivity = new Intent(this, LoggedActivity.class);
-        Button button = binding.button;
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                boolean authenticationRequired = true; // TODO Ask Server whether to authenticate login again
-                if(authenticationRequired) {
-                    MainActivity.this.startActivity(loginActivity);
-                } else {
-                    MainActivity.this.startActivity(loggedActivity);
-                }
+        setContentView(binding.getRoot());
+
+        loadFragment(new HomeFragment());
+
+        binding.bottomNav.setOnItemSelectedListener(item -> {
+            int itemId = item.getItemId();
+
+            if (itemId == R.id.nav_home) {
+                // open homeFragment
+                getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, new HomeFragment())
+                        .commit();
+                return true;
+
+            } else if (itemId == R.id.nav_search) {
+                // open searchFragment
+                getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, new SearchFragment())
+                        .commit();
+                return true;
+
+            } else if (itemId == R.id.nav_settings) {
+                // open settingsFragment
+                getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, new SettingsFragment())
+                        .commit();
+                return true;
             }
+
+            return false;
         });
+    }
+
+    private void loadFragment(Fragment fragment) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .commit();
     }
 }
