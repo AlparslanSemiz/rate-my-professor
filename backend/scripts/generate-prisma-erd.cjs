@@ -115,7 +115,7 @@ for (const model of models) {
 
   for (const field of model.fields) {
     if (modelNames.has(field.type) && !enumNames.has(field.type)) {
-      if (!field.isList) {
+      if (!field.isList && field.relationFields.length > 0) {
         relationships.push({
           from: model.dbName,
           to: nameToDbName.get(field.type) || field.type,

@@ -24,34 +24,53 @@ enum ReportStatus {
   @@map("report_status")
 }
 
+enum SemesterSeason {
+  SUMMER
+  WINTER
+
+  @@map("semester_season")
+}
+
 /// Current Spring Boot login table used by TokenService.
-model MagicLoginToken {
-  id        Int      @id @default(autoincrement())
-  email     String
-  token     String   @db.Text
-  expiresAt DateTime @map("expires_at") @db.Timestamp(6)
-  used      Boolean  @default(false)
+model OneTimePassword {
+  id      Int    @id @default(autoincrement())
+  email   String
+  value   String @db.Text
+  tokenId String? @unique @map("token_id") @db.Uuid
+  token   Token?  @relation(fields: [tokenId], references: [id], onDelete: Cascade)
 
   @@index([email])
-  @@index([token])
+  @@index([value])
+  @@map("one_time_passwords")
+}
+
+model Token {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String
+  value     String   @db.Text
+  expiresAt DateTime @map("expires_at") @db.Timestamp(6)
+  revoked   Boolean  @default(false)
+
+  oneTimePassword OneTimePassword?
+
+  @@index([email])
+  @@index([value])
   @@index([expiresAt])
-  @@map("magic_login_tokens")
+  @@index([revoked])
+  @@map("tokens")
 }
 
 model Professor {
   id        String  @id @default(uuid()) @db.Uuid
   firstName String  @map("first_name")
   lastName  String  @map("last_name")
-  photoUrl  String? @map("photo_url")
   isActive  Boolean @default(true) @map("is_active")
 
   /// Cached value from all Rating rows. Update it together with ratingCount.
   averageRating Decimal @default(0) @map("average_rating") @db.Decimal(3, 2)
   ratingCount   Int     @default(0) @map("rating_count")
 
-  lectures Lecture[]
-  ratings  Rating[]
-  comments Comment[]
+  modules Module[]
 
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -60,22 +79,27 @@ model Professor {
   @@map("professors")
 }
 
-/// One row represents one lecture offering taught by exactly one professor.
-/// The same lecture name/code may occur for different professors or semesters.
-model Lecture {
-  id       String  @id @default(uuid()) @db.Uuid
-  name     String
-  code     String?
-  semester String?
-  isActive Boolean @default(true) @map("is_active")
+/// One row represents one module offering taught by exactly one professor.
+/// The same module name/code may occur for different professors or semesters.
+model Module {
+  id             String         @id @default(uuid()) @db.Uuid
+  name           String
+  code           String?
+  semesterYear   Int            @map("semester_year")
+  semesterSeason SemesterSeason @map("semester_season")
+  isActive       Boolean        @default(true) @map("is_active")
 
   professorId String    @map("professor_id") @db.Uuid
   professor   Professor @relation(fields: [professorId], references: [id], onDelete: Cascade)
+
+  comments Comment[]
+  ratings  Rating[]
 
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([name])
   @@index([code])
+  @@index([semesterYear, semesterSeason])
   @@index([professorId, isActive])
   @@map("lectures")
 }
@@ -84,7 +108,6 @@ model Student {
   id              String    @id @default(uuid()) @db.Uuid
   username        String    @unique
   kitEmail        String    @unique @map("kit_email")
-  photoUrl        String?   @map("photo_url")
   emailVerifiedAt DateTime? @map("email_verified_at")
 
   /// Optional feature from the user stories.
@@ -102,39 +125,48 @@ model Student {
   @@map("students")
 }
 
-/// A student can rate a professor only once.
+/// A student can rate a module only once.
 model Rating {
   id String @id @default(uuid()) @db.Uuid
 
-  /// Must be between 0 and 5. Enforce this in application validation
-  /// and preferably with a PostgreSQL CHECK constraint in the migration.
-  value Int @db.SmallInt
+  studentId String @map("student_id") @db.Uuid
+  moduleId  String @map("lecture_id") @db.Uuid
 
-  studentId   String @map("student_id") @db.Uuid
-  professorId String @map("professor_id") @db.Uuid
-
-  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  professor Professor @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  module  Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  topics  RatingTopic[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@unique([studentId, professorId])
-  @@index([professorId])
+  @@unique([studentId, moduleId])
+  @@index([moduleId])
   @@map("ratings")
 }
 
-/// A student may create any number of comments for the same professor.
+model RatingTopic {
+  id    String @id @default(uuid()) @db.Uuid
+  name  String
+  value Int    @db.SmallInt
+
+  ratingId String @map("rating_id") @db.Uuid
+  rating   Rating @relation(fields: [ratingId], references: [id], onDelete: Cascade)
+
+  @@unique([ratingId, name])
+  @@map("rating_topics")
+}
+
+/// A student may create any number of comments for the same module.
 model Comment {
   id      String        @id @default(uuid()) @db.Uuid
   content String        @db.Text
   status  ContentStatus @default(VISIBLE)
 
-  studentId   String @map("student_id") @db.Uuid
-  professorId String @map("professor_id") @db.Uuid
+  studentId String @map("student_id") @db.Uuid
+  moduleId  String @map("lecture_id") @db.Uuid
 
-  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  professor Professor @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  module  Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
   answers Answer[]
   reports CommentReport[]
@@ -142,7 +174,7 @@ model Comment {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([professorId, createdAt])
+  @@index([moduleId, createdAt])
   @@index([studentId])
   @@map("comments")
 }
