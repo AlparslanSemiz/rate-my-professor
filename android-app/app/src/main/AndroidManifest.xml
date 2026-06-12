@@ -16,9 +16,6 @@
         android:theme="@style/Theme.MyApplication_Java"
         android:usesCleartextTraffic="true">
         <activity
-            android:name=".Activities.HomeScreenActivity"
-            android:exported="false" />
-        <activity
             android:name=".Activities.MainActivity"
             android:exported="false" />
         <activity
