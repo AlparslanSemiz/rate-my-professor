@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ContentStatus {
+  VISIBLE
+  HIDDEN
+  DELETED
+
+  @@map("content_status")
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+  ACTION_TAKEN
+
+  @@map("report_status")
+}
+
+enum SemesterSeason {
+  SUMMER
+  WINTER
+
+  @@map("semester_season")
+}
+
+/// Current Spring Boot login table used by TokenService.
+model OneTimePassword {
+  id      Int    @id @default(autoincrement())
+  email   String
+  value   String @db.Text
+  tokenId String? @unique @map("token_id") @db.Uuid
+  token   Token?  @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([value])
+  @@map("one_time_passwords")
+}
+
+model Token {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String
+  value     String   @db.Text
+  expiresAt DateTime @map("expires_at") @db.Timestamp(6)
+  revoked   Boolean  @default(false)
+
+  oneTimePassword OneTimePassword?
+
+  @@index([email])
+  @@index([value])
+  @@index([expiresAt])
+  @@index([revoked])
+  @@map("tokens")
+}
+
+model Professor {
+  id        String  @id @default(uuid()) @db.Uuid
+  firstName String  @map("first_name")
+  lastName  String  @map("last_name")
+  isActive  Boolean @default(true) @map("is_active")
+
+  /// Cached value from all Rating rows. Update it together with ratingCount.
+  averageRating Decimal @default(0) @map("average_rating") @db.Decimal(3, 2)
+  ratingCount   Int     @default(0) @map("rating_count")
+
+  modules Module[]
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([lastName, firstName])
+  @@index([isActive])
+  @@map("professors")
+}
+
+/// One row represents one module offering taught by exactly one professor.
+/// The same module name/code may occur for different professors or semesters.
+model Module {
+  id             String         @id @default(uuid()) @db.Uuid
+  name           String
+  code           String?
+  semesterYear   Int            @map("semester_year")
+  semesterSeason SemesterSeason @map("semester_season")
+  isActive       Boolean        @default(true) @map("is_active")
+
+  professorId String    @map("professor_id") @db.Uuid
+  professor   Professor @relation(fields: [professorId], references: [id], onDelete: Cascade)
+
+  comments Comment[]
+  ratings  Rating[]
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@index([code])
+  @@index([semesterYear, semesterSeason])
+  @@index([professorId, isActive])
+  @@map("lectures")
+}
+
+model Student {
+  id              String    @id @default(uuid()) @db.Uuid
+  username        String    @unique
+  kitEmail        String    @unique @map("kit_email")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+
+  /// Optional feature from the user stories.
+  credibilityScore Int @default(0) @map("credibility_score")
+
+  ratings        Rating[]
+  comments       Comment[]
+  answers        Answer[]
+  commentReports CommentReport[]
+  answerReports  AnswerReport[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("students")
+}
+
+/// A student can rate a module only once.
+model Rating {
+  id String @id @default(uuid()) @db.Uuid
+
+  studentId String @map("student_id") @db.Uuid
+  moduleId  String @map("lecture_id") @db.Uuid
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  module  Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  topics  RatingTopic[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([studentId, moduleId])
+  @@index([moduleId])
+  @@map("ratings")
+}
+
+model RatingTopic {
+  id    String @id @default(uuid()) @db.Uuid
+  name  String
+  value Int    @db.SmallInt
+
+  ratingId String @map("rating_id") @db.Uuid
+  rating   Rating @relation(fields: [ratingId], references: [id], onDelete: Cascade)
+
+  @@unique([ratingId, name])
+  @@map("rating_topics")
+}
+
+/// A student may create any number of comments for the same module.
+model Comment {
+  id      String        @id @default(uuid()) @db.Uuid
+  content String        @db.Text
+  status  ContentStatus @default(VISIBLE)
+
+  studentId String @map("student_id") @db.Uuid
+  moduleId  String @map("lecture_id") @db.Uuid
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  module  Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  answers Answer[]
+  reports CommentReport[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([moduleId, createdAt])
+  @@index([studentId])
+  @@map("comments")
+}
+
+/// Every answer belongs to exactly one comment.
+/// A comment may have zero, one, or many answers.
+model Answer {
+  id      String        @id @default(uuid()) @db.Uuid
+  content String        @db.Text
+  status  ContentStatus @default(VISIBLE)
+
+  studentId String @map("student_id") @db.Uuid
+  commentId String @map("comment_id") @db.Uuid
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  reports AnswerReport[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([commentId, createdAt])
+  @@index([studentId])
+  @@map("answers")
+}
+
+/// A student may report the same comment only once.
+model CommentReport {
+  id     String       @id @default(uuid()) @db.Uuid
+  reason String       @db.Text
+  status ReportStatus @default(OPEN)
+
+  reporterId String @map("reporter_id") @db.Uuid
+  commentId  String @map("comment_id") @db.Uuid
+
+  reporter Student @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  comment  Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([reporterId, commentId])
+  @@index([status, createdAt])
+  @@index([commentId])
+  @@map("comment_reports")
+}
+
+/// A student may report the same answer only once.
+model AnswerReport {
+  id     String       @id @default(uuid()) @db.Uuid
+  reason String       @db.Text
+  status ReportStatus @default(OPEN)
+
+  reporterId String @map("reporter_id") @db.Uuid
+  answerId   String @map("answer_id") @db.Uuid
+
+  reporter Student @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  answer   Answer  @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([reporterId, answerId])
+  @@index([status, createdAt])
+  @@index([answerId])
+  @@map("answer_reports")
+}
