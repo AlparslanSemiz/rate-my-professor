@@ -42,19 +42,15 @@ public class LoginActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-        enterButton = binding.enter;
-        emailInput = binding.inputEmail;
         enterButton.setOnClickListener(v -> {
             String mailAddress = emailInput.getText().toString();
 
             APIService apiService =
                     RetrofitClient
-                            .getClient()
                             .create(APIService.class);
 
             LoginRequest request = new LoginRequest(mailAddress, "");
 
-            Call<String> call = apiService.requestLogin(request);
 
             Intent enterAuthTokenActivity = new Intent(this, EnterAuthTokenActivity.class);
 
@@ -62,7 +58,6 @@ public class LoginActivity extends AppCompatActivity {
             /// 'callback' specifies how to handle the answer of the request.
             call.enqueue(new Callback<>() {
                 @Override
-                public void onResponse(Call<String> call, Response<String> response) {
                     if (response.isSuccessful()) {
                         /// 'SharedPreferences' is used to save data (at the moment just the email)
                         /// persistently, even when the app is closed
@@ -73,15 +68,12 @@ public class LoginActivity extends AppCompatActivity {
 
                         LoginActivity.this.startActivity(enterAuthTokenActivity);
                     } else {
-                        System.out.println(response.errorBody());
                     }
                 }
 
                 @Override
-                public void onFailure(Call<String> call, Throwable t) {
                     System.out.println("Error: " + t.getMessage());
                 }
             });
         });
-    }
 }

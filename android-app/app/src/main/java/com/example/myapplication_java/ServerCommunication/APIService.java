@@ -10,12 +10,12 @@ public interface APIService {
      * Used to start the 'request-login' routine in the Backend Code.
      */
     @POST("/auth/request-login")
-    Call<String> requestLogin(
+    Call<ServerResponse> requestLogin(
             @Body LoginRequest request
     );
 
     @POST("/auth/login")
-    Call<String> login(
+    Call<ServerResponse> login(
             @Body LoginRequest request
     );
 }

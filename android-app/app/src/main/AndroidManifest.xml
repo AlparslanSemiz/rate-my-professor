@@ -16,13 +16,19 @@
         android:theme="@style/Theme.MyApplication_Java"
         android:usesCleartextTraffic="true">
         <activity
+            android:name=".Activities.HomeScreenActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activities.MainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activities.EnterAuthTokenActivity"
+            android:exported="false" />
+        <activity
             android:name=".Activities.LoggedActivity"
             android:exported="false" />
         <activity
             android:name=".Activities.LoginActivity"
-            android:exported="false" />
-        <activity
-            android:name=".Activities.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -30,6 +36,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
     </application>
 
 </manifest>
