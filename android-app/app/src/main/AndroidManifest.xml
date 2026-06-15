@@ -16,7 +16,7 @@
         android:theme="@style/Theme.MyApplication_Java"
         android:usesCleartextTraffic="true">
         <activity
-            android:name=".Activities.MainActivity"
+            android:name=".Activities.LoginActivity"
             android:exported="false" />
         <activity
             android:name=".Activities.EnterAuthTokenActivity"
@@ -25,7 +25,7 @@
             android:name=".Activities.LoggedActivity"
             android:exported="false" />
         <activity
-            android:name=".Activities.LoginActivity"
+            android:name=".Activities.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
