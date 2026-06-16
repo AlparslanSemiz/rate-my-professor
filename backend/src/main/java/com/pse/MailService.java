@@ -20,11 +20,8 @@ public class MailService {
 
     // Login Mail Configuration
     private final String loginSenderMail = "ratemyprof@gmx.de";
-
     private final String loginSenderName = "RateMyProfApp";
-
     private final String formattedLoginEmailSubject = "Your Login Code for RateMyProfApp";
-
     private final String formattedLoginEmailBody = 
             """
             Hello,
@@ -48,12 +45,11 @@ public class MailService {
 
 
     /**
-     * Sends the login Mail with Token.
+     * Sends the login Mail with OTP.
      */
-    public void sendLoginMail(String to, String token) {
+    public void sendLoginMail(String to, String otp) {
 
-        
-        String body = formattedLoginEmailBody.formatted(token);
+        String body = formattedLoginEmailBody.formatted(otp);
 
         sendMail(to,loginSenderMail, loginSenderName, formattedLoginEmailSubject, body);
         System.out.println("Sent Mail");
@@ -83,15 +79,12 @@ public class MailService {
     }
 
 
+    /**
+     * Warning for user that somebody loged into his account (successfully)
+     */
     public void sendSuccessfulLogin(String email, String ip, String userAgent) {
 
-        //Somebody logged in successfully in your account
-        //At Time XY
 
-        //Used Auth token ending with ...
-        //If this wasnt you logout all devieces (here)
-
-       
         String subject = "Successful login to your RateMyProfApp account";
 
         String body = """
@@ -116,16 +109,7 @@ public class MailService {
             The RateMyProfApp Team
             """.formatted(ip, userAgent);
 
-        sendMail(
-                email,
-                loginSenderMail,
-                loginSenderName,
-                subject,
-                body
-        );
-
-
-
+        sendMail(email, loginSenderMail, loginSenderName, subject, body);
 
     }
 

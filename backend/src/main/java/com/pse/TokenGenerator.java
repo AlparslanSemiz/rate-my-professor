@@ -20,12 +20,8 @@ public class TokenGenerator {
         secureRandom.nextBytes(bytes);
         
 
-
-        
-        //TODO: OVERWRITE FOR TESTING PURPOSES
-        return Base64.getUrlEncoder()
-                .withoutPadding()
-                .encodeToString(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        //.withoutPadding() used, so that String is filled with "=" at end
     }
 
     /**

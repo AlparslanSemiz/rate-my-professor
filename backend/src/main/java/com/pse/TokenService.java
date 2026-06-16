@@ -7,7 +7,6 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 
@@ -24,21 +23,16 @@ import org.springframework.stereotype.Service;
 @Service
 public class TokenService {
 
-    //Object to communicate to database
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private DatabaseService database;
 
 
 
     public int invalidateAllAuthTokensForEmail(String email) {
-        return jdbcTemplate.update("""
-            UPDATE auth_tokens
-            SET revoked = true
-            WHERE email = ?
-            """,
-            email
-    );
-}
+
+        return database.invalidateAllAuthTokensForEmail(email);
+    
+    }
 
     public String createAndSaveAuthToken(String email) {
 
@@ -47,97 +41,48 @@ public class TokenService {
         ZonedDateTime berlinTime = ZonedDateTime.now(ZoneId.of("Europe/Berlin"));
         LocalDateTime expiresAt = berlinTime.plusDays(30).toLocalDateTime();
 
-        jdbcTemplate.update("""
-                INSERT INTO auth_tokens(email, token, expires_at, revoked)
-                VALUES (?, ?, ?, false)
-                """,
-                email,
-                authToken,
-                Timestamp.valueOf(expiresAt)
-        );
+
+        database.saveAuthToken(email, authToken, expiresAt);
+
 
         return authToken;
     }
     
-    public String verifyAuthToken(String token) {
+    public String verifyAuthToken(String authToken) {
 
-        return jdbcTemplate.query("""
-                SELECT email
-                FROM auth_tokens
-                WHERE token = ?
-                  AND revoked = false
-                  AND expires_at > NOW()
-                """,
-                rs -> {
-                    if (rs.next()) {
-                        return rs.getString("email");
-                    }
-
-                    return null;
-                },
-                token
-        );
+        return database.verifyAuthToken(authToken);
     }
 
 
 
     /**
-     * Creates the token and saves it in the login table.
+     * Creates the OTP and saves it in the login table.
      */
     public String createAndSaveOTToken(String email) {
 
-        String token = TokenGenerator.generateOneTimePassword();
+        String otp = TokenGenerator.generateOneTimePassword();
 
         ZonedDateTime berlinTime = ZonedDateTime.now(ZoneId.of("Europe/Berlin"));
 
         LocalDateTime expiresAt = berlinTime.plusMinutes(999).toLocalDateTime();
 
-        jdbcTemplate.update("""
-                INSERT INTO magic_login_tokens(email, token, expires_at, used)
-                VALUES (?, ?, ?, false)
-                """,
-                email,
-                token,
-                Timestamp.valueOf(expiresAt)
-        );
+        database.saveOTP(email, otp, expiresAt);
 
-        return token;
+        return otp;
     }
 
     /**
-     * Verifies the TOken by checking if it exists, is unused, and isnt expired.
+     * Verifies the OTP by checking if it exists, is unused, and isnt expired.
      */
     public boolean verifyOTToken(String email, String token) {
 
-        Integer count = jdbcTemplate.queryForObject("""
-                SELECT COUNT(*)
-                FROM magic_login_tokens
-                WHERE email = ?
-                  AND token = ?
-                  AND used = false
-                  AND expires_at > NOW()
-                """,
-                Integer.class,
-                email,
-                token
-        );
+        Integer count = database.validateOTP(email, token);
 
-
-        
         if (count == null || count == 0) {
-            
             return false;
         }
 
-        jdbcTemplate.update("""
-                UPDATE magic_login_tokens
-                SET used = true
-                WHERE email = ?
-                  AND token = ?
-                """,
-                email,
-                token
-        );
+        database.consumeOTP(email, token);
 
         return true;
     }
