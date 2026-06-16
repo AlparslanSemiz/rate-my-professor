@@ -37,7 +37,7 @@ class AccountControllerTests {
                 );
 
         assertFalse(response.success());
-        assertEquals("Error, not logged in", response.message());
+        assertEquals("Error, no Auth-Token supplied", response.message());
     }
 
     @Test
@@ -67,7 +67,7 @@ class AccountControllerTests {
                 );
 
         assertFalse(response.success());
-        assertEquals("Error, no email found", response.message());
+        assertEquals("Error, no email supplied", response.message());
     }
 
     @Test
