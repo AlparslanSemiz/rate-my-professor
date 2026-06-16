@@ -37,8 +37,6 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
         View view = binding.getRoot();
         setContentView(view);
 
-        System.out.println("EnterAuthTokenActivity: line 41");
-
         continueButton = binding.enterButton;
         tokenInput = binding.codeInput;
 

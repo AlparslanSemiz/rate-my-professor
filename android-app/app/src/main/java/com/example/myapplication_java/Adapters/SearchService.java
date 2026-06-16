@@ -47,6 +47,14 @@ public class SearchService {
         insert("003", "Stefan", "Mathematik");
         insert("004", "Linda", "Geologie");
         insert("005", "Paul", "Lehramt");
+        insert("006", "Qaul", "Lehramt");
+        insert("007", "Raul", "Lehramt");
+        insert("008", "Saul", "Lehramt");
+        insert("009", "Taul", "Lehramt");
+        insert("010", "Uaul", "Lehramt");
+        insert("011", "Vaul", "Lehramt");
+        insert("012", "Waul", "Lehramt");
+        insert("013", "Xaul", "Lehramt");
     }
 
     //BAD METHOD FIX IN THE FUTURE
@@ -63,6 +71,38 @@ public class SearchService {
     }
 
     public List<Lecture> searchLectures(String query) {
-        return new ArrayList<>();
+        ArrayList<Lecture> lectures = new ArrayList<>();
+        SQLiteDatabase db = helper.getReadableDatabase();
+
+        Cursor cursor = db.rawQuery(
+                "SELECT * FROM " + DBHelper.LECTURE_TABLE +
+                        " WHERE " + DBHelper.COLUMN_LECTURE_TITLE + " LIKE ?" +
+                        " ORDER BY " + DBHelper.COLUMN_LECTURE_TITLE + " ASC",
+                new String[]{"%" + query + "%"}
+        );
+
+        if (cursor.moveToFirst()) {
+            do {
+                String id = cursor.getString(
+                        cursor.getColumnIndexOrThrow(DBHelper.COLUMN_LECTURE_ID)
+                );
+                String title = cursor.getString(
+                        cursor.getColumnIndexOrThrow(DBHelper.COLUMN_LECTURE_TITLE)
+                );
+                String moduleCode = cursor.getString(
+                        cursor.getColumnIndexOrThrow(DBHelper.COLUMN_LECTURE_MODULE_CODE)
+                );
+                String description = cursor.getString(
+                        cursor.getColumnIndexOrThrow(DBHelper.COLUMN_LECTURE_DESCRIPTION)
+                );
+
+                Lecture lecture = new Lecture(id, title, moduleCode, description);
+                lectures.add(lecture);
+
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+        return lectures;
     }
 }
