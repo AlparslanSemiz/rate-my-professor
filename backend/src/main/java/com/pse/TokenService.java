@@ -1,7 +1,6 @@
 package com.pse;
 
 
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -64,7 +63,7 @@ public class TokenService {
 
         ZonedDateTime berlinTime = ZonedDateTime.now(ZoneId.of("Europe/Berlin"));
 
-        LocalDateTime expiresAt = berlinTime.plusMinutes(999).toLocalDateTime();
+        LocalDateTime expiresAt = berlinTime.plusMinutes(5).toLocalDateTime();
 
         database.saveOTP(email, otp, expiresAt);
 
@@ -76,17 +75,17 @@ public class TokenService {
      */
     public boolean verifyOTToken(String email, String token) {
 
-        Integer count = database.validateOTP(email, token);
-
-        if (count == null || count == 0) {
-            return false;
-        }
-
-        database.consumeOTP(email, token);
-
-        return true;
+        return database.validateOTP(email, token);
     }
 
+    /**
+     * Verifies the OTP by checking if it exists, is unused, and isnt expired.
+     */
+    public void consumeOTP(String email, String token) {
+
+        database.consumeOTP(email, token);
+    }
+    
 
 
 }

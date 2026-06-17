@@ -1,14 +1,23 @@
 package com.pse;
 
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import com.pse.model.Professor;
+import com.pse.model.Lecture;
+import com.pse.model.auth.OneTimePassword;
+import com.pse.model.auth.Token;
+import com.pse.repositories.OneTimePasswordRepository;
+import com.pse.repositories.ProfessorRepository;
+import com.pse.repositories.LectureRepository;
+import com.pse.repositories.TokenRepository;
 import com.pse.response.ProfessorResponse;
+import com.pse.response.LectureResponse;
+
 
 
 /**
@@ -18,40 +27,38 @@ import com.pse.response.ProfessorResponse;
 @Service
 public class DatabaseService {
 
-    //Object to communicate to database 
+    
     @Autowired
-    private JdbcTemplate jdbcTemplate;
-
+    private OneTimePasswordRepository oneTimePasswordRepository;
+    @Autowired
+    private TokenRepository tokenRepository;
+    @Autowired
+    private ProfessorRepository professorRepository;
+    @Autowired
+    private LectureRepository lectureRepository;
 
 
     public void saveOTP(String email, String otp, LocalDateTime expiresAt){
 
-        jdbcTemplate.update("""
-                INSERT INTO magic_login_tokens(email, token, expires_at, used)
-                VALUES (?, ?, ?, false)
-                """,
-                email,
-                otp,
-                Timestamp.valueOf(expiresAt)
-        );
+        OneTimePassword oneTimePassword = new OneTimePassword();
+
+        oneTimePassword.setEmail(email);
+        oneTimePassword.setValue(otp);
+        oneTimePassword.setExpiresAt(expiresAt);
+
+        oneTimePasswordRepository.save(oneTimePassword);
 
     }
 
 
-    public int validateOTP(String email, String otp) {
+    public boolean validateOTP(String email, String otp) {
 
-        return jdbcTemplate.queryForObject("""
-                SELECT COUNT(*)
-                FROM magic_login_tokens
-                WHERE email = ?
-                  AND token = ?
-                  AND used = false
-                  AND expires_at > NOW()
-                """,
-                Integer.class,
-                email,
-                otp
-        );
+        return oneTimePasswordRepository.findByEmailAndValueAndUsedFalseAndExpiresAtAfter(
+                    email,
+                    otp,
+                    LocalDateTime.now()
+                )
+            .isPresent();
     }
 
     /**
@@ -59,28 +66,28 @@ public class DatabaseService {
      */
     public void consumeOTP(String email, String otp) {
 
-        jdbcTemplate.update("""
-                UPDATE magic_login_tokens
-                SET used = true
-                WHERE email = ?
-                  AND token = ?
-                """,
-                email,
-                otp
-        );
+        oneTimePasswordRepository
+            .findByEmailAndValueAndUsedFalseAndExpiresAtAfter(
+                    email,
+                    otp,
+                    LocalDateTime.now()
+            )
+            .ifPresent(oneTimePassword -> {
+                oneTimePassword.setUsed(true);
+                oneTimePasswordRepository.save(oneTimePassword);
+            });
     }
 
 
     public void saveAuthToken(String email, String authToken, LocalDateTime expiresAt){
 
-        jdbcTemplate.update("""
-                INSERT INTO auth_tokens(email, token, expires_at, revoked)
-                VALUES (?, ?, ?, false)
-                """,
-                email,
-                authToken,
-                Timestamp.valueOf(expiresAt)
-        );
+        Token token = new Token();
+
+        token.setEmail(email);
+        token.setValue(authToken);
+        token.setExpiresAt(expiresAt);
+
+        tokenRepository.save(token);
 
     }
 
@@ -88,65 +95,83 @@ public class DatabaseService {
      * Validates the auth token, and if valid return the corresponding user Email
      */
     public String verifyAuthToken(String authToken) {
-        return jdbcTemplate.query("""
-                SELECT email
-                FROM auth_tokens
-                WHERE token = ?
-                  AND revoked = false
-                  AND expires_at > NOW()
-                """,
-                rs -> {
-                    if (rs.next()) {
-                        return rs.getString("email");
-                    }
 
-                    return null;
-                },
-                authToken
-        );
+        return tokenRepository
+            .findByValueAndRevokedFalseAndExpiresAtAfter(
+                    authToken,
+                    LocalDateTime.now()
+            )
+            .map(Token::getEmail)
+            .orElse(null);
+
     }
 
 
-
-
-
-
     public int invalidateAllAuthTokensForEmail(String email) {
-        return jdbcTemplate.update("""
-            UPDATE auth_tokens
-            SET revoked = true
-            WHERE email = ?
-            """,
-            email
-        );
+
+
+        List<Token> tokens = tokenRepository.findByEmail(email);
+
+        for (Token token : tokens) {
+            token.setRevoked(true);
+        }
+
+        return tokens.size();
     }
 
     
     public List<ProfessorResponse> getProfessors() {
 
-        return jdbcTemplate.query("""
-                SELECT
-                    id,
-                    first_name,
-                    last_name,
-                    photo_url,
-                    average_rating,
-                    rating_count
-                FROM professors
-                WHERE is_active = true
-                ORDER BY last_name, first_name
-                """,
-                (rs, rowNum) -> {
-            return new ProfessorResponse(
-                    rs.getString("id"),
-                    rs.getString("first_name"),
-                    rs.getString("last_name"),
-                    rs.getString("photo_url"),
-                    rs.getDouble("average_rating"),
-                    rs.getInt("rating_count")
+
+        List<Professor> professors =
+            professorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc();
+
+        List<ProfessorResponse> responses = new ArrayList<>();
+
+        for (Professor professor : professors) {
+
+            responses.add(
+                    new ProfessorResponse(
+                                professor.getId(),
+                                professor.getFirstName(),
+                                professor.getLastName(),
+                                professor.getAverageRating(),
+                                professor.getRatingCount()
+                    )
             );
         }
-        );
+
+        return responses;
+
+
     }
+
+    public List<LectureResponse> getLectures() {
+        List<Lecture> lectures = lectureRepository.findByActiveTrueOrderByNameAsc();
+
+        List<LectureResponse> responses = new ArrayList<>();
+
+        for (Lecture lecture : lectures) {
+
+            responses.add(
+                    new LectureResponse(
+                            lecture.getId(),
+                            lecture.getName(),
+                            lecture.getCode(),
+                            lecture.getSemesterYear(),
+                            lecture.getSemesterSeason(),
+                            lecture.isActive(),
+                            lecture.getProfessor().getId(),
+                            lecture.getProfessor().getFirstName(),
+                            lecture.getProfessor().getLastName(),
+                            lecture.getComments().size(),
+                            lecture.getRatings().size()
+                    )
+            );  
+        }
+
+        return responses;
+    }
+    
 
 }
