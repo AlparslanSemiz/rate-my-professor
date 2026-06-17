@@ -3,10 +3,14 @@ package com.pse.model.auth;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.pse.model.Student;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,6 +29,10 @@ public class Token {
 
     @Column(nullable = false)
     private String email;
+
+    @ManyToOne
+    @JoinColumn(name = "student_id")
+    private Student student;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String value;

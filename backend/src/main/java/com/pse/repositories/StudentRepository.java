@@ -13,5 +13,4 @@ public interface StudentRepository
     Optional<Student> findByKitEmail(String kitEmail);
 
     boolean existsByKitEmail(String kitEmail);
-
 }
