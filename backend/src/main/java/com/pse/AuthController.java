@@ -86,17 +86,17 @@ public class AuthController {
         }
 
 
-
         //Sanitize inputs
         String userEmail = request.email().trim().toLowerCase();
         String otp = request.loginToken().trim();
 
         boolean valid = tokenService.verifyOTToken(userEmail, otp);
-
+        
         if (!valid) {
             //TODO: More fine-grained error message (e.g. token expired...)
             return new LoginResponse("Invalid token", false, null);        
         }
+        tokenService.consumeOTP(userEmail, otp);
 
         String authToken = tokenService.createAndSaveAuthToken(userEmail);
         

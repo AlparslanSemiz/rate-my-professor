@@ -1,10 +1,13 @@
 package com.pse.response;
 
+import java.math.BigDecimal;
+import java.util.UUID;
+
+
 public record ProfessorResponse(
-        String id,
+        UUID id,
         String firstName,
         String lastName,
-        String photoUrl,
-        double averageRating,
+        BigDecimal averageRating,
         int ratingCount
 ) {}

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.pse.response.LectureResponse;
 import com.pse.response.ProfessorResponse;
 
 
@@ -22,6 +23,12 @@ public class SearchController {
     public List<ProfessorResponse> getProfessors() {
         
         return database.getProfessors();
+    }
+
+    @GetMapping("/lectures")
+    public List<LectureResponse> getLectures() {
+        
+        return database.getLectures();
     }
 
 

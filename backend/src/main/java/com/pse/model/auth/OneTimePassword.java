@@ -1,12 +1,12 @@
 package com.pse.model.auth;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,10 +26,12 @@ public class OneTimePassword {
     @Column(nullable = false)
     private String email;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(nullable = false)
     private String value;
 
-    @OneToOne
-    @JoinColumn(name = "token_id", unique = true)
-    private Token token;
+    @Column(nullable = false)
+    private boolean used = false;
+
+    @Column(nullable = false)
+    private LocalDateTime expiresAt;
 }

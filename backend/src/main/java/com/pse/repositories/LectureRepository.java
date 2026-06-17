@@ -11,5 +11,5 @@ public interface LectureRepository
         extends JpaRepository<Lecture, UUID> {
 
     List<Lecture> findByProfessorId(UUID professorId);
-
+    List<Lecture> findByActiveTrueOrderByNameAsc();
 }
