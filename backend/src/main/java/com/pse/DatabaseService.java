@@ -7,16 +7,16 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.pse.model.Professor;
 import com.pse.model.Lecture;
+import com.pse.model.Professor;
 import com.pse.model.auth.OneTimePassword;
 import com.pse.model.auth.Token;
+import com.pse.repositories.LectureRepository;
 import com.pse.repositories.OneTimePasswordRepository;
 import com.pse.repositories.ProfessorRepository;
-import com.pse.repositories.LectureRepository;
 import com.pse.repositories.TokenRepository;
-import com.pse.response.ProfessorResponse;
 import com.pse.response.LectureResponse;
+import com.pse.response.ProfessorResponse;
 
 
 
