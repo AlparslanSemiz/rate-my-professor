@@ -17,4 +17,5 @@ public interface RatingRepository
             UUID studentId,
             UUID lectureId
     );
+    
 }

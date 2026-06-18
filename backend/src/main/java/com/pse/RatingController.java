@@ -1,6 +1,11 @@
 package com.pse;
 
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -9,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.pse.request.RatingRequest;
 import com.pse.response.BasicResponse;
+import com.pse.response.TopicAverageResponse;
 
 
 
@@ -43,6 +49,9 @@ public class RatingController {
         return new BasicResponse("Rating submitted successfully",true);
     }
 
-
+    @GetMapping("/{lectureId}")
+    public List<TopicAverageResponse> getRatings(@PathVariable UUID lectureId) {
+        return ratingService.getRatings(lectureId);
+    }
 
 }
