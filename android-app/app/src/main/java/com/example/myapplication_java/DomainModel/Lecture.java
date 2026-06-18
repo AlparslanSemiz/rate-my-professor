@@ -1,18 +1,23 @@
 package com.example.myapplication_java.DomainModel;
 
+import androidx.annotation.NonNull;
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Entity(tableName = "lectures")
 public class Lecture {
-    public String lectureId;
-    public String title;
-    public String moduleCode;
-    public String description;
-    public Lecture(String lectureId, String title, String moduleCode, String description) {
-        this.description = description;
-        this.title = title;
-        this.moduleCode = moduleCode;
-        this.lectureId = lectureId;
+    @NonNull
+    @PrimaryKey
+    public String id;
+    public String name;
+    public String code;
+    public Lecture(String id, String name, String code) {
+        this.name = name;
+        this.code = code;
+        this.id = id;
     }
 
     public List<Professor> getProfessors() {

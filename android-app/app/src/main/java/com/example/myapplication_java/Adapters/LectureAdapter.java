@@ -33,7 +33,7 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
     public void onBindViewHolder(@NonNull LectureViewHolder holder, int position) {
         Lecture lecture = lectures.get(position);
 
-        holder.textView.setText(lecture.title); // This could be done better with a getter
+        holder.textView.setText(lecture.name); // This could be done better with a getter
     }
 
     @Override

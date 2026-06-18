@@ -50,4 +50,6 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation(libs.logging.interceptor)
+    implementation(libs.room.runtime)
+    annotationProcessor(libs.room.compiler)
 }

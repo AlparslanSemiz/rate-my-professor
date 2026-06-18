@@ -1,16 +1,29 @@
 package com.example.myapplication_java.DomainModel;
 
+import androidx.annotation.NonNull;
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+
 import java.util.ArrayList;
 import java.util.List;
 
+//changed, update the domain model.
+@Entity(tableName = "professors")
 public class Professor {
-    public String professorId;
-    public String name;
+    @NonNull
+    @PrimaryKey
+    public String id;
+    public String firstName;
+    public String lastName;
+    public int ratingCount;
+    public float averageRating;
     public String department;
-    public Professor(String professorId, String name, String department) {
-        this.professorId = professorId;
-        this.name = name;
+    public Professor(String id, String firstName, String lastName, String department, float averageRating) {
+        this.id = id;
         this.department = department;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.averageRating = averageRating;
     }
 
     //TODO: Implement here

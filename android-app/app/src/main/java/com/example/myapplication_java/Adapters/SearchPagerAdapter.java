@@ -6,6 +6,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import com.example.myapplication_java.Fragments.LectureSelectionFragment;
 import com.example.myapplication_java.Fragments.ProfessorSelectionFragment;
+import com.example.myapplication_java.ServerCommunication.APIService;
 
 /**
  * Bridge between the UI and the Fragment. Is used to manage and create

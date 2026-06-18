@@ -31,7 +31,7 @@ public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.Prof
     @Override
     public void onBindViewHolder(@NonNull ProfessorViewHolder holder, int position) {
         Professor professor = professors.get(position);
-        holder.textView.setText(professor.name);
+        holder.textView.setText(professor.firstName + " " + professor.lastName);
     }
 
     @Override

@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.viewmodel.CreationExtras;
 
+import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.databinding.FragmentHomeScreenBinding;
 
 public class HomeFragment extends Fragment {

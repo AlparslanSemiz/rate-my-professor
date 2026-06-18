@@ -16,6 +16,7 @@ import com.example.myapplication_java.Adapters.ProfessorAdapter;
 import com.example.myapplication_java.Adapters.SearchPagerAdapter;
 import com.example.myapplication_java.Adapters.SearchService;
 import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.databinding.FragmentProfSelectionBinding;
 import com.example.myapplication_java.databinding.FragmentSearchBinding;
 import com.google.android.material.tabs.TabLayout;

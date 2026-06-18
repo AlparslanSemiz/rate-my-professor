@@ -1,7 +1,13 @@
 package com.example.myapplication_java.ServerCommunication;
 
+import com.example.myapplication_java.DomainModel.Lecture;
+import com.example.myapplication_java.DomainModel.Professor;
+
+import java.util.List;
+
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.GET;
 import retrofit2.http.POST;
 
 public interface APIService {
@@ -14,8 +20,19 @@ public interface APIService {
             @Body LoginRequest request
     );
 
+    /**
+     * used to log in with the token.
+     * @param request the request with the token and mail.
+     * @return the server response.
+     */
     @POST("/auth/login")
     Call<ServerResponse> login(
             @Body LoginRequest request
     );
+
+    @GET("/data/professor")
+    Call<List<Professor>> getProfessors();
+
+    @GET("/data/lectures")
+    Call<List<Lecture>> getLectures();
 }
