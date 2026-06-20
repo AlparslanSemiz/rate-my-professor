@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.viewmodel.CreationExtras;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.myapplication_java.Adapters.ProfessorAdapter;
 import com.example.myapplication_java.Adapters.SearchPagerAdapter;
@@ -45,20 +46,44 @@ public class SearchFragment extends Fragment {
         SearchPagerAdapter adapter = new SearchPagerAdapter(this);
         binding.searchViewPager.setAdapter(adapter);
 
-        // The code below is android tab layout which sucks. But i leave it here in case i need it later
-//        new TabLayoutMediator(
-//                binding.searchTabLayout,
-//                binding.searchViewPager,
-//                (tab, position) -> {
-//                    if (position == 0) {
-//                        tab.setText("Professors");
-//                    } else {
-//                        tab.setText("Lectures");
-//                    }
-//                }
-//        ).attach();
+        binding.profsButton.setOnClickListener(v -> {
+            System.out.println("PROF BOTTOM GOT CLICKED");
+            binding.searchViewPager.setCurrentItem(0, true);
+        });
+
+        binding.lecturesButton.setOnClickListener(v -> {
+            System.out.println("LECTURE BOTTOM GOT CLICKED");
+            binding.searchViewPager.setCurrentItem(1, true);
+        });
+
+        binding.searchViewPager.registerOnPageChangeCallback(
+                new ViewPager2.OnPageChangeCallback() {
+                    @Override
+                    public void onPageSelected(int position) {
+                        super.onPageSelected(position);
+
+                        if (position == 0) {
+                            System.out.println("SWIPE TO PROF TAB");
+                            selectProfessorTab();
+                        } else {
+                            System.out.println("SWIPE TO LECTURE TAB");
+                            selectLectureTab();
+                        }
+                    }
+                }
+        );
 
         return binding.getRoot();
+    }
+
+    private void selectProfessorTab() {
+        binding.profsButton.setSelected(true);
+        binding.lecturesButton.setSelected(false);
+    }
+
+    private void selectLectureTab() {
+        binding.profsButton.setSelected(false);
+        binding.lecturesButton.setSelected(true);
     }
 
     @Override

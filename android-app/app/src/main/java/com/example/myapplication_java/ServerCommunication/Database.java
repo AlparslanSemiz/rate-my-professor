@@ -36,6 +36,7 @@ public abstract class Database extends RoomDatabase {
         Call<List<Lecture>> lectureCall = apiService.getLectures();
         List<Lecture> lectures = new ArrayList<>();
         ExecutorService executor = Executors.newSingleThreadExecutor();
+
         professorCall.enqueue(new retrofit2.Callback<List<Professor>>() {
             @Override
             public void onResponse(Call<List<Professor>> call, Response<List<Professor>> response) {
@@ -45,6 +46,7 @@ public abstract class Database extends RoomDatabase {
                     Log.e("Database", "Professor response body is null");
                     return;
                 }
+                System.out.println("THIS IS THE SIZE OF PROFESSOR LIST: " + professors.size());
                 executor.execute(() -> {
                     service.deleteProfessors();
                     for (Professor professor : professors) {
@@ -58,6 +60,7 @@ public abstract class Database extends RoomDatabase {
                 Log.println(Log.DEBUG, "Database update failure", throwable.getMessage());
             }
         });
+
         lectureCall.enqueue(new retrofit2.Callback<List<Lecture>>() {
             @Override
             public void onResponse(Call<List<Lecture>> call, Response<List<Lecture>> response) {
@@ -67,6 +70,8 @@ public abstract class Database extends RoomDatabase {
                     Log.e("Database", "Lecture response body is null");
                     return;
                 }
+
+                System.out.println("THIS IS THE SIZE OF LECTURE LIST " + lectures.size());
 
                 executor.execute(() -> {
                     service.deleteLectures();
