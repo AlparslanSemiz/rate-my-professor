@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class ProfessorSelectionFragment extends Fragment {
+public class SelectionFragment extends Fragment {
 
     private FragmentProfSelectionBinding binding;
     private Button lectureButton;

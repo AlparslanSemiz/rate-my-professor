@@ -5,8 +5,7 @@ import androidx.fragment.app.Fragment;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import com.example.myapplication_java.Fragments.LectureSelectionFragment;
-import com.example.myapplication_java.Fragments.ProfessorSelectionFragment;
-import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.Fragments.SelectionFragment;
 
 /**
  * Bridge between the UI and the Fragment. Is used to manage and create
@@ -28,7 +27,7 @@ public class SearchPagerAdapter extends FragmentStateAdapter {
     @Override
     public Fragment createFragment(int position) {
         if (position == 0) {
-            return new ProfessorSelectionFragment();
+            return new SelectionFragment();
         } else {
             return new LectureSelectionFragment();
         }
