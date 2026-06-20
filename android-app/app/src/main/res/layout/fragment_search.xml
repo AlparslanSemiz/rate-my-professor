@@ -5,12 +5,39 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/searchTabLayout"
+    <LinearLayout
+        android:id="@+id/customTabLayout"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        app:tabMode="fixed"
-        app:tabGravity="fill" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/profsButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:layout_weight="1"
+            android:background="@drawable/custom_tab_background"
+            android:backgroundTint="@null"
+            app:backgroundTint="@null"
+            android:text="Professors"
+            android:textColor="@color/custom_tab_text_color"
+            app:cornerRadius="24dp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/lecturesButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:layout_weight="1"
+            android:background="@drawable/custom_tab_background"
+            android:backgroundTint="@null"
+            app:backgroundTint="@null"
+            android:text="Lectures"
+            android:textColor="@color/custom_tab_text_color"
+            app:cornerRadius="24dp"/>
+
+    </LinearLayout>
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/searchViewPager"

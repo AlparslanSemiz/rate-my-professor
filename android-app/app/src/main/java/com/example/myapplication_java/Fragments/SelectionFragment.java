@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class ProfessorSelectionFragment extends Fragment {
+public class SelectionFragment extends Fragment {
 
     private FragmentProfSelectionBinding binding;
     private Button lectureButton;
@@ -33,6 +33,27 @@ public class ProfessorSelectionFragment extends Fragment {
     private SearchService service;
     private ArrayList<Lecture> lectures;
     private ArrayList<Professor> professors;
+    private static final String ARG_SELECTION_TYPE = "selection_type";
+    private SelectionType selectionType;
+    private static final String TYPE_PROFESSORS = "professors";
+    private static final String TYPE_LECTURES = "lectures";
+
+    /**
+     * The fragments get a new type everytime it gets created.
+     * This is how we differentiate between Lecture list and Prof list.
+     * @param type
+     * @return
+     */
+    public static SelectionFragment newInstance(SelectionType type) {
+        SelectionFragment fragment = new SelectionFragment();
+
+        Bundle args = new Bundle();
+
+        args.putString(ARG_SELECTION_TYPE, type.name());
+        fragment.setArguments(args);
+
+        return fragment;
+    }
 
     @Nullable
     @Override
@@ -44,53 +65,46 @@ public class ProfessorSelectionFragment extends Fragment {
         binding = FragmentProfSelectionBinding.inflate(inflater, container, false);
 
         binding.list.setLayoutManager(new LinearLayoutManager(getContext()));
-        lectureButton = binding.lecturesButton;
-        professorButton = binding.profsButton;
-        lectureButton.setOnClickListener(v -> {
-            professor = false;
-            setList(professor);
-        });
-        professorButton.setOnClickListener(v -> {
-            professor = true;
-            setList(professor);
-        });
 
-        //I want to use the same fragment for both lectures and professors I think its more intuitive
-        //and makes a lot of things easier. This boolean shows if its in professor selection or
-        //lecture selection.
         Database database = Room.databaseBuilder(
                 getContext(),
                 Database.class,
                 Database.DB_NAME
         ).build();
+
         service = database.searchService();
 
-        professor = true;
-        setList(professor);
+        String type = requireArguments().getString(ARG_SELECTION_TYPE);
+        selectionType = SelectionType.valueOf(type);
+        setList(selectionType);
 
         return binding.getRoot();
     }
 
-    private void setList(boolean professor) {
+    private void setList(SelectionType type) {
 
         try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
             executor.execute(() -> {
-                if (professor) {
-                    if (professors == null) {
-                        professors = new ArrayList<>(service.searchProfessors(""));
-                    }
-                    getActivity().runOnUiThread(() -> {
-                        binding.list.setAdapter(new ProfessorAdapter(professors));
+                switch (type) {
+                    case PROFESSORS:
+                        if (professors == null) {
+                            professors = new ArrayList<>(service.searchProfessors(""));
+                        }
 
-                    });
-                } else {
-                    if (lectures == null) {
-                       lectures = new ArrayList<>(service.searchLectures(""));
-                    }
-                    getActivity().runOnUiThread(() -> {
-                        binding.list.setAdapter(new LectureAdapter(lectures));
+                        requireActivity().runOnUiThread(() -> {
+                            binding.list.setAdapter(new ProfessorAdapter(professors));
+                        });
+                        break;
 
-                    });
+                    case LECTURES:
+                        if (lectures == null) {
+                            lectures = new ArrayList<>(service.searchLectures(""));
+                        }
+
+                        requireActivity().runOnUiThread(() -> {
+                            binding.list.setAdapter(new LectureAdapter(lectures));
+                        });
+                        break;
                 }
             });
         }
