@@ -39,14 +39,6 @@ public class SearchFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-//        binding = FragmentProfSelectionBinding.inflate(inflater, container, false);
-//        recyclerView = binding.list;
-//        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-//        SearchService service = new SearchService(getContext());
-//        service.setMockDatabase();
-//        ArrayList<Professor> professors = service.searchProfessors("");
-//        recyclerView.setAdapter(new ProfessorAdapter(professors));
-//        return binding.getRoot();
 
         binding = FragmentSearchBinding.inflate(inflater, container, false);
 

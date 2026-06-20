@@ -40,6 +40,11 @@ public abstract class Database extends RoomDatabase {
             @Override
             public void onResponse(Call<List<Professor>> call, Response<List<Professor>> response) {
                 List<Professor> professors = response.body();
+
+                if (professors == null) {
+                    Log.e("Database", "Professor response body is null");
+                    return;
+                }
                 executor.execute(() -> {
                     service.deleteProfessors();
                     for (Professor professor : professors) {
@@ -57,6 +62,12 @@ public abstract class Database extends RoomDatabase {
             @Override
             public void onResponse(Call<List<Lecture>> call, Response<List<Lecture>> response) {
                 List<Lecture> lectures = response.body();
+
+                if (lectures == null) {
+                    Log.e("Database", "Lecture response body is null");
+                    return;
+                }
+
                 executor.execute(() -> {
                     service.deleteLectures();
                     for (Lecture lecture : lectures) {
