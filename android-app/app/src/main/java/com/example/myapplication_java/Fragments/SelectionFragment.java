@@ -4,7 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -18,7 +18,7 @@ import com.example.myapplication_java.Adapters.SearchService;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.ServerCommunication.Database;
-import com.example.myapplication_java.databinding.FragmentProfSelectionBinding;
+import com.example.myapplication_java.databinding.FragmentSelectionBinding;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
@@ -26,17 +26,12 @@ import java.util.concurrent.Executors;
 
 public class SelectionFragment extends Fragment {
 
-    private FragmentProfSelectionBinding binding;
-    private Button lectureButton;
-    private Button professorButton;
-    private boolean professor;
+    private FragmentSelectionBinding binding;
     private SearchService service;
     private ArrayList<Lecture> lectures;
     private ArrayList<Professor> professors;
     private static final String ARG_SELECTION_TYPE = "selection_type";
     private SelectionType selectionType;
-    private static final String TYPE_PROFESSORS = "professors";
-    private static final String TYPE_LECTURES = "lectures";
 
     /**
      * The fragments get a new type everytime it gets created.
@@ -62,7 +57,7 @@ public class SelectionFragment extends Fragment {
             @Nullable ViewGroup container,
             @Nullable Bundle savedInstanceState
     ) {
-        binding = FragmentProfSelectionBinding.inflate(inflater, container, false);
+        binding = FragmentSelectionBinding.inflate(inflater, container, false);
 
         binding.list.setLayoutManager(new LinearLayoutManager(getContext()));
 

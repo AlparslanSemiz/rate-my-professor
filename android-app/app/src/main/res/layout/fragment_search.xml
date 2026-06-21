@@ -5,6 +5,8 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+
+
     <LinearLayout
         android:id="@+id/customTabLayout"
         android:layout_width="match_parent"
@@ -38,6 +40,8 @@
             app:cornerRadius="24dp"/>
 
     </LinearLayout>
+
+
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/searchViewPager"

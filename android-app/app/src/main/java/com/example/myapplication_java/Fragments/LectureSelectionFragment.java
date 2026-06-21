@@ -60,6 +60,7 @@ public class LectureSelectionFragment extends Fragment {
 
     // I was at minute 6:37 and LectureListFragment.java in chat Datenbank für profe...
     // >)) bro what??
+    // watched a tutorial video and paused mid-way through xd
     @Override
     public void onDestroyView() {
         super.onDestroyView();
