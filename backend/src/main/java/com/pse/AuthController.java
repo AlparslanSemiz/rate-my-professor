@@ -1,5 +1,7 @@
 package com.pse;
 
+import java.time.LocalDateTime;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -8,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.pse.model.Student;
 import com.pse.request.LoginRequest;
 import com.pse.request.OTPRequest;
 import com.pse.response.BasicResponse;
@@ -35,6 +38,8 @@ public class AuthController {
     private MailService mailService;
     @Autowired
     private TokenService tokenService;
+    @Autowired
+    private DatabaseService database;
     
     
     /**
@@ -98,7 +103,23 @@ public class AuthController {
         }
         tokenService.consumeOTP(userEmail, otp);
 
-        String authToken = tokenService.createAndSaveAuthToken(userEmail);
+        //TODO check if Student exists in Databse and if not add him
+
+        Student student = database.findStudentByKitEmail(userEmail);
+
+
+        if(student == NULL) {
+            Student student = new Student();
+            newStudent.setKitEmail(userEmail);
+            newStudent.setUsername(userEmail);
+            newStudent.setEmailVerifiedAt(LocalDateTime.now());
+            newStudent.setCredibilityScore(0);
+            
+            database.addStudent(newStudent);
+        }
+        
+
+        String authToken = tokenService.createAndSaveAuthToken(student);
         
 
         //Send successful login mail (Try to get ifnormation on ip e.g.)
@@ -109,6 +130,7 @@ public class AuthController {
         String userAgent = httpRequest.getHeader("User-Agent");
 
         mailService.sendSuccessfulLogin(userEmail, ip, userAgent);
+
         
 
         return new LoginResponse("Login successful", true, authToken);
