@@ -24,7 +24,7 @@ public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.Prof
     @Override
     public ProfessorViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).
-                inflate(R.layout.selection_item, parent, false);
+                inflate(R.layout.item_professor_name, parent, false);
         return new ProfessorViewHolder(view);
     }
 
@@ -44,7 +44,7 @@ public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.Prof
         TextView textView;
         public ProfessorViewHolder(View itemview) {
             super(itemview);
-            textView = itemview.findViewById(R.id.prof_placeholder);
+            textView = itemview.findViewById(R.id.profName);
         }
     }
 }

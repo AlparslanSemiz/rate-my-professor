@@ -25,7 +25,7 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
     @Override
     public LectureViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.selection_item, parent, false);
+                .inflate(R.layout.item_lecture_name, parent, false);
         return new LectureViewHolder(view);
     }
 
@@ -47,7 +47,7 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
 
         public LectureViewHolder(@NonNull View itemView) {
             super(itemView);
-            textView = itemView.findViewById(R.id.prof_placeholder);
+            textView = itemView.findViewById(R.id.lectureName);
         }
     }
 }
