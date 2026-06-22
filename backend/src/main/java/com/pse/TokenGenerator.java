@@ -11,6 +11,9 @@ public class TokenGenerator {
 
     private static final SecureRandom secureRandom = new SecureRandom();
 
+    //Human friendly alphabet (soem fonts make e.g. l and I look the same)
+    private static final String CHARACTERS = "23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ";
+
     /**
      * 32 Byte long Token => ~ 43 Chars (Base64)
      */
@@ -20,18 +23,22 @@ public class TokenGenerator {
         secureRandom.nextBytes(bytes);
         
 
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         //.withoutPadding() used, so that String is filled with "=" at end
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     /**
-     * Create 6 Digit One Time Password
+     * Create 6 Char long One Time Password
      */
     public static String generateOneTimePassword() {
 
-        int code = secureRandom.nextInt(1000000); 
-        return String.format("%06d", code);
+        StringBuilder otp = new StringBuilder(6);
 
+        for (int i = 0; i < 6; i++) {
+            otp.append(CHARACTERS.charAt(secureRandom.nextInt(CHARACTERS.length())));
+        }
+
+        return otp.toString();
     }
 
    

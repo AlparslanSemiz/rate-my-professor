@@ -11,6 +11,6 @@ class TokenGeneratorTest {
         String code = TokenGenerator.generateOneTimePassword();
 
         assertEquals(6, code.length());
-        assertTrue(code.matches("\\d{6}"));
-    }
+        assertTrue(code.matches("[23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ]{6}"));    
+        }
 }

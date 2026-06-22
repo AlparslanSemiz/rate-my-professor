@@ -9,11 +9,13 @@ import org.springframework.stereotype.Service;
 
 import com.pse.model.Lecture;
 import com.pse.model.Professor;
+import com.pse.model.Student;
 import com.pse.model.auth.OneTimePassword;
 import com.pse.model.auth.Token;
 import com.pse.repositories.LectureRepository;
 import com.pse.repositories.OneTimePasswordRepository;
 import com.pse.repositories.ProfessorRepository;
+import com.pse.repositories.StudentRepository;
 import com.pse.repositories.TokenRepository;
 import com.pse.response.LectureResponse;
 import com.pse.response.ProfessorResponse;
@@ -36,6 +38,9 @@ public class DatabaseService {
     private ProfessorRepository professorRepository;
     @Autowired
     private LectureRepository lectureRepository;
+    @Autowired
+    private StudentRepository studentRepository;
+    
 
 
     public void saveOTP(String email, String otp, LocalDateTime expiresAt){
@@ -79,13 +84,14 @@ public class DatabaseService {
     }
 
 
-    public void saveAuthToken(String email, String authToken, LocalDateTime expiresAt){
+    public void saveAuthToken(String email, String authToken, LocalDateTime expiresAt, Student student){
 
         Token token = new Token();
 
         token.setEmail(email);
         token.setValue(authToken);
         token.setExpiresAt(expiresAt);
+        token.setStudent(student);
 
         tokenRepository.save(token);
 
@@ -171,6 +177,18 @@ public class DatabaseService {
         }
 
         return responses;
+    }
+
+    public boolean studentExists(String userEmail) {
+        return studentRepository.existsByKitEmail(userEmail);
+    }
+
+    public Student findStudentByKitEmail(String email) {
+        return studentRepository.findByKitEmail(email);
+    }
+
+    public void addStudent(Student student) {
+        studentRepository.save(student);
     }
     
 
