@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
+import com.pse.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +34,7 @@ public class TokenService {
     
     }
 
-    public String createAndSaveAuthToken(String email) {
+    public String createAndSaveAuthToken(Student student) {
 
         String authToken = TokenGenerator.generateToken();
 
@@ -41,7 +42,7 @@ public class TokenService {
         LocalDateTime expiresAt = berlinTime.plusDays(30).toLocalDateTime();
 
 
-        database.saveAuthToken(email, authToken, expiresAt);
+        database.saveAuthToken(student, authToken, expiresAt);
 
 
         return authToken;

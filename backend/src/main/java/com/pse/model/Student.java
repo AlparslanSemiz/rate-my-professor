@@ -44,7 +44,7 @@ public class Student {
     private LocalDateTime emailVerifiedAt;
 
     @Column(name = "credibility_score", nullable = false)
-    private int credibilityScore = 0;
+    private int credibilityScore;
 
     @OneToMany(mappedBy = "student")
     private List<Rating> ratings = new ArrayList<>();
@@ -61,6 +61,10 @@ public class Student {
     @OneToMany(mappedBy = "reporter")
     private List<AnswerReport> answerReports = new ArrayList<>();
 
+
+    @Column(name = "deleted")
+    private boolean deleted;
+
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -68,4 +72,5 @@ public class Student {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
 }

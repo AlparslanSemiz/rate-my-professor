@@ -21,8 +21,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 
 
-
-
 /**
  * Handles the authentication of the users.
  * - User can request login (ask for OTP [OneTimePassword])
@@ -67,7 +65,7 @@ public class AuthController {
 
         mailService.sendLoginMail(userEmail, token);
 
-        //FOR FUTURE: Dont tell, whether user has an existing account (only e.g. if user has account email has been sent)
+        //FOR FUTURE: Don't tell, whether user has an existing account (only e.g. if user has account email has been sent)
         return new BasicResponse("Login Token sent to: " + userEmail, true); 
     }
 
@@ -108,21 +106,25 @@ public class AuthController {
         Student student = database.findStudentByKitEmail(userEmail);
 
 
-        if(student == NULL) {
-            Student student = new Student();
-            newStudent.setKitEmail(userEmail);
-            newStudent.setUsername(userEmail);
-            newStudent.setEmailVerifiedAt(LocalDateTime.now());
-            newStudent.setCredibilityScore(0);
+        if(student == null) {
+            student = new Student();
+            student.setKitEmail(userEmail);
+
+            String userName = Utility.generateUsername();
+
+            student.setUsername(userName);
+
+            student.setEmailVerifiedAt(LocalDateTime.now());
+            student.setCredibilityScore(0);
             
-            database.addStudent(newStudent);
+            database.addStudent(student);
         }
         
 
         String authToken = tokenService.createAndSaveAuthToken(student);
         
 
-        //Send successful login mail (Try to get ifnormation on ip e.g.)
+        //Send successful login mail (Try to get information on ip e.g.)
         String ip = httpRequest.getHeader("X-Forwarded-For");
         if (ip == null || ip.isBlank()) {
             ip = httpRequest.getRemoteAddr();

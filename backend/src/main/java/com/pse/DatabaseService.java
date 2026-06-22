@@ -84,9 +84,11 @@ public class DatabaseService {
     }
 
 
-    public void saveAuthToken(String email, String authToken, LocalDateTime expiresAt, Student student){
+    public void saveAuthToken(Student student, String authToken, LocalDateTime expiresAt){
 
         Token token = new Token();
+
+        String email = studentRepository.findEmailByStudent(student);
 
         token.setEmail(email);
         token.setValue(authToken);
@@ -184,12 +186,15 @@ public class DatabaseService {
     }
 
     public Student findStudentByKitEmail(String email) {
-        return studentRepository.findByKitEmail(email);
+        return studentRepository.findByKitEmail(email).orElse(null);
     }
 
     public void addStudent(Student student) {
         studentRepository.save(student);
     }
-    
 
+
+    public void deleteStudentByMail(String email) {
+        studentRepository.softDeleteByKitEmail(email);
+    }
 }

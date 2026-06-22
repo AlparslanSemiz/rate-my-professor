@@ -3,22 +3,28 @@ package com.pse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.pse.model.Student;
+import com.pse.request.LogoutRequest;
+import com.pse.request.ValidateCredsRequest;
+import com.pse.response.BasicResponse;
+import com.pse.response.StudentProfileResponse;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
-
-import com.pse.request.LogoutRequest;
-import com.pse.request.ValidateCredsRequest;
-import com.pse.response.BasicResponse;
 
 class AccountControllerTests {
 
     @Mock
     private TokenService tokenService;
+
+    @Mock
+    private DatabaseService databaseService;
 
     @InjectMocks
     private AccountController accountController;
@@ -57,9 +63,6 @@ class AccountControllerTests {
 
     @Test
     void logoutShouldFailIfEmailIsMissing() {
-        when(tokenService.verifyAuthToken("auth-token"))
-                .thenReturn("test@student.kit.edu");
-
         BasicResponse response =
                 accountController.requestLogout(
                         "Bearer auth-token",
@@ -167,5 +170,105 @@ class AccountControllerTests {
                 "Error, wrong email: other@student.kit.edu",
                 response.message()
         );
+    }
+
+    @Test
+    void informationShouldFailWithoutBearerToken() {
+        StudentProfileResponse response =
+                accountController.getUserInformation(
+                        "invalid-header",
+                        new LogoutRequest("test@student.kit.edu")
+                );
+
+        assertFalse(response.success());
+        assertEquals("Error, no Auth-Token supplied", response.message());
+    }
+
+    @Test
+    void informationShouldFailIfEmailIsMissing() {
+        StudentProfileResponse response =
+                accountController.getUserInformation(
+                        "Bearer auth-token",
+                        new LogoutRequest(null)
+                );
+
+        assertFalse(response.success());
+        assertEquals("Error, no email supplied", response.message());
+    }
+
+    @Test
+    void informationShouldFailForWrongAuthToken() {
+        when(tokenService.verifyAuthToken("wrong-token"))
+                .thenReturn(null);
+
+        StudentProfileResponse response =
+                accountController.getUserInformation(
+                        "Bearer wrong-token",
+                        new LogoutRequest("test@student.kit.edu")
+                );
+
+        assertFalse(response.success());
+        assertEquals("Error, wrong Auth-Token", response.message());
+    }
+
+    @Test
+    void informationShouldFailForWrongEmail() {
+        when(tokenService.verifyAuthToken("auth-token"))
+                .thenReturn("test@student.kit.edu");
+
+        StudentProfileResponse response =
+                accountController.getUserInformation(
+                        "Bearer auth-token",
+                        new LogoutRequest("other@student.kit.edu")
+                );
+
+        assertFalse(response.success());
+        assertEquals("Error, wrong email for auth Token", response.message());
+    }
+
+    @Test
+    void informationShouldSucceedForValidTokenAndEmail() {
+        Student student = new Student();
+        student.setUsername("SchnellerFuchs1234");
+        student.setCredibilityScore(42);
+
+        when(tokenService.verifyAuthToken("auth-token"))
+                .thenReturn("test@student.kit.edu");
+
+        when(databaseService.findStudentByKitEmail("test@student.kit.edu"))
+                .thenReturn(student);
+
+        StudentProfileResponse response =
+                accountController.getUserInformation(
+                        "Bearer auth-token",
+                        new LogoutRequest("test@student.kit.edu")
+                );
+
+        assertTrue(response.success());
+        assertEquals("Success", response.message());
+        assertEquals("SchnellerFuchs1234", response.username());
+        assertEquals(42, response.credibilityScore());
+        assertEquals(0, response.commentsWritten());
+        assertEquals(0, response.ratingsCount());
+    }
+
+    @Test
+    void deleteAccountShouldSucceedForValidTokenAndEmail() {
+        when(tokenService.verifyAuthToken("auth-token"))
+                .thenReturn("test@student.kit.edu");
+
+        BasicResponse response =
+                accountController.deleteAccount(
+                        "Bearer auth-token",
+                        new LogoutRequest("test@student.kit.edu")
+                );
+
+        assertTrue(response.success());
+        assertEquals(
+                "Deleted Account succesfully: test@student.kit.edu",
+                response.message()
+        );
+
+        verify(databaseService).deleteStudentByMail("test@student.kit.edu");
     }
 }
