@@ -11,12 +11,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.pse.model.Student;
-import com.pse.request.LoginRequest;
-import com.pse.request.OTPRequest;
-import com.pse.response.BasicResponse;
-import com.pse.response.LoginResponse;
+import com.pse.auth.controller.AuthController;
+import com.pse.auth.service.MailService;
+import com.pse.auth.service.TokenService;
+import com.pse.user.model.Student;
+import com.pse.auth.dto.request.LoginRequest;
+import com.pse.auth.dto.request.OTPRequest;
+import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.dto.response.LoginResponse;
 
+import com.pse.user.service.StudentService;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +28,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.util.Optional;
 
 class AuthControllerTests {
 
@@ -33,8 +39,9 @@ class AuthControllerTests {
     @Mock
     private TokenService tokenService;
 
+
     @Mock
-    private DatabaseService database;
+    private StudentService studentService;
 
     @InjectMocks
     private AuthController authController;
@@ -69,8 +76,8 @@ class AuthControllerTests {
         student.setKitEmail("test@student.kit.edu");
         student.setUsername("SchnellerFuchs1234");
 
-        when(database.findStudentByKitEmail("test@student.kit.edu"))
-                .thenReturn(student);
+        when(studentService.findByKitEmail("test@student.kit.edu"))
+                .thenReturn(Optional.of(student));
 
         when(tokenService.createAndSaveAuthToken(student))
                 .thenReturn("auth-token");
@@ -112,7 +119,7 @@ class AuthControllerTests {
                 "123456"))
                 .thenReturn(true);
 
-        when(database.findStudentByKitEmail("test@student.kit.edu"))
+        when(studentService.findByKitEmail("test@student.kit.edu"))
                 .thenReturn(null);
 
         when(tokenService.createAndSaveAuthToken(any(Student.class)))
@@ -125,7 +132,7 @@ class AuthControllerTests {
         assertEquals("Login successful", response.message());
         assertEquals("auth-token", response.authToken());
 
-        verify(database).addStudent(any(Student.class));
+        verify(studentService).addStudent(any(Student.class));
         verify(tokenService).consumeOTP("test@student.kit.edu", "123456");
         verify(tokenService).createAndSaveAuthToken(any(Student.class));
     }

@@ -2,6 +2,8 @@ package com.pse;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.pse.auth.service.TokenGenerator;
 import org.junit.jupiter.api.Test;
 
 class TokenGeneratorTest {

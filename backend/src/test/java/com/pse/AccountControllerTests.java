@@ -6,28 +6,35 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.pse.model.Student;
-import com.pse.request.LogoutRequest;
-import com.pse.request.ValidateCredsRequest;
-import com.pse.response.BasicResponse;
-import com.pse.response.StudentProfileResponse;
+import com.pse.auth.controller.AccountController;
+import com.pse.auth.service.TokenService;
+import com.pse.user.model.Student;
+import com.pse.auth.dto.request.LogoutRequest;
+import com.pse.auth.dto.request.ValidateCredsRequest;
+import com.pse.auth.dto.response.BasicResponse;
+import com.pse.user.dto.StudentProfileResponse;
 
+import com.pse.user.service.StudentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.Optional;
 
 class AccountControllerTests {
 
     @Mock
     private TokenService tokenService;
 
-    @Mock
-    private DatabaseService databaseService;
 
     @InjectMocks
     private AccountController accountController;
+
+    @Mock
+    private StudentService studentService;
 
     @BeforeEach
     void setUp() {
@@ -235,8 +242,8 @@ class AccountControllerTests {
         when(tokenService.verifyAuthToken("auth-token"))
                 .thenReturn("test@student.kit.edu");
 
-        when(databaseService.findStudentByKitEmail("test@student.kit.edu"))
-                .thenReturn(student);
+        when(studentService.findByKitEmail("test@student.kit.edu"))
+                .thenReturn(Optional.of(student));
 
         StudentProfileResponse response =
                 accountController.getUserInformation(
@@ -269,6 +276,6 @@ class AccountControllerTests {
                 response.message()
         );
 
-        verify(databaseService).deleteStudentByMail("test@student.kit.edu");
+        verify(studentService).softDeleteByKitEmail("test@student.kit.edu");
     }
 }
