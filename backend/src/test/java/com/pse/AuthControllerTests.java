@@ -1,35 +1,34 @@
 package com.pse;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
 
 import com.pse.auth.controller.AuthController;
-import com.pse.auth.service.MailService;
-import com.pse.auth.service.TokenService;
-import com.pse.user.model.Student;
 import com.pse.auth.dto.request.LoginRequest;
 import com.pse.auth.dto.request.OTPRequest;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.LoginResponse;
-
+import com.pse.auth.service.MailService;
+import com.pse.auth.service.TokenService;
+import com.pse.user.model.Student;
 import com.pse.user.service.StudentService;
+
 import jakarta.servlet.http.HttpServletRequest;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
-import java.util.Optional;
 
 class AuthControllerTests {
 
@@ -98,35 +97,35 @@ class AuthControllerTests {
         );
     }
 
-    @Test
-    void loginShouldCreateStudentIfStudentDoesNotExist() {
+   @Test
+   void loginShouldCreateStudentIfStudentDoesNotExist() {
         LoginRequest request =
-                new LoginRequest("test@student.kit.edu", "123456");
+            new LoginRequest("test@student.kit.edu", "123456");
 
         HttpServletRequest httpRequest = mock(HttpServletRequest.class);
 
         when(httpRequest.getHeader("X-Forwarded-For"))
-                .thenReturn(null);
+            .thenReturn(null);
 
         when(httpRequest.getRemoteAddr())
-                .thenReturn("127.0.0.1");
+            .thenReturn("127.0.0.1");
 
         when(httpRequest.getHeader("User-Agent"))
-                .thenReturn("JUnit Test");
+            .thenReturn("JUnit Test");
 
         when(tokenService.verifyOTToken(
-                "test@student.kit.edu",
-                "123456"))
-                .thenReturn(true);
+            "test@student.kit.edu",
+            "123456"))
+            .thenReturn(true);
 
         when(studentService.findByKitEmail("test@student.kit.edu"))
-                .thenReturn(null);
+            .thenReturn(Optional.empty());
 
         when(tokenService.createAndSaveAuthToken(any(Student.class)))
-                .thenReturn("auth-token");
+            .thenReturn("auth-token");
 
         LoginResponse response =
-                authController.login(request, httpRequest);
+            authController.login(request, httpRequest);
 
         assertTrue(response.success());
         assertEquals("Login successful", response.message());
@@ -135,7 +134,7 @@ class AuthControllerTests {
         verify(studentService).addStudent(any(Student.class));
         verify(tokenService).consumeOTP("test@student.kit.edu", "123456");
         verify(tokenService).createAndSaveAuthToken(any(Student.class));
-    }
+}
 
     @Test
     void loginShouldFailForInvalidToken() {
