@@ -6,25 +6,6 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/search_button"
-        android:layout_width="80dp"
-        android:layout_height="90dp"
-        android:layout_marginEnd="32dp"
-        android:layout_marginBottom="32dp"
-        app:backgroundTint="#575757"
-        app:cornerRadius="48dp"
-        app:icon="@android:drawable/ic_menu_search"
-        app:iconGravity="textStart"
-        app:iconSize="50dp"
-        app:iconTint="@android:color/white"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:srcCompat="@android:drawable/ic_menu_search" />
-
-
-
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/list"
         android:layout_width="match_parent"
