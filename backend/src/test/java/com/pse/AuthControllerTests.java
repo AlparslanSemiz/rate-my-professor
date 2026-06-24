@@ -66,7 +66,7 @@ class AuthControllerTests {
         when(httpRequest.getHeader("User-Agent"))
                 .thenReturn("JUnit Test");
 
-        when(tokenService.verifyOTToken(
+        when(tokenService.verifyOTP(
                 "test@student.kit.edu",
                 "123456"))
                 .thenReturn(true);
@@ -113,7 +113,7 @@ class AuthControllerTests {
         when(httpRequest.getHeader("User-Agent"))
             .thenReturn("JUnit Test");
 
-        when(tokenService.verifyOTToken(
+        when(tokenService.verifyOTP(
             "test@student.kit.edu",
             "123456"))
             .thenReturn(true);
@@ -143,7 +143,7 @@ class AuthControllerTests {
 
         HttpServletRequest httpRequest = mock(HttpServletRequest.class);
 
-        when(tokenService.verifyOTToken(
+        when(tokenService.verifyOTP(
                 "test@student.kit.edu",
                 "wrong"))
                 .thenReturn(false);
@@ -244,7 +244,7 @@ class AuthControllerTests {
         );
 
         verify(tokenService, never())
-                .createAndSaveOTToken(anyString());
+                .createAndSaveOTP(anyString());
 
         verify(mailService, never())
                 .sendLoginMail(anyString(), anyString());
@@ -262,7 +262,7 @@ class AuthControllerTests {
         assertEquals("Error, Email is required", response.message());
 
         verify(tokenService, never())
-                .createAndSaveOTToken(anyString());
+                .createAndSaveOTP(anyString());
 
         verify(mailService, never())
                 .sendLoginMail(anyString(), anyString());
@@ -273,7 +273,7 @@ class AuthControllerTests {
         OTPRequest request =
                 new OTPRequest("TEST@student.kit.edu");
 
-        when(tokenService.createAndSaveOTToken("test@student.kit.edu"))
+        when(tokenService.createAndSaveOTP("test@student.kit.edu"))
                 .thenReturn("otp-token");
 
         BasicResponse response =
@@ -286,7 +286,7 @@ class AuthControllerTests {
         );
 
         verify(tokenService)
-                .createAndSaveOTToken("test@student.kit.edu");
+                .createAndSaveOTP("test@student.kit.edu");
 
         verify(mailService)
                 .sendLoginMail("test@student.kit.edu", "otp-token");

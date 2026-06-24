@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.pse.auth.controller.AccountController;
+import com.pse.auth.controller.AuthController;
 import com.pse.auth.service.TokenService;
 import com.pse.user.model.Student;
 import com.pse.auth.dto.request.LogoutRequest;
@@ -33,6 +34,9 @@ class AccountControllerTests {
     @InjectMocks
     private AccountController accountController;
 
+    @InjectMocks
+    private AuthController authController;
+
     @Mock
     private StudentService studentService;
 
@@ -45,8 +49,7 @@ class AccountControllerTests {
     void logoutShouldFailWithoutBearerToken() {
         BasicResponse response =
                 accountController.requestLogout(
-                        "invalid-header",
-                        new LogoutRequest("test@student.kit.edu")
+                        "invalid-header"
                 );
 
         assertFalse(response.success());
@@ -60,8 +63,7 @@ class AccountControllerTests {
 
         BasicResponse response =
                 accountController.requestLogout(
-                        "Bearer wrong-token",
-                        new LogoutRequest("test@student.kit.edu")
+                        "Bearer wrong-token"
                 );
 
         assertFalse(response.success());
@@ -72,8 +74,7 @@ class AccountControllerTests {
     void logoutShouldFailIfEmailIsMissing() {
         BasicResponse response =
                 accountController.requestLogout(
-                        "Bearer auth-token",
-                        new LogoutRequest(null)
+                        "Bearer auth-token"
                 );
 
         assertFalse(response.success());
@@ -87,8 +88,7 @@ class AccountControllerTests {
 
         BasicResponse response =
                 accountController.requestLogout(
-                        "Bearer auth-token",
-                        new LogoutRequest("other@student.kit.edu")
+                        "Bearer auth-token"
                 );
 
         assertFalse(response.success());
@@ -105,8 +105,7 @@ class AccountControllerTests {
 
         BasicResponse response =
                 accountController.requestLogout(
-                        "Bearer auth-token",
-                        new LogoutRequest("test@student.kit.edu")
+                        "Bearer auth-token"
                 );
 
         assertTrue(response.success());
@@ -119,7 +118,7 @@ class AccountControllerTests {
     @Test
     void validateShouldFailWithoutBearerToken() {
         BasicResponse response =
-                accountController.validate(
+                authController.validate(
                         "invalid-header",
                         new ValidateCredsRequest("test@student.kit.edu")
                 );
@@ -134,7 +133,7 @@ class AccountControllerTests {
                 .thenReturn(null);
 
         BasicResponse response =
-                accountController.validate(
+                authController.validate(
                         "Bearer wrong-token",
                         new ValidateCredsRequest("test@student.kit.edu")
                 );
@@ -149,7 +148,7 @@ class AccountControllerTests {
                 .thenReturn("test@student.kit.edu");
 
         BasicResponse response =
-                accountController.validate(
+                authController.validate(
                         "Bearer auth-token",
                         new ValidateCredsRequest("test@student.kit.edu")
                 );
@@ -167,7 +166,7 @@ class AccountControllerTests {
                 .thenReturn("test@student.kit.edu");
 
         BasicResponse response =
-                accountController.validate(
+                authController.validate(
                         "Bearer auth-token",
                         new ValidateCredsRequest("other@student.kit.edu")
                 );
@@ -183,8 +182,7 @@ class AccountControllerTests {
     void informationShouldFailWithoutBearerToken() {
         StudentProfileResponse response =
                 accountController.getUserInformation(
-                        "invalid-header",
-                        new LogoutRequest("test@student.kit.edu")
+                        "invalid-header"
                 );
 
         assertFalse(response.success());
@@ -195,8 +193,7 @@ class AccountControllerTests {
     void informationShouldFailIfEmailIsMissing() {
         StudentProfileResponse response =
                 accountController.getUserInformation(
-                        "Bearer auth-token",
-                        new LogoutRequest(null)
+                        "Bearer auth-token"
                 );
 
         assertFalse(response.success());
@@ -210,8 +207,7 @@ class AccountControllerTests {
 
         StudentProfileResponse response =
                 accountController.getUserInformation(
-                        "Bearer wrong-token",
-                        new LogoutRequest("test@student.kit.edu")
+                        "Bearer wrong-token"
                 );
 
         assertFalse(response.success());
@@ -225,8 +221,7 @@ class AccountControllerTests {
 
         StudentProfileResponse response =
                 accountController.getUserInformation(
-                        "Bearer auth-token",
-                        new LogoutRequest("other@student.kit.edu")
+                        "Bearer auth-token"
                 );
 
         assertFalse(response.success());
@@ -247,8 +242,7 @@ class AccountControllerTests {
 
         StudentProfileResponse response =
                 accountController.getUserInformation(
-                        "Bearer auth-token",
-                        new LogoutRequest("test@student.kit.edu")
+                        "Bearer auth-token"
                 );
 
         assertTrue(response.success());
@@ -266,8 +260,7 @@ class AccountControllerTests {
 
         BasicResponse response =
                 accountController.deleteAccount(
-                        "Bearer auth-token",
-                        new LogoutRequest("test@student.kit.edu")
+                        "Bearer auth-token"
                 );
 
         assertTrue(response.success());

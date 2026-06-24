@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.pse.auth.service.TokenGenerator;
 import org.junit.jupiter.api.Test;
 
-class TokenGeneratorTest {
+class TokenGeneratorTests {
 
     @Test
     void generateLoginCodeShouldHaveSixDigits() {

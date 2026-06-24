@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.pse.rating.service.RatingService;
 import com.pse.auth.service.TokenService;
+import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,20 +34,15 @@ public class RatingController {
     @PostMapping
     public BasicResponse submitRating(@RequestHeader("Authorization") String authHeader, @RequestBody  RatingRequest request) {
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return new BasicResponse("Error, not logged in", false);
+
+        Student student = tokenService.verifyUser(authHeader);
+
+        if(student == null) {
+            return new BasicResponse("Error, cannot authenticate user", false);
         }
 
-        String token = authHeader.substring("Bearer ".length());
-        String email = tokenService.verifyAuthToken(token);
 
-        if (email == null) {
-            return new BasicResponse("Error, wrong Auth-Token", false);
-        }
-
-        //User is logged in 
-
-        ratingService.submitRating(email, request);
+        ratingService.submitRating(student.getKitEmail(), request);
 
         return new BasicResponse("Rating submitted successfully",true);
     }

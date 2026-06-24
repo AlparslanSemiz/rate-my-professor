@@ -2,6 +2,7 @@ package com.pse.auth.controller;
 
 import java.time.LocalDateTime;
 
+import com.pse.auth.dto.request.ValidateCredsRequest;
 import com.pse.auth.service.MailService;
 import com.pse.auth.service.TokenService;
 import com.pse.shared.util.Utility;
@@ -65,7 +66,7 @@ public class AuthController {
         }
           
 
-        String token = tokenService.createAndSaveOTToken(userEmail);
+        String token = tokenService.createAndSaveOTP(userEmail);
 
         mailService.sendLoginMail(userEmail, token);
 
@@ -97,7 +98,7 @@ public class AuthController {
         String userEmail = request.email().trim().toLowerCase();
         String otp = request.loginToken().trim();
 
-        boolean valid = tokenService.verifyOTToken(userEmail, otp);
+        boolean valid = tokenService.verifyOTP(userEmail, otp);
         
         if (!valid) {
             //TODO: More fine-grained error message (e.g. token expired...)
@@ -161,7 +162,30 @@ public class AuthController {
             return new BasicResponse("Not logged in", false);
         }
 
+
         return new BasicResponse("Logged in as: " + email, true);
+    }
+
+
+    /**
+     * Validates the Users credentials (Email fits Auth-Token)
+     *
+     * Request:
+     *  - email
+     *  - (auth Token in Header)
+     */
+    @PostMapping("/validate")
+    public BasicResponse validate(@RequestHeader("Authorization") String authHeader,
+                                  @RequestBody ValidateCredsRequest request) {
+
+        BasicResponse response = tokenService.validateCredentials(authHeader, request.email());
+
+        if (!response.success()) {
+            return response;
+        }
+
+        return new BasicResponse("Correct auth-Token for email: " + request.email(), true);
+
     }
 
 
