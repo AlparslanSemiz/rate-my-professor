@@ -1,10 +1,9 @@
 package com.pse.auth.dto.response;
 
-public record UserRatingResponse (
+import java.util.List;
 
+public record UserRatingResponse(
         String message,
-        boolean success
-
-
-
+        boolean success,
+        List<UserRatingDto> ratings
 ) {}

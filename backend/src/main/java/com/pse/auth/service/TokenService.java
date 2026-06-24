@@ -107,7 +107,7 @@ public class TokenService {
         ZonedDateTime berlinTime = ZonedDateTime.now(ZoneId.of("Europe/Berlin"));
         LocalDateTime expiresAt = berlinTime.plusDays(365).toLocalDateTime();
 
-        String email = studentService.findEmailByStudent(student);
+        String email = student.getKitEmail();
 
         Token token = new Token();
         token.setEmail(email);
@@ -147,7 +147,13 @@ public class TokenService {
     }
 
 
-    public Student verifyUser(String authToken) {
+    public Student verifyUser(String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null;
+        }
+
+        String authToken = authHeader.substring("Bearer ".length());
 
         return tokenRepository
                 .findByValueAndRevokedFalseAndExpiresAtAfter(

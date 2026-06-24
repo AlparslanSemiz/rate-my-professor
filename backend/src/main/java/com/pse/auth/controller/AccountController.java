@@ -1,9 +1,12 @@
 package com.pse.auth.controller;
 
 
+import com.pse.auth.dto.response.UserRatingDto;
 import com.pse.auth.dto.response.UserRatingResponse;
 import com.pse.auth.service.TokenService;
 import com.pse.rating.model.Rating;
+import com.pse.rating.model.RatingTopic;
+import com.pse.shared.enums.SemesterSeason;
 import com.pse.user.model.Student;
 import com.pse.user.dto.StudentProfileResponse;
 
@@ -19,6 +22,7 @@ import com.pse.auth.dto.request.LogoutRequest;
 import com.pse.auth.dto.request.ValidateCredsRequest;
 import com.pse.auth.dto.response.BasicResponse;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -79,6 +83,19 @@ public class AccountController {
      * Returns all the Ratings of the User
      * Used for the Homepage of the App
      *
+     *
+     *
+     //Was wir zurückgeben wollen
+
+     //Rating #1:
+     //Lineare Algebra 1, Kühnlein (SS24)
+     //Bewertung Overall: 9/10
+
+     //Rating #1:
+     //TGI, Müller Quade (SS25)
+     //Bewertung Overall: 8/10
+
+     *
      * Request:
      *  - email
      *  - (auth Token in Header)
@@ -93,18 +110,47 @@ public class AccountController {
         if (student == null) {
             return new UserRatingResponse(
                     "Error, cannot authenticate user",
-                    false
+                    false,
+                    null
             );
         }
 
-
-        //TODO: Not implemented yet
-
-
-        List<Rating> ratings = student.getRatings();
+        List<UserRatingDto> ratingDtos = new ArrayList<>();
 
 
-        return null;
+        for (Rating rating : student.getRatings()) {
+
+            String lectureName = rating.getLecture().getName();
+
+            String professorName =
+                    rating.getLecture().getProfessor().getLastName();
+
+            String semester = rating.getLecture().getSemesterSeason().toString()
+                    + rating.getLecture().getSemesterYear();
+
+            int overallRating = 0;
+
+            for (RatingTopic topic : rating.getTopics()) {
+                if (topic.getName().equals("overall")) {
+                    overallRating = topic.getValue();
+                    break;
+                }
+            }
+
+            ratingDtos.add(new UserRatingDto(
+                    lectureName,
+                    professorName,
+                    semester,
+                    overallRating
+            ));
+        }
+
+        return new UserRatingResponse(
+                        "Success",
+                        true,
+                        ratingDtos
+        );
+
     }
 
 

@@ -16,12 +16,38 @@ import java.net.http.HttpResponse;
 public class TestClient {
 
 
-    //Should be the Servers IP (192.0.2.10:8080)         
+
     private static final String SERVER_IP = "https://server.example.org";
 
     private static final HttpClient client = HttpClient.newHttpClient();
 
     private static String authToken = "REDACTED";
+
+
+    /**
+     * Requests all ratings of the currently logged-in user.
+     */
+    public static void getRatings() throws Exception {
+
+        String json = """
+            {
+                "email": "u-kisi6@student.kit.edu"
+            }
+            """;
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(SERVER_IP + "/account/ratings"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + authToken)
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+        HttpResponse<String> response =
+                client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        System.out.println("RATINGS STATUS: " + response.statusCode());
+        System.out.println(response.body());
+    }
 
 
 
