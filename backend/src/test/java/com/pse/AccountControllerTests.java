@@ -1,35 +1,32 @@
 package com.pse;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import com.pse.auth.controller.AccountController;
 import com.pse.auth.controller.AuthController;
-import com.pse.auth.service.TokenService;
-import com.pse.user.model.Student;
-import com.pse.auth.dto.request.LogoutRequest;
 import com.pse.auth.dto.request.ValidateCredsRequest;
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.service.TokenService;
 import com.pse.user.dto.StudentProfileResponse;
-
+import com.pse.user.model.Student;
 import com.pse.user.service.StudentService;
+
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import java.util.Optional;
 
 class AccountControllerTests {
 
     @Mock
     private TokenService tokenService;
 
+    @Mock
+    private StudentService studentService;
 
     @InjectMocks
     private AccountController accountController;
@@ -37,20 +34,17 @@ class AccountControllerTests {
     @InjectMocks
     private AuthController authController;
 
-    @Mock
-    private StudentService studentService;
-
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 
+    // ---------------- LOGOUT ----------------
+
     @Test
     void logoutShouldFailWithoutBearerToken() {
         BasicResponse response =
-                accountController.requestLogout(
-                        "invalid-header"
-                );
+                accountController.requestLogout("invalid-header");
 
         assertFalse(response.success());
         assertEquals("Error, no Auth-Token supplied", response.message());
@@ -62,41 +56,14 @@ class AccountControllerTests {
                 .thenReturn(null);
 
         BasicResponse response =
-                accountController.requestLogout(
-                        "Bearer wrong-token"
-                );
+                accountController.requestLogout("Bearer wrong-token");
 
         assertFalse(response.success());
         assertEquals("Error, wrong Auth-Token", response.message());
     }
 
     @Test
-    void logoutShouldFailIfEmailIsMissing() {
-        BasicResponse response =
-                accountController.requestLogout(
-                        "Bearer auth-token"
-                );
-
-        assertFalse(response.success());
-        assertEquals("Error, no email supplied", response.message());
-    }
-
-    @Test
-    void logoutShouldFailForWrongEmail() {
-        when(tokenService.verifyAuthToken("auth-token"))
-                .thenReturn("test@student.kit.edu");
-
-        BasicResponse response =
-                accountController.requestLogout(
-                        "Bearer auth-token"
-                );
-
-        assertFalse(response.success());
-        assertEquals("Error, wrong email for auth Token", response.message());
-    }
-
-    @Test
-    void logoutShouldSucceedForValidTokenAndEmail() {
+    void logoutShouldSucceedForValidToken() {
         when(tokenService.verifyAuthToken("auth-token"))
                 .thenReturn("test@student.kit.edu");
 
@@ -104,9 +71,7 @@ class AccountControllerTests {
                 .thenReturn(3);
 
         BasicResponse response =
-                accountController.requestLogout(
-                        "Bearer auth-token"
-                );
+                accountController.requestLogout("Bearer auth-token");
 
         assertTrue(response.success());
         assertEquals("Logged out successfully (3 sessions)", response.message());
@@ -115,8 +80,17 @@ class AccountControllerTests {
                 .invalidateAllAuthTokensForEmail("test@student.kit.edu");
     }
 
+    // ---------------- VALIDATE ----------------
+
     @Test
     void validateShouldFailWithoutBearerToken() {
+        when(tokenService.validateCredentials(
+                "invalid-header",
+                "test@student.kit.edu"
+        )).thenReturn(
+                new BasicResponse("Error, not logged in", false)
+        );
+
         BasicResponse response =
                 authController.validate(
                         "invalid-header",
@@ -129,8 +103,12 @@ class AccountControllerTests {
 
     @Test
     void validateShouldFailForWrongAuthToken() {
-        when(tokenService.verifyAuthToken("wrong-token"))
-                .thenReturn(null);
+        when(tokenService.validateCredentials(
+                "Bearer wrong-token",
+                "test@student.kit.edu"
+        )).thenReturn(
+                new BasicResponse("Error, wrong Auth-Token", false)
+        );
 
         BasicResponse response =
                 authController.validate(
@@ -144,8 +122,12 @@ class AccountControllerTests {
 
     @Test
     void validateShouldSucceedForMatchingEmail() {
-        when(tokenService.verifyAuthToken("auth-token"))
-                .thenReturn("test@student.kit.edu");
+        when(tokenService.validateCredentials(
+                "Bearer auth-token",
+                "test@student.kit.edu"
+        )).thenReturn(
+                new BasicResponse("OK", true)
+        );
 
         BasicResponse response =
                 authController.validate(
@@ -162,8 +144,12 @@ class AccountControllerTests {
 
     @Test
     void validateShouldFailForWrongEmail() {
-        when(tokenService.verifyAuthToken("auth-token"))
-                .thenReturn("test@student.kit.edu");
+        when(tokenService.validateCredentials(
+                "Bearer auth-token",
+                "other@student.kit.edu"
+        )).thenReturn(
+                new BasicResponse("Error, wrong email: other@student.kit.edu", false)
+        );
 
         BasicResponse response =
                 authController.validate(
@@ -178,26 +164,15 @@ class AccountControllerTests {
         );
     }
 
+    // ---------------- INFORMATION ----------------
+
     @Test
     void informationShouldFailWithoutBearerToken() {
         StudentProfileResponse response =
-                accountController.getUserInformation(
-                        "invalid-header"
-                );
+                accountController.getUserInformation("invalid-header");
 
         assertFalse(response.success());
         assertEquals("Error, no Auth-Token supplied", response.message());
-    }
-
-    @Test
-    void informationShouldFailIfEmailIsMissing() {
-        StudentProfileResponse response =
-                accountController.getUserInformation(
-                        "Bearer auth-token"
-                );
-
-        assertFalse(response.success());
-        assertEquals("Error, no email supplied", response.message());
     }
 
     @Test
@@ -206,30 +181,29 @@ class AccountControllerTests {
                 .thenReturn(null);
 
         StudentProfileResponse response =
-                accountController.getUserInformation(
-                        "Bearer wrong-token"
-                );
+                accountController.getUserInformation("Bearer wrong-token");
 
         assertFalse(response.success());
         assertEquals("Error, wrong Auth-Token", response.message());
     }
 
     @Test
-    void informationShouldFailForWrongEmail() {
+    void informationShouldFailIfStudentDoesNotExist() {
         when(tokenService.verifyAuthToken("auth-token"))
                 .thenReturn("test@student.kit.edu");
 
+        when(studentService.findByKitEmail("test@student.kit.edu"))
+                .thenReturn(Optional.empty());
+
         StudentProfileResponse response =
-                accountController.getUserInformation(
-                        "Bearer auth-token"
-                );
+                accountController.getUserInformation("Bearer auth-token");
 
         assertFalse(response.success());
-        assertEquals("Error, wrong email for auth Token", response.message());
+        assertEquals("Error, student not found", response.message());
     }
 
     @Test
-    void informationShouldSucceedForValidTokenAndEmail() {
+    void informationShouldSucceedForValidToken() {
         Student student = new Student();
         student.setUsername("SchnellerFuchs1234");
         student.setCredibilityScore(42);
@@ -241,9 +215,7 @@ class AccountControllerTests {
                 .thenReturn(Optional.of(student));
 
         StudentProfileResponse response =
-                accountController.getUserInformation(
-                        "Bearer auth-token"
-                );
+                accountController.getUserInformation("Bearer auth-token");
 
         assertTrue(response.success());
         assertEquals("Success", response.message());
@@ -253,15 +225,36 @@ class AccountControllerTests {
         assertEquals(0, response.ratingsCount());
     }
 
+    // ---------------- DELETE ACCOUNT ----------------
+
     @Test
-    void deleteAccountShouldSucceedForValidTokenAndEmail() {
+    void deleteAccountShouldFailWithoutBearerToken() {
+        BasicResponse response =
+                accountController.deleteAccount("invalid-header");
+
+        assertFalse(response.success());
+        assertEquals("Error, no Auth-Token supplied", response.message());
+    }
+
+    @Test
+    void deleteAccountShouldFailForWrongAuthToken() {
+        when(tokenService.verifyAuthToken("wrong-token"))
+                .thenReturn(null);
+
+        BasicResponse response =
+                accountController.deleteAccount("Bearer wrong-token");
+
+        assertFalse(response.success());
+        assertEquals("Error, wrong Auth-Token", response.message());
+    }
+
+    @Test
+    void deleteAccountShouldSucceedForValidToken() {
         when(tokenService.verifyAuthToken("auth-token"))
                 .thenReturn("test@student.kit.edu");
 
         BasicResponse response =
-                accountController.deleteAccount(
-                        "Bearer auth-token"
-                );
+                accountController.deleteAccount("Bearer auth-token");
 
         assertTrue(response.success());
         assertEquals(
@@ -269,6 +262,7 @@ class AccountControllerTests {
                 response.message()
         );
 
-        verify(studentService).softDeleteByKitEmail("test@student.kit.edu");
+        verify(studentService)
+                .softDeleteByKitEmail("test@student.kit.edu");
     }
 }
