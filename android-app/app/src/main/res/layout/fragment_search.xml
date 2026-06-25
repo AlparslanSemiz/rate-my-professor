@@ -61,7 +61,7 @@
         android:layout_marginBottom="128dp"
         app:backgroundTint="#575757"
         app:cornerRadius="48dp"
-        app:icon="@android:drawable/ic_menu_search"
+        app:icon="@drawable/search_icon"
         app:iconGravity="textStart"
         app:iconSize="50dp"
         app:iconTint="@android:color/white"
