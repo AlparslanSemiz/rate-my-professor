@@ -22,6 +22,7 @@
         android:layout_marginBottom="30dp"
         android:background="@drawable/bottom_nav_background"
         android:elevation="12dp"
+        app:itemActiveIndicatorStyle="@style/BottomNavActiveIndicator"
         app:itemIconTint="#FFFFFF"
         app:itemTextColor="#FFFFFF"
         app:labelVisibilityMode="unlabeled"
