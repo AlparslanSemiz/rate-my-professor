@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">My Application_Java</string>
     <string name="back">Back</string>
+    <string name="close">Close</string>
 </resources>

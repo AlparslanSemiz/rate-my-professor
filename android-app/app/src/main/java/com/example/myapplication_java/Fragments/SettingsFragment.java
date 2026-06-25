@@ -3,10 +3,13 @@ package com.example.myapplication_java.Fragments;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -22,6 +25,7 @@ import com.example.myapplication_java.ServerCommunication.ServerResponse;
 import com.example.myapplication_java.databinding.FragmentSettingsBinding;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.textfield.TextInputEditText;
 
 import okhttp3.OkHttpClient;
@@ -90,26 +94,33 @@ public class SettingsFragment extends Fragment {
 
     private void showBugReportDialog() {
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_bug_report, null);
+        TextInputLayout bugReportInputLayout = dialogView.findViewById(R.id.bug_report_input_layout);
         TextInputEditText bugReportInput = dialogView.findViewById(R.id.bug_report_input);
 
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext())
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setView(dialogView)
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Submit", null);
+                .create();
 
-        androidx.appcompat.app.AlertDialog dialog = builder.create();
-        dialog.setOnShowListener(dialogInterface -> dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
-                .setOnClickListener(view -> {
-                    String reportText = getTextFromInput(bugReportInput);
-                    if (reportText.isEmpty()) {
-                        Toast.makeText(requireContext(), "Please describe the bug first.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    Toast.makeText(requireContext(), "Bug report saved for sending.", Toast.LENGTH_LONG).show();
-                    dialog.dismiss();
-                }));
         dialog.show();
+
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        dialogView.findViewById(R.id.bug_report_close).setOnClickListener(view -> dialog.dismiss());
+        dialogView.findViewById(R.id.bug_report_cancel).setOnClickListener(view -> dialog.dismiss());
+        dialogView.findViewById(R.id.bug_report_submit).setOnClickListener(view -> {
+            String reportText = getTextFromInput(bugReportInput);
+            if (reportText.isEmpty()) {
+                bugReportInputLayout.setError("Please describe the bug first.");
+                return;
+            }
+
+            bugReportInputLayout.setError(null);
+            Toast.makeText(requireContext(), "Bug report saved for sending.", Toast.LENGTH_LONG).show();
+            dialog.dismiss();
+        });
     }
 
     private void showDeleteAccountConfirmation() {
