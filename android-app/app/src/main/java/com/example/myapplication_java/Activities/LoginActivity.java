@@ -49,8 +49,8 @@ public class LoginActivity extends AppCompatActivity {
         enterButton = binding.verifyButton;
         emailInput = binding.mailInput;
         //If you are reading this and didn't write this comment remove the following 2 lines its just there for debugging purposes.
-        Intent mainActivity = new Intent(this, MainActivity.class);
-        startActivity(mainActivity);
+//        Intent mainActivity = new Intent(this, MainActivity.class);
+//        startActivity(mainActivity);
         //end of test-code
 
         enterButton.setOnClickListener(v -> {
@@ -79,8 +79,8 @@ public class LoginActivity extends AppCompatActivity {
                     if (response.isSuccessful()) {
                         /// 'SharedPreferences' is used to save data (at the moment just the email)
                         /// persistently, even when the app is closed
-                        SharedPreferences persistentEmailSave = getSharedPreferences("savedEmail", MODE_PRIVATE);
-                        SharedPreferences.Editor editor = persistentEmailSave.edit();
+                        SharedPreferences loginDataStorage = getSharedPreferences("loginData", MODE_PRIVATE);
+                        SharedPreferences.Editor editor = loginDataStorage.edit();
                         editor.putString("mailAddress", mailAddress);
                         editor.apply();
 
