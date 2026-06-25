@@ -3,9 +3,6 @@ package com.pse.rating.controller;
 import java.util.List;
 import java.util.UUID;
 
-import com.pse.rating.service.RatingService;
-import com.pse.auth.service.TokenService;
-import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,9 +12,12 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pse.rating.dto.request.RatingRequest;
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.service.TokenService;
+import com.pse.rating.dto.request.RatingRequest;
 import com.pse.rating.dto.response.TopicAverageResponse;
+import com.pse.rating.service.RatingService;
+import com.pse.user.model.Student;
 
 
 
@@ -31,7 +31,7 @@ public class RatingController {
     @Autowired
     private TokenService tokenService;
 
-    @PostMapping
+    @PostMapping("/rate")
     public BasicResponse submitRating(@RequestHeader("Authorization") String authHeader, @RequestBody  RatingRequest request) {
 
 
