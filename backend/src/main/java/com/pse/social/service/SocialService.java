@@ -2,9 +2,14 @@ package com.pse.social.service;
 
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.service.LectureService;
+import com.pse.shared.enums.ReportReason;
 import com.pse.social.model.Answer;
+import com.pse.social.model.AnswerReport;
 import com.pse.social.model.Comment;
+import com.pse.social.model.CommentReport;
+import com.pse.social.repository.AnswerReportRepository;
 import com.pse.social.repository.AnswerRepository;
+import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.CommentRepository;
 import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +27,10 @@ public class SocialService {
     @Autowired
     private LectureService lectureService;
 
+    @Autowired
+    private CommentReportRepository commentReportRepository;
+    @Autowired
+    private AnswerReportRepository answerReportRepository;
 
 
     public boolean submitComment(Student student, String lectureID, String content) {
@@ -62,5 +71,46 @@ public class SocialService {
 
         answerRepository.save(answer);
         return true;
+    }
+
+    public boolean submitCommentReport(Student student, String commentID, ReportReason reportReason, String explanation) {
+
+        Comment comment = commentRepository.findById(UUID.fromString(commentID)).orElse(null);
+        if(comment == null) {
+            return false;
+        }
+
+        CommentReport report = new CommentReport();
+
+        report.setReporter(student);
+        report.setComment(comment);
+        report.setReason(reportReason);
+        report.setExplanation(explanation);
+
+        commentReportRepository.save(report);
+
+        return true;
+
+    }
+
+
+    public boolean submitAnswerReport(Student student, String answerID, ReportReason reportReason, String explanation) {
+
+        Answer answer = answerRepository.findById(UUID.fromString(answerID)).orElse(null);
+        if(answer == null) {
+            return false;
+        }
+
+        AnswerReport report = new AnswerReport();
+
+        report.setReporter(student);
+        report.setAnswer(answer);
+        report.setReason(reportReason);
+        report.setExplanation(explanation);
+
+        answerReportRepository.save(report);
+
+        return true;
+
     }
 }

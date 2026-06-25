@@ -3,6 +3,7 @@ package com.pse.social.model;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.pse.shared.enums.ReportReason;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -39,8 +40,12 @@ public class AnswerReport {
     @GeneratedValue
     private UUID id;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
-    private String reason;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ReportReason reason;
+
+    @Column(name = "explanation")
+    private String explanation;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

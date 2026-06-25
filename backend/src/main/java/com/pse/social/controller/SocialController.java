@@ -2,7 +2,9 @@ package com.pse.social.controller;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.TokenService;
+import com.pse.social.dto.request.AnswerReportRequest;
 import com.pse.social.dto.request.AnswerSubmitRequest;
+import com.pse.social.dto.request.CommentReportRequest;
 import com.pse.social.dto.request.CommentSubmitRequest;
 import com.pse.social.service.SocialService;
 import com.pse.user.model.Student;
@@ -23,6 +25,9 @@ public class SocialController {
     private SocialService socialService;
     @Autowired
     private TokenService tokenService;
+
+
+
 
     @PostMapping("/submitComment")
     public BasicResponse submitComment(@RequestHeader("Authorization") String authHeader, @RequestBody CommentSubmitRequest request) {
@@ -60,6 +65,43 @@ public class SocialController {
 
 
         return new BasicResponse("Answer submitted successfully",true);
+    }
+
+
+    @PostMapping("/submitCommentReport")
+    public BasicResponse submitCommentReport(@RequestHeader("Authorization") String authHeader, @RequestBody CommentReportRequest request) {
+
+
+        Student student = tokenService.verifyUser(authHeader);
+
+        if(student == null) {
+            return new BasicResponse("Error, cannot authenticate user", false);
+        }
+
+        if(!socialService.submitCommentReport(student, request.commentID(), request.reportReason(), request.explanation())){
+            return new BasicResponse("Error, couldnt finde comment",false);
+        }
+
+
+        return new BasicResponse("Comment Report submitted successfully",true);
+    }
+
+    @PostMapping("/submitAnswerReport")
+    public BasicResponse submitAnswerReport(@RequestHeader("Authorization") String authHeader, @RequestBody AnswerReportRequest request) {
+
+
+        Student student = tokenService.verifyUser(authHeader);
+
+        if(student == null) {
+            return new BasicResponse("Error, cannot authenticate user", false);
+        }
+
+        if(!socialService.submitAnswerReport(student, request.answerID(), request.reportReason(), request.explanation())){
+            return new BasicResponse("Error, couldnt finde answer",false);
+        }
+
+
+        return new BasicResponse("Answer Report submitted successfully",true);
     }
 
 
