@@ -20,7 +20,7 @@ import retrofit2.Response;
 
 @androidx.room.Database(
         entities = {Lecture.class, Professor.class},
-        version = 1
+        version = 2
 )
 public abstract class Database extends RoomDatabase {
     public static String DB_NAME = "database.db";
