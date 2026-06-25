@@ -31,10 +31,6 @@ public class TokenService {
     @Autowired
     private OneTimePasswordRepository oneTimePasswordRepository;
 
-    @Autowired
-    private StudentService studentService;
-
-
 
 
     /**

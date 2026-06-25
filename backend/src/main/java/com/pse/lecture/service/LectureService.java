@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class LectureService {
@@ -20,4 +21,9 @@ public class LectureService {
     }
 
 
+    public Lecture getLectureByID(String lectureID) {
+
+        return lectureRepository.findById(UUID.fromString(lectureID))
+                .orElse(null);
+    }
 }
