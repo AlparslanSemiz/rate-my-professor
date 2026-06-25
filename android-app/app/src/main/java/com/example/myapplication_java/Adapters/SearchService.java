@@ -12,7 +12,10 @@ import java.util.List;
 @Dao
 public interface SearchService {
 
-    @Query("SELECT * FROM professors WHERE firstName LIKE '%' || :query || '%' ORDER BY firstName ASC")
+    @Query("SELECT * FROM professors " +
+            "WHERE firstName LIKE '%' || :query || '%' " +
+            "OR lastName LIKE '%' || :query || '%' " +
+            "ORDER BY lastName ASC")
     List<Professor> searchProfessors(String query);
 
     //BAD METHOD FIX IN THE FUTURE

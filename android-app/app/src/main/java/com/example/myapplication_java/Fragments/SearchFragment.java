@@ -12,14 +12,20 @@ import androidx.lifecycle.viewmodel.CreationExtras;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.View;
+
+import androidx.lifecycle.ViewModelProvider;
 
 import com.example.myapplication_java.Adapters.ProfessorAdapter;
 import com.example.myapplication_java.Adapters.SearchPagerAdapter;
 import com.example.myapplication_java.Adapters.SearchService;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.databinding.FragmentProfSelectionBinding;
+import com.example.myapplication_java.databinding.FragmentSelectionBinding;
 import com.example.myapplication_java.databinding.FragmentSearchBinding;
+import com.example.myapplication_java.logic.SearchViewModel;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
@@ -29,6 +35,7 @@ public class SearchFragment extends Fragment {
 
     //FragmentProfSelectionBinding binding;
     private RecyclerView recyclerView;
+    private SearchViewModel searchViewModel;
 
     private FragmentSearchBinding binding;
     @NonNull
@@ -46,6 +53,8 @@ public class SearchFragment extends Fragment {
         SearchPagerAdapter adapter = new SearchPagerAdapter(this);
         binding.searchViewPager.setAdapter(adapter);
 
+        searchViewModel = new ViewModelProvider(this).get(SearchViewModel.class);
+
         binding.profsButton.setOnClickListener(v -> {
             System.out.println("PROF BOTTOM GOT CLICKED");
             binding.searchViewPager.setCurrentItem(0, true);
@@ -55,6 +64,36 @@ public class SearchFragment extends Fragment {
             System.out.println("LECTURE BOTTOM GOT CLICKED");
             binding.searchViewPager.setCurrentItem(1, true);
         });
+
+        binding.searchButton.setOnClickListener(v -> {
+            if (binding.searchBar.getVisibility() == View.GONE) {
+                binding.searchBar.setVisibility(View.VISIBLE);
+                binding.searchInput.requestFocus();
+            } else {
+                binding.searchBar.setVisibility(View.GONE);
+                binding.searchInput.setText("");
+                searchViewModel.clearQuery();
+            }
+        });
+
+        binding.clearSearchButton.setOnClickListener(v -> {
+            binding.searchInput.setText("");
+            searchViewModel.clearQuery();
+        });
+
+        binding.searchInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                searchViewModel.setQuery(s.toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
 
         binding.searchViewPager.registerOnPageChangeCallback(
                 new ViewPager2.OnPageChangeCallback() {

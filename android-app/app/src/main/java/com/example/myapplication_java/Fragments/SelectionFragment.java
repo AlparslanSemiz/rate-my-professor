@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.room.Room;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.example.myapplication_java.Adapters.LectureAdapter;
 import com.example.myapplication_java.Adapters.ProfessorAdapter;
@@ -18,7 +19,8 @@ import com.example.myapplication_java.Adapters.SearchService;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.ServerCommunication.Database;
-import com.example.myapplication_java.databinding.FragmentProfSelectionBinding;
+import com.example.myapplication_java.databinding.FragmentSelectionBinding;
+import com.example.myapplication_java.logic.SearchViewModel;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
@@ -26,10 +28,11 @@ import java.util.concurrent.Executors;
 
 public class SelectionFragment extends Fragment {
 
-    private FragmentProfSelectionBinding binding;
-    private Button lectureButton;
-    private Button professorButton;
-    private boolean professor;
+    private FragmentSelectionBinding binding;
+    private SearchViewModel searchViewModel;
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private ProfessorAdapter professorAdapter;
+    private LectureAdapter lectureAdapter;
     private SearchService service;
     private ArrayList<Lecture> lectures;
     private ArrayList<Professor> professors;
@@ -62,7 +65,7 @@ public class SelectionFragment extends Fragment {
             @Nullable ViewGroup container,
             @Nullable Bundle savedInstanceState
     ) {
-        binding = FragmentProfSelectionBinding.inflate(inflater, container, false);
+        binding = FragmentSelectionBinding.inflate(inflater, container, false);
 
         binding.list.setLayoutManager(new LinearLayoutManager(getContext()));
 
@@ -76,45 +79,71 @@ public class SelectionFragment extends Fragment {
 
         String type = requireArguments().getString(ARG_SELECTION_TYPE);
         selectionType = SelectionType.valueOf(type);
-        setList(selectionType);
+
+        searchViewModel = new ViewModelProvider(requireParentFragment()).get(SearchViewModel.class);
+        setupAdapter();
+        observeSearchQuery();
 
         return binding.getRoot();
     }
 
-    private void setList(SelectionType type) {
-
-        try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
-            executor.execute(() -> {
-                switch (type) {
-                    case PROFESSORS:
-                        if (professors == null) {
-                            professors = new ArrayList<>(service.searchProfessors(""));
-                        }
-
-                        requireActivity().runOnUiThread(() -> {
-                            binding.list.setAdapter(new ProfessorAdapter(professors));
-                        });
-                        break;
-
-                    case LECTURES:
-                        if (lectures == null) {
-                            lectures = new ArrayList<>(service.searchLectures(""));
-                        }
-
-                        requireActivity().runOnUiThread(() -> {
-                            binding.list.setAdapter(new LectureAdapter(lectures));
-                        });
-                        break;
-                }
-            });
-        }
-    }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         binding = null;
     }
+    private void setupAdapter() {
+        switch (selectionType) {
+            case PROFESSORS:
+                professorAdapter = new ProfessorAdapter(new ArrayList<>());
+                binding.list.setAdapter(professorAdapter);
+                break;
+
+            case LECTURES:
+                lectureAdapter = new LectureAdapter(new ArrayList<>());
+                binding.list.setAdapter(lectureAdapter);
+                break;
+        }
+    }
+    private void observeSearchQuery() {
+        searchViewModel.getQuery().observe(getViewLifecycleOwner(), query -> {
+            System.out.println("QUERY IN SELECTION FRAGMENT: " + query);
+            search(query);
+        });
+    }
+    private void search(String query) {
+
+        System.out.println("SEARCH CALLED WITH: " + query + " TYPE: " + selectionType);
+
+
+        executorService.execute(() -> {
+            switch (selectionType) {
+                case PROFESSORS:
+                    ArrayList<Professor> professorResults =
+                            new ArrayList<>(service.searchProfessors(query));
+
+                    System.out.println("PROF RESULTS: " + professorResults.size());
+
+                    requireActivity().runOnUiThread(() -> {
+                        professorAdapter.setData(professorResults);
+                    });
+                    break;
+
+                case LECTURES:
+                    ArrayList<Lecture> lectureResults =
+                            new ArrayList<>(service.searchLectures(query));
+
+                    System.out.println("LECTURE RESULTS: " + lectureResults.size());
+
+                    requireActivity().runOnUiThread(() -> {
+                        lectureAdapter.setData(lectureResults);
+                    });
+                    break;
+            }
+        });
+    }
+
     public void setMockDatabase(boolean professor) {
         if (professor) {
             //dont forget to clear the database

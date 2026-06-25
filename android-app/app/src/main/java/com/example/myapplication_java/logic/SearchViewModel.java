@@ -16,6 +16,7 @@ public class SearchViewModel extends ViewModel {
     }
 
     public void setQuery(String newQuery) {
+        System.out.println("SEARCH_VIEW_MODEL: " + newQuery);
         query.setValue(newQuery);
     }
 
