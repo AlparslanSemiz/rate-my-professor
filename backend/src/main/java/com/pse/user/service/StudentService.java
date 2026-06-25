@@ -1,10 +1,14 @@
 package com.pse.user.service;
 
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.pse.moderation.dto.response.UserListResponse;
+import com.pse.moderation.dto.response.UserResponse;
+import com.pse.user.dto.StudentProfileResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,15 +37,6 @@ public class StudentService {
         studentRepository.softDeleteByKitEmail(email);
     }
 
-
-    public Double getAverageOverallRating(Student student){
-        return studentRepository.getAverageOverallRating(student);
-    }
-
-
-    public List<Rating> findAllByStudentIdWithTopics(UUID studentId){
-        return studentRepository.findAllByStudentIdWithTopics(studentId);
-    }
 
     public void addStudent(Student student) {
         studentRepository.save(student);
