@@ -39,6 +39,16 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        View root = binding.getRoot();
+        //This should hide the menu bar when the keyboard is visible
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            boolean keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+
+            binding.bottomNav.setVisibility(keyboardVisible ? View.GONE : View.VISIBLE);
+
+            return insets;
+        });
+
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
         OkHttpClient client = new OkHttpClient.Builder().addInterceptor(loggingInterceptor).build();
