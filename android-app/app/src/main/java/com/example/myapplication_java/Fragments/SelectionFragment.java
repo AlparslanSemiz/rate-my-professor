@@ -2,6 +2,7 @@ package com.example.myapplication_java.Fragments;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -10,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.room.Room;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -27,7 +29,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class SelectionFragment extends Fragment {
-
+    /**
+     *  This look absolutely wrong here, but logically it only interacts with the SelectionFragment so...
+     *  This actually makes sense :D
+      */
+    public interface UserInteractionListener {
+        void onUserInteractedWithList();
+    }
+    private UserInteractionListener userInteractionListener;
     private FragmentSelectionBinding binding;
     private SearchViewModel searchViewModel;
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -68,6 +77,18 @@ public class SelectionFragment extends Fragment {
         binding = FragmentSelectionBinding.inflate(inflater, container, false);
 
         binding.list.setLayoutManager(new LinearLayoutManager(getContext()));
+
+        // This is needed to close the search when the user touches anywhere on screen
+        binding.list.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
+            @Override
+            public boolean onInterceptTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {
+                System.out.println("GOT A SWIPE");
+                if (userInteractionListener != null) {
+                    userInteractionListener.onUserInteractedWithList();
+                }
+                return false;
+            }
+        });
 
         Database database = Room.databaseBuilder(
                 getContext(),
@@ -194,5 +215,13 @@ public class SelectionFragment extends Fragment {
                 service.insertLecture(lecture);
             });
         }
+    }
+
+    /**
+     * This
+     * @param listener
+     */
+    public void setUserInteractionListener(UserInteractionListener listener) {
+        this.userInteractionListener = listener;
     }
 }

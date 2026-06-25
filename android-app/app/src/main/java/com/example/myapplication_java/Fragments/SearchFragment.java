@@ -46,8 +46,7 @@ import java.util.ArrayList;
 
 public class SearchFragment extends Fragment {
 
-    //FragmentProfSelectionBinding binding;
-    private RecyclerView recyclerView;
+    private boolean searchModeOpen = false;
     private SearchViewModel searchViewModel;
 
     private FragmentSearchBinding binding;
@@ -65,34 +64,49 @@ public class SearchFragment extends Fragment {
 
         binding = FragmentSearchBinding.inflate(inflater, container, false);
 
-        SearchPagerAdapter adapter = new SearchPagerAdapter(this);
+        SearchPagerAdapter adapter = new SearchPagerAdapter(this, () -> {
+            if (searchModeOpen) {
+                closeSearchMode();
+            }
+        });
+
         binding.searchViewPager.setAdapter(adapter);
 
         searchViewModel = new ViewModelProvider(this).get(SearchViewModel.class);
 
         setupSearchBarKeyboardMovement();
         setupSearchModeButtons();
+        setupCloseSearchOnOutsideTouch();
 
         binding.profsButton.setOnClickListener(v -> {
+            if (searchModeOpen) {
+                closeSearchMode();
+            }
+
             System.out.println("PROF BOTTOM GOT CLICKED");
             binding.searchViewPager.setCurrentItem(0, true);
         });
 
         binding.lecturesButton.setOnClickListener(v -> {
+            if (searchModeOpen) {
+                closeSearchMode();
+            }
+
             System.out.println("LECTURE BOTTOM GOT CLICKED");
             binding.searchViewPager.setCurrentItem(1, true);
         });
 
-        binding.searchButton.setOnClickListener(v -> {
-            if (binding.searchBar.getVisibility() == View.GONE) {
-                binding.searchBar.setVisibility(View.VISIBLE);
-                binding.searchInput.requestFocus();
-            } else {
-                binding.searchBar.setVisibility(View.GONE);
-                binding.searchInput.setText("");
-                searchViewModel.clearQuery();
-            }
-        });
+//        binding.searchButton.setOnClickListener(v -> {
+//            if (binding.searchBar.getVisibility() == View.GONE) {
+//                binding.searchBar.setVisibility(View.VISIBLE);
+//                binding.searchInput.requestFocus();
+//            } else {
+//                binding.searchBar.setVisibility(View.GONE);
+//                binding.searchInput.setText("");
+//                searchViewModel.clearQuery();
+//            }
+//        });
+
 
         binding.clearSearchButton.setOnClickListener(v -> {
             binding.searchInput.setText("");
@@ -175,6 +189,8 @@ public class SearchFragment extends Fragment {
     }
 
     private void openSearchMode() {
+        searchModeOpen = true;
+
         binding.searchBar.setVisibility(View.VISIBLE);
         binding.searchButton.setVisibility(View.GONE);
 
@@ -188,8 +204,14 @@ public class SearchFragment extends Fragment {
     }
 
     private void closeSearchMode() {
-        binding.searchInput.setText("");
-        searchViewModel.clearQuery();
+        if (!searchModeOpen) {
+            return;
+        }
+        System.out.println("SEARCH_FRAGMENT: closeSearchMode");
+        searchModeOpen = false;
+
+        //binding.searchInput.setText("");
+        //searchViewModel.clearQuery();
 
         binding.searchBar.setVisibility(View.GONE);
         binding.searchBar.setTranslationY(0);
@@ -223,5 +245,27 @@ public class SearchFragment extends Fragment {
         if (imm != null) {
             imm.hideSoftInputFromWindow(binding.searchInput.getWindowToken(), 0);
         }
+    }
+
+    // If you click anywhere on the screen the search gets canceled.
+    private void setupCloseSearchOnOutsideTouch() {
+
+        System.out.println("SEARCH_FRAGMENT: setupCloseSearchOnOutsideTouch()");
+        binding.searchRoot.setOnClickListener(v -> {
+            if (searchModeOpen) {
+                closeSearchMode();
+            }
+        });
+
+        binding.searchViewPager.setOnClickListener(v -> {
+            if (searchModeOpen) {
+                closeSearchMode();
+            }
+        });
+
+        binding.searchBar.setOnClickListener(v -> {
+            // Should not do anything since clicking on the search bar should not close the search lol
+        });
+
     }
 }

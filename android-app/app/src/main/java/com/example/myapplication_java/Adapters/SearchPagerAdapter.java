@@ -12,8 +12,10 @@ import com.example.myapplication_java.Fragments.SelectionType;
  * the fragments according to the interaction with the ViewPager2
  */
 public class SearchPagerAdapter extends FragmentStateAdapter {
-    public SearchPagerAdapter(@NonNull Fragment fragment) {
+    private final SelectionFragment.UserInteractionListener userInteractionListener;
+    public SearchPagerAdapter(@NonNull Fragment fragment, SelectionFragment.UserInteractionListener userInteractionListener) {
         super(fragment);
+        this.userInteractionListener = userInteractionListener;
     }
 
     /**
@@ -26,11 +28,17 @@ public class SearchPagerAdapter extends FragmentStateAdapter {
     @NonNull
     @Override
     public Fragment createFragment(int position) {
+
+        SelectionFragment fragment;
+
         if (position == 0) {
-            return SelectionFragment.newInstance(SelectionType.PROFESSORS);
+            fragment = SelectionFragment.newInstance(SelectionType.PROFESSORS);
         } else {
-            return SelectionFragment.newInstance(SelectionType.LECTURES);
+            fragment = SelectionFragment.newInstance(SelectionType.LECTURES);
         }
+
+        fragment.setUserInteractionListener(userInteractionListener);
+        return fragment;
     }
 
     /**
