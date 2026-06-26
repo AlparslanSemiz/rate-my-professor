@@ -54,8 +54,8 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
 
             /// 'SharedPreferences' is used to save data (currently just the email)
             /// persistently, even when the app is closed
-            SharedPreferences persistentEmailSave = getSharedPreferences("savedEmail", MODE_PRIVATE);
-            String mailAddress = persistentEmailSave.getString("mailAddress", "");
+            SharedPreferences loginDataStorage = getSharedPreferences("loginData", MODE_PRIVATE);
+            String mailAddress = loginDataStorage.getString("mailAddress", "");
             LoginRequest request = new LoginRequest(mailAddress, token);
 
             Call<ServerResponse> call = apiService.login(request);
@@ -70,6 +70,12 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
                         Toast.makeText(EnterAuthTokenActivity.this, response.body().message, Toast.LENGTH_LONG).show();
                     } else {
                         Log.println(Log.DEBUG, "login response ___", "success!!");
+
+                        // Saving the OneTimePassword for future logins
+                        SharedPreferences.Editor editor = loginDataStorage.edit();
+                        editor.putString("OTP", token);
+                        editor.apply();
+
                         EnterAuthTokenActivity.this.startActivity(mainActivity);
                     }
 

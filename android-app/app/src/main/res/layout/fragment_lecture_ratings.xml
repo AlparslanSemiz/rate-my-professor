@@ -128,7 +128,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Category 1"
                         android:textColor="#FFFFFF"
-                        android:textSize="30sp"
+                        android:textSize="24sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
@@ -141,7 +141,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Average"
                         android:textColor="#FFFFFF"
-                        android:textSize="24sp"
+                        android:textSize="20sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/category_1_text" />
 
@@ -154,7 +154,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Your Rating"
                         android:textColor="#FFFFFF"
-                        android:textSize="24sp"
+                        android:textSize="20sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/average_text" />
 
@@ -162,23 +162,48 @@
                         android:id="@+id/ratingBar_average_1"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
                         android:scaleX="0.8"
                         android:scaleY="0.8"
                         app:layout_constraintBottom_toBottomOf="@+id/average_text"
-                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/average_rating_num"
                         app:layout_constraintTop_toTopOf="@+id/average_text" />
+
 
                     <RatingBar
                         android:id="@+id/ratingBar_your_rating_1"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
                         android:scaleX="0.8"
                         android:scaleY="0.8"
                         app:layout_constraintBottom_toBottomOf="@+id/your_rating_text"
-                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/your_rating_num"
                         app:layout_constraintTop_toTopOf="@+id/your_rating_text" />
+
+                    <TextView
+                        android:id="@+id/average_rating_num"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="4,0"
+                        android:textColor="#228B22"
+                        android:textSize="24sp"
+                        app:layout_constraintBottom_toBottomOf="@id/average_text"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/average_text" />
+
+                    <TextView
+                        android:id="@+id/your_rating_num"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="4,0"
+                        android:textColor="#228B22"
+                        android:textSize="24sp"
+                        app:layout_constraintBottom_toBottomOf="@id/your_rating_text"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/your_rating_text" />
 
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
@@ -202,7 +227,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Category 3"
                         android:textColor="#FFFFFF"
-                        android:textSize="30sp"
+                        android:textSize="24sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
@@ -215,7 +240,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Average"
                         android:textColor="#FFFFFF"
-                        android:textSize="24sp"
+                        android:textSize="20sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/category_3_text" />
 
@@ -228,7 +253,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Your Rating"
                         android:textColor="#FFFFFF"
-                        android:textSize="24sp"
+                        android:textSize="20sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/average_text_3" />
 
@@ -236,23 +261,47 @@
                         android:id="@+id/ratingBar_average_3"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
                         android:scaleX="0.8"
                         android:scaleY="0.8"
                         app:layout_constraintBottom_toBottomOf="@+id/average_text_3"
-                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/average_rating_num_3"
                         app:layout_constraintTop_toTopOf="@+id/average_text_3" />
 
                     <RatingBar
                         android:id="@+id/ratingBar_your_rating_3"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
                         android:scaleX="0.8"
                         android:scaleY="0.8"
                         app:layout_constraintBottom_toBottomOf="@+id/your_rating_text_3"
-                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/your_rating_num_3"
                         app:layout_constraintTop_toTopOf="@+id/your_rating_text_3" />
+
+                    <TextView
+                        android:id="@+id/average_rating_num_3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="4,0"
+                        android:textColor="#228B22"
+                        android:textSize="24sp"
+                        app:layout_constraintBottom_toBottomOf="@id/average_text_3"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/average_text_3" />
+
+                    <TextView
+                        android:id="@+id/your_rating_num_3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="4,0"
+                        android:textColor="#228B22"
+                        android:textSize="24sp"
+                        app:layout_constraintBottom_toBottomOf="@id/your_rating_text_3"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/your_rating_text_3" />
 
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
@@ -276,7 +325,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Category 4"
                         android:textColor="#FFFFFF"
-                        android:textSize="30sp"
+                        android:textSize="24sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
@@ -289,7 +338,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Average"
                         android:textColor="#FFFFFF"
-                        android:textSize="24sp"
+                        android:textSize="20sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/category_4_text" />
 
@@ -302,7 +351,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Your Rating"
                         android:textColor="#FFFFFF"
-                        android:textSize="24sp"
+                        android:textSize="20sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/average_text_4" />
 
@@ -310,23 +359,47 @@
                         android:id="@+id/ratingBar_average_4"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
                         android:scaleX="0.8"
                         android:scaleY="0.8"
-                        app:layout_constraintBottom_toBottomOf="@+id/average_text_4"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@+id/average_text_4" />
+                        app:layout_constraintBottom_toBottomOf="@id/average_text_4"
+                        app:layout_constraintEnd_toStartOf="@id/average_rating_num_4"
+                        app:layout_constraintTop_toTopOf="@id/average_text_4" />
 
                     <RatingBar
                         android:id="@+id/ratingBar_your_rating_4"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
                         android:scaleX="0.8"
                         android:scaleY="0.8"
-                        app:layout_constraintBottom_toBottomOf="@+id/your_rating_text_4"
+                        app:layout_constraintBottom_toBottomOf="@id/your_rating_text_4"
+                        app:layout_constraintEnd_toStartOf="@id/your_rating_num_4"
+                        app:layout_constraintTop_toTopOf="@id/your_rating_text_4" />
+
+                    <TextView
+                        android:id="@+id/average_rating_num_4"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="4,0"
+                        android:textColor="#228B22"
+                        android:textSize="24sp"
+                        app:layout_constraintBottom_toBottomOf="@id/average_text_4"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@+id/your_rating_text_4" />
+                        app:layout_constraintTop_toTopOf="@id/average_text_4" />
+
+                    <TextView
+                        android:id="@+id/your_rating_num_4"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="4,0"
+                        android:textColor="#228B22"
+                        android:textSize="24sp"
+                        app:layout_constraintBottom_toBottomOf="@id/your_rating_text_4"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/your_rating_text_4" />
 
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
@@ -350,7 +423,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Category 2"
                         android:textColor="#FFFFFF"
-                        android:textSize="30sp"
+                        android:textSize="24sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
@@ -363,7 +436,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Average"
                         android:textColor="#FFFFFF"
-                        android:textSize="24sp"
+                        android:textSize="20sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/category_2_text" />
 
@@ -376,7 +449,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Your Rating"
                         android:textColor="#FFFFFF"
-                        android:textSize="24sp"
+                        android:textSize="20sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/average_text_2" />
 
@@ -384,23 +457,47 @@
                         android:id="@+id/ratingBar_average_2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
                         android:scaleX="0.8"
                         android:scaleY="0.8"
-                        app:layout_constraintBottom_toBottomOf="@+id/average_text_2"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@+id/average_text_2" />
+                        app:layout_constraintBottom_toBottomOf="@id/average_text_2"
+                        app:layout_constraintEnd_toStartOf="@id/average_rating_num_2"
+                        app:layout_constraintTop_toTopOf="@id/average_text_2" />
 
                     <RatingBar
                         android:id="@+id/ratingBar_your_rating_2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
                         android:scaleX="0.8"
                         android:scaleY="0.8"
-                        app:layout_constraintBottom_toBottomOf="@+id/your_rating_text_2"
+                        app:layout_constraintBottom_toBottomOf="@id/your_rating_text_2"
+                        app:layout_constraintEnd_toStartOf="@id/your_rating_num_2"
+                        app:layout_constraintTop_toTopOf="@id/your_rating_text_2" />
+
+                    <TextView
+                        android:id="@+id/average_rating_num_2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="4,0"
+                        android:textColor="#228B22"
+                        android:textSize="24sp"
+                        app:layout_constraintBottom_toBottomOf="@id/average_text_2"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@+id/your_rating_text_2" />
+                        app:layout_constraintTop_toTopOf="@id/average_text_2" />
+
+                    <TextView
+                        android:id="@+id/your_rating_num_2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="4,0"
+                        android:textColor="#228B22"
+                        android:textSize="24sp"
+                        app:layout_constraintBottom_toBottomOf="@id/your_rating_text_2"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/your_rating_text_2" />
 
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
@@ -424,7 +521,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Category 5"
                         android:textColor="#FFFFFF"
-                        android:textSize="30sp"
+                        android:textSize="24sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
@@ -437,7 +534,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Average"
                         android:textColor="#FFFFFF"
-                        android:textSize="24sp"
+                        android:textSize="20sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/category_5_text" />
 
@@ -450,7 +547,7 @@
                         android:fontFamily="@font/inter_bold"
                         android:text="Your Rating"
                         android:textColor="#FFFFFF"
-                        android:textSize="24sp"
+                        android:textSize="20sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/average_text_5" />
 
@@ -458,23 +555,47 @@
                         android:id="@+id/ratingBar_average_5"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
                         android:scaleX="0.8"
                         android:scaleY="0.8"
-                        app:layout_constraintBottom_toBottomOf="@+id/average_text_5"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@+id/average_text_5" />
+                        app:layout_constraintBottom_toBottomOf="@id/average_text_5"
+                        app:layout_constraintEnd_toStartOf="@id/average_rating_num_5"
+                        app:layout_constraintTop_toTopOf="@id/average_text_5" />
 
                     <RatingBar
                         android:id="@+id/ratingBar_your_rating_5"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
                         android:scaleX="0.8"
                         android:scaleY="0.8"
-                        app:layout_constraintBottom_toBottomOf="@+id/your_rating_text_5"
+                        app:layout_constraintBottom_toBottomOf="@id/your_rating_text_5"
+                        app:layout_constraintEnd_toStartOf="@id/your_rating_num_5"
+                        app:layout_constraintTop_toTopOf="@id/your_rating_text_5" />
+
+                    <TextView
+                        android:id="@+id/average_rating_num_5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="4,0"
+                        android:textColor="#228B22"
+                        android:textSize="24sp"
+                        app:layout_constraintBottom_toBottomOf="@id/average_text_5"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@+id/your_rating_text_5" />
+                        app:layout_constraintTop_toTopOf="@id/average_text_5" />
+
+                    <TextView
+                        android:id="@+id/your_rating_num_5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="4,0"
+                        android:textColor="#228B22"
+                        android:textSize="24sp"
+                        app:layout_constraintBottom_toBottomOf="@id/your_rating_text_5"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/your_rating_text_5" />
 
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
@@ -498,10 +619,12 @@
                     android:layout_height="100dp"
                     android:background="@drawable/rounded_box_dark"
                     android:hint="write a comment..."
-                    android:textColorHint="#282828"
+                    android:textColorHint="#575757"
                     android:fontFamily="@font/inter_bold"
                     android:paddingStart="8dp"
+                    android:paddingTop="8dp"
                     android:paddingEnd="8dp"
+                    android:gravity="top|start"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
