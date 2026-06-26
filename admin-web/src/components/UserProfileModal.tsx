@@ -102,10 +102,14 @@ interface UserProfileModalProps {
   onUserChanged?: (id: number, change: 'warned' | 'blocked' | 'unblocked' | 'deleted') => void
 }
 
+interface LoadedProfile {
+  userId: number
+  user: User | null
+  warnings: Warning[]
+}
+
 export default function UserProfileModal({ userId, opened, onClose, onUserChanged }: UserProfileModalProps) {
-  const [user, setUser] = useState<User | null>(null)
-  const [warnings, setWarnings] = useState<Warning[]>([])
-  const [loading, setLoading] = useState(false)
+  const [profile, setProfile] = useState<LoadedProfile | null>(null)
 
   const [warnText, setWarnText] = useState('')
   const [warnLoading, setWarnLoading] = useState(false)
@@ -113,26 +117,44 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
 
   const [confirmAction, setConfirmAction] = useState<'block' | 'unblock' | 'delete' | null>(null)
 
+  const isLoadedProfile = profile?.userId === userId
+  const user = isLoadedProfile ? profile.user : null
+  const warnings = isLoadedProfile ? profile.warnings : []
+  const loading = opened && userId !== null && !isLoadedProfile
+
   useEffect(() => {
     if (!opened || userId === null) return
-    setLoading(true)
-    setUser(null)
-    setWarnings([])
-    setShowWarnForm(false)
-    setWarnText('')
+    let canceled = false
+
     Promise.all([getUserById(userId), getUserWarnings(userId)]).then(([u, w]) => {
-      setUser(u ?? null)
-      setWarnings(w)
-      setLoading(false)
+      if (canceled) return
+      setProfile({ userId, user: u ?? null, warnings: w })
+      setShowWarnForm(false)
+      setWarnText('')
     })
+
+    return () => {
+      canceled = true
+    }
   }, [opened, userId])
+
+  function handleClose() {
+    setProfile(null)
+    setWarnText('')
+    setShowWarnForm(false)
+    setConfirmAction(null)
+    onClose()
+  }
 
   async function handleWarn() {
     if (!user || !warnText.trim()) return
     setWarnLoading(true)
     const newWarning = await warnUser(user.id, warnText.trim())
-    setWarnings((prev) => [newWarning, ...prev])
-    setUser((prev) => prev ? { ...prev, warningCount: prev.warningCount + 1 } : prev)
+    setProfile((prev) => prev && prev.user?.id === user.id ? {
+      ...prev,
+      user: { ...prev.user, warningCount: prev.user.warningCount + 1 },
+      warnings: [newWarning, ...prev.warnings],
+    } : prev)
     setWarnText('')
     setShowWarnForm(false)
     setWarnLoading(false)
@@ -142,14 +164,20 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
   async function handleBlock() {
     if (!user) return
     await blockUser(user.id)
-    setUser((prev) => prev ? { ...prev, status: 'Blocked' } : prev)
+    setProfile((prev) => prev && prev.user?.id === user.id ? {
+      ...prev,
+      user: { ...prev.user, status: 'Blocked' },
+    } : prev)
     onUserChanged?.(user.id, 'blocked')
   }
 
   async function handleUnblock() {
     if (!user) return
     await unblockUser(user.id)
-    setUser((prev) => prev ? { ...prev, status: 'Active' } : prev)
+    setProfile((prev) => prev && prev.user?.id === user.id ? {
+      ...prev,
+      user: { ...prev.user, status: 'Active' },
+    } : prev)
     onUserChanged?.(user.id, 'unblocked')
   }
 
@@ -157,14 +185,14 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
     if (!user) return
     await deleteUser(user.id)
     onUserChanged?.(user.id, 'deleted')
-    onClose()
+    handleClose()
   }
 
   return (
     <>
       <Modal
         opened={opened}
-        onClose={onClose}
+        onClose={handleClose}
         title="User Profile"
         centered
         size="lg"
