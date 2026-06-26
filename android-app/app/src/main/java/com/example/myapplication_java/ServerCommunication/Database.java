@@ -31,6 +31,7 @@ public abstract class Database extends RoomDatabase {
     //I probably shouldn't do it like this but I don't know where to put it.
     //Also we need to do error handling.
     public void updateDB(APIService apiService) {
+        Log.println(Log.DEBUG, "updateDB", "rein");
         SearchService service = searchService();
         Call<List<Professor>> professorCall = apiService.getProfessors();
         Call<List<Lecture>> lectureCall = apiService.getLectures();
