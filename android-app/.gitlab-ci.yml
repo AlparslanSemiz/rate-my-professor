@@ -55,8 +55,13 @@ android:instrumentation-test:
     ANDROID_SYSTEM_IMAGE: "system-images;android-36;google_apis;x86_64"
   script:
     - yes | sdkmanager --licenses >/dev/null || true
-    - yes | sdkmanager --install "platform-tools" "emulator" "platforms;android-36" "$ANDROID_SYSTEM_IMAGE"
+    - sdkmanager --install "platform-tools" "emulator" "platforms;android-36" "$ANDROID_SYSTEM_IMAGE"
     - yes | sdkmanager --licenses >/dev/null || true
+    - |
+      if ! sdkmanager --list | grep -F "$ANDROID_SYSTEM_IMAGE"; then
+        echo "Android system image package is not available: $ANDROID_SYSTEM_IMAGE"
+        exit 1
+      fi
     - echo "no" | avdmanager create avd --force --name "$AVD_NAME" --package "$ANDROID_SYSTEM_IMAGE" --device "pixel"
     - emulator -avd "$AVD_NAME" -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel off -no-snapshot -wipe-data &
     - adb wait-for-device
