@@ -50,7 +50,22 @@ android:test:
 android:instrumentation-test:
   extends: .android-gradle
   stage: test
+  variables:
+    AVD_NAME: "ci-api-36"
+    ANDROID_SYSTEM_IMAGE: "system-images;android-36;google_apis;x86_64"
   script:
+    - yes | sdkmanager --licenses >/dev/null || true
+    - yes | sdkmanager --install "platform-tools" "emulator" "platforms;android-36" "$ANDROID_SYSTEM_IMAGE"
+    - yes | sdkmanager --licenses >/dev/null || true
+    - echo "no" | avdmanager create avd --force --name "$AVD_NAME" --package "$ANDROID_SYSTEM_IMAGE" --device "pixel"
+    - emulator -avd "$AVD_NAME" -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel off -no-snapshot -wipe-data &
+    - adb wait-for-device
+    - |
+      timeout 300 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 5; done'
+    - adb shell input keyevent 82 || true
+    - adb shell settings put global window_animation_scale 0 || true
+    - adb shell settings put global transition_animation_scale 0 || true
+    - adb shell settings put global animator_duration_scale 0 || true
     - ./gradlew app:connectedDebugAndroidTest --no-daemon
   artifacts:
     when: always
