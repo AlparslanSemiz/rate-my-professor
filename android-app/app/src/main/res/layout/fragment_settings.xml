@@ -15,7 +15,7 @@
         android:contentDescription="@string/back"
         android:padding="16dp"
         android:src="@drawable/back_icon"
-        android:tint="#E9E9E9"
+        app:tint="#E9E9E9"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
