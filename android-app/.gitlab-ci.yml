@@ -63,7 +63,13 @@ android:instrumentation-test:
         exit 1
       fi
     - echo "no" | avdmanager create avd --force --name "$AVD_NAME" --package "$ANDROID_SYSTEM_IMAGE" --device "pixel"
-    - emulator -avd "$AVD_NAME" -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel off -no-snapshot -wipe-data &
+    - |
+      if [ ! -e /dev/kvm ]; then
+        echo "KVM hardware acceleration is required for Android instrumentation tests, but /dev/kvm is not available on this runner."
+        exit 1
+      fi
+    - ls -l /dev/kvm
+    - emulator -avd "$AVD_NAME" -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -accel on -no-snapshot -wipe-data &
     - adb wait-for-device
     - |
       timeout 300 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 5; done'
