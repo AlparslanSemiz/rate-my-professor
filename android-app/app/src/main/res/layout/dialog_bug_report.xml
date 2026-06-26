@@ -33,7 +33,7 @@
             android:contentDescription="@string/close"
             android:padding="12dp"
             android:src="@drawable/close_icon"
-            android:tint="#E9E9E9" />
+            app:tint="#E9E9E9" />
     </LinearLayout>
 
     <TextView
