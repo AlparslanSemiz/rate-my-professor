@@ -47,6 +47,20 @@ android:test:
       - app/build/reports/tests/
       - app/build/test-results/
 
+android:instrumentation-test:
+  extends: .android-gradle
+  stage: test
+  script:
+    - ./gradlew app:connectedDebugAndroidTest --no-daemon
+  artifacts:
+    when: always
+    expire_in: 1 week
+    reports:
+      junit: app/build/outputs/androidTest-results/connected/**/TEST-*.xml
+    paths:
+      - app/build/reports/androidTests/
+      - app/build/outputs/androidTest-results/
+
 android:build:
   extends: .android-gradle
   stage: build
