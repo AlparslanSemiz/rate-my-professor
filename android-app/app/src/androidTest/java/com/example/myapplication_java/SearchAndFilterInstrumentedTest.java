@@ -59,6 +59,30 @@ public class SearchAndFilterInstrumentedTest {
     }
 
     @Test
+    public void searchServiceReturnsAllProfessorsOrderedByFirstNameForBlankQuery() {
+        searchService.insertProfessor(new Professor("prof-3", "Grace", "Hopper", "Informatik", 4.8f));
+        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f));
+        searchService.insertProfessor(new Professor("prof-2", "Alan", "Turing", "Informatik", 4.9f));
+
+        List<Professor> results = searchService.searchProfessors("");
+
+        assertEquals(3, results.size());
+        assertEquals("Ada", results.get(0).firstName);
+        assertEquals("Alan", results.get(1).firstName);
+        assertEquals("Grace", results.get(2).firstName);
+    }
+
+    @Test
+    public void deleteProfessorsClearsProfessorTable() {
+        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f));
+        searchService.insertProfessor(new Professor("prof-2", "Grace", "Hopper", "Informatik", 4.8f));
+
+        searchService.deleteProfessors();
+
+        assertTrue(searchService.searchProfessors("").isEmpty());
+    }
+
+    @Test
     public void searchServiceReturnsLecturesMatchingNameOrderedByName() {
         searchService.insertLecture(new Lecture("lecture-2", "Softwaretechnik", "240002"));
         searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001"));
@@ -82,6 +106,30 @@ public class SearchAndFilterInstrumentedTest {
     }
 
     @Test
+    public void searchServiceReturnsAllLecturesOrderedByNameForBlankQuery() {
+        searchService.insertLecture(new Lecture("lecture-3", "Softwaretechnik", "240002"));
+        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001"));
+        searchService.insertLecture(new Lecture("lecture-2", "Analysis", "240003"));
+
+        List<Lecture> results = searchService.searchLectures("");
+
+        assertEquals(3, results.size());
+        assertEquals("Algorithms", results.get(0).name);
+        assertEquals("Analysis", results.get(1).name);
+        assertEquals("Softwaretechnik", results.get(2).name);
+    }
+
+    @Test
+    public void deleteLecturesClearsLectureTable() {
+        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001"));
+        searchService.insertLecture(new Lecture("lecture-2", "Softwaretechnik", "240002"));
+
+        searchService.deleteLectures();
+
+        assertTrue(searchService.searchLectures("").isEmpty());
+    }
+
+    @Test
     public void lectureAdapterBindsLectureNameAndItemCount() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         ArrayList<Lecture> lectures = new ArrayList<>();
@@ -99,12 +147,29 @@ public class SearchAndFilterInstrumentedTest {
     }
 
     @Test
+    public void lectureAdapterReportsZeroItemsForEmptyList() {
+        LectureAdapter adapter = new LectureAdapter(new ArrayList<>());
+
+        assertEquals(0, adapter.getItemCount());
+    }
+
+    @Test
     public void searchPagerAdapterCreatesLecturePage() {
         SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment());
 
         Fragment fragment = adapter.createFragment(1);
 
         assertEquals(2, adapter.getItemCount());
+        assertTrue(fragment instanceof SelectionFragment);
+        assertEquals("LECTURES", fragment.requireArguments().getString("selection_type"));
+    }
+
+    @Test
+    public void searchPagerAdapterTreatsUnknownPositionAsLecturePage() {
+        SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment());
+
+        Fragment fragment = adapter.createFragment(99);
+
         assertTrue(fragment instanceof SelectionFragment);
         assertEquals("LECTURES", fragment.requireArguments().getString("selection_type"));
     }

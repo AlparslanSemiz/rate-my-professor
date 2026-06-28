@@ -19,6 +19,12 @@ The GitLab pipeline currently runs local JVM tests in the `test` stage:
 ./gradlew app:test --no-daemon
 ```
 
+- `android:instrumentation-compile` compiles the Android instrumentation test APK without starting an emulator:
+
+```bash
+./gradlew app:compileDebugAndroidTestJavaWithJavac --no-daemon
+```
+
 - `.android:instrumentation-test` is kept as a hidden GitLab CI template for Android instrumentation tests:
 
 ```bash
@@ -29,7 +35,10 @@ The instrumentation job is temporarily disabled and will not run in CI while it 
 
 ## Local JVM Tests
 
-File: `src/test/java/com/example/myapplication_java/DomainModelTest.java`
+Files:
+
+- `src/test/java/com/example/myapplication_java/DomainModelTest.java`
+- `src/test/java/com/example/myapplication_java/APIServiceContractTest.java`
 
 These tests verify pure Java/domain-model behavior. They are fast and do not depend on Android framework classes.
 
@@ -135,6 +144,31 @@ Covered behavior:
 
 Why this matters: the token entry screen uses the success flag and message to decide whether to continue or show an error.
 
+Additional domain-model tests cover the remaining practical JVM-testable behavior:
+
+- `Professor.getLectures()` currently returns an empty list.
+- `Lecture.getProfessors()` currently returns an empty list.
+- `Comment.addReply(...)` and `Comment.getVoteScore()` currently keep the default vote score at `0`.
+- `LectureOffering` stores lecture/professor/semester relations and currently returns the placeholder average rating `5.0`.
+- `Notification.markAsRead()` is documented as a current no-op.
+- `Semester`, `UserStatistics`, and `Vote` constructors store their implemented fields.
+- `User` action placeholder methods currently do not mutate the supplied review/comment objects.
+- `SemesterType` and `VoteType` expose the expected enum values.
+
+## API Contract JVM Tests
+
+File: `src/test/java/com/example/myapplication_java/APIServiceContractTest.java`
+
+These tests verify Retrofit-facing configuration without making real network calls.
+
+Covered behavior:
+
+- `requestLogin(...)` uses `POST /auth/request-login` with a `@Body` request parameter.
+- `login(...)` uses `POST /auth/login` with a `@Body` request parameter.
+- `getProfessors()` uses `GET /data/professor`.
+- `getLectures()` uses `GET /data/lectures`.
+- `RetrofitClient.getClient(...)` uses the configured backend base URL and caches the Retrofit instance.
+
 ## Android Instrumentation Tests
 
 File: `src/androidTest/java/com/example/myapplication_java/ProfessorFeatureInstrumentedTest.java`
@@ -165,6 +199,10 @@ Covered behavior:
 - The rendered format is `firstName + " " + lastName`.
 
 Why this is instrumentation: inflating Android layouts and reading a `TextView` require Android framework classes.
+
+### `professorAdapterReportsZeroItemsForEmptyList`
+
+Purpose: verifies that `ProfessorAdapter` handles an empty input list without producing phantom rows.
 
 ### `searchPagerAdapterCreatesProfessorPage`
 
@@ -215,6 +253,14 @@ Why `waitForProfessorCount(...)` exists:
 - The test waits briefly until the expected number of professors appears in the database.
 - This avoids asserting before the async insert finishes.
 
+### Additional Database Refresh Tests
+
+The instrumentation suite also covers:
+
+- replacing cached lectures with lectures returned by `APIService.getLectures()`
+- preserving existing professor and lecture rows when the fake server response body is `null`
+- waiting for asynchronous lecture inserts before asserting final DAO state
+
 ## Search And Filter Instrumentation Tests
 
 File: `src/androidTest/java/com/example/myapplication_java/SearchAndFilterInstrumentedTest.java`
@@ -247,6 +293,13 @@ Covered behavior:
 
 Why this matters: search should not return unrelated professor rows.
 
+### Additional Professor DAO Tests
+
+The instrumentation suite also covers:
+
+- blank professor query returns all professors ordered by `firstName ASC`
+- `deleteProfessors()` clears the professor table
+
 ### `searchServiceReturnsLecturesMatchingNameOrderedByName`
 
 Purpose: verifies the implemented Room DAO query for lecture search.
@@ -270,6 +323,13 @@ Covered behavior:
 
 Why this matters: lecture search should not return unrelated lecture rows.
 
+### Additional Lecture DAO Tests
+
+The instrumentation suite also covers:
+
+- blank lecture query returns all lectures ordered by `name ASC`
+- `deleteLectures()` clears the lecture table
+
 ### `lectureAdapterBindsLectureNameAndItemCount`
 
 Purpose: verifies that `LectureAdapter` renders implemented lecture list data correctly.
@@ -282,6 +342,10 @@ Covered behavior:
 
 Why this is instrumentation: inflating Android layouts and reading a `TextView` require Android framework classes.
 
+### `lectureAdapterReportsZeroItemsForEmptyList`
+
+Purpose: verifies that `LectureAdapter` handles an empty input list without producing phantom rows.
+
 ### `searchPagerAdapterCreatesLecturePage`
 
 Purpose: verifies that the search pager creates the lecture-selection page for position `1`.
@@ -293,6 +357,10 @@ Covered behavior:
 - The created fragment receives the `selection_type` argument with value `LECTURES`.
 
 Why this matters: the search screen depends on pager position `1` being the lecture list.
+
+### `searchPagerAdapterTreatsUnknownPositionAsLecturePage`
+
+Purpose: documents the current fallback behavior where any non-zero pager position creates the lecture page.
 
 ## Disabled User Story Instrumentation Tests
 
@@ -383,21 +451,29 @@ This is enough for `Database.updateDB(...)`, because the production code uses `e
 
 Covered now:
 
-- Basic `Professor` model construction.
-- Basic `Lecture` model construction.
-- Basic `Rating` model construction.
+- Domain-model constructors and current placeholder behavior for `Professor`, `Lecture`, `Rating`, `RatingCategory`, `Comment`, `Review`, `User`, `LectureOffering`, `Notification`, `Semester`, `UserStatistics`, and `Vote`.
+- Enum values for `SemesterType` and `VoteType`.
 - Basic `Review` model construction for rating plus written experience text.
 - Basic `Comment` model construction for readable professor comments.
 - Basic `User` model construction for KIT identity fields.
 - `LoginRequest` payload construction for KIT email and token login.
 - `ServerResponse` construction for login verification result handling.
+- Retrofit API endpoint annotations for login, professor data, and lecture data.
+- Retrofit client base URL and singleton/cache behavior.
 - Professor adapter display binding.
+- Professor adapter empty-list behavior.
 - Lecture adapter display binding.
+- Lecture adapter empty-list behavior.
 - Search pager professor page selection.
 - Search pager lecture page selection.
+- Search pager non-zero fallback behavior.
 - Professor DAO insert/search/order behavior.
+- Professor DAO blank-query and delete behavior.
 - Lecture DAO insert/search/order behavior.
+- Lecture DAO blank-query and delete behavior.
 - Professor cache refresh from API response into Room.
+- Lecture cache refresh from API response into Room.
+- Database refresh behavior when API response bodies are null.
 - Disabled instrumentation acceptance placeholders for the four current user stories.
 
 Not covered yet:

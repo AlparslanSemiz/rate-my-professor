@@ -79,6 +79,13 @@ public class ProfessorFeatureInstrumentedTest {
     }
 
     @Test
+    public void professorAdapterReportsZeroItemsForEmptyList() {
+        ProfessorAdapter adapter = new ProfessorAdapter(new ArrayList<>());
+
+        assertEquals(0, adapter.getItemCount());
+    }
+
+    @Test
     public void searchPagerAdapterCreatesProfessorPage() {
         SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment());
 
@@ -120,12 +127,57 @@ public class ProfessorFeatureInstrumentedTest {
         assertEquals("Grace", results.get(1).firstName);
     }
 
+    @Test
+    public void updateDBReplacesExistingLecturesWithServerLectures() throws Exception {
+        searchService.insertLecture(new Lecture("old-lecture", "Old Lecture", "000000"));
+        APIService apiService = new FakeAPIService(
+                Collections.emptyList(),
+                Arrays.asList(
+                        new Lecture("lecture-2", "Softwaretechnik", "240002"),
+                        new Lecture("lecture-1", "Algorithms", "240001")
+                )
+        );
+
+        database.updateDB(apiService);
+
+        List<Lecture> results = waitForLectureCount(2);
+        assertEquals("Algorithms", results.get(0).name);
+        assertEquals("Softwaretechnik", results.get(1).name);
+    }
+
+    @Test
+    public void updateDBLeavesExistingDataWhenServerBodiesAreNull() {
+        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f));
+        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001"));
+        APIService apiService = new FakeAPIService(null, null);
+
+        database.updateDB(apiService);
+
+        assertEquals(1, searchService.searchProfessors("").size());
+        assertEquals(1, searchService.searchLectures("").size());
+    }
+
     private List<Professor> waitForProfessorCount(int expectedCount) throws InterruptedException {
         long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(3);
         List<Professor> results = Collections.emptyList();
 
         while (System.currentTimeMillis() < deadline) {
             results = searchService.searchProfessors("");
+            if (results.size() == expectedCount) {
+                return results;
+            }
+            Thread.sleep(50);
+        }
+
+        return results;
+    }
+
+    private List<Lecture> waitForLectureCount(int expectedCount) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(3);
+        List<Lecture> results = Collections.emptyList();
+
+        while (System.currentTimeMillis() < deadline) {
+            results = searchService.searchLectures("");
             if (results.size() == expectedCount) {
                 return results;
             }

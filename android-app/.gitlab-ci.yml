@@ -47,6 +47,12 @@ android:test:
       - app/build/reports/tests/
       - app/build/test-results/
 
+android:instrumentation-compile:
+  extends: .android-gradle
+  stage: test
+  script:
+    - ./gradlew app:compileDebugAndroidTestJavaWithJavac --no-daemon
+
 # Temporarily disabled: instrumentation tests are kept as a hidden CI template
 # until the runner can execute Android emulator/device tests reliably.
 .android:instrumentation-test:
