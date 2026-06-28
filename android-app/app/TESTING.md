@@ -15,6 +15,7 @@ Local JVM tests:
 
 - `DomainModelTest`: `professorConstructorStoresImplementedFields`, `lectureConstructorStoresImplementedFields`, `ratingConstructorStoresImplementedFields`, `commentConstructorStoresReadableCommentFields`, `reviewConstructorStoresProfessorRatingAndCommentText`, `userConstructorStoresVerifiedKitStudentIdentityFields`, `loginRequestStoresKitMailAndAuthToken`, `serverResponseStoresLoginVerificationResult`, `professorGetLecturesCurrentlyReturnsEmptyList`, `lectureGetProfessorsCurrentlyReturnsEmptyList`, `commentVoteScoreDefaultsToZero`, `lectureOfferingStoresRelationsAndCurrentAverageRatingPlaceholder`, `notificationConstructorStoresFieldsAndMarkAsReadIsCurrentlyNoOp`, `semesterConstructorStoresImplementedFields`, `userStatisticsConstructorStoresImplementedFields`, `voteConstructorStoresImplementedFields`, `userActionPlaceholdersDoNotMutateCurrentDomainObjects`, `enumValuesExposeSupportedSemesterAndVoteTypes`.
 - `APIServiceContractTest`: `requestLoginEndpointUsesExpectedPostPathAndBody`, `loginEndpointUsesExpectedPostPathAndBody`, `dataEndpointsUseExpectedGetPaths`, `retrofitClientUsesConfiguredBaseUrlAndCachesInstance`.
+- `APIServiceHttpIntegrationTest`: `requestLoginSendsJsonBodyAndParsesServerResponse`, `loginSendsTokenAndParsesRejectedResponse`, `getProfessorsParsesProfessorListFromJson`, `getLecturesParsesLectureListFromJson`.
 
 Active instrumentation tests:
 
@@ -53,8 +54,9 @@ Files:
 
 - `src/test/java/com/example/myapplication_java/DomainModelTest.java`
 - `src/test/java/com/example/myapplication_java/APIServiceContractTest.java`
+- `src/test/java/com/example/myapplication_java/APIServiceHttpIntegrationTest.java`
 
-These tests verify pure Java/domain-model behavior. They are fast and do not depend on Android framework classes.
+These tests verify pure Java/domain-model behavior, Retrofit contracts, and emulator-free HTTP integration behavior. They are fast and do not depend on Android framework classes.
 
 ### `professorConstructorStoresImplementedFields`
 
@@ -182,6 +184,58 @@ Covered behavior:
 - `getProfessors()` uses `GET /data/professor`.
 - `getLectures()` uses `GET /data/lectures`.
 - `RetrofitClient.getClient(...)` uses the configured backend base URL and caches the Retrofit instance.
+
+## Emulator-Free JVM Integration Tests
+
+File: `src/test/java/com/example/myapplication_java/APIServiceHttpIntegrationTest.java`
+
+These tests use Retrofit, Gson, OkHttp, and MockWebServer together on the JVM. They do not need an emulator because MockWebServer is a normal in-process HTTP server and the tests do not use Android `Context`, views, Room, activities, or fragments.
+
+What is integrated:
+
+- Retrofit creates a real `APIService` implementation.
+- Gson serializes `LoginRequest` into JSON request bodies.
+- OkHttp sends HTTP requests to MockWebServer.
+- MockWebServer records the actual HTTP method, URL path, and request body.
+- Retrofit/Gson parse fake JSON responses back into `ServerResponse`, `Professor`, and `Lecture` objects.
+
+### `requestLoginSendsJsonBodyAndParsesServerResponse`
+
+Purpose: verifies the request-login flow across Retrofit, JSON serialization, HTTP transport, and response parsing.
+
+Covered behavior:
+
+- `requestLogin(...)` sends `POST /auth/request-login`.
+- The JSON request body contains the KIT email and empty token.
+- A successful JSON response is parsed into `ServerResponse`.
+
+### `loginSendsTokenAndParsesRejectedResponse`
+
+Purpose: verifies token-login request serialization and failure-response parsing without calling the real backend.
+
+Covered behavior:
+
+- `login(...)` sends `POST /auth/login`.
+- The JSON request body contains the KIT email and token.
+- A rejected JSON response is parsed with `success == false` and the expected message.
+
+### `getProfessorsParsesProfessorListFromJson`
+
+Purpose: verifies that professor data returned by the backend shape can be parsed into the current `Professor` domain model.
+
+Covered behavior:
+
+- `getProfessors()` sends `GET /data/professor`.
+- JSON fields `id`, `firstName`, `lastName`, `department`, and `averageRating` populate a `Professor`.
+
+### `getLecturesParsesLectureListFromJson`
+
+Purpose: verifies that lecture data returned by the backend shape can be parsed into the current `Lecture` domain model.
+
+Covered behavior:
+
+- `getLectures()` sends `GET /data/lectures`.
+- JSON fields `id`, `name`, and `code` populate a `Lecture`.
 
 ## Android Instrumentation Tests
 
@@ -474,6 +528,7 @@ Covered now:
 - `ServerResponse` construction for login verification result handling.
 - Retrofit API endpoint annotations for login, professor data, and lecture data.
 - Retrofit client base URL and singleton/cache behavior.
+- Retrofit/Gson/OkHttp integration against MockWebServer for login, professor list, and lecture list HTTP calls.
 - Professor adapter display binding.
 - Professor adapter empty-list behavior.
 - Lecture adapter display binding.

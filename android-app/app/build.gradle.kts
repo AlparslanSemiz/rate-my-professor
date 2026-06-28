@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.logging.interceptor)
     implementation(libs.room.runtime)
     annotationProcessor(libs.room.compiler)
+    testImplementation(libs.mockwebserver)
 }
 
 jacoco {
