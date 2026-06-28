@@ -14,7 +14,7 @@ The project uses two Android test source sets:
 Local JVM tests:
 
 - `DomainModelTest`: `professorConstructorStoresImplementedFields`, `lectureConstructorStoresImplementedFields`, `ratingConstructorStoresImplementedFields`, `commentConstructorStoresReadableCommentFields`, `reviewConstructorStoresProfessorRatingAndCommentText`, `userConstructorStoresVerifiedKitStudentIdentityFields`, `loginRequestStoresKitMailAndAuthToken`, `serverResponseStoresLoginVerificationResult`, `professorGetLecturesCurrentlyReturnsEmptyList`, `lectureGetProfessorsCurrentlyReturnsEmptyList`, `commentVoteScoreDefaultsToZero`, `lectureOfferingStoresRelationsAndCurrentAverageRatingPlaceholder`, `notificationConstructorStoresFieldsAndMarkAsReadIsCurrentlyNoOp`, `semesterConstructorStoresImplementedFields`, `userStatisticsConstructorStoresImplementedFields`, `voteConstructorStoresImplementedFields`, `userActionPlaceholdersDoNotMutateCurrentDomainObjects`, `enumValuesExposeSupportedSemesterAndVoteTypes`.
-- `APIServiceContractTest`: `requestLoginEndpointUsesExpectedPostPathAndBody`, `loginEndpointUsesExpectedPostPathAndBody`, `dataEndpointsUseExpectedGetPaths`, `retrofitClientUsesConfiguredBaseUrlAndCachesInstance`.
+- `APIServiceContractTest`: `retrofitClientUsesConfiguredBaseUrlAndCachesInstance`.
 - `APIServiceHttpIntegrationTest`: `requestLoginSendsJsonBodyAndParsesServerResponse`, `loginSendsTokenAndParsesRejectedResponse`, `getProfessorsParsesProfessorListFromJson`, `getLecturesParsesLectureListFromJson`.
 
 Active instrumentation tests:
@@ -47,6 +47,8 @@ The GitLab pipeline has one CI job per active verification category:
 Instrumentation is controlled as one unit: when it is disabled, CI does not compile, assemble, or run `src/androidTest`; when it is enabled, CI creates an emulator and `connectedDebugAndroidTest` builds the Android test APK as part of the same Gradle task graph before running the tests.
 
 This report covers code that is exercised by local JVM tests. Android UI classes in `Activities`, `Fragments`, and `Adapters` are excluded from this JVM report because they require Android runtime/instrumentation coverage instead of local unit-test coverage.
+
+Test ownership rule: each behavior should have one owning test layer. JVM tests own domain object behavior, Retrofit client configuration, and Retrofit/Gson/HTTP behavior against MockWebServer. Instrumentation tests own Android runtime behavior: Room DAO execution, adapter view binding, fragment/page mapping, and app context checks.
 
 ## Local JVM Tests
 
@@ -175,15 +177,13 @@ Additional domain-model tests cover the remaining practical JVM-testable behavio
 
 File: `src/test/java/com/example/myapplication_java/APIServiceContractTest.java`
 
-These tests verify Retrofit-facing configuration without making real network calls.
+This test verifies Retrofit client construction that is not covered by the MockWebServer integration tests.
 
 Covered behavior:
 
-- `requestLogin(...)` uses `POST /auth/request-login` with a `@Body` request parameter.
-- `login(...)` uses `POST /auth/login` with a `@Body` request parameter.
-- `getProfessors()` uses `GET /data/professor`.
-- `getLectures()` uses `GET /data/lectures`.
 - `RetrofitClient.getClient(...)` uses the configured backend base URL and caches the Retrofit instance.
+
+Endpoint paths, HTTP methods, request JSON, and response parsing are intentionally not tested here. They are owned by `APIServiceHttpIntegrationTest` so that the same API behavior is not tested twice.
 
 ## Emulator-Free JVM Integration Tests
 
@@ -526,7 +526,6 @@ Covered now:
 - Basic `User` model construction for KIT identity fields.
 - `LoginRequest` payload construction for KIT email and token login.
 - `ServerResponse` construction for login verification result handling.
-- Retrofit API endpoint annotations for login, professor data, and lecture data.
 - Retrofit client base URL and singleton/cache behavior.
 - Retrofit/Gson/OkHttp integration against MockWebServer for login, professor list, and lecture list HTTP calls.
 - Professor adapter display binding.
