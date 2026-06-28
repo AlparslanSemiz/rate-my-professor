@@ -9,29 +9,43 @@ The project uses two Android test source sets:
 - `src/test`: local JVM tests. These run without an Android device or emulator.
 - `src/androidTest`: Android instrumentation tests. These run on a real Android device or emulator.
 
+## Active Test Inventory
+
+Local JVM tests:
+
+- `DomainModelTest`: `professorConstructorStoresImplementedFields`, `lectureConstructorStoresImplementedFields`, `ratingConstructorStoresImplementedFields`, `commentConstructorStoresReadableCommentFields`, `reviewConstructorStoresProfessorRatingAndCommentText`, `userConstructorStoresVerifiedKitStudentIdentityFields`, `loginRequestStoresKitMailAndAuthToken`, `serverResponseStoresLoginVerificationResult`, `professorGetLecturesCurrentlyReturnsEmptyList`, `lectureGetProfessorsCurrentlyReturnsEmptyList`, `commentVoteScoreDefaultsToZero`, `lectureOfferingStoresRelationsAndCurrentAverageRatingPlaceholder`, `notificationConstructorStoresFieldsAndMarkAsReadIsCurrentlyNoOp`, `semesterConstructorStoresImplementedFields`, `userStatisticsConstructorStoresImplementedFields`, `voteConstructorStoresImplementedFields`, `userActionPlaceholdersDoNotMutateCurrentDomainObjects`, `enumValuesExposeSupportedSemesterAndVoteTypes`.
+- `APIServiceContractTest`: `requestLoginEndpointUsesExpectedPostPathAndBody`, `loginEndpointUsesExpectedPostPathAndBody`, `dataEndpointsUseExpectedGetPaths`, `retrofitClientUsesConfiguredBaseUrlAndCachesInstance`.
+
+Active instrumentation tests:
+
+- `ExampleInstrumentedTest`: `useAppContext`.
+- `ProfessorFeatureInstrumentedTest`: `professorAdapterBindsFullNameAndItemCount`, `professorAdapterReportsZeroItemsForEmptyList`, `searchPagerAdapterCreatesProfessorPage`, `searchServiceReturnsProfessorsMatchingFirstNameOrderedByFirstName`, `updateDBReplacesExistingProfessorsWithServerProfessors`, `updateDBReplacesExistingLecturesWithServerLectures`, `updateDBLeavesExistingDataWhenServerBodiesAreNull`.
+- `SearchAndFilterInstrumentedTest`: `searchServiceReturnsEmptyProfessorListWhenFirstNameDoesNotMatch`, `searchServiceReturnsAllProfessorsOrderedByFirstNameForBlankQuery`, `deleteProfessorsClearsProfessorTable`, `searchServiceReturnsLecturesMatchingNameOrderedByName`, `searchServiceReturnsEmptyLectureListWhenNameDoesNotMatch`, `searchServiceReturnsAllLecturesOrderedByNameForBlankQuery`, `deleteLecturesClearsLectureTable`, `lectureAdapterBindsLectureNameAndItemCount`, `lectureAdapterReportsZeroItemsForEmptyList`, `searchPagerAdapterCreatesLecturePage`, `searchPagerAdapterTreatsUnknownPositionAsLecturePage`.
+
+Disabled instrumentation placeholders:
+
+- `UserStoryInstrumentedTest`: `kitStudentCanSeeAndRateCurrentProfessor`, `kitStudentCanSearchAndFilterProfessorsByNameLectureAndCriteria`, `kitStudentCanReadAndWriteProfessorComments`, `kitStudentCanLoginWithKitMailVerification`.
+
 ## How CI Runs Them
 
-The GitLab pipeline currently runs local JVM tests in the `test` stage:
+The GitLab pipeline has one CI job per active verification category:
 
-- `android:test` runs local JVM tests with:
-
-```bash
-./gradlew app:test --no-daemon
-```
-
-- `android:instrumentation-compile` compiles the Android instrumentation test APK without starting an emulator:
+- `android:lint` runs static Android lint only. It does not run unit or instrumentation tests.
+- `android:test` runs the local JVM test suite once and generates the JVM coverage report:
 
 ```bash
-./gradlew app:compileDebugAndroidTestJavaWithJavac --no-daemon
+./gradlew app:debugUnitTestCoverage --no-daemon
 ```
 
-- `.android:instrumentation-test` is kept as a hidden GitLab CI template for Android instrumentation tests:
+- `android:instrumentation-test` is disabled by default. Set the GitLab CI variable `RUN_INSTRUMENTATION_TESTS=true` to run the full Android instrumentation suite once:
 
 ```bash
 ./gradlew app:connectedDebugAndroidTest --no-daemon
 ```
 
-The instrumentation job is temporarily disabled and will not run in CI while it is dot-prefixed. This keeps the test definition integrated with CI but avoids booting an emulator until the runner can execute Android device tests reliably.
+Instrumentation is controlled as one unit: when it is disabled, CI does not compile, assemble, or run `src/androidTest`; when it is enabled, CI creates an emulator and `connectedDebugAndroidTest` builds the Android test APK as part of the same Gradle task graph before running the tests.
+
+This report covers code that is exercised by local JVM tests. Android UI classes in `Activities`, `Fragments`, and `Adapters` are excluded from this JVM report because they require Android runtime/instrumentation coverage instead of local unit-test coverage.
 
 ## Local JVM Tests
 

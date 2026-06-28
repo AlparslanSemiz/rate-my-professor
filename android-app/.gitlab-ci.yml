@@ -22,45 +22,42 @@ stages:
   before_script:
     - chmod +x ./gradlew
 
-android:check:
+android:lint:
   extends: .android-gradle
   stage: check
   script:
-    - ./gradlew app:check --no-daemon
+    - ./gradlew app:lint --no-daemon
   artifacts:
     when: always
     expire_in: 1 week
     paths:
-      - app/build/reports/
+      - app/build/reports/lint-results-*.html
+      - app/build/reports/lint-results-*.xml
 
 android:test:
   extends: .android-gradle
   stage: test
   script:
-    - ./gradlew app:test --no-daemon
+    - ./gradlew app:debugUnitTestCoverage --no-daemon
   artifacts:
     when: always
     expire_in: 1 week
     reports:
       junit: app/build/test-results/test*/TEST-*.xml
     paths:
+      - app/build/reports/jacoco/debugUnitTestCoverage/
       - app/build/reports/tests/
       - app/build/test-results/
 
-android:instrumentation-compile:
-  extends: .android-gradle
-  stage: test
-  script:
-    - ./gradlew app:compileDebugAndroidTestJavaWithJavac --no-daemon
-
-# Temporarily disabled: instrumentation tests are kept as a hidden CI template
-# until the runner can execute Android emulator/device tests reliably.
-.android:instrumentation-test:
+android:instrumentation-test:
   extends: .android-gradle
   stage: test
   variables:
     AVD_NAME: "ci-api-36"
     ANDROID_SYSTEM_IMAGE: "system-images;android-36;google_apis;x86_64"
+  rules:
+    - if: '$RUN_INSTRUMENTATION_TESTS == "true"'
+    - when: never
   script:
     - yes | sdkmanager --licenses >/dev/null || true
     - sdkmanager --install "platform-tools" "emulator" "platforms;android-36" "$ANDROID_SYSTEM_IMAGE"

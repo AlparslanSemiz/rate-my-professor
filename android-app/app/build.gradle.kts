@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    jacoco
 }
 
 android {
@@ -52,4 +53,45 @@ dependencies {
     implementation(libs.logging.interceptor)
     implementation(libs.room.runtime)
     annotationProcessor(libs.room.compiler)
+}
+
+jacoco {
+    toolVersion = "0.8.14"
+}
+
+tasks.register<JacocoReport>("debugUnitTestCoverage") {
+    dependsOn("testDebugUnitTest")
+
+    reports {
+        xml.required.set(true)
+        csv.required.set(true)
+        html.required.set(true)
+    }
+
+    val excludes = listOf(
+        "**/R.class",
+        "**/R$*.class",
+        "**/BuildConfig.*",
+        "**/*Binding.*",
+        "**/*_Impl.*",
+        "**/*_Impl*",
+        "**/Activities/**",
+        "**/Adapters/**",
+        "**/Fragments/**"
+    )
+
+    classDirectories.setFrom(
+        files(
+            fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
+                exclude(excludes)
+            },
+            fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
+                exclude(excludes)
+            }
+        )
+    )
+    sourceDirectories.setFrom(files("src/main/java"))
+    executionData.setFrom(fileTree(layout.buildDirectory) {
+        include("jacoco/testDebugUnitTest.exec")
+    })
 }
