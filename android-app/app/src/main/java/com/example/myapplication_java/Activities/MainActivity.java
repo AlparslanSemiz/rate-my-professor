@@ -1,21 +1,20 @@
 package com.example.myapplication_java.Activities;
 
-import static java.security.AccessController.getContext;
-
-import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
+import android.util.Log;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.room.Room;
 
+import com.example.myapplication_java.Adapters.ControlFlowInterface;
+import com.example.myapplication_java.DomainModel.Lecture;
+import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.Fragments.HomeFragment;
+import com.example.myapplication_java.Fragments.LectureRatingsFragment;
+import com.example.myapplication_java.Fragments.ProfessorProfileFragment;
 import com.example.myapplication_java.Fragments.SearchFragment;
 import com.example.myapplication_java.Fragments.SettingsFragment;
 import com.example.myapplication_java.R;
@@ -27,7 +26,7 @@ import com.example.myapplication_java.databinding.ActivityMainBinding;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ControlFlowInterface {
 
     private ActivityMainBinding binding;
 
@@ -52,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
                 this,
                 Database.class,
                 Database.DB_NAME
-        ).build();
+        ).fallbackToDestructiveMigration(true).build();
         database.updateDB(apiService);
 
         binding.bottomNav.setOnItemSelectedListener(item -> {
@@ -93,4 +92,29 @@ public class MainActivity extends AppCompatActivity {
                 .replace(R.id.fragment_container, fragment)
                 .commit();
     }
+
+    @Override
+    public void onProfessorSelected(Professor professor) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragment_container, new ProfessorProfileFragment(professor))
+                .commit();
+    }
+
+    @Override
+    public void onLectureSelected(String lectureTitle) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragment_container, new ProfessorProfileFragment(lectureTitle))
+                .commit();
+    }
+
+    @Override
+    public void openLectureProfile(Professor professor, Semester semester, Lecture lecture) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragment_container, new LectureRatingsFragment(professor, semester, lecture))
+                .commit();
+    }
+
 }

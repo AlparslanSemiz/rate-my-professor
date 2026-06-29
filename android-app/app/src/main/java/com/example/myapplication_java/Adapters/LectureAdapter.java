@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.DomainModel.Lecture;
+import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.R;
 
 import java.util.List;
@@ -16,9 +17,11 @@ import java.util.List;
 public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureViewHolder> {
 
     private List<Lecture> lectures;
+    private OnLectureClickListener listener;
 
-    public LectureAdapter(List<Lecture> lectures) {
+    public LectureAdapter(List<Lecture> lectures, OnLectureClickListener listener) {
         this.lectures = lectures;
+        this.listener = listener;
     }
 
     @NonNull
@@ -32,8 +35,8 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
     @Override
     public void onBindViewHolder(@NonNull LectureViewHolder holder, int position) {
         Lecture lecture = lectures.get(position);
-
-        holder.textView.setText(lecture.name); // This could be done better with a getter
+        holder.textView.setText(lecture.name);
+        holder.itemView.setOnClickListener(v -> listener.onLectureClick(lecture.name));
     }
 
     @Override
@@ -49,5 +52,8 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
             super(itemView);
             textView = itemView.findViewById(R.id.lectureName);
         }
+    }
+    public interface OnLectureClickListener {
+        void onLectureClick(String lectureTitle);
     }
 }

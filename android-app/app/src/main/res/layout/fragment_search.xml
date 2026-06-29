@@ -1,66 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/profsButton"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:background="@drawable/custom_tab_background"
-        android:backgroundTint="@null"
-        android:text="Professors"
-        android:textColor="@color/custom_tab_text_color"
-        app:backgroundTint="@null"
-        app:cornerRadius="24dp"
-        app:layout_constraintEnd_toStartOf="@id/lecturesButton"
-        app:layout_constraintHorizontal_weight="1"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/lecturesButton"
-        android:layout_width="0dp"
+
+    <LinearLayout
+        android:id="@+id/customTabLayout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:background="@drawable/custom_tab_background"
-        android:backgroundTint="@null"
-        android:text="Lectures"
-        android:textColor="@color/custom_tab_text_color"
-        app:backgroundTint="@null"
-        app:cornerRadius="24dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_weight="1"
-        app:layout_constraintStart_toEndOf="@id/profsButton"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:orientation="horizontal">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/profsButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:layout_weight="1"
+            android:background="@drawable/custom_tab_background"
+            android:backgroundTint="@null"
+            app:backgroundTint="@null"
+            android:text="Professors"
+            android:textColor="@color/custom_tab_text_color"
+            app:cornerRadius="24dp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/lecturesButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:layout_weight="1"
+            android:background="@drawable/custom_tab_background"
+            android:backgroundTint="@null"
+            app:backgroundTint="@null"
+            android:text="Lectures"
+            android:textColor="@color/custom_tab_text_color"
+            app:cornerRadius="24dp"/>
+
+    </LinearLayout>
+
+
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/searchViewPager"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/profsButton"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:layout_weight="1" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/search_button"
-        android:layout_width="80dp"
-        android:layout_height="90dp"
-        android:layout_marginEnd="32dp"
-        android:layout_marginBottom="128dp"
-        app:backgroundTint="#575757"
-        app:cornerRadius="48dp"
-        app:icon="@android:drawable/ic_menu_search"
-        app:iconGravity="textStart"
-        app:iconSize="50dp"
-        app:iconTint="@android:color/white"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:srcCompat="@android:drawable/ic_menu_search" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

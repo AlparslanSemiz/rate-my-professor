@@ -1,5 +1,6 @@
 package com.example.myapplication_java.Fragments;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,28 +10,15 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.viewmodel.CreationExtras;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.example.myapplication_java.Adapters.ProfessorAdapter;
+import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.Adapters.SearchPagerAdapter;
-import com.example.myapplication_java.Adapters.SearchService;
-import com.example.myapplication_java.DomainModel.Professor;
-import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.databinding.FragmentProfSelectionBinding;
 import com.example.myapplication_java.databinding.FragmentSearchBinding;
-import com.google.android.material.tabs.TabLayout;
-import com.google.android.material.tabs.TabLayoutMediator;
-
-import java.util.ArrayList;
 
 public class SearchFragment extends Fragment {
-
-    //FragmentProfSelectionBinding binding;
-    private RecyclerView recyclerView;
-
     private FragmentSearchBinding binding;
+    private ControlFlowInterface flowInterface;
     @NonNull
     @Override
     public CreationExtras getDefaultViewModelCreationExtras() {
@@ -86,6 +74,15 @@ public class SearchFragment extends Fragment {
         binding.lecturesButton.setSelected(true);
     }
 
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        if (context instanceof ControlFlowInterface) {
+            flowInterface = (ControlFlowInterface) context;
+        } else {
+            throw new RuntimeException(context + "must implement ControlFlowInterface");
+        }
+    }
     @Override
     public void onDestroyView() {
         super.onDestroyView();
