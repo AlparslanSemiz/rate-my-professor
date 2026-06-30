@@ -3,6 +3,7 @@ package com.pse.social.model;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.pse.moderation.model.Admin;
 import com.pse.shared.enums.ReportReason;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -58,6 +59,13 @@ public class CommentReport {
     @ManyToOne(optional = false)
     @JoinColumn(name = "comment_id")
     private Comment comment;
+
+    @ManyToOne
+    @JoinColumn(name = "reviewed_by_admin_id")
+    private Admin reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
 
     @CreationTimestamp
     @Column(name = "created_at")

@@ -3,6 +3,7 @@ package com.pse.social.service;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.service.LectureService;
 import com.pse.shared.enums.ReportReason;
+import com.pse.shared.enums.ReportStatus;
 import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerReport;
 import com.pse.social.model.Comment;
@@ -15,6 +16,7 @@ import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -112,5 +114,22 @@ public class SocialService {
 
         return true;
 
+    }
+
+    public List<CommentReport> getReportedComments() {
+        return commentReportRepository.findAll();
+    }
+
+
+    public boolean updateReportStatus(UUID reportId, ReportStatus status) {
+        CommentReport commentReport = commentReportRepository.findById(reportId).orElse(null);
+
+        if(commentReport == null) {
+            return false;
+        }
+
+        commentReport.setStatus(status);
+
+        return true;
     }
 }

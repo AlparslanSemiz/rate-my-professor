@@ -5,21 +5,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.pse.moderation.model.Warning;
 import com.pse.rating.model.Rating;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerReport;
 import com.pse.social.model.Comment;
 import com.pse.social.model.CommentReport;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import com.pse.shared.enums.UserStatus;
+
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -47,6 +45,22 @@ public class Student {
     @Column(name = "credibility_score", nullable = false)
     private int credibilityScore;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserStatus status = UserStatus.ACTIVE;
+
+    @Column(columnDefinition = "TEXT")
+    private String biography;
+
+    @Column(name = "last_seen_at")
+    private LocalDateTime lastSeenAt;
+
+    @Column(name = "blocked_at")
+    private LocalDateTime blockedAt;
+
+    @Column(name = "blocked_reason")
+    private String blockedReason;
+
     @OneToMany(mappedBy = "student")
     private List<Rating> ratings = new ArrayList<>();
 
@@ -62,9 +76,8 @@ public class Student {
     @OneToMany(mappedBy = "reporter")
     private List<AnswerReport> answerReports = new ArrayList<>();
 
-
-    @Column(name = "deleted")
-    private boolean deleted;
+    @OneToMany(mappedBy = "student")
+    private List<Warning> warnings = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at")
