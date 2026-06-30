@@ -1,4 +1,4 @@
-package com.pse.lecture.dto;
+package com.pse.lecture.dto.response;
 
 import java.util.UUID;
 
