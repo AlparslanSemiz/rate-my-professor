@@ -194,7 +194,7 @@ public class AccountController {
         }
 
         //Set deleted in Database: Set "deleted" to true
-        if( !(studentService.softDeleteByKitEmail(student.getKitEmail()))){
+        if( !studentService.softDeleteByKitEmail(student.getKitEmail())){
            return new BasicResponse("Error, couldnt find student", false);     
         }
         

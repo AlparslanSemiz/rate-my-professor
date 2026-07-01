@@ -86,7 +86,6 @@ class AccountControllerTests {
                 .invalidateAllAuthTokensForEmail("test@student.kit.edu");
     }
 
-    // ---------------- VALIDATE ----------------
 
     @Test
     void validateShouldFailWithoutBearerToken() {
@@ -167,7 +166,6 @@ class AccountControllerTests {
         assertEquals("Error, wrong email for auth Token", response.message());
     }
 
-    // ---------------- INFORMATION ----------------
 
     @Test
     void informationShouldFailWithoutBearerToken() {
@@ -219,7 +217,6 @@ class AccountControllerTests {
         assertEquals(42, response.credibilityScore());
     }
 
-    // ---------------- DELETE ACCOUNT ----------------
 
     @Test
     void deleteAccountShouldFailWithoutBearerToken() {
@@ -252,6 +249,8 @@ class AccountControllerTests {
 
         when(tokenService.verifyUser("Bearer auth-token"))
                 .thenReturn(student);
+        when(studentService.softDeleteByKitEmail("test@student.kit.edu"))
+                .thenReturn(true);
 
         BasicResponse response =
                 accountController.deleteAccount("Bearer auth-token");
