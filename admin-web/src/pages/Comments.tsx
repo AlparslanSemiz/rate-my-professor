@@ -10,7 +10,6 @@ import {
   Tooltip,
   Box,
   SimpleGrid,
-  UnstyledButton,
 } from '@mantine/core'
 import {
   IconSearch,
@@ -21,133 +20,17 @@ import {
   IconCheck,
 } from '@tabler/icons-react'
 import {
-  getReportedComments,
-  updateCommentReportStatus,
+  commentsService,
   type ReportedComment,
   type CommentReportStatus,
-  type ReportReason,
-} from '../api/comments'
+} from '../api/CommentsService'
 import UserProfileModal from '../components/UserProfileModal'
-
-const statusColor: Record<CommentReportStatus, string> = {
-  Pending: 'orange',
-  Reviewed: 'blue',
-  Dismissed: 'gray',
-  Removed: 'red',
-}
-
-const reasonColor: Record<ReportReason, string> = {
-  Spam: 'yellow',
-  Harassment: 'red',
-  'Hate Speech': 'red',
-  Misinformation: 'orange',
-  Inappropriate: 'grape',
-  Other: 'gray',
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
+import StatCard from '../components/StatCard'
+import UserChip from '../components/UserChip'
+import { commentStatusColor, reportReasonColor } from '../constants/colors'
+import { formatDate } from '../utils/formatDate'
 
 const ALL = 'All'
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  accent,
-}: {
-  label: string
-  value: number
-  icon: React.ElementType
-  accent: string
-}) {
-  return (
-    <Box
-      style={{
-        background: '#161b22',
-        border: '1px solid #21262d',
-        borderRadius: 12,
-        padding: '16px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-      }}
-    >
-      <Box
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          background: `${accent}18`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <Icon size={18} color={accent} />
-      </Box>
-      <div>
-        <Text fw={700} c="#f1f5f9" style={{ fontSize: 22, lineHeight: 1 }}>
-          {value}
-        </Text>
-        <Text size="xs" c="#6b7280" mt={2}>
-          {label}
-        </Text>
-      </div>
-    </Box>
-  )
-}
-
-function UserChip({ id, name, role, warningCount, status, onClick }: {
-  id: number
-  name: string
-  role: string
-  warningCount: number
-  status: string
-  onClick: (id: number) => void
-}) {
-  const roleColor: Record<string, string> = {
-    Admin: '#3b82f6',
-    Professor: '#8b5cf6',
-    Student: '#6b7280',
-  }
-  return (
-    <UnstyledButton
-      onClick={(e) => { e.stopPropagation(); onClick(id) }}
-      style={{ display: 'inline-flex', flexDirection: 'column', gap: 2 }}
-    >
-      <Text
-        size="sm"
-        fw={500}
-        c="#e2e8f0"
-        style={{
-          textDecoration: 'underline',
-          textDecorationColor: 'rgba(255,255,255,0.15)',
-          cursor: 'pointer',
-        }}
-      >
-        {name}
-      </Text>
-      <Group gap={4}>
-        <Text size="xs" style={{ color: roleColor[role] ?? '#6b7280' }}>{role}</Text>
-        {warningCount > 0 && (
-          <Badge size="xs" color="yellow" variant="light">{warningCount}⚠</Badge>
-        )}
-        {status === 'Blocked' && (
-          <Badge size="xs" color="red" variant="light">Blocked</Badge>
-        )}
-      </Group>
-    </UnstyledButton>
-  )
-}
 
 export default function CommentsPage() {
   const [reports, setReports] = useState<ReportedComment[]>([])
@@ -160,7 +43,7 @@ export default function CommentsPage() {
   const [profileOpen, setProfileOpen] = useState(false)
 
   useEffect(() => {
-    getReportedComments().then((data) => {
+    commentsService.getReported().then((data) => {
       setReports(data)
       setLoading(false)
     })
@@ -183,7 +66,7 @@ export default function CommentsPage() {
   }, [reports, search, filterStatus, filterReason])
 
   async function handleStatusChange(id: number, status: CommentReportStatus) {
-    await updateCommentReportStatus(id, status)
+    await commentsService.updateStatus(id, status)
     setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
   }
 
@@ -391,13 +274,13 @@ export default function CommentsPage() {
                     </td>
 
                     <td style={{ padding: '16px 20px' }}>
-                      <Badge color={reasonColor[report.reason]} variant="light" size="sm">
+                      <Badge color={reportReasonColor[report.reason]} variant="light" size="sm">
                         {report.reason}
                       </Badge>
                     </td>
 
                     <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
-                      <Text size="xs" c="#6b7280">{formatDate(report.reportedAt)}</Text>
+                      <Text size="xs" c="#6b7280">{formatDate(report.reportedAt, { withTime: true })}</Text>
                     </td>
 
                     <td style={{ padding: '16px 20px' }}>
@@ -409,7 +292,7 @@ export default function CommentsPage() {
                           input: {
                             background: '#0f1117',
                             border: '1px solid #21262d',
-                            color: `var(--mantine-color-${statusColor[report.status]}-4)`,
+                            color: `var(--mantine-color-${commentStatusColor[report.status]}-4)`,
                             fontWeight: 600,
                             fontSize: 11,
                           },

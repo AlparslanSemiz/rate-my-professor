@@ -1,80 +1,23 @@
 import { useEffect, useState } from 'react'
 import { Text, Badge, Box, SimpleGrid, Select, Group, Loader, Center } from '@mantine/core'
 import { IconBug, IconAlertCircle, IconCircleCheck, IconClock } from '@tabler/icons-react'
-import { getReports, updateReportStatus, type BugReport, type ReportStatus } from '../api/feedback'
-
-const severityColor: Record<string, string> = {
-  Low: 'gray',
-  Medium: 'yellow',
-  High: 'orange',
-  Critical: 'red',
-}
-
-const severityAccent: Record<string, string> = {
-  Low: '#6b7280',
-  Medium: '#eab308',
-  High: '#f97316',
-  Critical: '#ef4444',
-}
-
-const statusColor: Record<string, string> = {
-  Open: 'red',
-  'In Progress': 'blue',
-  Resolved: 'green',
-}
-
-function StatCard({ label, value, icon: Icon, accent }: { label: string; value: number; icon: React.ElementType; accent: string }) {
-  return (
-    <Box
-      style={{
-        background: '#161b22',
-        border: '1px solid #21262d',
-        borderRadius: 12,
-        padding: '16px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-      }}
-    >
-      <Box
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          background: `${accent}18`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <Icon size={18} color={accent} />
-      </Box>
-      <div>
-        <Text fw={700} c="#f1f5f9" style={{ fontSize: 22, lineHeight: 1 }}>
-          {value}
-        </Text>
-        <Text size="xs" c="#6b7280" mt={2}>
-          {label}
-        </Text>
-      </div>
-    </Box>
-  )
-}
+import { feedbackService, type BugReport, type ReportStatus } from '../api/FeedbackService'
+import StatCard from '../components/StatCard'
+import { severityColor, severityAccent, reportStatusColor } from '../constants/colors'
 
 export default function FeedbackPage() {
   const [reports, setReports] = useState<BugReport[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getReports().then((data) => {
+    feedbackService.getReports().then((data) => {
       setReports(data)
       setLoading(false)
     })
   }, [])
 
   async function handleStatusChange(id: number, status: ReportStatus) {
-    await updateReportStatus(id, status)
+    await feedbackService.updateStatus(id, status)
     setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
   }
 
@@ -160,7 +103,7 @@ export default function FeedbackPage() {
                         <Badge color={severityColor[report.severity]} variant="light" size="xs">
                           {report.severity}
                         </Badge>
-                        <Badge color={statusColor[report.status]} variant="light" size="xs">
+                        <Badge color={reportStatusColor[report.status]} variant="light" size="xs">
                           {report.status}
                         </Badge>
                       </Group>

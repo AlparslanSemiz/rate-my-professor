@@ -1,3 +1,5 @@
+import { apiClient, delay, type ApiClient } from './ApiClient'
+
 export type CommentReportStatus = 'Pending' | 'Reviewed' | 'Dismissed' | 'Removed'
 export type ReportReason = 'Spam' | 'Harassment' | 'Hate Speech' | 'Misinformation' | 'Inappropriate' | 'Other'
 
@@ -21,7 +23,7 @@ export interface ReportedComment {
   reportedAt: string
 }
 
-let MOCK_REPORTED_COMMENTS: ReportedComment[] = [
+const INITIAL_REPORTED_COMMENTS: ReportedComment[] = [
   {
     id: 1,
     commentText: 'You are absolutely terrible at this, give up already.',
@@ -68,17 +70,29 @@ let MOCK_REPORTED_COMMENTS: ReportedComment[] = [
   },
 ]
 
-export async function getReportedComments(): Promise<ReportedComment[]> {
-  await new Promise((r) => setTimeout(r, 400))
-  return [...MOCK_REPORTED_COMMENTS]
+export class CommentsService {
+  private reportedComments: ReportedComment[] = [...INITIAL_REPORTED_COMMENTS]
+  private readonly client: ApiClient
+
+  constructor(client: ApiClient) {
+    this.client = client
+  }
+
+  async getReported(): Promise<ReportedComment[]> {
+    if (this.client.isConfigured) return this.client.get<ReportedComment[]>('/comments/reported')
+
+    await delay(400)
+    return [...this.reportedComments]
+  }
+
+  async updateStatus(id: number, status: CommentReportStatus): Promise<void> {
+    if (this.client.isConfigured) return this.client.patch(`/comments/reported/${id}`, { status })
+
+    await delay(300)
+    this.reportedComments = this.reportedComments.map((r) =>
+      r.id === id ? { ...r, status } : r
+    )
+  }
 }
 
-export async function updateCommentReportStatus(
-  id: number,
-  status: CommentReportStatus
-): Promise<void> {
-  await new Promise((r) => setTimeout(r, 300))
-  MOCK_REPORTED_COMMENTS = MOCK_REPORTED_COMMENTS.map((r) =>
-    r.id === id ? { ...r, status } : r
-  )
-}
+export const commentsService = new CommentsService(apiClient)

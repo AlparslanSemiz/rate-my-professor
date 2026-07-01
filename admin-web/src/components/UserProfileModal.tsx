@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Modal,
   Text,
@@ -19,127 +19,28 @@ import {
   IconClock,
   IconUser,
 } from '@tabler/icons-react'
-import {
-  getUserById,
-  getUserWarnings,
-  warnUser,
-  blockUser,
-  unblockUser,
-  deleteUser,
-  type User,
-  type Warning,
-} from '../api/users'
-
-const roleColor: Record<string, string> = {
-  Admin: '#3b82f6',
-  Professor: '#8b5cf6',
-  Student: '#6b7280',
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-interface ConfirmModalProps {
-  opened: boolean
-  title: string
-  description: string
-  confirmLabel: string
-  confirmColor: string
-  onConfirm: () => Promise<void>
-  onClose: () => void
-}
-
-function ConfirmModal({ opened, title, description, confirmLabel, confirmColor, onConfirm, onClose }: ConfirmModalProps) {
-  const [loading, setLoading] = useState(false)
-
-  async function handleConfirm() {
-    setLoading(true)
-    await onConfirm()
-    setLoading(false)
-    onClose()
-  }
-
-  return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title={title}
-      centered
-      size="sm"
-      styles={{
-        content: { background: '#161b22', border: '1px solid #21262d' },
-        header: { background: '#161b22', borderBottom: '1px solid #21262d' },
-        title: { color: '#f1f5f9', fontWeight: 600 },
-        close: { color: '#6b7280' },
-      }}
-    >
-      <Text size="sm" c="#9ca3af" mb={20}>
-        {description}
-      </Text>
-      <Group justify="flex-end" gap={10}>
-        <Button variant="subtle" color="gray" size="sm" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button color={confirmColor} size="sm" loading={loading} onClick={handleConfirm}>
-          {confirmLabel}
-        </Button>
-      </Group>
-    </Modal>
-  )
-}
+import { useUserProfile, type UserChange } from '../hooks/useUserProfile'
+import ConfirmModal from './ConfirmModal'
+import { roleAccent } from '../constants/colors'
+import { formatDate } from '../utils/formatDate'
 
 interface UserProfileModalProps {
   userId: number | null
   opened: boolean
   onClose: () => void
-  onUserChanged?: (id: number, change: 'warned' | 'blocked' | 'unblocked' | 'deleted') => void
-}
-
-interface LoadedProfile {
-  userId: number
-  user: User | null
-  warnings: Warning[]
+  onUserChanged?: (id: number, change: UserChange) => void
 }
 
 export default function UserProfileModal({ userId, opened, onClose, onUserChanged }: UserProfileModalProps) {
-  const [profile, setProfile] = useState<LoadedProfile | null>(null)
+  const { user, warnings, loading, warnLoading, reset, warn, block, unblock, remove } =
+    useUserProfile(userId, opened, onUserChanged)
 
   const [warnText, setWarnText] = useState('')
-  const [warnLoading, setWarnLoading] = useState(false)
   const [showWarnForm, setShowWarnForm] = useState(false)
-
   const [confirmAction, setConfirmAction] = useState<'block' | 'unblock' | 'delete' | null>(null)
 
-  const isLoadedProfile = profile?.userId === userId
-  const user = isLoadedProfile ? profile.user : null
-  const warnings = isLoadedProfile ? profile.warnings : []
-  const loading = opened && userId !== null && !isLoadedProfile
-
-  useEffect(() => {
-    if (!opened || userId === null) return
-    let canceled = false
-
-    Promise.all([getUserById(userId), getUserWarnings(userId)]).then(([u, w]) => {
-      if (canceled) return
-      setProfile({ userId, user: u ?? null, warnings: w })
-      setShowWarnForm(false)
-      setWarnText('')
-    })
-
-    return () => {
-      canceled = true
-    }
-  }, [opened, userId])
-
   function handleClose() {
-    setProfile(null)
+    reset()
     setWarnText('')
     setShowWarnForm(false)
     setConfirmAction(null)
@@ -147,44 +48,13 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
   }
 
   async function handleWarn() {
-    if (!user || !warnText.trim()) return
-    setWarnLoading(true)
-    const newWarning = await warnUser(user.id, warnText.trim())
-    setProfile((prev) => prev && prev.user?.id === user.id ? {
-      ...prev,
-      user: { ...prev.user, warningCount: prev.user.warningCount + 1 },
-      warnings: [newWarning, ...prev.warnings],
-    } : prev)
+    await warn(warnText)
     setWarnText('')
     setShowWarnForm(false)
-    setWarnLoading(false)
-    onUserChanged?.(user.id, 'warned')
-  }
-
-  async function handleBlock() {
-    if (!user) return
-    await blockUser(user.id)
-    setProfile((prev) => prev && prev.user?.id === user.id ? {
-      ...prev,
-      user: { ...prev.user, status: 'Blocked' },
-    } : prev)
-    onUserChanged?.(user.id, 'blocked')
-  }
-
-  async function handleUnblock() {
-    if (!user) return
-    await unblockUser(user.id)
-    setProfile((prev) => prev && prev.user?.id === user.id ? {
-      ...prev,
-      user: { ...prev.user, status: 'Active' },
-    } : prev)
-    onUserChanged?.(user.id, 'unblocked')
   }
 
   async function handleDelete() {
-    if (!user) return
-    await deleteUser(user.id)
-    onUserChanged?.(user.id, 'deleted')
+    await remove()
     handleClose()
   }
 
@@ -224,7 +94,7 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
                     <Badge
                       size="sm"
                       variant="light"
-                      style={{ background: `${roleColor[user.role]}18`, color: roleColor[user.role], borderColor: `${roleColor[user.role]}30` }}
+                      style={{ background: `${roleAccent[user.role]}18`, color: roleAccent[user.role], borderColor: `${roleAccent[user.role]}30` }}
                     >
                       {user.role}
                     </Badge>
@@ -274,7 +144,7 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px' }}>
                 {[
                   { label: 'Joined', value: user.joinedAt },
-                  { label: 'Last seen', value: formatDate(user.lastSeenAt) },
+                  { label: 'Last seen', value: formatDate(user.lastSeenAt, { withTime: true }) },
                   { label: 'Reports received', value: user.reportCount > 0 ? `${user.reportCount} times` : 'None' },
                   { label: 'User ID', value: `#${user.id}` },
                 ].map((item) => (
@@ -419,7 +289,7 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
                         {w.message}
                       </Text>
                       <Text size="xs" c="#4b5563">
-                        {formatDate(w.issuedAt)} · by {w.issuedBy}
+                        {formatDate(w.issuedAt, { withTime: true })} · by {w.issuedBy}
                       </Text>
                     </Box>
                   ))}
@@ -436,7 +306,7 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
         description={`Block ${user?.name ?? 'this user'}? They will lose access to the platform. You can unblock them later.`}
         confirmLabel="Block user"
         confirmColor="orange"
-        onConfirm={handleBlock}
+        onConfirm={block}
         onClose={() => setConfirmAction(null)}
       />
 
@@ -446,7 +316,7 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
         description={`Unblock ${user?.name ?? 'this user'}? They will regain access to the platform.`}
         confirmLabel="Unblock user"
         confirmColor="green"
-        onConfirm={handleUnblock}
+        onConfirm={unblock}
         onClose={() => setConfirmAction(null)}
       />
 

@@ -1,3 +1,5 @@
+import { apiClient, delay, type ApiClient } from './ApiClient'
+
 export type UserRole = 'Admin' | 'Student' | 'Professor'
 export type UserStatus = 'Active' | 'Inactive' | 'Blocked'
 
@@ -21,7 +23,7 @@ export interface User {
   reportCount: number
 }
 
-const MOCK_WARNINGS: Record<number, Warning[]> = {
+const INITIAL_WARNINGS: Record<number, Warning[]> = {
   3: [
     { id: 1, message: 'Inappropriate language in comments.', issuedAt: '2026-05-10T14:22:00Z', issuedBy: 'Admin User' },
   ],
@@ -31,7 +33,7 @@ const MOCK_WARNINGS: Record<number, Warning[]> = {
   ],
 }
 
-let MOCK_USERS: User[] = [
+const INITIAL_USERS: User[] = [
   {
     id: 1,
     name: 'Alice Smith',
@@ -118,47 +120,73 @@ let MOCK_USERS: User[] = [
   },
 ]
 
-export async function getUsers(): Promise<User[]> {
-  await new Promise((r) => setTimeout(r, 400))
-  return [...MOCK_USERS]
-}
+export class UsersService {
+  private users: User[] = [...INITIAL_USERS]
+  private warnings: Record<number, Warning[]> = { ...INITIAL_WARNINGS }
+  private readonly client: ApiClient
 
-export async function getUserById(id: number): Promise<User | undefined> {
-  await new Promise((r) => setTimeout(r, 200))
-  return MOCK_USERS.find((u) => u.id === id)
-}
-
-export async function deleteUser(id: number): Promise<void> {
-  await new Promise((r) => setTimeout(r, 300))
-  MOCK_USERS = MOCK_USERS.filter((u) => u.id !== id)
-}
-
-export async function blockUser(id: number): Promise<void> {
-  await new Promise((r) => setTimeout(r, 300))
-  MOCK_USERS = MOCK_USERS.map((u) => (u.id === id ? { ...u, status: 'Blocked' } : u))
-}
-
-export async function unblockUser(id: number): Promise<void> {
-  await new Promise((r) => setTimeout(r, 300))
-  MOCK_USERS = MOCK_USERS.map((u) => (u.id === id ? { ...u, status: 'Active' } : u))
-}
-
-export async function warnUser(id: number, message: string): Promise<Warning> {
-  await new Promise((r) => setTimeout(r, 300))
-  const warning: Warning = {
-    id: Date.now(),
-    message,
-    issuedAt: new Date().toISOString(),
-    issuedBy: 'Admin User',
+  constructor(client: ApiClient) {
+    this.client = client
   }
-  MOCK_WARNINGS[id] = [warning, ...(MOCK_WARNINGS[id] ?? [])]
-  MOCK_USERS = MOCK_USERS.map((u) =>
-    u.id === id ? { ...u, warningCount: u.warningCount + 1 } : u
-  )
-  return warning
+
+  async getAll(): Promise<User[]> {
+    if (this.client.isConfigured) return this.client.get<User[]>('/users')
+
+    await delay(400)
+    return [...this.users]
+  }
+
+  async getById(id: number): Promise<User | undefined> {
+    if (this.client.isConfigured) return this.client.get<User>(`/users/${id}`)
+
+    await delay(200)
+    return this.users.find((u) => u.id === id)
+  }
+
+  async delete(id: number): Promise<void> {
+    if (this.client.isConfigured) return this.client.delete(`/users/${id}`)
+
+    await delay(300)
+    this.users = this.users.filter((u) => u.id !== id)
+  }
+
+  async block(id: number): Promise<void> {
+    if (this.client.isConfigured) return this.client.patch(`/users/${id}/block`)
+
+    await delay(300)
+    this.users = this.users.map((u) => (u.id === id ? { ...u, status: 'Blocked' } : u))
+  }
+
+  async unblock(id: number): Promise<void> {
+    if (this.client.isConfigured) return this.client.patch(`/users/${id}/unblock`)
+
+    await delay(300)
+    this.users = this.users.map((u) => (u.id === id ? { ...u, status: 'Active' } : u))
+  }
+
+  async warn(id: number, message: string): Promise<Warning> {
+    if (this.client.isConfigured) return this.client.post<Warning>(`/users/${id}/warnings`, { message })
+
+    await delay(300)
+    const warning: Warning = {
+      id: Date.now(),
+      message,
+      issuedAt: new Date().toISOString(),
+      issuedBy: 'Admin User',
+    }
+    this.warnings[id] = [warning, ...(this.warnings[id] ?? [])]
+    this.users = this.users.map((u) =>
+      u.id === id ? { ...u, warningCount: u.warningCount + 1 } : u
+    )
+    return warning
+  }
+
+  async getWarnings(id: number): Promise<Warning[]> {
+    if (this.client.isConfigured) return this.client.get<Warning[]>(`/users/${id}/warnings`)
+
+    await delay(200)
+    return this.warnings[id] ?? []
+  }
 }
 
-export async function getUserWarnings(id: number): Promise<Warning[]> {
-  await new Promise((r) => setTimeout(r, 200))
-  return MOCK_WARNINGS[id] ?? []
-}
+export const usersService = new UsersService(apiClient)

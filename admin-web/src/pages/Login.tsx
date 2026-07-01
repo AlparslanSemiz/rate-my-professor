@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { TextInput, PasswordInput, Button, Text, Stack, Alert, Box } from '@mantine/core'
 import { IconShield, IconAlertCircle } from '@tabler/icons-react'
 import { useAuth } from '../context/useAuth'
-import { loginRequest } from '../api/auth'
+import { authService } from '../api/AuthService'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -19,7 +19,7 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const { token, user } = await loginRequest(email, password)
+      const { token, user } = await authService.login(email, password)
       login(token, user)
       navigate('/dashboard')
     } catch (err: unknown) {

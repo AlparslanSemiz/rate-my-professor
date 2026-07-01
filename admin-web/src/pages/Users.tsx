@@ -7,77 +7,12 @@ import {
   IconShieldCheck,
   IconShieldOff,
 } from '@tabler/icons-react'
-import { getUsers, type User } from '../api/users'
+import { usersService, type User } from '../api/UsersService'
 import UserProfileModal from '../components/UserProfileModal'
-
-const roleColor: Record<string, string> = {
-  Admin: 'blue',
-  Professor: 'violet',
-  Student: 'gray',
-}
-
-const statusColor: Record<string, string> = {
-  Active: 'green',
-  Inactive: 'gray',
-  Blocked: 'red',
-}
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  accent,
-}: {
-  label: string
-  value: number
-  icon: React.ElementType
-  accent: string
-}) {
-  return (
-    <Box
-      style={{
-        background: '#161b22',
-        border: '1px solid #21262d',
-        borderRadius: 12,
-        padding: '16px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-      }}
-    >
-      <Box
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          background: `${accent}18`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <Icon size={18} color={accent} />
-      </Box>
-      <div>
-        <Text fw={700} c="#f1f5f9" style={{ fontSize: 22, lineHeight: 1 }}>
-          {value}
-        </Text>
-        <Text size="xs" c="#6b7280" mt={2}>
-          {label}
-        </Text>
-      </div>
-    </Box>
-  )
-}
-
-function formatLastSeen(iso: string) {
-  return new Date(iso).toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-}
+import StatCard from '../components/StatCard'
+import { roleColor, userStatusColor } from '../constants/colors'
+import { formatDate } from '../utils/formatDate'
+import type { UserChange } from '../hooks/useUserProfile'
 
 export default function Users() {
   const [users, setUsers] = useState<User[]>([])
@@ -87,7 +22,7 @@ export default function Users() {
   const [profileOpen, setProfileOpen] = useState(false)
 
   useEffect(() => {
-    getUsers().then((data) => {
+    usersService.getAll().then((data) => {
       setUsers(data)
       setLoading(false)
     })
@@ -98,7 +33,7 @@ export default function Users() {
     setProfileOpen(true)
   }
 
-  function handleUserChanged(id: number, change: 'warned' | 'blocked' | 'unblocked' | 'deleted') {
+  function handleUserChanged(id: number, change: UserChange) {
     if (change === 'deleted') {
       setUsers((prev) => prev.filter((u) => u.id !== id))
       setProfileOpen(false)
@@ -234,7 +169,7 @@ export default function Users() {
                       </Badge>
                     </td>
                     <td style={{ padding: '13px 20px' }}>
-                      <Badge color={statusColor[user.status]} variant="dot" size="sm">
+                      <Badge color={userStatusColor[user.status]} variant="dot" size="sm">
                         {user.status}
                       </Badge>
                     </td>
@@ -258,7 +193,7 @@ export default function Users() {
                     </td>
                     <td style={{ padding: '13px 20px' }}>
                       <Text size="xs" c="#6b7280" style={{ whiteSpace: 'nowrap' }}>
-                        {formatLastSeen(user.lastSeenAt)}
+                        {formatDate(user.lastSeenAt)}
                       </Text>
                     </td>
                     <td style={{ padding: '13px 20px' }}>

@@ -8,61 +8,9 @@ import {
   IconRefresh,
   IconArrowRight,
 } from '@tabler/icons-react'
-import { getUsers, type User } from '../api/users'
+import { usersService, type User } from '../api/UsersService'
 import { useNavigate } from 'react-router-dom'
-
-function StatCard({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  accent,
-}: {
-  label: string
-  value: string | number
-  sub: string
-  icon: React.ElementType
-  accent: string
-}) {
-  return (
-    <Box
-      style={{
-        background: '#161b22',
-        border: '1px solid #21262d',
-        borderRadius: 12,
-        padding: '20px 20px',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      <Box
-        style={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          background: `${accent}18`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Icon size={18} color={accent} />
-      </Box>
-      <Text size="xs" c="#6b7280" mb={8} tt="uppercase" fw={500} style={{ letterSpacing: '0.05em' }}>
-        {label}
-      </Text>
-      <Text fw={700} c="#f1f5f9" mb={4} style={{ fontSize: 28, lineHeight: 1 }}>
-        {value}
-      </Text>
-      <Text size="xs" c="#4b5563">
-        {sub}
-      </Text>
-    </Box>
-  )
-}
+import StatCard from '../components/StatCard'
 
 function ModuleCard({
   label,
@@ -135,7 +83,7 @@ export default function Dashboard() {
   const [users, setUsers] = useState<User[]>([])
 
   useEffect(() => {
-    getUsers().then(setUsers)
+    usersService.getAll().then(setUsers)
   }, [])
 
   const now = new Date().toLocaleString('en-GB', {
