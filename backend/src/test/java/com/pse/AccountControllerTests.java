@@ -84,12 +84,13 @@ class AccountControllerTests {
 
     @Test
     void validateShouldFailWithoutBearerToken() {
-        when(authService.validateCredentials(
-                "invalid-header",
-                "test@student.kit.edu"
-        )).thenReturn(
-                new BasicResponse("Error, no Auth-Token supplied", false)
-        );
+
+        ValidateCredsRequest request =
+                new ValidateCredsRequest("test@student.kit.edu");
+
+        when(authService.validate("invalid-header", request))
+                .thenReturn(new BasicResponse("Error, no Auth-Token supplied", false));
+
 
         BasicResponse response =
                 authController.validate(

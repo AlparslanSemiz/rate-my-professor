@@ -32,20 +32,13 @@ class AuthControllerTests {
 
     @Test
     void loginShouldSucceedForValidToken() {
-        LoginRequest request =
-                new LoginRequest("test@student.kit.edu", "123456");
-
+        LoginRequest request = new LoginRequest("test@student.kit.edu", "123456");
         HttpServletRequest httpRequest = mock(HttpServletRequest.class);
 
         when(authService.login(request, httpRequest))
-                .thenReturn(new LoginResponse(
-                        "Login successful",
-                        true,
-                        "auth-token"
-                ));
+                .thenReturn(new LoginResponse("Login successful", true, "auth-token"));
 
-        LoginResponse response =
-                authController.login(request, httpRequest);
+        LoginResponse response = authController.login(request, httpRequest);
 
         assertTrue(response.success());
         assertEquals("Login successful", response.message());
@@ -56,20 +49,13 @@ class AuthControllerTests {
 
     @Test
     void loginShouldCreateStudentIfStudentDoesNotExist() {
-        LoginRequest request =
-                new LoginRequest("test@student.kit.edu", "123456");
-
+        LoginRequest request = new LoginRequest("test@student.kit.edu", "123456");
         HttpServletRequest httpRequest = mock(HttpServletRequest.class);
 
         when(authService.login(request, httpRequest))
-                .thenReturn(new LoginResponse(
-                        "Login successful",
-                        true,
-                        "auth-token"
-                ));
+                .thenReturn(new LoginResponse("Login successful", true, "auth-token"));
 
-        LoginResponse response =
-                authController.login(request, httpRequest);
+        LoginResponse response = authController.login(request, httpRequest);
 
         assertTrue(response.success());
         assertEquals("Login successful", response.message());
@@ -80,20 +66,13 @@ class AuthControllerTests {
 
     @Test
     void loginShouldFailForInvalidToken() {
-        LoginRequest request =
-                new LoginRequest("test@student.kit.edu", "wrong");
-
+        LoginRequest request = new LoginRequest("test@student.kit.edu", "wrong");
         HttpServletRequest httpRequest = mock(HttpServletRequest.class);
 
         when(authService.login(request, httpRequest))
-                .thenReturn(new LoginResponse(
-                        "Invalid token",
-                        false,
-                        null
-                ));
+                .thenReturn(new LoginResponse("Invalid token", false, null));
 
-        LoginResponse response =
-                authController.login(request, httpRequest);
+        LoginResponse response = authController.login(request, httpRequest);
 
         assertFalse(response.success());
         assertEquals("Invalid token", response.message());
@@ -104,20 +83,13 @@ class AuthControllerTests {
 
     @Test
     void loginShouldFailIfEmailIsMissing() {
-        LoginRequest request =
-                new LoginRequest(null, "123456");
-
+        LoginRequest request = new LoginRequest(null, "123456");
         HttpServletRequest httpRequest = mock(HttpServletRequest.class);
 
         when(authService.login(request, httpRequest))
-                .thenReturn(new LoginResponse(
-                        "Error, Email is required",
-                        false,
-                        null
-                ));
+                .thenReturn(new LoginResponse("Error, Email is required", false, null));
 
-        LoginResponse response =
-                authController.login(request, httpRequest);
+        LoginResponse response = authController.login(request, httpRequest);
 
         assertFalse(response.success());
         assertEquals("Error, Email is required", response.message());
@@ -128,20 +100,13 @@ class AuthControllerTests {
 
     @Test
     void loginShouldFailIfLoginTokenIsMissing() {
-        LoginRequest request =
-                new LoginRequest("test@student.kit.edu", null);
-
+        LoginRequest request = new LoginRequest("test@student.kit.edu", null);
         HttpServletRequest httpRequest = mock(HttpServletRequest.class);
 
         when(authService.login(request, httpRequest))
-                .thenReturn(new LoginResponse(
-                        "Error, login token is required",
-                        false,
-                        null
-                ));
+                .thenReturn(new LoginResponse("Error, login token is required", false, null));
 
-        LoginResponse response =
-                authController.login(request, httpRequest);
+        LoginResponse response = authController.login(request, httpRequest);
 
         assertFalse(response.success());
         assertEquals("Error, login token is required", response.message());
@@ -155,8 +120,7 @@ class AuthControllerTests {
         when(authService.me("invalid-header"))
                 .thenReturn(new BasicResponse("Not logged in", false));
 
-        BasicResponse response =
-                authController.me("invalid-header");
+        BasicResponse response = authController.me("invalid-header");
 
         assertFalse(response.success());
         assertEquals("Not logged in", response.message());
@@ -169,8 +133,7 @@ class AuthControllerTests {
         when(authService.me("Bearer wrong-token"))
                 .thenReturn(new BasicResponse("Not logged in", false));
 
-        BasicResponse response =
-                authController.me("Bearer wrong-token");
+        BasicResponse response = authController.me("Bearer wrong-token");
 
         assertFalse(response.success());
         assertEquals("Not logged in", response.message());
@@ -186,22 +149,17 @@ class AuthControllerTests {
                         true
                 ));
 
-        BasicResponse response =
-                authController.me("Bearer auth-token");
+        BasicResponse response = authController.me("Bearer auth-token");
 
         assertTrue(response.success());
-        assertEquals(
-                "Logged in as: test@student.kit.edu",
-                response.message()
-        );
+        assertEquals("Logged in as: test@student.kit.edu", response.message());
 
         verify(authService).me("Bearer auth-token");
     }
 
     @Test
     void requestLoginShouldRejectNonKitEmail() {
-        OTPRequest request =
-                new OTPRequest("test@gmail.com");
+        OTPRequest request = new OTPRequest("test@gmail.com");
 
         when(authService.requestLogin(request))
                 .thenReturn(new BasicResponse(
@@ -209,8 +167,7 @@ class AuthControllerTests {
                         false
                 ));
 
-        BasicResponse response =
-                authController.requestLogin(request);
+        BasicResponse response = authController.requestLogin(request);
 
         assertFalse(response.success());
         assertEquals(
@@ -223,17 +180,12 @@ class AuthControllerTests {
 
     @Test
     void requestLoginShouldFailIfEmailIsMissing() {
-        OTPRequest request =
-                new OTPRequest(null);
+        OTPRequest request = new OTPRequest(null);
 
         when(authService.requestLogin(request))
-                .thenReturn(new BasicResponse(
-                        "Error, Email is required",
-                        false
-                ));
+                .thenReturn(new BasicResponse("Error, Email is required", false));
 
-        BasicResponse response =
-                authController.requestLogin(request);
+        BasicResponse response = authController.requestLogin(request);
 
         assertFalse(response.success());
         assertEquals("Error, Email is required", response.message());
@@ -243,8 +195,7 @@ class AuthControllerTests {
 
     @Test
     void requestLoginShouldSucceedForKitEmail() {
-        OTPRequest request =
-                new OTPRequest("TEST@student.kit.edu");
+        OTPRequest request = new OTPRequest("TEST@student.kit.edu");
 
         when(authService.requestLogin(request))
                 .thenReturn(new BasicResponse(
@@ -252,8 +203,7 @@ class AuthControllerTests {
                         true
                 ));
 
-        BasicResponse response =
-                authController.requestLogin(request);
+        BasicResponse response = authController.requestLogin(request);
 
         assertTrue(response.success());
         assertEquals(
@@ -269,12 +219,8 @@ class AuthControllerTests {
         ValidateCredsRequest request =
                 new ValidateCredsRequest("test@student.kit.edu");
 
-        when(authService.validateCredentials(
-                "invalid-header",
-                "test@student.kit.edu"
-        )).thenReturn(
-                new BasicResponse("Error, no Auth-Token supplied", false)
-        );
+        when(authService.validate("invalid-header", request))
+                .thenReturn(new BasicResponse("Error, no Auth-Token supplied", false));
 
         BasicResponse response =
                 authController.validate("invalid-header", request);
@@ -282,8 +228,7 @@ class AuthControllerTests {
         assertFalse(response.success());
         assertEquals("Error, no Auth-Token supplied", response.message());
 
-        verify(authService)
-                .validateCredentials("invalid-header", "test@student.kit.edu");
+        verify(authService).validate("invalid-header", request);
     }
 
     @Test
@@ -291,12 +236,8 @@ class AuthControllerTests {
         ValidateCredsRequest request =
                 new ValidateCredsRequest("test@student.kit.edu");
 
-        when(authService.validateCredentials(
-                "Bearer wrong-token",
-                "test@student.kit.edu"
-        )).thenReturn(
-                new BasicResponse("Error, wrong Auth-Token", false)
-        );
+        when(authService.validate("Bearer wrong-token", request))
+                .thenReturn(new BasicResponse("Error, wrong Auth-Token", false));
 
         BasicResponse response =
                 authController.validate("Bearer wrong-token", request);
@@ -304,8 +245,7 @@ class AuthControllerTests {
         assertFalse(response.success());
         assertEquals("Error, wrong Auth-Token", response.message());
 
-        verify(authService)
-                .validateCredentials("Bearer wrong-token", "test@student.kit.edu");
+        verify(authService).validate("Bearer wrong-token", request);
     }
 
     @Test
@@ -313,15 +253,11 @@ class AuthControllerTests {
         ValidateCredsRequest request =
                 new ValidateCredsRequest("test@student.kit.edu");
 
-        when(authService.validateCredentials(
-                "Bearer auth-token",
-                "test@student.kit.edu"
-        )).thenReturn(
-                new BasicResponse(
+        when(authService.validate("Bearer auth-token", request))
+                .thenReturn(new BasicResponse(
                         "Correct auth-Token for email: test@student.kit.edu",
                         true
-                )
-        );
+                ));
 
         BasicResponse response =
                 authController.validate("Bearer auth-token", request);
@@ -332,8 +268,7 @@ class AuthControllerTests {
                 response.message()
         );
 
-        verify(authService)
-                .validateCredentials("Bearer auth-token", "test@student.kit.edu");
+        verify(authService).validate("Bearer auth-token", request);
     }
 
     @Test
@@ -341,12 +276,8 @@ class AuthControllerTests {
         ValidateCredsRequest request =
                 new ValidateCredsRequest("other@student.kit.edu");
 
-        when(authService.validateCredentials(
-                "Bearer auth-token",
-                "other@student.kit.edu"
-        )).thenReturn(
-                new BasicResponse("Error, wrong email for auth Token", false)
-        );
+        when(authService.validate("Bearer auth-token", request))
+                .thenReturn(new BasicResponse("Error, wrong email for auth Token", false));
 
         BasicResponse response =
                 authController.validate("Bearer auth-token", request);
@@ -354,7 +285,6 @@ class AuthControllerTests {
         assertFalse(response.success());
         assertEquals("Error, wrong email for auth Token", response.message());
 
-        verify(authService)
-                .validateCredentials("Bearer auth-token", "other@student.kit.edu");
+        verify(authService).validate("Bearer auth-token", request);
     }
 }
