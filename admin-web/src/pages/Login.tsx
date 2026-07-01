@@ -4,6 +4,8 @@ import { TextInput, PasswordInput, Button, Text, Stack, Alert, Box } from '@mant
 import { IconShield, IconAlertCircle } from '@tabler/icons-react'
 import { useAuth } from '../context/useAuth'
 import { authService } from '../api/AuthService'
+import Panel from '../components/Panel'
+import { darkInputStyles } from '../constants/inputStyles'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -39,15 +41,7 @@ export default function Login() {
         background: '#0f1117',
       }}
     >
-      <Box
-        style={{
-          width: 400,
-          background: '#161b22',
-          border: '1px solid #21262d',
-          borderRadius: 14,
-          padding: '36px 32px',
-        }}
-      >
+      <Panel style={{ width: 400, borderRadius: 14, padding: '36px 32px' }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
           <Box
@@ -102,12 +96,7 @@ export default function Login() {
               required
               styles={{
                 label: { color: '#9ca3af', fontSize: 13, marginBottom: 6 },
-                input: {
-                  background: '#0f1117',
-                  border: '1px solid #21262d',
-                  color: '#e2e8f0',
-                  borderRadius: 8,
-                },
+                input: { ...darkInputStyles.input, borderRadius: 8 },
               }}
             />
             <PasswordInput
@@ -118,12 +107,7 @@ export default function Login() {
               required
               styles={{
                 label: { color: '#9ca3af', fontSize: 13, marginBottom: 6 },
-                input: {
-                  background: '#0f1117',
-                  border: '1px solid #21262d',
-                  color: '#e2e8f0',
-                  borderRadius: 8,
-                },
+                input: { ...darkInputStyles.input, borderRadius: 8 },
               }}
             />
             <Button
@@ -139,7 +123,7 @@ export default function Login() {
             </Button>
           </Stack>
         </form>
-      </Box>
+      </Panel>
     </div>
   )
 }

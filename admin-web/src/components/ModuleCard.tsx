@@ -1,0 +1,61 @@
+import { Badge, Group, Text } from '@mantine/core'
+import { IconArrowRight } from '@tabler/icons-react'
+import Panel from './Panel'
+
+interface ModuleCardProps {
+  label: string
+  title: string
+  description: string
+  accent: string
+  path: string
+  onClick: (path: string) => void
+}
+
+export default function ModuleCard({ label, title, description, accent, path, onClick }: ModuleCardProps) {
+  return (
+    <Panel
+      onClick={() => onClick(path)}
+      style={{
+        padding: '18px 20px',
+        cursor: 'pointer',
+        transition: 'border-color 0.15s, background 0.15s',
+      }}
+      onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
+        e.currentTarget.style.borderColor = `${accent}55`
+        e.currentTarget.style.background = '#1c2128'
+      }}
+      onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
+        e.currentTarget.style.borderColor = '#21262d'
+        e.currentTarget.style.background = '#161b22'
+      }}
+    >
+      <Badge
+        size="xs"
+        variant="light"
+        style={{
+          background: `${accent}18`,
+          color: accent,
+          borderColor: `${accent}30`,
+          marginBottom: 10,
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        }}
+      >
+        {label}
+      </Badge>
+      <Text fw={600} c="#e2e8f0" size="sm" mb={6}>
+        {title}
+      </Text>
+      <Text size="xs" c="#6b7280" mb={14} lh={1.5}>
+        {description}
+      </Text>
+      <Group gap={4} style={{ color: accent }}>
+        <Text size="xs" fw={500} c={accent}>
+          Open
+        </Text>
+        <IconArrowRight size={12} color={accent} />
+      </Group>
+    </Panel>
+  )
+}

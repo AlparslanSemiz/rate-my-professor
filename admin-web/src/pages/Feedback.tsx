@@ -3,7 +3,15 @@ import { Text, Badge, Box, SimpleGrid, Select, Group, Loader, Center } from '@ma
 import { IconBug, IconAlertCircle, IconCircleCheck, IconClock } from '@tabler/icons-react'
 import { feedbackService, type BugReport, type ReportStatus } from '../api/FeedbackService'
 import StatCard from '../components/StatCard'
+import Panel from '../components/Panel'
+import PageHeader from '../components/PageHeader'
 import { severityColor, severityAccent, reportStatusColor } from '../constants/colors'
+
+const STATUS_OPTIONS: ReportStatus[] = ['Open', 'In Progress', 'Resolved']
+
+function countByStatus(reports: BugReport[], status: ReportStatus) {
+  return reports.filter((r) => r.status === status).length
+}
 
 export default function FeedbackPage() {
   const [reports, setReports] = useState<BugReport[]>([])
@@ -28,35 +36,21 @@ export default function FeedbackPage() {
       </Center>
     )
 
-  const open = reports.filter((r) => r.status === 'Open').length
-  const inProgress = reports.filter((r) => r.status === 'In Progress').length
-  const resolved = reports.filter((r) => r.status === 'Resolved').length
-
   return (
     <div>
-      <Text fw={700} c="#f1f5f9" mb={4} style={{ fontSize: 28, lineHeight: 1.1 }}>
-        Bug Reports
-      </Text>
-      <Text size="sm" c="#6b7280" mb={28}>
-        User-submitted bug forms, screenshots, device info and automatic crash logs.
-      </Text>
+      <PageHeader
+        title="Bug Reports"
+        description="User-submitted bug forms, screenshots, device info and automatic crash logs."
+      />
 
       <SimpleGrid cols={4} spacing={14} mb={28}>
         <StatCard label="Total reports" value={reports.length} icon={IconBug} accent="#f97316" />
-        <StatCard label="Open" value={open} icon={IconAlertCircle} accent="#ef4444" />
-        <StatCard label="In progress" value={inProgress} icon={IconClock} accent="#3b82f6" />
-        <StatCard label="Resolved" value={resolved} icon={IconCircleCheck} accent="#22c55e" />
+        <StatCard label="Open" value={countByStatus(reports, 'Open')} icon={IconAlertCircle} accent="#ef4444" />
+        <StatCard label="In progress" value={countByStatus(reports, 'In Progress')} icon={IconClock} accent="#3b82f6" />
+        <StatCard label="Resolved" value={countByStatus(reports, 'Resolved')} icon={IconCircleCheck} accent="#22c55e" />
       </SimpleGrid>
 
-      {/* Report queue */}
-      <Box
-        style={{
-          background: '#161b22',
-          border: '1px solid #21262d',
-          borderRadius: 12,
-          overflow: 'hidden',
-        }}
-      >
+      <Panel style={{ overflow: 'hidden' }}>
         <Box px={20} py={16} style={{ borderBottom: '1px solid #21262d' }}>
           <Text fw={600} c="#e2e8f0" size="sm">
             Report queue
@@ -76,73 +70,74 @@ export default function FeedbackPage() {
         ) : (
           <div>
             {reports.map((report, i) => (
-              <Box
+              <ReportItem
                 key={report.id}
-                px={20}
-                py={18}
-                style={{
-                  borderBottom: i < reports.length - 1 ? '1px solid #1c2128' : 'none',
-                }}
-              >
-                <Group justify="space-between" mb={8}>
-                  <Group gap={8}>
-                    <Box
-                      style={{
-                        width: 3,
-                        height: 36,
-                        borderRadius: 2,
-                        background: severityAccent[report.severity] ?? '#6b7280',
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div>
-                      <Text fw={600} c="#e2e8f0" size="sm">
-                        {report.title}
-                      </Text>
-                      <Group gap={6} mt={2}>
-                        <Badge color={severityColor[report.severity]} variant="light" size="xs">
-                          {report.severity}
-                        </Badge>
-                        <Badge color={reportStatusColor[report.status]} variant="light" size="xs">
-                          {report.status}
-                        </Badge>
-                      </Group>
-                    </div>
-                  </Group>
-                  <Group gap={10} align="center">
-                    <Text size="xs" c="#4b5563">
-                      {report.reportedAt}
-                    </Text>
-                    <Select
-                      size="xs"
-                      w={130}
-                      value={report.status}
-                      data={['Open', 'In Progress', 'Resolved']}
-                      styles={{
-                        input: {
-                          background: '#0f1117',
-                          border: '1px solid #21262d',
-                          color: '#e2e8f0',
-                          fontSize: 12,
-                        },
-                      }}
-                      onChange={(val) =>
-                        val && handleStatusChange(report.id, val as ReportStatus)
-                      }
-                    />
-                  </Group>
-                </Group>
-                <Text size="sm" c="#6b7280" ml={11}>
-                  {report.description}
-                </Text>
-                <Text size="xs" c="#374151" mt={6} ml={11}>
-                  Reported by {report.reportedBy}
-                </Text>
-              </Box>
+                report={report}
+                isLast={i === reports.length - 1}
+                onStatusChange={handleStatusChange}
+              />
             ))}
           </div>
         )}
-      </Box>
+      </Panel>
     </div>
+  )
+}
+
+interface ReportItemProps {
+  report: BugReport
+  isLast: boolean
+  onStatusChange: (id: number, status: ReportStatus) => void
+}
+
+function ReportItem({ report, isLast, onStatusChange }: ReportItemProps) {
+  return (
+    <Box px={20} py={18} style={{ borderBottom: isLast ? 'none' : '1px solid #1c2128' }}>
+      <Group justify="space-between" mb={8}>
+        <Group gap={8}>
+          <Box
+            style={{
+              width: 3,
+              height: 36,
+              borderRadius: 2,
+              background: severityAccent[report.severity] ?? '#6b7280',
+              flexShrink: 0,
+            }}
+          />
+          <div>
+            <Text fw={600} c="#e2e8f0" size="sm">
+              {report.title}
+            </Text>
+            <Group gap={6} mt={2}>
+              <Badge color={severityColor[report.severity]} variant="light" size="xs">
+                {report.severity}
+              </Badge>
+              <Badge color={reportStatusColor[report.status]} variant="light" size="xs">
+                {report.status}
+              </Badge>
+            </Group>
+          </div>
+        </Group>
+        <Group gap={10} align="center">
+          <Text size="xs" c="#4b5563">
+            {report.reportedAt}
+          </Text>
+          <Select
+            size="xs"
+            w={130}
+            value={report.status}
+            data={STATUS_OPTIONS}
+            styles={{ input: { background: '#0f1117', border: '1px solid #21262d', color: '#e2e8f0', fontSize: 12 } }}
+            onChange={(val) => val && onStatusChange(report.id, val as ReportStatus)}
+          />
+        </Group>
+      </Group>
+      <Text size="sm" c="#6b7280" ml={11}>
+        {report.description}
+      </Text>
+      <Text size="xs" c="#374151" mt={6} ml={11}>
+        Reported by {report.reportedBy}
+      </Text>
+    </Box>
   )
 }

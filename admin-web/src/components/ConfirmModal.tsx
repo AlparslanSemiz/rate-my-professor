@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Modal, Text, Group, Button } from '@mantine/core'
+import { darkModalStyles } from '../constants/modalStyles'
 
 interface ConfirmModalProps {
   opened: boolean
@@ -28,12 +29,7 @@ export default function ConfirmModal({ opened, title, description, confirmLabel,
       title={title}
       centered
       size="sm"
-      styles={{
-        content: { background: '#161b22', border: '1px solid #21262d' },
-        header: { background: '#161b22', borderBottom: '1px solid #21262d' },
-        title: { color: '#f1f5f9', fontWeight: 600 },
-        close: { color: '#6b7280' },
-      }}
+      styles={darkModalStyles}
     >
       <Text size="sm" c="#9ca3af" mb={20}>
         {description}

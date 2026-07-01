@@ -32,9 +32,10 @@ export class FeedbackService {
     if (this.client.isConfigured) return this.client.patch(`/feedback/${id}`, { status })
 
     await delay(300)
-    const report = this.reports.find((item) => item.id === id)
-    if (!report) throw new Error(`Report with id ${id} not found`)
-    report.status = status
+    if (!this.reports.some((report) => report.id === id)) {
+      throw new Error(`Report with id ${id} not found`)
+    }
+    this.reports = this.reports.map((report) => (report.id === id ? { ...report, status } : report))
   }
 }
 
