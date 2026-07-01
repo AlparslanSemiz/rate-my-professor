@@ -28,30 +28,8 @@ public class LectureController {
     @GetMapping("/lectures")
     public List<LectureResponse> getLectures() {
 
-        List<Lecture> lectures = lectureService.findByActiveTrueOrderByNameAsc();
-
-        List<LectureResponse> responses = new ArrayList<>();
-
-        for (Lecture lecture : lectures) {
-
-            responses.add(
-                    new LectureResponse(
-                            lecture.getId(),
-                            lecture.getName(),
-                            lecture.getCode(),
-                            lecture.getSemesterYear(),
-                            lecture.getSemesterSeason(),
-                            lecture.isActive(),
-                            lecture.getProfessor().getId(),
-                            lecture.getProfessor().getFirstName(),
-                            lecture.getProfessor().getLastName(),
-                            lecture.getComments().size(),
-                            lecture.getRatings().size()
-                    )
-            );
-        }
-
-        return responses;
+        return lectureService.getLectures();
+        
     }
 
 
@@ -65,11 +43,8 @@ public class LectureController {
     @PostMapping("/lecutres")
     public BasicResponse addLecture(@RequestHeader("Authorization") String authHeader, AddLectureRequest request) {
 
-        if(lectureService.addLecture(authHeader, request)){
-            return new BasicResponse("Successfully added lecture", true);
-        }
+        return lectureService.addLecture(authHeader, request);
 
-        return new BasicResponse("Failed to add lecture", true);
     }
 
 

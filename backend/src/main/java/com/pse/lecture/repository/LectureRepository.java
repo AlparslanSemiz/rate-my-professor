@@ -7,9 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.pse.lecture.model.Lecture;
 
-public interface LectureRepository
-        extends JpaRepository<Lecture, UUID> {
+public interface LectureRepository extends JpaRepository<Lecture, UUID> {
 
-    List<Lecture> findByProfessorId(UUID professorId);
+
     List<Lecture> findByActiveTrueOrderByNameAsc();
 }

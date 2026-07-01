@@ -6,6 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.service.AuthService;
+import com.pse.lecture.service.LectureService;
+import com.pse.user.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,33 +17,46 @@ import com.pse.lecture.model.Lecture;
 import com.pse.rating.model.Rating;
 import com.pse.rating.model.RatingTopic;
 import com.pse.user.model.Student;
-import com.pse.lecture.repository.LectureRepository;
 import com.pse.rating.repository.RatingRepository;
-import com.pse.user.repository.StudentRepository;
 import com.pse.rating.dto.request.RatingRequest;
 import com.pse.rating.dto.request.RatingTopicRequest;
 import com.pse.rating.dto.response.TopicAverageResponse;
 
 @Service
 public class RatingService {
+
+    @Autowired
+    private StudentService studentService;
+    @Autowired
+    private AuthService authService;
+    @Autowired
+    private LectureService lectureService;
+
+
     @Autowired
     private RatingRepository ratingRepository;
-    @Autowired
-    private LectureRepository lectureRepository;
-    @Autowired
-    private StudentRepository studentRepository;
 
     
-    public void submitRating(String studentEmail, RatingRequest request) {
+    public BasicResponse submitRating(String authHeader, RatingRequest request) {
 
-         Lecture lecture = lectureRepository
-                .findById(request.lectureId())
-                .orElseThrow(() -> new IllegalArgumentException("Lecture not found"));
+        Student student = authService.verifyUser(authHeader);
+
+        if(student == null) {
+            return new BasicResponse("Error, cannot authenticate user", false);
+        }
+
+        Lecture lecture = lectureService.findById(request.lectureId());
+
+        if (lecture == null) {
+            return new BasicResponse("Error, cannot find lecture with id " + request.lectureId() + "", false);
+        }
 
 
-        Student student = studentRepository
-                .findByKitEmail(studentEmail)
-                .orElseThrow(() -> new IllegalArgumentException("Student not found"));
+        student = studentService.findByKitEmail(student.getKitEmail());
+
+        if (student == null) {
+            return new BasicResponse("Error, cannot find student", false);
+        }
 
         Rating rating = new Rating();
         rating.setLecture(lecture);
@@ -57,7 +74,12 @@ public class RatingService {
         }
 
         ratingRepository.save(rating);
+
+
+        return new BasicResponse("Rating submitted successfully",true);
+
     }
+
 
     public List<TopicAverageResponse> getRatings(UUID lectureId) {
 
@@ -89,6 +111,9 @@ public class RatingService {
 
         return result;
     }
+
+
+
 
 
 }

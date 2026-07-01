@@ -1,16 +1,19 @@
 package com.pse.lecture.service;
 
-import com.pse.auth.service.TokenService;
+import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.service.AuthService;
 import com.pse.lecture.dto.request.AddLectureRequest;
+import com.pse.lecture.dto.response.LectureResponse;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
-import com.pse.moderation.service.ModerationService;
+import com.pse.moderation.service.ModerationUserService;
 import com.pse.professor.model.Professor;
 import com.pse.professor.service.ProfessorService;
 import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,34 +25,54 @@ public class LectureService {
     private LectureRepository lectureRepository;
 
     @Autowired
-    private ModerationService moderationService;
+    private ModerationUserService moderationUserService;
     @Autowired
-    private TokenService tokenService;
+    private AuthService authService;
     @Autowired
     private ProfessorService professorService;
 
-    public List<Lecture> findByActiveTrueOrderByNameAsc(){
-        return lectureRepository.findByActiveTrueOrderByNameAsc();
+
+
+    public List<LectureResponse> getLectures() {
+
+        List<Lecture> lectures = lectureRepository.findByActiveTrueOrderByNameAsc();
+
+        List<LectureResponse> responses = new ArrayList<>();
+
+        for (Lecture lecture : lectures) {
+
+            responses.add(
+                    new LectureResponse(
+                            lecture.getId(),
+                            lecture.getName(),
+                            lecture.getCode(),
+                            lecture.getSemesterYear(),
+                            lecture.getSemesterSeason(),
+                            lecture.isActive(),
+                            lecture.getProfessor().getId(),
+                            lecture.getProfessor().getFirstName(),
+                            lecture.getProfessor().getLastName(),
+                            lecture.getComments().size(),
+                            lecture.getRatings().size()
+                    )
+            );
+        }
+
+        return responses;
     }
 
 
-    public Lecture getLectureByID(String lectureID) {
+    public BasicResponse addLecture(String authHeader, AddLectureRequest request) {
 
-        return lectureRepository.findById(UUID.fromString(lectureID))
-                .orElse(null);
-    }
-
-    public boolean addLecture(String authHeader, AddLectureRequest request) {
-
-        Student student = tokenService.verifyUser(authHeader);
-        if(!(student != null && moderationService.verifyAdmin(student))){
-            return false; //User is not authorized to add Lectures (isnt Admin)
+        Student student = authService.verifyUser(authHeader);
+        if(!(student != null && moderationUserService.verifyAdmin(student))){
+            return new BasicResponse("User is not authorized to add Lectures (isnt Admin)", false);
         }
 
         Professor professor = professorService.findById(request.professorId());
 
         if(professor == null){
-            return false;
+            return new BasicResponse("Professor not found", false);
         }
 
         Lecture lecture = new Lecture();
@@ -62,7 +85,22 @@ public class LectureService {
         lecture.setProfessor(professor);
         lectureRepository.save(lecture);
 
-        return true;
+        return new BasicResponse("Successfully added Lectures", true);
+    }
+
+
+
+
+
+
+    public Lecture findById(UUID id) {
+        return lectureRepository.findById(id).orElse(null);
+    }
+
+
+    public Lecture getLectureByID(String lectureID) {
+
+        return lectureRepository.findById(UUID.fromString(lectureID)).orElse(null);
     }
 
 

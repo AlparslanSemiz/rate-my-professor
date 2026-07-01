@@ -1,10 +1,12 @@
 package com.pse.moderation.service;
 
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.service.AuthService;
 import com.pse.moderation.dto.request.WarningRequest;
 import com.pse.moderation.dto.response.UserListResponse;
 import com.pse.moderation.dto.response.UserResponse;
 import com.pse.moderation.dto.response.WarningHistoryResponse;
+import com.pse.moderation.dto.response.WarningResponse;
 import com.pse.moderation.model.Warning;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.WarningRepository;
@@ -20,24 +22,41 @@ import java.util.UUID;
 
 
 @Service
-public class ModerationService {
+public class ModerationUserService {
+
+    @Autowired
+    private StudentService studentService;
+    @Autowired
+    private AuthService authService;
 
 
     @Autowired
     private AdminRepository moderationRepository;
     @Autowired
     private WarningRepository warningRepository;
-    @Autowired
-    private StudentService studentService;
 
+
+
+    public boolean validateAdminToken(String authHeader) {
+
+        Student student = authService.verifyUser(authHeader);
+
+        return student != null && verifyAdmin(student);
+
+    }
 
     public boolean verifyAdmin(Student student) {
 
         return moderationRepository.existsById(student.getId());
     }
 
-    public UserListResponse getAllUsers() {
 
+
+    public UserListResponse getStudents(String authHeader) {
+
+        if(validateAdminToken(authHeader)) {
+            return null;
+        }
 
         List<Student> students = studentService.getAllUsers();
 
@@ -62,15 +81,21 @@ public class ModerationService {
 
         }
 
-
         return new UserListResponse("Success", true, users);
-
     }
 
+    public UserResponse getStudent(String authHeader, UUID studentId) {
 
-    public UserResponse getUser(UUID studentId) {
+        if(validateAdminToken(authHeader)) {
+            return null;
+        }
+
 
         Student student = studentService.getUser(studentId);
+
+        if(student == null) {
+            return null;
+        }
 
         return new UserResponse(
                 student.getId(),
@@ -84,11 +109,14 @@ public class ModerationService {
                 student.getWarnings().size(),
                 student.getCommentReports().size() + student.getAnswerReports().size()
         );
+
     }
 
+    public BasicResponse deleteStudent(String authHeader, UUID studentId) {
 
-
-    public BasicResponse deleteUser(UUID studentId) {
+        if(validateAdminToken(authHeader)) {
+            return new BasicResponse("Couldnt authenticate Admin", false);
+        }
 
         if(studentService.deleteUser(studentId)){
             return new BasicResponse("Deleted User successfully", true);
@@ -98,7 +126,10 @@ public class ModerationService {
 
     }
 
-    public BasicResponse blockStudent(UUID studentId) {
+    public BasicResponse blockStudent(String authHeader, UUID studentId) {
+        if(validateAdminToken(authHeader)) {
+            return new BasicResponse("Couldnt authenticate Admin", false);
+        }
 
         if(studentService.blockStudent(studentId)){
             return new BasicResponse("Student blocked successfully", true);
@@ -107,18 +138,30 @@ public class ModerationService {
         return new BasicResponse("Couldnt block User", false);
     }
 
-    public BasicResponse unblockStudent(UUID studentId) {
+    public BasicResponse unblockStudent(String authHeader, UUID studentId) {
+
+        if(validateAdminToken(authHeader)) {
+            return new BasicResponse("Couldnt authenticate Admin", false);
+        }
 
         if(studentService.unblockStudent(studentId)){
             return new BasicResponse("Student unblocked successfully", true);
         }
 
-
         return new BasicResponse("Couldnt unblock User", false);
 
     }
 
-    public BasicResponse warnStudent(WarningRequest warningRequest) {
+    public BasicResponse warnStudent(String authHeader, UUID studentId, WarningRequest warningRequest) {
+
+
+        if(validateAdminToken(authHeader)) {
+            return new BasicResponse("Couldnt authenticate Admin", false);
+        }
+
+        if (studentId != warningRequest.userID()){
+            return new BasicResponse("Student id mismatch", false);
+        }
 
         Warning warning = new Warning();
         warning.setStudent(studentService.getUser(warningRequest.userID()));
@@ -130,23 +173,32 @@ public class ModerationService {
         return new BasicResponse("Student warned successfully", true);
     }
 
-    public List<Warning> getWarningsForStudent(UUID studentId) {
+    public WarningHistoryResponse getWarningsForStudent(String authHeader, UUID studentId) {
+
+        if(validateAdminToken(authHeader)) {
+            return new WarningHistoryResponse("Couldnt authenticate Admin", false, null);
+        }
 
         Student student = studentService.getUser(studentId);
         if(student == null){
             return null;
         }
-        return warningRepository.findByStudent(student);
-
-    }
+        List<Warning> warnings = warningRepository.findByStudent(student);
 
 
+        List<WarningResponse> responses = new ArrayList<>();
 
-    public int getWarningsCount(UUID studentId) {
-        Student student = studentService.getUser(studentId);
-        if(student == null){
-            return 0;
+        for (Warning warning : warnings) {
+
+            responses.add(new WarningResponse(
+                    warning.getStudent().getId(),
+                    warning.getMessage(),
+                    warning.getCreatedAt(),
+                    warning.getAdmin()
+            ));
+
         }
-        return warningRepository.findByStudent(student).size();
+        return new WarningHistoryResponse("Successfully found warnings for student", true, responses);
     }
+
 }

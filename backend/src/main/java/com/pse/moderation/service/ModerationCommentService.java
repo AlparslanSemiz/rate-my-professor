@@ -4,14 +4,13 @@ package com.pse.moderation.service;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.moderation.dto.response.ReportedCommentResponse;
 import com.pse.moderation.dto.response.ReportedCommentsResponse;
-import com.pse.moderation.dto.response.UserListResponse;
 import com.pse.moderation.dto.response.UserReferenceResponse;
-import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.WarningRepository;
 import com.pse.shared.enums.ReportStatus;
 import com.pse.shared.enums.UserRole;
 import com.pse.social.model.CommentReport;
 import com.pse.social.service.SocialService;
+import com.pse.user.model.Student;
 import com.pse.user.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,20 +22,25 @@ import java.util.UUID;
 @Service
 public class ModerationCommentService {
 
-    @Autowired
-    private AdminRepository moderationRepository;
-    @Autowired
-    private WarningRepository warningRepository;
+
     @Autowired
     private StudentService studentService;
     @Autowired
     private SocialService socialService;
     @Autowired
-    private ModerationService moderationService;
+    private ModerationUserService moderationUserService;
+
+    @Autowired
+    private WarningRepository warningRepository;
 
 
-    public ReportedCommentsResponse getReportedComments() {
 
+    //TODO: undefined flied: "postContext"
+    public ReportedCommentsResponse getReportedComments(String authHeader) {
+
+        if(moderationUserService.validateAdminToken(authHeader)) {
+            return null;
+        }
 
         List<CommentReport> reports = socialService.getReportedComments();
         List<ReportedCommentResponse> responses = new ArrayList<>();
@@ -52,14 +56,14 @@ public class ModerationCommentService {
                             report.getComment().getStudent().getId(),
                             report.getComment().getStudent().getUsername(),
                             UserRole.STUDENT,
-                            moderationService.getWarningsCount(report.getComment().getStudent().getId()),
+                            getWarningsCount(report.getComment().getStudent().getId()),
                             report.getComment().getStudent().getStatus()
                             ),
                     new UserReferenceResponse(
                             report.getReporter().getId(),
                             report.getReporter().getUsername(),
                             UserRole.STUDENT,
-                            moderationService.getWarningsCount(report.getReporter().getId()),
+                            getWarningsCount(report.getReporter().getId()),
                             report.getReporter().getStatus()
                     ),
 
@@ -70,16 +74,30 @@ public class ModerationCommentService {
 
         }
 
-
         return new ReportedCommentsResponse("Successfully found all reported Comments", true, responses);
-
     }
 
-    public BasicResponse updateReportStatus(UUID reportId, ReportStatus status) {
+    public BasicResponse updateReportStatus(String authHeader, UUID reportId, ReportStatus status) {
+
+
+        if(moderationUserService.validateAdminToken(authHeader)) {
+            return new BasicResponse("Couldnt authenticate Admin", false);
+        }
 
         if(socialService.updateReportStatus(reportId, status)){
             return new BasicResponse("Successfully updated Status", true);
         }
         return new BasicResponse("Couldnt updated Status", false);
     }
+
+
+    private int getWarningsCount(UUID studentId) {
+        Student student = studentService.getUser(studentId);
+        if(student == null){
+            return 0;
+        }
+        return warningRepository.findByStudent(student).size();
+    }
+
+
 }

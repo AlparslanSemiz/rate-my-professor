@@ -7,12 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.pse.professor.model.Professor;
 
-public interface ProfessorRepository
-        extends JpaRepository<Professor, UUID> {
+public interface ProfessorRepository extends JpaRepository<Professor, UUID> {
 
 
     List<Professor> findByActiveTrueOrderByLastNameAscFirstNameAsc();
+
     
-    
-    
-    }
+}

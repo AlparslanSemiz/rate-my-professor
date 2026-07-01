@@ -1,7 +1,5 @@
 package com.pse;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -24,7 +22,7 @@ import com.pse.auth.dto.request.OTPRequest;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.LoginResponse;
 import com.pse.auth.service.MailService;
-import com.pse.auth.service.TokenService;
+import com.pse.auth.service.AuthService;
 import com.pse.user.model.Student;
 import com.pse.user.service.StudentService;
 
@@ -36,7 +34,7 @@ class AuthControllerTests {
     private MailService mailService;
 
     @Mock
-    private TokenService tokenService;
+    private AuthService authService;
 
 
     @Mock
@@ -66,7 +64,7 @@ class AuthControllerTests {
         when(httpRequest.getHeader("User-Agent"))
                 .thenReturn("JUnit Test");
 
-        when(tokenService.verifyOTP(
+        when(authService.verifyOTP(
                 "test@student.kit.edu",
                 "123456"))
                 .thenReturn(true);
@@ -76,9 +74,9 @@ class AuthControllerTests {
         student.setUsername("SchnellerFuchs1234");
 
         when(studentService.findByKitEmail("test@student.kit.edu"))
-                .thenReturn(Optional.of(student));
+                .thenReturn(student);
 
-        when(tokenService.createAndSaveAuthToken(student))
+        when(authService.createAndSaveAuthToken(student))
                 .thenReturn("auth-token");
 
         LoginResponse response =
@@ -88,7 +86,7 @@ class AuthControllerTests {
         assertEquals("Login successful", response.message());
         assertEquals("auth-token", response.authToken());
 
-        verify(tokenService).consumeOTP("test@student.kit.edu", "123456");
+        verify(authService).consumeOTP("test@student.kit.edu", "123456");
 
         verify(mailService).sendSuccessfulLogin(
                 "test@student.kit.edu",
@@ -113,15 +111,15 @@ class AuthControllerTests {
         when(httpRequest.getHeader("User-Agent"))
             .thenReturn("JUnit Test");
 
-        when(tokenService.verifyOTP(
+        when(authService.verifyOTP(
             "test@student.kit.edu",
             "123456"))
             .thenReturn(true);
 
         when(studentService.findByKitEmail("test@student.kit.edu"))
-            .thenReturn(Optional.empty());
+            .thenReturn(null);
 
-        when(tokenService.createAndSaveAuthToken(any(Student.class)))
+        when(authService.createAndSaveAuthToken(any(Student.class)))
             .thenReturn("auth-token");
 
         LoginResponse response =
@@ -132,8 +130,8 @@ class AuthControllerTests {
         assertEquals("auth-token", response.authToken());
 
         verify(studentService).addStudent(any(Student.class));
-        verify(tokenService).consumeOTP("test@student.kit.edu", "123456");
-        verify(tokenService).createAndSaveAuthToken(any(Student.class));
+        verify(authService).consumeOTP("test@student.kit.edu", "123456");
+        verify(authService).createAndSaveAuthToken(any(Student.class));
 }
 
     @Test
@@ -143,7 +141,7 @@ class AuthControllerTests {
 
         HttpServletRequest httpRequest = mock(HttpServletRequest.class);
 
-        when(tokenService.verifyOTP(
+        when(authService.verifyOTP(
                 "test@student.kit.edu",
                 "wrong"))
                 .thenReturn(false);
@@ -155,7 +153,7 @@ class AuthControllerTests {
         assertEquals("Invalid token", response.message());
         assertNull(response.authToken());
 
-        verify(tokenService, never())
+        verify(authService, never())
                 .createAndSaveAuthToken(any(Student.class));
 
         verify(mailService, never())
@@ -203,7 +201,7 @@ class AuthControllerTests {
 
     @Test
     void meShouldRejectWrongBearerToken() {
-        when(tokenService.verifyAuthToken("wrong-token"))
+        when(authService.verifyAuthToken("wrong-token"))
                 .thenReturn(null);
 
         BasicResponse response =
@@ -215,7 +213,7 @@ class AuthControllerTests {
 
     @Test
     void meShouldAcceptValidBearerToken() {
-        when(tokenService.verifyAuthToken("auth-token"))
+        when(authService.verifyAuthToken("auth-token"))
                 .thenReturn("test@student.kit.edu");
 
         BasicResponse response =
@@ -243,7 +241,7 @@ class AuthControllerTests {
                 response.message()
         );
 
-        verify(tokenService, never())
+        verify(authService, never())
                 .createAndSaveOTP(anyString());
 
         verify(mailService, never())
@@ -261,7 +259,7 @@ class AuthControllerTests {
         assertFalse(response.success());
         assertEquals("Error, Email is required", response.message());
 
-        verify(tokenService, never())
+        verify(authService, never())
                 .createAndSaveOTP(anyString());
 
         verify(mailService, never())
@@ -273,7 +271,7 @@ class AuthControllerTests {
         OTPRequest request =
                 new OTPRequest("TEST@student.kit.edu");
 
-        when(tokenService.createAndSaveOTP("test@student.kit.edu"))
+        when(authService.createAndSaveOTP("test@student.kit.edu"))
                 .thenReturn("otp-token");
 
         BasicResponse response =
@@ -285,7 +283,7 @@ class AuthControllerTests {
                 response.message()
         );
 
-        verify(tokenService)
+        verify(authService)
                 .createAndSaveOTP("test@student.kit.edu");
 
         verify(mailService)

@@ -5,7 +5,6 @@ import com.pse.moderation.dto.response.BugReportResponse;
 import com.pse.moderation.dto.response.BugReportsResponse;
 import com.pse.moderation.model.BugReport;
 import com.pse.moderation.repository.BugReportRepository;
-import com.pse.moderation.repository.WarningRepository;
 import com.pse.shared.enums.ReportStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,10 +16,18 @@ import java.util.UUID;
 @Service
 public class ModerationBugReportService {
 
+
+    @Autowired
+    private ModerationUserService moderationUserService;
     @Autowired
     private BugReportRepository bugReportRepository;
 
-    public BugReportsResponse getAllReports() {
+
+    public BugReportsResponse getAllReports(String authHeader) {
+
+        if(moderationUserService.validateAdminToken(authHeader)) {
+            return null;
+        }
 
         List<BugReport> reports = bugReportRepository.findAll();
         List<BugReportResponse> responses = new ArrayList<>();
@@ -42,7 +49,12 @@ public class ModerationBugReportService {
 
     }
 
-    public BasicResponse updateBugReportStatus(UUID report_id, ReportStatus status) {
+    public BasicResponse updateBugReportStatus(String authHeader, UUID report_id, ReportStatus status) {
+
+        if(moderationUserService.validateAdminToken(authHeader)) {
+            return null;
+        }
+
         BugReport bugReport = bugReportRepository.findById(report_id).orElse(null);
         if (bugReport == null) {
             return new BasicResponse("Error, couldnt find BugReport", false);

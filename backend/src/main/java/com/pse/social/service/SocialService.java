@@ -1,9 +1,15 @@
 package com.pse.social.service;
 
+import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.service.AuthService;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.service.LectureService;
 import com.pse.shared.enums.ReportReason;
 import com.pse.shared.enums.ReportStatus;
+import com.pse.social.dto.request.AnswerReportRequest;
+import com.pse.social.dto.request.AnswerSubmitRequest;
+import com.pse.social.dto.request.CommentReportRequest;
+import com.pse.social.dto.request.CommentSubmitRequest;
 import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerReport;
 import com.pse.social.model.Comment;
@@ -19,24 +25,47 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
 
+
+/**
+ * Provides Comment-related business logic.
+ * Handles comments/answers submition and reporting comments/answers.
+ */
 @Service
 public class SocialService {
+
+    @Autowired
+    private LectureService lectureService;
+    @Autowired
+    private AuthService authService;
+
 
     @Autowired
     private CommentRepository commentRepository;
     @Autowired
     private AnswerRepository answerRepository;
     @Autowired
-    private LectureService lectureService;
-
-    @Autowired
     private CommentReportRepository commentReportRepository;
     @Autowired
     private AnswerReportRepository answerReportRepository;
 
 
-    public boolean submitComment(Student student, String lectureID, String content) {
 
+    public BasicResponse submitComment(String authHeader, CommentSubmitRequest request) {
+
+        Student student = authService.verifyUser(authHeader);
+
+        if (student == null) {
+            return new BasicResponse("Error, cannot authenticate user", false);
+        }
+
+        if (!submitComment(student, request.lectureID(), request.content())) {
+            return new BasicResponse("Error, cannot submit comment", false);
+        }
+
+        return new BasicResponse("Comment submitted successfully", true);
+    }
+
+    private boolean submitComment(Student student, String lectureID, String content) {
 
         Lecture lecture = lectureService.getLectureByID(lectureID);
         if (lecture == null) {
@@ -56,8 +85,23 @@ public class SocialService {
     }
 
 
-    public boolean submitAnswer(Student student, String commentID, String content) {
 
+    public BasicResponse submitAnswer(String authHeader, AnswerSubmitRequest request) {
+
+        Student student = authService.verifyUser(authHeader);
+
+        if(student == null) {
+            return new BasicResponse("Error, cannot authenticate user", false);
+        }
+
+        if(!submitAnswer(student, request.commentID(), request.content())){
+            return new BasicResponse("Error, couldnt finde comment",false);
+        }
+
+        return new BasicResponse("Answer submitted successfully",true);
+    }
+
+    private boolean submitAnswer(Student student, String commentID, String content) {
 
         Comment comment = commentRepository.findById(UUID.fromString(commentID)).orElse(null);
         if(comment == null) {
@@ -69,13 +113,30 @@ public class SocialService {
         answer.setContent(content);
         answer.setComment(comment);
 
-
-
         answerRepository.save(answer);
         return true;
     }
 
-    public boolean submitCommentReport(Student student, String commentID, ReportReason reportReason, String explanation) {
+
+
+    public BasicResponse submitCommentReport(String authHeader, CommentReportRequest request) {
+
+        Student student = authService.verifyUser(authHeader);
+
+        if(student == null) {
+            return new BasicResponse("Error, cannot authenticate user", false);
+        }
+
+        if(!submitCommentReport(student, request.commentID(), request.reportReason(), request.explanation())){
+            return new BasicResponse("Error, couldnt finde comment",false);
+        }
+
+
+        return new BasicResponse("Comment Report submitted successfully",true);
+
+    }
+
+    private boolean submitCommentReport(Student student, String commentID, ReportReason reportReason, String explanation) {
 
         Comment comment = commentRepository.findById(UUID.fromString(commentID)).orElse(null);
         if(comment == null) {
@@ -96,7 +157,22 @@ public class SocialService {
     }
 
 
-    public boolean submitAnswerReport(Student student, String answerID, ReportReason reportReason, String explanation) {
+    public BasicResponse submitAnswerReport(String authHeader, AnswerReportRequest request) {
+
+        Student student = authService.verifyUser(authHeader);
+
+        if(student == null) {
+            return new BasicResponse("Error, cannot authenticate user", false);
+        }
+
+        if(!submitAnswerReport(student, request.answerID(), request.reportReason(), request.explanation())){
+            return new BasicResponse("Error, couldnt finde answer",false);
+        }
+
+        return new BasicResponse("Answer Report submitted successfully",true);
+    }
+
+    private boolean submitAnswerReport(Student student, String answerID, ReportReason reportReason, String explanation) {
 
         Answer answer = answerRepository.findById(UUID.fromString(answerID)).orElse(null);
         if(answer == null) {
@@ -116,10 +192,10 @@ public class SocialService {
 
     }
 
-    public List<CommentReport> getReportedComments() {
-        return commentReportRepository.findAll();
-    }
 
+
+
+    //Methods used by other Services
 
     public boolean updateReportStatus(UUID reportId, ReportStatus status) {
         CommentReport commentReport = commentReportRepository.findById(reportId).orElse(null);
@@ -132,4 +208,17 @@ public class SocialService {
 
         return true;
     }
+
+
+
+    //Repository methods
+
+    public List<CommentReport> getReportedComments() {
+        return commentReportRepository.findAll();
+    }
+
+
+
+
+
 }
