@@ -1,7 +1,27 @@
 <resources>
     <string name="app_name">My Application_Java</string>
-    <!-- TODO: Remove or change this placeholder text -->
+
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_settings">Settings</string>
+
     <string name="back">Back</string>
     <string name="close">Close</string>
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="submit">Submit</string>
+
+    <string name="settings_dark_mode">Dark Mode</string>
+    <string name="settings_bug_report">Bug Report</string>
+    <string name="settings_delete_account">Delete Account</string>
+
+    <string name="bug_report_prompt">What went wrong?</string>
+    <string name="bug_report_hint">Describe the bug</string>
+    <string name="bug_report_empty_error">Please describe the bug before submitting.</string>
+    <string name="bug_report_submitted">Thanks for the report.</string>
+    <string name="delete_account_title">Delete Account?</string>
+    <string name="delete_account_message">This will permanently delete your account.</string>
+    <string name="delete_account_missing_login">Please log in again before deleting your account.</string>
+    <string name="delete_account_failed">Account deletion failed. Please try again.</string>
+    <string name="delete_account_success">Your account has been deleted.</string>
 </resources>

@@ -15,7 +15,7 @@ import com.example.myapplication_java.DomainModel.Rating;
 import com.example.myapplication_java.DomainModel.RatingCategory;
 import com.example.myapplication_java.DomainModel.Review;
 import com.example.myapplication_java.DomainModel.Semester;
-import com.example.myapplication_java.DomainModel.SemesterType;
+import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.DomainModel.User;
 import com.example.myapplication_java.DomainModel.UserStatistics;
 import com.example.myapplication_java.DomainModel.Vote;
@@ -47,11 +47,13 @@ public class DomainModelTest {
 
     @Test
     public void lectureConstructorStoresImplementedFields() {
-        Lecture lecture = new Lecture("lecture-1", "Algorithms", "240001");
+        Lecture lecture = createLecture();
 
         assertEquals("lecture-1", lecture.id);
         assertEquals("Algorithms", lecture.name);
         assertEquals("240001", lecture.code);
+        assertEquals(2026, lecture.semesterYear);
+        assertEquals(SemesterSeason.WINTER, lecture.semesterSeason);
     }
 
     @Test
@@ -150,7 +152,7 @@ public class DomainModelTest {
 
     @Test
     public void lectureGetProfessorsCurrentlyReturnsEmptyList() {
-        Lecture lecture = new Lecture("lecture-1", "Algorithms", "240001");
+        Lecture lecture = createLecture();
 
         assertTrue(lecture.getProfessors().isEmpty());
     }
@@ -167,9 +169,9 @@ public class DomainModelTest {
 
     @Test
     public void lectureOfferingStoresRelationsAndCurrentAverageRatingPlaceholder() {
-        Lecture lecture = new Lecture("lecture-1", "Algorithms", "240001");
+        Lecture lecture = createLecture();
         Professor professor = new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f);
-        Semester semester = new Semester("semester-1", "Winter 2026", 2026, SemesterType.WINTER);
+        Semester semester = new Semester(2026, SemesterSeason.WINTER);
 
         LectureOffering offering = new LectureOffering("offering-1", lecture, professor, semester);
 
@@ -200,12 +202,10 @@ public class DomainModelTest {
 
     @Test
     public void semesterConstructorStoresImplementedFields() {
-        Semester semester = new Semester("semester-1", "Sommer 2026", 2026, SemesterType.SUMMER);
+        Semester semester = new Semester(2026, SemesterSeason.SUMMER);
 
-        assertEquals("semester-1", semester.semesterId);
-        assertEquals("Sommer 2026", semester.name);
-        assertEquals(2026, semester.year);
-        assertEquals(SemesterType.SUMMER, semester.type);
+        assertEquals(2026, semester.semesterYear);
+        assertEquals(SemesterSeason.SUMMER, semester.semesterSeason);
     }
 
     @Test
@@ -251,9 +251,23 @@ public class DomainModelTest {
 
     @Test
     public void enumValuesExposeSupportedSemesterAndVoteTypes() {
-        assertEquals(SemesterType.SUMMER, SemesterType.valueOf("SUMMER"));
-        assertEquals(SemesterType.WINTER, SemesterType.valueOf("WINTER"));
+        assertEquals(SemesterSeason.SUMMER, SemesterSeason.valueOf("SUMMER"));
+        assertEquals(SemesterSeason.WINTER, SemesterSeason.valueOf("WINTER"));
         assertEquals(VoteType.UPVOTE, VoteType.valueOf("UPVOTE"));
         assertEquals(VoteType.DOWNVOTE, VoteType.valueOf("DOWNVOTE"));
+    }
+
+    private Lecture createLecture() {
+        return new Lecture(
+                "lecture-1",
+                "Algorithms",
+                "240001",
+                2026,
+                SemesterSeason.WINTER,
+                true,
+                "prof-1",
+                3,
+                4
+        );
     }
 }
