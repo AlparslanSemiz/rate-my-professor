@@ -1,0 +1,16 @@
+Changed following Interfaces:
+
+
+Changes at "/information" Interface:
+- "/information"  renamed to "account"
+
+
+
+Changes at "/social" Interface:
+- "/submitComment"  renamed to "comments"
+- "/submitAnswer"  renamed to "answers"
+- "/submitCommentReport"  renamed to "/comments/report"
+- "/submitAnswerReport"  renamed to "/answers/report"
+
+
+
