@@ -1,22 +1,14 @@
 package com.pse.user.service;
 
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.pse.auth.dto.response.BasicResponse;
-import com.pse.moderation.dto.response.UserListResponse;
-import com.pse.moderation.dto.response.UserResponse;
-import com.pse.moderation.service.ModerationService;
-import com.pse.shared.enums.UserRole;
-import com.pse.shared.enums.UserStatus;
-import com.pse.user.dto.StudentProfileResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.pse.rating.model.Rating;
+import com.pse.shared.enums.UserStatus;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
 
@@ -26,17 +18,22 @@ public class StudentService {
 
     @Autowired
     private StudentRepository studentRepository;
-    @Autowired
-    private ModerationService moderationService;
-
+    
 
     public Optional<Student> findByKitEmail(String kitEmail){
         return studentRepository.findByKitEmail(kitEmail);
     }
 
 
-    public void softDeleteByKitEmail(String email){
-        studentRepository.softDeleteByKitEmail(email);
+    public boolean softDeleteByKitEmail(String email){
+        Student student = studentRepository.findByKitEmail(email).orElse(null);
+
+        if(student == null) {
+            return false; //couldnt find User
+        }
+        student.setStatus(UserStatus.DELETED);
+        studentRepository.save(student);
+        return true;
     }
 
 

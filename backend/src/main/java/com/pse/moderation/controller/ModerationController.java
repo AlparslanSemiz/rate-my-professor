@@ -1,17 +1,10 @@
 package com.pse.moderation.controller;
 
 
-import com.pse.auth.dto.response.BasicResponse;
-import com.pse.auth.service.TokenService;
-import com.pse.moderation.dto.request.WarningRequest;
-import com.pse.moderation.dto.response.UserResponse;
-import com.pse.moderation.dto.response.WarningHistoryResponse;
-import com.pse.moderation.dto.response.WarningResponse;
-import com.pse.moderation.model.Warning;
-import com.pse.moderation.service.ModerationService;
-import com.pse.moderation.dto.response.UserListResponse;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
-import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,9 +15,16 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.service.TokenService;
+import com.pse.moderation.dto.request.WarningRequest;
+import com.pse.moderation.dto.response.UserListResponse;
+import com.pse.moderation.dto.response.UserResponse;
+import com.pse.moderation.dto.response.WarningHistoryResponse;
+import com.pse.moderation.dto.response.WarningResponse;
+import com.pse.moderation.model.Warning;
+import com.pse.moderation.service.ModerationService;
+import com.pse.user.model.Student;
 
 @RestController
 @RequestMapping("/users")
@@ -80,7 +80,7 @@ public class ModerationController {
 
     }
 
-    @PatchMapping("/{student_id}")
+    @PatchMapping("/{student_id}/block")
     public BasicResponse blockStudent(@RequestHeader("Authorization") String authHeader, @PathVariable UUID student_id) {
 
         if(validateAdminToken(authHeader)) {
@@ -91,7 +91,7 @@ public class ModerationController {
 
     }
 
-    @PatchMapping("/{student_id}")
+    @PatchMapping("/{student_id}/unblock")
     public BasicResponse unblockStudent(@RequestHeader("Authorization") String authHeader, @PathVariable UUID student_id) {
 
         if(validateAdminToken(authHeader)) {

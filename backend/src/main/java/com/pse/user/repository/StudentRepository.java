@@ -5,10 +5,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.pse.rating.model.Rating;
 import com.pse.user.model.Student;
@@ -18,12 +16,6 @@ public interface StudentRepository
 
     Optional<Student> findByKitEmail(String kitEmail);
 
-
-
-    @Modifying
-    @Transactional
-    @Query("UPDATE Student s SET s.deleted = true WHERE s.kitEmail = :email")
-    void softDeleteByKitEmail(@Param("email") String email);
 
 
     @Query("""

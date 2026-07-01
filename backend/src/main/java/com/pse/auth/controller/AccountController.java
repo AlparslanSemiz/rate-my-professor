@@ -1,16 +1,9 @@
 package com.pse.auth.controller;
 
 
-import com.pse.auth.dto.response.UserRatingDto;
-import com.pse.auth.dto.response.UserRatingResponse;
-import com.pse.auth.service.TokenService;
-import com.pse.rating.model.Rating;
-import com.pse.rating.model.RatingTopic;
-import com.pse.shared.enums.SemesterSeason;
-import com.pse.user.model.Student;
-import com.pse.user.dto.StudentProfileResponse;
+import java.util.ArrayList;
+import java.util.List;
 
-import com.pse.user.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,11 +12,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.pse.auth.dto.request.LogoutRequest;
-import com.pse.auth.dto.request.ValidateCredsRequest;
 import com.pse.auth.dto.response.BasicResponse;
-
-import java.util.ArrayList;
-import java.util.List;
+import com.pse.auth.dto.response.UserRatingDto;
+import com.pse.auth.dto.response.UserRatingResponse;
+import com.pse.auth.service.TokenService;
+import com.pse.rating.model.Rating;
+import com.pse.rating.model.RatingTopic;
+import com.pse.user.dto.StudentProfileResponse;
+import com.pse.user.model.Student;
+import com.pse.user.service.StudentService;
 
 
 /**
@@ -197,8 +194,10 @@ public class AccountController {
         }
 
         //Set deleted in Database: Set "deleted" to true
-        studentService.softDeleteByKitEmail(student.getKitEmail());
-
+        if( !(studentService.softDeleteByKitEmail(student.getKitEmail()))){
+           return new BasicResponse("Error, couldnt find student", false);     
+        }
+        
         return new BasicResponse("Deleted Account succesfully: " + student.getKitEmail(), true);
     }
 
