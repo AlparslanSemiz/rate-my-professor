@@ -1,44 +1,29 @@
-import { apiClient, delay, type ApiClient } from './ApiClient'
-
-const MOCK_USERS = [
-  { id: 1, name: 'Admin User', email: 'admin@example.com', password: 'admin123', role: 'Admin' },
-  { id: 2, name: 'Max Mustermann', email: 'max@example.com', password: 'max123', role: 'Developer' },
-]
+import { apiClient, type ApiClient } from './ApiClient'
+import { RemoteBackedService, delay } from './RemoteBackedService'
+import { AuthRepository, type AuthUser } from './AuthRepository'
 
 export interface LoginResponse {
   token: string
-  user: {
-    id: number
-    name: string
-    email: string
-    role: string
-  }
+  user: AuthUser
 }
 
-export class AuthService {
-  private readonly client: ApiClient
+export class AuthService extends RemoteBackedService {
+  private readonly repository = new AuthRepository()
 
   constructor(client: ApiClient) {
-    this.client = client
+    super(client)
   }
 
-  async login(email: string, password: string): Promise<LoginResponse> {
-    if (this.client.isConfigured) {
-      return this.client.post<LoginResponse>('/auth/login', { email, password })
-    }
-
-    await delay(600)
-    const match = MOCK_USERS.find((u) => u.email === email && u.password === password)
-    if (!match) throw new Error('Invalid email or password')
-
-    const user = {
-      id: match.id,
-      name: match.name,
-      email: match.email,
-      role: match.role,
-    }
-
-    return { token: `mock-token-${user.id}`, user }
+  login(email: string, password: string): Promise<LoginResponse> {
+    return this.execute(
+      () => this.client.post<LoginResponse>('/auth/login', { email, password }),
+      async () => {
+        await delay(600)
+        const user = this.repository.findByCredentials(email, password)
+        if (!user) throw new Error('Invalid email or password')
+        return { token: `mock-token-${user.id}`, user }
+      }
+    )
   }
 }
 

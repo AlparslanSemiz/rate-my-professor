@@ -1,41 +1,34 @@
-import { apiClient, delay, type ApiClient } from './ApiClient'
+import { apiClient, type ApiClient } from './ApiClient'
+import { RemoteBackedService, delay } from './RemoteBackedService'
+import { FeedbackRepository, type BugReport, type ReportStatus } from './FeedbackRepository'
 
-export type Severity = 'Low' | 'Medium' | 'High' | 'Critical'
-export type ReportStatus = 'Open' | 'In Progress' | 'Resolved'
+export type { BugReport, ReportStatus, Severity } from './FeedbackRepository'
 
-export interface BugReport {
-  id: number
-  title: string
-  description: string
-  severity: Severity
-  status: ReportStatus
-  reportedBy: string
-  reportedAt: string
-}
-
-export class FeedbackService {
-  private reports: BugReport[] = []
-  private readonly client: ApiClient
+export class FeedbackService extends RemoteBackedService {
+  private readonly repository = new FeedbackRepository()
 
   constructor(client: ApiClient) {
-    this.client = client
+    super(client)
   }
 
-  async getReports(): Promise<BugReport[]> {
-    if (this.client.isConfigured) return this.client.get<BugReport[]>('/feedback')
-
-    await delay(400)
-    return [...this.reports]
+  getReports(): Promise<BugReport[]> {
+    return this.execute(
+      () => this.client.get<BugReport[]>('/feedback'),
+      async () => {
+        await delay(400)
+        return this.repository.getAll()
+      }
+    )
   }
 
-  async updateStatus(id: number, status: ReportStatus): Promise<void> {
-    if (this.client.isConfigured) return this.client.patch(`/feedback/${id}`, { status })
-
-    await delay(300)
-    if (!this.reports.some((report) => report.id === id)) {
-      throw new Error(`Report with id ${id} not found`)
-    }
-    this.reports = this.reports.map((report) => (report.id === id ? { ...report, status } : report))
+  updateStatus(id: number, status: ReportStatus): Promise<void> {
+    return this.execute(
+      () => this.client.patch(`/feedback/${id}`, { status }),
+      async () => {
+        await delay(300)
+        this.repository.setStatus(id, status)
+      }
+    )
   }
 }
 

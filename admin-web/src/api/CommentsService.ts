@@ -1,96 +1,33 @@
-import { apiClient, delay, type ApiClient } from './ApiClient'
+import { apiClient, type ApiClient } from './ApiClient'
+import { RemoteBackedService, delay } from './RemoteBackedService'
+import { CommentsRepository, type ReportedComment, type CommentReportStatus } from './CommentsRepository'
 
-export type CommentReportStatus = 'Pending' | 'Reviewed' | 'Dismissed' | 'Removed'
-export type ReportReason = 'Spam' | 'Harassment' | 'Hate Speech' | 'Misinformation' | 'Inappropriate' | 'Other'
+export type { ReportedComment, CommentReportStatus, ReportReason, CommentUserRef } from './CommentsRepository'
 
-export interface CommentUserRef {
-  id: number
-  name: string
-  role: 'Admin' | 'Student' | 'Professor'
-  warningCount: number
-  status: 'Active' | 'Inactive' | 'Blocked'
-}
-
-export interface ReportedComment {
-  id: number
-  commentText: string
-  postContext: string
-  reportMessage: string
-  reportedUser: CommentUserRef
-  reportingUser: CommentUserRef
-  reason: ReportReason
-  status: CommentReportStatus
-  reportedAt: string
-}
-
-const INITIAL_REPORTED_COMMENTS: ReportedComment[] = [
-  {
-    id: 1,
-    commentText: 'You are absolutely terrible at this, give up already.',
-    postContext: 'Best practices for code review',
-    reportMessage: 'This user has been consistently attacking others in this thread. Very hostile.',
-    reportedUser: { id: 3, name: 'Carol White', role: 'Student', warningCount: 1, status: 'Active' },
-    reportingUser: { id: 2, name: 'Bob Johnson', role: 'Professor', warningCount: 0, status: 'Active' },
-    reason: 'Harassment',
-    status: 'Pending',
-    reportedAt: '2026-06-03T16:22:00Z',
-  },
-  {
-    id: 2,
-    commentText: 'Buy cheap crypto NOW!!! 10000x guaranteed returns, click link in bio.',
-    postContext: 'Investment strategies discussion',
-    reportMessage: 'Obvious spam link. This user has been posting this same message in multiple threads.',
-    reportedUser: { id: 4, name: 'David Brown', role: 'Student', warningCount: 3, status: 'Blocked' },
-    reportingUser: { id: 1, name: 'Alice Smith', role: 'Admin', warningCount: 0, status: 'Active' },
-    reason: 'Spam',
-    status: 'Removed',
-    reportedAt: '2026-06-03T13:05:00Z',
-  },
-  {
-    id: 3,
-    commentText: 'People from that country are all lazy and stupid.',
-    postContext: 'Remote work culture differences',
-    reportMessage: 'Very offensive, should be removed immediately. This is clearly hate speech targeting a nationality.',
-    reportedUser: { id: 5, name: 'Emma Davis', role: 'Student', warningCount: 2, status: 'Active' },
-    reportingUser: { id: 2, name: 'Bob Johnson', role: 'Professor', warningCount: 0, status: 'Active' },
-    reason: 'Hate Speech',
-    status: 'Reviewed',
-    reportedAt: '2026-06-02T11:41:00Z',
-  },
-  {
-    id: 4,
-    commentText: 'This is 100% proven that vaccines cause autism, do your research!',
-    postContext: 'Healthcare in 2026',
-    reportMessage: 'Spreading dangerous medical misinformation. Could cause real harm to readers.',
-    reportedUser: { id: 7, name: 'Grace Lee', role: 'Student', warningCount: 0, status: 'Inactive' },
-    reportingUser: { id: 6, name: 'Frank Miller', role: 'Professor', warningCount: 0, status: 'Active' },
-    reason: 'Misinformation',
-    status: 'Pending',
-    reportedAt: '2026-06-02T18:30:00Z',
-  },
-]
-
-export class CommentsService {
-  private reportedComments: ReportedComment[] = [...INITIAL_REPORTED_COMMENTS]
-  private readonly client: ApiClient
+export class CommentsService extends RemoteBackedService {
+  private readonly repository = new CommentsRepository()
 
   constructor(client: ApiClient) {
-    this.client = client
+    super(client)
   }
 
-  async getReported(): Promise<ReportedComment[]> {
-    if (this.client.isConfigured) return this.client.get<ReportedComment[]>('/comments/reported')
-
-    await delay(400)
-    return [...this.reportedComments]
+  getReported(): Promise<ReportedComment[]> {
+    return this.execute(
+      () => this.client.get<ReportedComment[]>('/comments/reported'),
+      async () => {
+        await delay(400)
+        return this.repository.getAll()
+      }
+    )
   }
 
-  async updateStatus(id: number, status: CommentReportStatus): Promise<void> {
-    if (this.client.isConfigured) return this.client.patch(`/comments/reported/${id}`, { status })
-
-    await delay(300)
-    this.reportedComments = this.reportedComments.map((r) =>
-      r.id === id ? { ...r, status } : r
+  updateStatus(id: number, status: CommentReportStatus): Promise<void> {
+    return this.execute(
+      () => this.client.patch(`/comments/reported/${id}`, { status }),
+      async () => {
+        await delay(300)
+        this.repository.setStatus(id, status)
+      }
     )
   }
 }

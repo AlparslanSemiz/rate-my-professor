@@ -41,7 +41,3 @@ export class ApiClient {
 }
 
 export const apiClient = new ApiClient(import.meta.env.VITE_API_BASE_URL || null)
-
-export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
