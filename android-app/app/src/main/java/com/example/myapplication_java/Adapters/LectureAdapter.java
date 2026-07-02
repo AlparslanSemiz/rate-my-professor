@@ -56,4 +56,13 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
     public interface OnLectureClickListener {
         void onLectureClick(String lectureTitle);
     }
+
+    /**
+     * This method is used to update the list of lectures on runtime.
+     * @param lectures
+     */
+    public void setData(List<Lecture> lectures) {
+        this.lectures = lectures;
+        notifyDataSetChanged();
+    }
 }
