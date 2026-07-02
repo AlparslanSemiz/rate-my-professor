@@ -31,9 +31,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService {
 
-
-    @Autowired
-    private AuthService authService;
     @Autowired
     private StudentService studentService;
     @Autowired
@@ -60,7 +57,7 @@ public class AuthService {
         }
 
 
-        String token = authService.createAndSaveOTP(userEmail);
+        String token = createAndSaveOTP(userEmail);
 
         mailService.sendLoginMail(userEmail, token);
 
@@ -84,13 +81,13 @@ public class AuthService {
         String userEmail = request.email().trim().toLowerCase();
         String otp = request.loginToken().trim();
 
-        boolean valid = authService.verifyOTP(userEmail, otp);
+        boolean valid = verifyOTP(userEmail, otp);
 
         if (!valid) {
             //TODO: More fine-grained error message (e.g. token expired...)
             return new LoginResponse("Invalid token", false, null);
         }
-        authService.consumeOTP(userEmail, otp);
+        consumeOTP(userEmail, otp);
 
         //TODO check if Student exists in Databse and if not add him
 
@@ -111,7 +108,7 @@ public class AuthService {
             studentService.addStudent(student);
         }
 
-        String authToken = authService.createAndSaveAuthToken(student);
+        String authToken = createAndSaveAuthToken(student);
 
         //Send successful login mail (Try to get information on ip e.g.)
         String ip = httpRequest.getHeader("X-Forwarded-For");
@@ -135,7 +132,7 @@ public class AuthService {
 
         String token = authHeader.substring("Bearer ".length());
 
-        String email = authService.verifyAuthToken(token);
+        String email = verifyAuthToken(token);
 
         if (email == null) {
             return new BasicResponse("Not logged in", false);
@@ -148,7 +145,7 @@ public class AuthService {
 
     public BasicResponse validate(String authHeader, ValidateCredsRequest request) {
 
-        BasicResponse response = authService.validateCredentials(authHeader, request.email());
+        BasicResponse response = validateCredentials(authHeader, request.email());
 
         if (!response.success()) {
             return response;
@@ -306,8 +303,7 @@ public class AuthService {
 
     //Repository Methods:
 
-
-    public String verifyAuthToken(String authToken) {
+    private String verifyAuthToken(String authToken) {
 
         Token token = tokenRepository
                 .findByValueAndRevokedFalseAndExpiresAtAfter(
@@ -328,7 +324,7 @@ public class AuthService {
     /**
      * Verifies the OTP by checking if it exists, is unused, and isnt expired.
      */
-    public boolean verifyOTP(String email, String otp) {
+    private boolean verifyOTP(String email, String otp) {
 
         return oneTimePasswordRepository.findByEmailAndValueAndUsedFalseAndExpiresAtAfter(
                 email,

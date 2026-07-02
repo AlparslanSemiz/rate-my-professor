@@ -29,29 +29,13 @@ public class StudentService {
 
 
     @Autowired
-    private AuthService authService;
-    @Autowired
     private StudentRepository studentRepository;
 
 
 
     //Methods used by AccountController
 
-    public StudentProfileResponse getUserInformation(String authHeader) {
-        Student student = authService.verifyUser(authHeader);
-
-        if (student == null) {
-            return new StudentProfileResponse(
-                    "Error, cannot authenticate user",
-                    false,
-                    null,
-                    0,
-                    0,
-                    0,
-                    0
-            );
-        }
-
+    public StudentProfileResponse getUserInformation(Student student) {
         return new StudentProfileResponse(
                 "Success",
                 true,
@@ -63,16 +47,8 @@ public class StudentService {
         );
     }
 
-    public UserRatingResponse getUserRatings(String authHeader) {
+    public UserRatingResponse getUserRatings(Student student) {
 
-        Student student = authService.verifyUser(authHeader);
-        if (student == null) {
-            return new UserRatingResponse(
-                    "Error, cannot authenticate user",
-                    false,
-                    null
-            );
-        }
 
         List<UserRatingDto> ratingDtos = new ArrayList<>();
 
@@ -110,21 +86,12 @@ public class StudentService {
 
     }
 
-    public BasicResponse requestLogout(String authHeader) {
-        Student student = authService.verifyUser(authHeader);
+    public BasicResponse requestLogout(Student student) {
 
-        if (student == null) {
-            return new BasicResponse("Error, couldnt authenticate user", false);
-        }
-
-        //Iterate through every entry in AuthToken and delete every match where: AuthToken.email == email
-        int sessions = authService.invalidateAllAuthTokensForEmail(student.getKitEmail());
-
-        return new BasicResponse("Logged out successfully (" + sessions + " sessions)", true);
+        return new BasicResponse("Logged out successfully ("  + " sessions)", true);
     }
 
-    public BasicResponse deleteAccount(String authHeader) {
-        Student student = authService.verifyUser(authHeader);
+    public BasicResponse deleteAccount(Student student) {
 
         if (student == null) {
             return new BasicResponse("Error, couldnt authenticate user", false);
@@ -137,6 +104,7 @@ public class StudentService {
 
         return new BasicResponse("Deleted Account succesfully: " + student.getKitEmail(), true);
     }
+
 
 
 

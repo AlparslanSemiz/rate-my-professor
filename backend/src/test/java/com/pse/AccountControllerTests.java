@@ -6,7 +6,7 @@ import static org.mockito.Mockito.*;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.user.controller.AccountController;
 import com.pse.user.dto.StudentProfileResponse;
-import com.pse.user.service.StudentService;
+import com.pse.user.service.AccountService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ import org.mockito.MockitoAnnotations;
 class AccountControllerTests {
 
     @Mock
-    private StudentService studentService;
+    private AccountService accountService;
 
     @InjectMocks
     private AccountController accountController;
@@ -29,7 +29,7 @@ class AccountControllerTests {
 
     @Test
     void logoutShouldFailWithoutBearerToken() {
-        when(studentService.requestLogout("invalid-header"))
+        when(accountService.requestLogout("invalid-header"))
                 .thenReturn(new BasicResponse("Error, couldnt authenticate user", false));
 
         BasicResponse response = accountController.requestLogout("invalid-header");
@@ -37,12 +37,12 @@ class AccountControllerTests {
         assertFalse(response.success());
         assertEquals("Error, couldnt authenticate user", response.message());
 
-        verify(studentService).requestLogout("invalid-header");
+        verify(accountService).requestLogout("invalid-header");
     }
 
     @Test
     void logoutShouldFailForWrongAuthToken() {
-        when(studentService.requestLogout("Bearer wrong-token"))
+        when(accountService.requestLogout("Bearer wrong-token"))
                 .thenReturn(new BasicResponse("Error, couldnt authenticate user", false));
 
         BasicResponse response = accountController.requestLogout("Bearer wrong-token");
@@ -50,12 +50,12 @@ class AccountControllerTests {
         assertFalse(response.success());
         assertEquals("Error, couldnt authenticate user", response.message());
 
-        verify(studentService).requestLogout("Bearer wrong-token");
+        verify(accountService).requestLogout("Bearer wrong-token");
     }
 
     @Test
     void logoutShouldSucceedForValidToken() {
-        when(studentService.requestLogout("Bearer auth-token"))
+        when(accountService.requestLogout("Bearer auth-token"))
                 .thenReturn(new BasicResponse("Logged out successfully (3 sessions)", true));
 
         BasicResponse response = accountController.requestLogout("Bearer auth-token");
@@ -63,12 +63,12 @@ class AccountControllerTests {
         assertTrue(response.success());
         assertEquals("Logged out successfully (3 sessions)", response.message());
 
-        verify(studentService).requestLogout("Bearer auth-token");
+        verify(accountService).requestLogout("Bearer auth-token");
     }
 
     @Test
     void informationShouldFailWithoutBearerToken() {
-        when(studentService.getUserInformation("invalid-header"))
+        when(accountService.getUserInformation("invalid-header"))
                 .thenReturn(new StudentProfileResponse(
                         "Error, cannot authenticate user",
                         false,
@@ -85,12 +85,12 @@ class AccountControllerTests {
         assertFalse(response.success());
         assertEquals("Error, cannot authenticate user", response.message());
 
-        verify(studentService).getUserInformation("invalid-header");
+        verify(accountService).getUserInformation("invalid-header");
     }
 
     @Test
     void informationShouldFailForWrongAuthToken() {
-        when(studentService.getUserInformation("Bearer wrong-token"))
+        when(accountService.getUserInformation("Bearer wrong-token"))
                 .thenReturn(new StudentProfileResponse(
                         "Error, cannot authenticate user",
                         false,
@@ -107,12 +107,12 @@ class AccountControllerTests {
         assertFalse(response.success());
         assertEquals("Error, cannot authenticate user", response.message());
 
-        verify(studentService).getUserInformation("Bearer wrong-token");
+        verify(accountService).getUserInformation("Bearer wrong-token");
     }
 
     @Test
     void informationShouldSucceedForValidToken() {
-        when(studentService.getUserInformation("Bearer auth-token"))
+        when(accountService.getUserInformation("Bearer auth-token"))
                 .thenReturn(new StudentProfileResponse(
                         "Success",
                         true,
@@ -134,12 +134,12 @@ class AccountControllerTests {
         assertEquals(0, response.commentsWritten());
         assertEquals(42, response.credibilityScore());
 
-        verify(studentService).getUserInformation("Bearer auth-token");
+        verify(accountService).getUserInformation("Bearer auth-token");
     }
 
     @Test
     void deleteAccountShouldFailWithoutBearerToken() {
-        when(studentService.deleteAccount("invalid-header"))
+        when(accountService.deleteAccount("invalid-header"))
                 .thenReturn(new BasicResponse("Error, couldnt authenticate user", false));
 
         BasicResponse response = accountController.deleteAccount("invalid-header");
@@ -147,12 +147,12 @@ class AccountControllerTests {
         assertFalse(response.success());
         assertEquals("Error, couldnt authenticate user", response.message());
 
-        verify(studentService).deleteAccount("invalid-header");
+        verify(accountService).deleteAccount("invalid-header");
     }
 
     @Test
     void deleteAccountShouldFailForWrongAuthToken() {
-        when(studentService.deleteAccount("Bearer wrong-token"))
+        when(accountService.deleteAccount("Bearer wrong-token"))
                 .thenReturn(new BasicResponse("Error, couldnt authenticate user", false));
 
         BasicResponse response = accountController.deleteAccount("Bearer wrong-token");
@@ -160,12 +160,12 @@ class AccountControllerTests {
         assertFalse(response.success());
         assertEquals("Error, couldnt authenticate user", response.message());
 
-        verify(studentService).deleteAccount("Bearer wrong-token");
+        verify(accountService).deleteAccount("Bearer wrong-token");
     }
 
     @Test
     void deleteAccountShouldSucceedForValidToken() {
-        when(studentService.deleteAccount("Bearer auth-token"))
+        when(accountService.deleteAccount("Bearer auth-token"))
                 .thenReturn(new BasicResponse(
                         "Deleted Account succesfully: test@student.kit.edu",
                         true
@@ -179,6 +179,6 @@ class AccountControllerTests {
                 response.message()
         );
 
-        verify(studentService).deleteAccount("Bearer auth-token");
+        verify(accountService).deleteAccount("Bearer auth-token");
     }
 }

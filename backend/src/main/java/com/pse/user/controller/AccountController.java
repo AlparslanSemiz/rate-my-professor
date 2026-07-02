@@ -1,6 +1,7 @@
 package com.pse.user.controller;
 
 
+import com.pse.user.service.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -11,7 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.UserRatingResponse;
 import com.pse.user.dto.StudentProfileResponse;
-import com.pse.user.service.StudentService;
 
 
 /**
@@ -22,9 +22,9 @@ import com.pse.user.service.StudentService;
 @RequestMapping("/account")
 public class AccountController {
 
-    @Autowired
-    private StudentService studentService;
 
+    @Autowired
+    private AccountService accountService;
 
     /**
      * Returns information about the User
@@ -36,7 +36,7 @@ public class AccountController {
     @GetMapping("/information")
     public StudentProfileResponse getUserInformation(@RequestHeader("Authorization") String authHeader) {
 
-        return studentService.getUserInformation(authHeader);
+        return accountService.getUserInformation(authHeader);
 
     }
 
@@ -64,7 +64,7 @@ public class AccountController {
     @GetMapping("/ratings")
     public UserRatingResponse getUserRatings(@RequestHeader("Authorization") String authHeader) {
 
-        return studentService.getUserRatings(authHeader);
+        return accountService.getUserRatings(authHeader);
 
     }
 
@@ -72,15 +72,15 @@ public class AccountController {
 
     /**
      * Invalidates all auth-Tokens related to User in Database
-     * 
-     * Request: 
+     *
+     * Request:
      *  - email
      *  - (auth Token in Header)
      */
     @PatchMapping("/logout")
     public BasicResponse requestLogout(@RequestHeader("Authorization") String authHeader) {
 
-        return studentService.requestLogout(authHeader);
+        return accountService.requestLogout(authHeader);
 
     }
 
@@ -95,7 +95,7 @@ public class AccountController {
     @PatchMapping("/deleteAccount")
     public BasicResponse deleteAccount(@RequestHeader("Authorization") String authHeader) {
 
-        return studentService.deleteAccount(authHeader);
+        return accountService.deleteAccount(authHeader);
 
     }
 
