@@ -1,84 +1,101 @@
 import { apiClient, type ApiClient } from './ApiClient'
-import { RemoteBackedService, delay } from './RemoteBackedService'
-import { UsersRepository, type User, type Warning } from './UsersRepository'
 
-export type { User, UserRole, UserStatus, Warning } from './UsersRepository'
+export type UserRole = 'STUDENT' | 'ADMIN'
+export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED' | 'DELETED'
 
-export class UsersService extends RemoteBackedService {
-  private readonly repository = new UsersRepository()
+export interface Warning {
+  userID: string
+  message: string
+  createdAt: string
+  issuedBy: string
+}
+
+export interface User {
+  id: string
+  username: string
+  kitEmail: string
+  role: UserRole
+  status: UserStatus
+  joined: string
+  lastOnline: string
+  biography: string
+  warnings: number
+  reports: number
+}
+
+interface BasicResponse {
+  message: string
+  success: boolean
+}
+
+interface UserListResponse extends BasicResponse {
+  users: User[]
+}
+
+interface WarningHistoryResponse extends BasicResponse {
+  warnings: BackendWarning[]
+}
+
+interface BackendWarning {
+  userID: string
+  message: string
+  createdAt: string
+  createdFrom: { id: string; student?: unknown; createdAt: string } | null
+}
+
+function toWarning(w: BackendWarning): Warning {
+  return {
+    userID: w.userID,
+    message: w.message,
+    createdAt: w.createdAt,
+    issuedBy: w.createdFrom?.id ?? 'Unknown',
+  }
+}
+
+export class UsersService {
+  private readonly client: ApiClient
 
   constructor(client: ApiClient) {
-    super(client)
+    this.client = client
   }
 
-  getAll(): Promise<User[]> {
-    return this.execute(
-      () => this.client.get<User[]>('/users'),
-      async () => {
-        await delay(400)
-        return this.repository.getAll()
-      }
-    )
+  async getAll(): Promise<User[]> {
+    const response = await this.client.get<UserListResponse>('/users')
+    return response.users
   }
 
-  getById(id: number): Promise<User | undefined> {
-    return this.execute(
-      () => this.client.get<User>(`/users/${id}`),
-      async () => {
-        await delay(200)
-        return this.repository.getById(id)
-      }
-    )
+  getById(id: string): Promise<User> {
+    return this.client.get<User>(`/users/${id}`)
   }
 
-  delete(id: number): Promise<void> {
-    return this.execute(
-      () => this.client.delete(`/users/${id}`),
-      async () => {
-        await delay(300)
-        this.repository.delete(id)
-      }
-    )
+  delete(id: string): Promise<BasicResponse> {
+    return this.client.delete(`/users/${id}`)
   }
 
-  block(id: number): Promise<void> {
-    return this.execute(
-      () => this.client.patch(`/users/${id}/block`),
-      async () => {
-        await delay(300)
-        this.repository.setStatus(id, 'Blocked')
-      }
-    )
+  block(id: string): Promise<BasicResponse> {
+    return this.client.withQueryParams('PATCH', `/users/${id}/block`, {})
   }
 
-  unblock(id: number): Promise<void> {
-    return this.execute(
-      () => this.client.patch(`/users/${id}/unblock`),
-      async () => {
-        await delay(300)
-        this.repository.setStatus(id, 'Active')
-      }
-    )
+  unblock(id: string): Promise<BasicResponse> {
+    return this.client.withQueryParams('PATCH', `/users/${id}/unblock`, {})
   }
 
-  warn(id: number, message: string): Promise<Warning> {
-    return this.execute(
-      () => this.client.post<Warning>(`/users/${id}/warnings`, { message }),
-      async () => {
-        await delay(300)
-        return this.repository.addWarning(id, message)
-      }
-    )
+  /**
+   * The backend expects the issuing admin's id as `createdFrom.id` — it does not derive
+   * this from the auth token. `adminId` should be the id of the currently logged-in admin.
+   */
+  async warn(id: string, message: string, adminId: string): Promise<BasicResponse> {
+    return this.client.withQueryParams<BasicResponse>('POST', `/users/${id}/warnings`, {
+      id: crypto.randomUUID(),
+      userID: id,
+      message,
+      'createdFrom.id': adminId,
+    })
   }
 
-  getWarnings(id: number): Promise<Warning[]> {
-    return this.execute(
-      () => this.client.get<Warning[]>(`/users/${id}/warnings`),
-      async () => {
-        await delay(200)
-        return this.repository.getWarnings(id)
-      }
-    )
+  async getWarnings(id: string): Promise<Warning[]> {
+    const response = await this.client.get<WarningHistoryResponse>(`/users/${id}/warnings`)
+    return response.warnings.map(toWarning)
   }
 }
 

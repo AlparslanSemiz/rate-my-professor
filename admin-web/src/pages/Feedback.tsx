@@ -3,11 +3,14 @@ import { Text, Badge, Box, SimpleGrid, Select, Group, Loader, Center } from '@ma
 import { IconBug, IconAlertCircle, IconCircleCheck, IconClock } from '@tabler/icons-react'
 import { feedbackService, type BugReport, type ReportStatus } from '../api/FeedbackService'
 import StatCard from '../components/StatCard'
+import LoadError from '../components/LoadError'
 import Panel from '../components/Panel'
 import PageHeader from '../components/PageHeader'
 import { severityColor, severityAccent, reportStatusColor } from '../constants/colors'
+import { formatDate } from '../utils/formatDate'
+import { enumLabel } from '../utils/enumLabel'
 
-const STATUS_OPTIONS: ReportStatus[] = ['Open', 'In Progress', 'Resolved']
+const STATUS_OPTIONS: ReportStatus[] = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN']
 
 function countByStatus(reports: BugReport[], status: ReportStatus) {
   return reports.filter((r) => r.status === status).length
@@ -16,15 +19,24 @@ function countByStatus(reports: BugReport[], status: ReportStatus) {
 export default function FeedbackPage() {
   const [reports, setReports] = useState<BugReport[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
-    feedbackService.getReports().then((data) => {
-      setReports(data)
-      setLoading(false)
-    })
-  }, [])
+    feedbackService
+      .getReports()
+      .then(setReports)
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load bug reports'))
+      .finally(() => setLoading(false))
+  }, [reloadKey])
 
-  async function handleStatusChange(id: number, status: ReportStatus) {
+  function retry() {
+    setLoading(true)
+    setError('')
+    setReloadKey((k) => k + 1)
+  }
+
+  async function handleStatusChange(id: string, status: ReportStatus) {
     await feedbackService.updateStatus(id, status)
     setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
   }
@@ -36,6 +48,8 @@ export default function FeedbackPage() {
       </Center>
     )
 
+  if (error) return <LoadError message={error} onRetry={retry} />
+
   return (
     <div>
       <PageHeader
@@ -45,9 +59,9 @@ export default function FeedbackPage() {
 
       <SimpleGrid cols={4} spacing={14} mb={28}>
         <StatCard label="Total reports" value={reports.length} icon={IconBug} accent="#f97316" />
-        <StatCard label="Open" value={countByStatus(reports, 'Open')} icon={IconAlertCircle} accent="#ef4444" />
-        <StatCard label="In progress" value={countByStatus(reports, 'In Progress')} icon={IconClock} accent="#3b82f6" />
-        <StatCard label="Resolved" value={countByStatus(reports, 'Resolved')} icon={IconCircleCheck} accent="#22c55e" />
+        <StatCard label="Open" value={countByStatus(reports, 'OPEN')} icon={IconAlertCircle} accent="#ef4444" />
+        <StatCard label="Reviewed" value={countByStatus(reports, 'REVIEWED')} icon={IconClock} accent="#3b82f6" />
+        <StatCard label="Action taken" value={countByStatus(reports, 'ACTION_TAKEN')} icon={IconCircleCheck} accent="#22c55e" />
       </SimpleGrid>
 
       <Panel style={{ overflow: 'hidden' }}>
@@ -87,7 +101,7 @@ export default function FeedbackPage() {
 interface ReportItemProps {
   report: BugReport
   isLast: boolean
-  onStatusChange: (id: number, status: ReportStatus) => void
+  onStatusChange: (id: string, status: ReportStatus) => void
 }
 
 function ReportItem({ report, isLast, onStatusChange }: ReportItemProps) {
@@ -110,23 +124,23 @@ function ReportItem({ report, isLast, onStatusChange }: ReportItemProps) {
             </Text>
             <Group gap={6} mt={2}>
               <Badge color={severityColor[report.severity]} variant="light" size="xs">
-                {report.severity}
+                {enumLabel(report.severity)}
               </Badge>
               <Badge color={reportStatusColor[report.status]} variant="light" size="xs">
-                {report.status}
+                {enumLabel(report.status)}
               </Badge>
             </Group>
           </div>
         </Group>
         <Group gap={10} align="center">
           <Text size="xs" c="#4b5563">
-            {report.reportedAt}
+            {formatDate(report.reportedAt, { withTime: true })}
           </Text>
           <Select
             size="xs"
-            w={130}
+            w={140}
             value={report.status}
-            data={STATUS_OPTIONS}
+            data={STATUS_OPTIONS.map((s) => ({ value: s, label: enumLabel(s) }))}
             styles={{ input: { background: '#0f1117', border: '1px solid #21262d', color: '#e2e8f0', fontSize: 12 } }}
             onChange={(val) => val && onStatusChange(report.id, val as ReportStatus)}
           />
@@ -136,7 +150,7 @@ function ReportItem({ report, isLast, onStatusChange }: ReportItemProps) {
         {report.description}
       </Text>
       <Text size="xs" c="#374151" mt={6} ml={11}>
-        Reported by {report.reportedBy}
+        Reported by {report.reporterName}
       </Text>
     </Box>
   )

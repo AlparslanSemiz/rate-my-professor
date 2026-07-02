@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react'
 import { usersService, type User, type Warning } from '../api/UsersService'
+import { useAuth } from '../context/useAuth'
 
 export type UserChange = 'warned' | 'blocked' | 'unblocked' | 'deleted'
 
 interface LoadedProfile {
-  userId: number
+  userId: string
   user: User | null
   warnings: Warning[]
 }
 
 export function useUserProfile(
-  userId: number | null,
+  userId: string | null,
   opened: boolean,
-  onUserChanged?: (id: number, change: UserChange) => void
+  onUserChanged?: (id: string, change: UserChange) => void
 ) {
+  const { user: currentAdmin } = useAuth()
   const [profile, setProfile] = useState<LoadedProfile | null>(null)
   const [warnLoading, setWarnLoading] = useState(false)
 
@@ -26,10 +28,16 @@ export function useUserProfile(
     if (!opened || userId === null) return
     let canceled = false
 
-    Promise.all([usersService.getById(userId), usersService.getWarnings(userId)]).then(([u, w]) => {
-      if (canceled) return
-      setProfile({ userId, user: u ?? null, warnings: w })
-    })
+    Promise.all([usersService.getById(userId), usersService.getWarnings(userId)])
+      .then(([u, w]) => {
+        if (canceled) return
+        setProfile({ userId, user: u ?? null, warnings: w })
+      })
+      .catch(() => {
+        // Surface the "User not found" state instead of an endless spinner.
+        if (canceled) return
+        setProfile({ userId, user: null, warnings: [] })
+      })
 
     return () => {
       canceled = true
@@ -41,13 +49,14 @@ export function useUserProfile(
   }
 
   async function warn(message: string) {
-    if (!user || !message.trim()) return
+    if (!user || !message.trim() || !currentAdmin) return
     setWarnLoading(true)
-    const newWarning = await usersService.warn(user.id, message.trim())
+    await usersService.warn(user.id, message.trim(), currentAdmin.id)
+    const refreshedWarnings = await usersService.getWarnings(user.id)
     setProfile((prev) => prev && prev.user?.id === user.id ? {
       ...prev,
-      user: { ...prev.user, warningCount: prev.user.warningCount + 1 },
-      warnings: [newWarning, ...prev.warnings],
+      user: { ...prev.user, warnings: prev.user.warnings + 1 },
+      warnings: refreshedWarnings,
     } : prev)
     setWarnLoading(false)
     onUserChanged?.(user.id, 'warned')
@@ -58,7 +67,7 @@ export function useUserProfile(
     await usersService.block(user.id)
     setProfile((prev) => prev && prev.user?.id === user.id ? {
       ...prev,
-      user: { ...prev.user, status: 'Blocked' },
+      user: { ...prev.user, status: 'BLOCKED' },
     } : prev)
     onUserChanged?.(user.id, 'blocked')
   }
@@ -68,7 +77,7 @@ export function useUserProfile(
     await usersService.unblock(user.id)
     setProfile((prev) => prev && prev.user?.id === user.id ? {
       ...prev,
-      user: { ...prev.user, status: 'Active' },
+      user: { ...prev.user, status: 'ACTIVE' },
     } : prev)
     onUserChanged?.(user.id, 'unblocked')
   }

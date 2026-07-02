@@ -1,13 +1,14 @@
 import { Badge, Group, Text, UnstyledButton } from '@mantine/core'
 import { roleAccent } from '../constants/colors'
+import { enumLabel } from '../utils/enumLabel'
 
 interface UserChipProps {
-  id: number
+  id: string
   name: string
   role: string
   warningCount: number
   status: string
-  onClick: (id: number) => void
+  onClick: (id: string) => void
 }
 
 export default function UserChip({ id, name, role, warningCount, status, onClick }: UserChipProps) {
@@ -29,11 +30,11 @@ export default function UserChip({ id, name, role, warningCount, status, onClick
         {name}
       </Text>
       <Group gap={4}>
-        <Text size="xs" style={{ color: roleAccent[role] ?? '#6b7280' }}>{role}</Text>
+        <Text size="xs" style={{ color: roleAccent[role] ?? '#6b7280' }}>{enumLabel(role)}</Text>
         {warningCount > 0 && (
           <Badge size="xs" color="yellow" variant="light">{warningCount}⚠</Badge>
         )}
-        {status === 'Blocked' && (
+        {status === 'BLOCKED' && (
           <Badge size="xs" color="red" variant="light">Blocked</Badge>
         )}
       </Group>

@@ -14,12 +14,13 @@ import WarnForm from './WarnForm'
 import { roleAccent } from '../constants/colors'
 import { darkModalStyles } from '../constants/modalStyles'
 import { formatDate } from '../utils/formatDate'
+import { enumLabel } from '../utils/enumLabel'
 
 interface UserProfileModalProps {
-  userId: number | null
+  userId: string | null
   opened: boolean
   onClose: () => void
-  onUserChanged?: (id: number, change: UserChange) => void
+  onUserChanged?: (id: string, change: UserChange) => void
 }
 
 type ConfirmAction = 'block' | 'unblock' | 'delete' | null
@@ -46,21 +47,21 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
   const confirmConfig = user && {
     block: {
       title: 'Block user',
-      description: `Block ${user.name}? They will lose access to the platform. You can unblock them later.`,
+      description: `Block ${user.username}? They will lose access to the platform. You can unblock them later.`,
       confirmLabel: 'Block user',
       confirmColor: 'orange',
       onConfirm: block,
     },
     unblock: {
       title: 'Unblock user',
-      description: `Unblock ${user.name}? They will regain access to the platform.`,
+      description: `Unblock ${user.username}? They will regain access to the platform.`,
       confirmLabel: 'Unblock user',
       confirmColor: 'green',
       onConfirm: unblock,
     },
     delete: {
       title: 'Delete account',
-      description: `Permanently delete ${user.name}'s account? This action cannot be undone.`,
+      description: `Permanently delete ${user.username}'s account? This action cannot be undone.`,
       confirmLabel: 'Delete permanently',
       confirmColor: 'red',
       onConfirm: handleDelete,
@@ -93,7 +94,7 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
               >
                 Warn
               </Button>
-              {user.status === 'Blocked' ? (
+              {user.status === 'BLOCKED' ? (
                 <Button
                   size="xs"
                   variant="light"
@@ -128,7 +129,7 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
 
             {showWarnForm && (
               <WarnForm
-                userName={user.name}
+                userName={user.username}
                 loading={warnLoading}
                 onCancel={() => setShowWarnForm(false)}
                 onSubmit={async (message) => {
@@ -161,28 +162,28 @@ function ProfileHeader({ user }: { user: NonNullable<ReturnType<typeof useUserPr
         <div>
           <Group gap={8} mb={6}>
             <Text fw={700} c="#f1f5f9" style={{ fontSize: 20 }}>
-              {user.name}
+              {user.username}
             </Text>
             <Badge
               size="sm"
               variant="light"
               style={{ background: `${roleAccent[user.role]}18`, color: roleAccent[user.role], borderColor: `${roleAccent[user.role]}30` }}
             >
-              {user.role}
+              {enumLabel(user.role)}
             </Badge>
             <Badge
               size="sm"
               variant="dot"
-              color={user.status === 'Active' ? 'green' : user.status === 'Blocked' ? 'red' : 'gray'}
+              color={user.status === 'ACTIVE' ? 'green' : user.status === 'BLOCKED' ? 'red' : 'gray'}
             >
-              {user.status}
+              {enumLabel(user.status)}
             </Badge>
           </Group>
           <Text size="sm" c="#6b7280">
-            {user.email}
+            {user.kitEmail}
           </Text>
         </div>
-        {user.warningCount > 0 && (
+        {user.warnings > 0 && (
           <Box
             style={{
               background: 'rgba(234,179,8,0.1)',
@@ -193,10 +194,10 @@ function ProfileHeader({ user }: { user: NonNullable<ReturnType<typeof useUserPr
             }}
           >
             <Text fw={700} c="#eab308" style={{ fontSize: 18, lineHeight: 1 }}>
-              {user.warningCount}
+              {user.warnings}
             </Text>
             <Text size="xs" c="#92400e">
-              warning{user.warningCount !== 1 ? 's' : ''}
+              warning{user.warnings !== 1 ? 's' : ''}
             </Text>
           </Box>
         )}
@@ -207,10 +208,10 @@ function ProfileHeader({ user }: { user: NonNullable<ReturnType<typeof useUserPr
 
 function ProfileDetails({ user }: { user: NonNullable<ReturnType<typeof useUserProfile>['user']> }) {
   const fields = [
-    { label: 'Joined', value: user.joinedAt },
-    { label: 'Last seen', value: formatDate(user.lastSeenAt, { withTime: true }) },
-    { label: 'Reports received', value: user.reportCount > 0 ? `${user.reportCount} times` : 'None' },
-    { label: 'User ID', value: `#${user.id}` },
+    { label: 'Joined', value: formatDate(user.joined) },
+    { label: 'Last seen', value: formatDate(user.lastOnline, { withTime: true }) },
+    { label: 'Reports received', value: user.reports > 0 ? `${user.reports} times` : 'None' },
+    { label: 'User ID', value: `#${user.id.slice(0, 8)}` },
   ]
 
   return (
@@ -227,11 +228,11 @@ function ProfileDetails({ user }: { user: NonNullable<ReturnType<typeof useUserP
           </div>
         ))}
       </div>
-      {user.bio && (
+      {user.biography && (
         <>
           <Divider color="#21262d" my={12} />
           <Text size="xs" c="#4b5563" mb={4}>Bio</Text>
-          <Text size="sm" c="#9ca3af">{user.bio}</Text>
+          <Text size="sm" c="#9ca3af">{user.biography}</Text>
         </>
       )}
     </Box>
@@ -254,9 +255,9 @@ function WarningHistory({ warnings }: { warnings: ReturnType<typeof useUserProfi
         </Box>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {warnings.map((w) => (
+          {warnings.map((w, i) => (
             <Box
-              key={w.id}
+              key={`${w.userID}-${i}`}
               style={{
                 background: '#0f1117',
                 border: '1px solid rgba(234,179,8,0.15)',
@@ -269,7 +270,7 @@ function WarningHistory({ warnings }: { warnings: ReturnType<typeof useUserProfi
                 {w.message}
               </Text>
               <Text size="xs" c="#4b5563">
-                {formatDate(w.issuedAt, { withTime: true })} · by {w.issuedBy}
+                {formatDate(w.createdAt, { withTime: true })}
               </Text>
             </Box>
           ))}

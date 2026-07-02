@@ -8,12 +8,14 @@ import {
   IconRefresh,
 } from '@tabler/icons-react'
 import { usersService, type User } from '../api/UsersService'
+import { feedbackService } from '../api/FeedbackService'
 import { useNavigate } from 'react-router-dom'
 import { StatCardDetailed } from '../components/StatCard'
 import ModuleCard from '../components/ModuleCard'
 import Panel from '../components/Panel'
 import { roleColor } from '../constants/colors'
 import { formatDate } from '../utils/formatDate'
+import { enumLabel } from '../utils/enumLabel'
 
 const MODULES = [
   {
@@ -41,21 +43,28 @@ const MODULES = [
 
 function useUserStats() {
   const [users, setUsers] = useState<User[]>([])
+  const [openReports, setOpenReports] = useState(0)
 
   useEffect(() => {
-    usersService.getAll().then(setUsers)
+    // The dashboard is an overview; if a request fails we keep the zeros
+    // rather than blocking the whole page.
+    usersService.getAll().then(setUsers).catch(() => {})
+    feedbackService
+      .getReports()
+      .then((reports) => setOpenReports(reports.filter((r) => r.status === 'OPEN').length))
+      .catch(() => {})
   }, [])
 
   const total = users.length
-  const active = users.filter((u) => u.status === 'Active').length
-  const admins = users.filter((u) => u.role === 'Admin').length
+  const active = users.filter((u) => u.status === 'ACTIVE').length
+  const admins = users.filter((u) => u.role === 'ADMIN').length
 
-  return { users, total, active, admins }
+  return { users, total, active, admins, openReports }
 }
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { users, total, active, admins } = useUserStats()
+  const { users, total, active, admins, openReports } = useUserStats()
   const activeRate = total ? Math.round((active / total) * 100) : 0
 
   return (
@@ -80,7 +89,7 @@ export default function Dashboard() {
         <StatCardDetailed label="Total users" value={total} sub={`${active} active`} icon={IconUsers} accent="#3b82f6" />
         <StatCardDetailed label="Active users" value={active} sub="Currently active" icon={IconUserCheck} accent="#22c55e" />
         <StatCardDetailed label="Admin accounts" value={admins} sub="Privileged accounts" icon={IconShieldCheck} accent="#f59e0b" />
-        <StatCardDetailed label="Open reports" value={0} sub="Bug reports open" icon={IconBug} accent="#f97316" />
+        <StatCardDetailed label="Open reports" value={openReports} sub="Bug reports open" icon={IconBug} accent="#f97316" />
       </SimpleGrid>
 
       <SimpleGrid cols={2} spacing={16} mb={28}>
@@ -230,14 +239,14 @@ function RecentRegistrations({ users, onViewAll }: { users: User[]; onViewAll: (
         <Box key={u.id} mb={12} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <Text size="sm" fw={500} c="#d1d5db">
-              {u.name}
+              {u.username}
             </Text>
             <Text size="xs" c="#4b5563">
-              {u.email}
+              {u.kitEmail}
             </Text>
           </div>
           <Badge size="xs" variant="light" color={roleColor[u.role]}>
-            {u.role}
+            {enumLabel(u.role)}
           </Badge>
         </Box>
       ))}

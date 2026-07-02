@@ -23,30 +23,41 @@ import {
   commentsService,
   type ReportedComment,
   type CommentReportStatus,
+  type ReportReason,
 } from '../api/CommentsService'
 import UserProfileModal from '../components/UserProfileModal'
+import LoadError from '../components/LoadError'
 import StatCard from '../components/StatCard'
 import UserChip from '../components/UserChip'
 import Panel from '../components/Panel'
 import PageHeader from '../components/PageHeader'
 import TableHeaderRow from '../components/TableHeaderRow'
-import { commentStatusColor, reportReasonColor } from '../constants/colors'
+import { reportStatusColor, reportReasonColor } from '../constants/colors'
 import { darkInputStyles } from '../constants/inputStyles'
 import { formatDate } from '../utils/formatDate'
+import { enumLabel } from '../utils/enumLabel'
 import { useSearch } from '../hooks/useSearch'
 
 const ALL = 'All'
-const STATUS_OPTIONS = [ALL, 'Pending', 'Reviewed', 'Dismissed', 'Removed']
-const REASON_OPTIONS = [ALL, 'Spam', 'Harassment', 'Hate Speech', 'Misinformation', 'Inappropriate', 'Other']
+const STATUS_OPTIONS: CommentReportStatus[] = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN']
+const REASON_OPTIONS: ReportReason[] = [
+  'SPAM',
+  'INSULT',
+  'HARASSMENT',
+  'HATE_SPEECH',
+  'PERSONAL_INFORMATION',
+  'OFF_TOPIC',
+  'INAPPROPRIATE_CONTENT',
+  'OTHER',
+]
 const TABLE_COLUMNS = ['Comment & Report', 'Reported user', 'Reported by', 'Reason', 'Date', 'Status']
 
 function matchesQuery(report: ReportedComment, query: string) {
   return (
-    report.commentText.toLowerCase().includes(query) ||
+    report.commentContent.toLowerCase().includes(query) ||
     report.reportedUser.name.toLowerCase().includes(query) ||
-    report.reportingUser.name.toLowerCase().includes(query) ||
-    report.postContext.toLowerCase().includes(query) ||
-    report.reportMessage.toLowerCase().includes(query)
+    report.reporter.name.toLowerCase().includes(query) ||
+    report.reportText.toLowerCase().includes(query)
   )
 }
 
@@ -57,9 +68,11 @@ function countByStatus(reports: ReportedComment[], status: CommentReportStatus) 
 export default function CommentsPage() {
   const [reports, setReports] = useState<ReportedComment[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
   const [filterStatus, setFilterStatus] = useState<string>(ALL)
   const [filterReason, setFilterReason] = useState<string>(ALL)
-  const [profileUserId, setProfileUserId] = useState<number | null>(null)
+  const [profileUserId, setProfileUserId] = useState<string | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
 
   const { search, setSearch, filtered: searchFiltered } = useSearch(reports, matchesQuery)
@@ -75,18 +88,25 @@ export default function CommentsPage() {
   )
 
   useEffect(() => {
-    commentsService.getReported().then((data) => {
-      setReports(data)
-      setLoading(false)
-    })
-  }, [])
+    commentsService
+      .getReported()
+      .then(setReports)
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load reported comments'))
+      .finally(() => setLoading(false))
+  }, [reloadKey])
 
-  async function handleStatusChange(id: number, status: CommentReportStatus) {
+  function retry() {
+    setLoading(true)
+    setError('')
+    setReloadKey((k) => k + 1)
+  }
+
+  async function handleStatusChange(id: string, status: CommentReportStatus) {
     await commentsService.updateStatus(id, status)
     setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
   }
 
-  function openProfile(userId: number) {
+  function openProfile(userId: string) {
     setProfileUserId(userId)
     setProfileOpen(true)
   }
@@ -98,6 +118,8 @@ export default function CommentsPage() {
       </Center>
     )
 
+  if (error) return <LoadError message={error} onRetry={retry} />
+
   return (
     <>
       <PageHeader
@@ -106,16 +128,16 @@ export default function CommentsPage() {
       />
 
       <SimpleGrid cols={4} spacing={14} mb={28}>
-        <StatCard label="Pending" value={countByStatus(reports, 'Pending')} icon={IconClock} accent="#f97316" />
-        <StatCard label="Reviewed" value={countByStatus(reports, 'Reviewed')} icon={IconEye} accent="#3b82f6" />
-        <StatCard label="Dismissed" value={countByStatus(reports, 'Dismissed')} icon={IconX} accent="#6b7280" />
-        <StatCard label="Removed" value={countByStatus(reports, 'Removed')} icon={IconCheck} accent="#ef4444" />
+        <StatCard label="Open" value={countByStatus(reports, 'OPEN')} icon={IconClock} accent="#f97316" />
+        <StatCard label="Reviewed" value={countByStatus(reports, 'REVIEWED')} icon={IconEye} accent="#3b82f6" />
+        <StatCard label="Dismissed" value={countByStatus(reports, 'DISMISSED')} icon={IconX} accent="#6b7280" />
+        <StatCard label="Action taken" value={countByStatus(reports, 'ACTION_TAKEN')} icon={IconCheck} accent="#ef4444" />
       </SimpleGrid>
 
       <Panel mb={16} style={{ padding: '14px 20px' }}>
         <Group gap={12} wrap="wrap">
           <TextInput
-            placeholder="Search by comment, user, post, or report message..."
+            placeholder="Search by comment, user, or report message..."
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
             leftSection={<IconSearch size={14} color="#6b7280" />}
@@ -125,7 +147,7 @@ export default function CommentsPage() {
           />
           <Select
             placeholder="All Statuses"
-            data={STATUS_OPTIONS}
+            data={[ALL, ...STATUS_OPTIONS.map((s) => ({ value: s, label: enumLabel(s) }))]}
             value={filterStatus}
             onChange={(v) => setFilterStatus(v ?? ALL)}
             w={150}
@@ -135,10 +157,10 @@ export default function CommentsPage() {
           />
           <Select
             placeholder="All Reasons"
-            data={REASON_OPTIONS}
+            data={[ALL, ...REASON_OPTIONS.map((r) => ({ value: r, label: enumLabel(r) }))]}
             value={filterReason}
             onChange={(v) => setFilterReason(v ?? ALL)}
-            w={165}
+            w={180}
             size="sm"
             clearable={false}
             styles={darkInputStyles}
@@ -193,8 +215,8 @@ export default function CommentsPage() {
 interface ReportRowProps {
   report: ReportedComment
   isLast: boolean
-  onOpenProfile: (userId: number) => void
-  onStatusChange: (id: number, status: CommentReportStatus) => void
+  onOpenProfile: (userId: string) => void
+  onStatusChange: (id: string, status: CommentReportStatus) => void
 }
 
 function ReportRow({ report, isLast, onOpenProfile, onStatusChange }: ReportRowProps) {
@@ -206,29 +228,26 @@ function ReportRow({ report, isLast, onOpenProfile, onStatusChange }: ReportRowP
     >
       <td style={{ padding: '16px 20px', maxWidth: 340 }}>
         <Tooltip
-          label={report.commentText}
+          label={report.commentContent}
           multiline
           w={340}
           withArrow
-          disabled={report.commentText.length <= 80}
+          disabled={report.commentContent.length <= 80}
         >
           <Text
             size="sm"
             c="#d1d5db"
             lineClamp={2}
             mb={4}
-            style={{ cursor: report.commentText.length > 80 ? 'help' : 'default', wordBreak: 'break-word' }}
+            style={{ cursor: report.commentContent.length > 80 ? 'help' : 'default', wordBreak: 'break-word' }}
           >
-            "{report.commentText}"
+            "{report.commentContent}"
           </Text>
         </Tooltip>
-        <Text size="xs" c="#4b5563" mb={6} style={{ wordBreak: 'break-word' }}>
-          in: {report.postContext}
-        </Text>
-        {report.reportMessage && (
+        {report.reportText && (
           <Box style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 6, padding: '5px 8px' }}>
             <Text size="xs" c="#fca5a5" lineClamp={2} style={{ wordBreak: 'break-word' }}>
-              Report: {report.reportMessage}
+              Report: {report.reportText}
             </Text>
           </Box>
         )}
@@ -239,7 +258,7 @@ function ReportRow({ report, isLast, onOpenProfile, onStatusChange }: ReportRowP
           id={report.reportedUser.id}
           name={report.reportedUser.name}
           role={report.reportedUser.role}
-          warningCount={report.reportedUser.warningCount}
+          warningCount={report.reportedUser.warnings}
           status={report.reportedUser.status}
           onClick={onOpenProfile}
         />
@@ -247,35 +266,35 @@ function ReportRow({ report, isLast, onOpenProfile, onStatusChange }: ReportRowP
 
       <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
         <UserChip
-          id={report.reportingUser.id}
-          name={report.reportingUser.name}
-          role={report.reportingUser.role}
-          warningCount={report.reportingUser.warningCount}
-          status={report.reportingUser.status}
+          id={report.reporter.id}
+          name={report.reporter.name}
+          role={report.reporter.role}
+          warningCount={report.reporter.warnings}
+          status={report.reporter.status}
           onClick={onOpenProfile}
         />
       </td>
 
       <td style={{ padding: '16px 20px' }}>
         <Badge color={reportReasonColor[report.reason]} variant="light" size="sm">
-          {report.reason}
+          {enumLabel(report.reason)}
         </Badge>
       </td>
 
       <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
-        <Text size="xs" c="#6b7280">{formatDate(report.reportedAt, { withTime: true })}</Text>
+        <Text size="xs" c="#6b7280">{formatDate(report.date, { withTime: true })}</Text>
       </td>
 
       <td style={{ padding: '16px 20px' }}>
         <Select
           size="xs"
           value={report.status}
-          data={['Pending', 'Reviewed', 'Dismissed', 'Removed']}
+          data={STATUS_OPTIONS.map((s) => ({ value: s, label: enumLabel(s) }))}
           styles={{
             input: {
               background: '#0f1117',
               border: '1px solid #21262d',
-              color: `var(--mantine-color-${commentStatusColor[report.status]}-4)`,
+              color: `var(--mantine-color-${reportStatusColor[report.status]}-4)`,
               fontWeight: 600,
               fontSize: 11,
             },

@@ -9,6 +9,7 @@ import {
 } from '@tabler/icons-react'
 import { usersService, type User } from '../api/UsersService'
 import UserProfileModal from '../components/UserProfileModal'
+import LoadError from '../components/LoadError'
 import StatCard from '../components/StatCard'
 import Panel from '../components/Panel'
 import PageHeader from '../components/PageHeader'
@@ -16,13 +17,14 @@ import TableHeaderRow from '../components/TableHeaderRow'
 import { roleColor, userStatusColor } from '../constants/colors'
 import { darkInputStyles } from '../constants/inputStyles'
 import { formatDate } from '../utils/formatDate'
+import { enumLabel } from '../utils/enumLabel'
 import { useSearch } from '../hooks/useSearch'
 import type { UserChange } from '../hooks/useUserProfile'
 
 const TABLE_COLUMNS = ['Name', 'Email', 'Role', 'Status', 'Warnings', 'Reports', 'Last seen', 'Joined']
 
 function matchesQuery(user: User, query: string) {
-  return user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query)
+  return user.username.toLowerCase().includes(query) || user.kitEmail.toLowerCase().includes(query)
 }
 
 function countByStatus(users: User[], status: User['status']) {
@@ -32,32 +34,41 @@ function countByStatus(users: User[], status: User['status']) {
 export default function Users() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
+  const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const { search, setSearch, filtered } = useSearch(users, matchesQuery)
 
   useEffect(() => {
-    usersService.getAll().then((data) => {
-      setUsers(data)
-      setLoading(false)
-    })
-  }, [])
+    usersService
+      .getAll()
+      .then(setUsers)
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load users'))
+      .finally(() => setLoading(false))
+  }, [reloadKey])
 
-  function openProfile(id: number) {
+  function retry() {
+    setLoading(true)
+    setError('')
+    setReloadKey((k) => k + 1)
+  }
+
+  function openProfile(id: string) {
     setSelectedUserId(id)
     setProfileOpen(true)
   }
 
-  function handleUserChanged(id: number, change: UserChange) {
+  function handleUserChanged(id: string, change: UserChange) {
     if (change === 'deleted') {
       setUsers((prev) => prev.filter((u) => u.id !== id))
       setProfileOpen(false)
     } else if (change === 'blocked') {
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'Blocked' } : u)))
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'BLOCKED' } : u)))
     } else if (change === 'unblocked') {
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'Active' } : u)))
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'ACTIVE' } : u)))
     } else if (change === 'warned') {
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, warningCount: u.warningCount + 1 } : u)))
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, warnings: u.warnings + 1 } : u)))
     }
   }
 
@@ -68,6 +79,8 @@ export default function Users() {
       </Center>
     )
 
+  if (error) return <LoadError message={error} onRetry={retry} />
+
   return (
     <>
       <PageHeader
@@ -77,9 +90,9 @@ export default function Users() {
 
       <SimpleGrid cols={4} spacing={14} mb={28}>
         <StatCard label="Total users" value={users.length} icon={IconUsers} accent="#3b82f6" />
-        <StatCard label="Active" value={countByStatus(users, 'Active')} icon={IconUserCheck} accent="#22c55e" />
-        <StatCard label="Admin accounts" value={users.filter((u) => u.role === 'Admin').length} icon={IconShieldCheck} accent="#f59e0b" />
-        <StatCard label="Blocked" value={countByStatus(users, 'Blocked')} icon={IconShieldOff} accent="#ef4444" />
+        <StatCard label="Active" value={countByStatus(users, 'ACTIVE')} icon={IconUserCheck} accent="#22c55e" />
+        <StatCard label="Admin accounts" value={users.filter((u) => u.role === 'ADMIN').length} icon={IconShieldCheck} accent="#f59e0b" />
+        <StatCard label="Blocked" value={countByStatus(users, 'BLOCKED')} icon={IconShieldOff} accent="#ef4444" />
       </SimpleGrid>
 
       <Panel style={{ overflow: 'hidden' }}>
@@ -127,34 +140,34 @@ export default function Users() {
                     onClick={() => openProfile(user.id)}
                   >
                     <td style={{ padding: '13px 20px' }}>
-                      <Text size="sm" fw={500} c="#e2e8f0">{user.name}</Text>
+                      <Text size="sm" fw={500} c="#e2e8f0">{user.username}</Text>
                     </td>
                     <td style={{ padding: '13px 20px' }}>
-                      <Text size="sm" c="#6b7280">{user.email}</Text>
+                      <Text size="sm" c="#6b7280">{user.kitEmail}</Text>
                     </td>
                     <td style={{ padding: '13px 20px' }}>
                       <Badge color={roleColor[user.role]} variant="light" size="sm">
-                        {user.role}
+                        {enumLabel(user.role)}
                       </Badge>
                     </td>
                     <td style={{ padding: '13px 20px' }}>
                       <Badge color={userStatusColor[user.status]} variant="dot" size="sm">
-                        {user.status}
+                        {enumLabel(user.status)}
                       </Badge>
                     </td>
                     <td style={{ padding: '13px 20px' }}>
-                      {user.warningCount > 0 ? (
+                      {user.warnings > 0 ? (
                         <Badge color="yellow" variant="light" size="sm">
-                          {user.warningCount}
+                          {user.warnings}
                         </Badge>
                       ) : (
                         <Text size="xs" c="#374151">—</Text>
                       )}
                     </td>
                     <td style={{ padding: '13px 20px' }}>
-                      {user.reportCount > 0 ? (
+                      {user.reports > 0 ? (
                         <Badge color="red" variant="light" size="sm">
-                          {user.reportCount}
+                          {user.reports}
                         </Badge>
                       ) : (
                         <Text size="xs" c="#374151">—</Text>
@@ -162,12 +175,12 @@ export default function Users() {
                     </td>
                     <td style={{ padding: '13px 20px' }}>
                       <Text size="xs" c="#6b7280" style={{ whiteSpace: 'nowrap' }}>
-                        {formatDate(user.lastSeenAt)}
+                        {formatDate(user.lastOnline)}
                       </Text>
                     </td>
                     <td style={{ padding: '13px 20px' }}>
                       <Text size="xs" c="#6b7280" style={{ whiteSpace: 'nowrap' }}>
-                        {user.joinedAt}
+                        {formatDate(user.joined)}
                       </Text>
                     </td>
                   </tr>

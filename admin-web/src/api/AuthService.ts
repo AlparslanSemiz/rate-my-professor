@@ -1,29 +1,38 @@
 import { apiClient, type ApiClient } from './ApiClient'
-import { RemoteBackedService, delay } from './RemoteBackedService'
-import { AuthRepository, type AuthUser } from './AuthRepository'
 
-export interface LoginResponse {
-  token: string
-  user: AuthUser
+export interface AuthUser {
+  id: string
+  name: string
+  email: string
+  role: string
 }
 
-export class AuthService extends RemoteBackedService {
-  private readonly repository = new AuthRepository()
+interface BasicResponse {
+  message: string
+  success: boolean
+}
+
+interface LoginResponse extends BasicResponse {
+  authToken: string
+}
+
+export class AuthService {
+  private readonly client: ApiClient
 
   constructor(client: ApiClient) {
-    super(client)
+    this.client = client
   }
 
-  login(email: string, password: string): Promise<LoginResponse> {
-    return this.execute(
-      () => this.client.post<LoginResponse>('/auth/login', { email, password }),
-      async () => {
-        await delay(600)
-        const user = this.repository.findByCredentials(email, password)
-        if (!user) throw new Error('Invalid email or password')
-        return { token: `mock-token-${user.id}`, user }
-      }
-    )
+  /** Sends a one-time login code to the given email. */
+  requestLoginCode(email: string): Promise<BasicResponse> {
+    return this.client.post<BasicResponse>('/auth/request-login', { email })
+  }
+
+  /** Exchanges an email + one-time code for an auth token. */
+  async login(email: string, loginToken: string): Promise<{ token: string }> {
+    const response = await this.client.post<LoginResponse>('/auth/login', { email, loginToken })
+    if (!response.success) throw new Error(response.message)
+    return { token: response.authToken }
   }
 }
 

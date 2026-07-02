@@ -1,31 +1,57 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TextInput, PasswordInput, Button, Text, Stack, Alert, Box } from '@mantine/core'
+import { TextInput, Button, Text, Stack, Alert, Box } from '@mantine/core'
 import { IconShield, IconAlertCircle } from '@tabler/icons-react'
 import { useAuth } from '../context/useAuth'
 import { authService } from '../api/AuthService'
+import { usersService } from '../api/UsersService'
+import { apiClient } from '../api/ApiClient'
 import Panel from '../components/Panel'
 import { darkInputStyles } from '../constants/inputStyles'
 
+type Step = 'email' | 'code'
+
 export default function Login() {
+  const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const { login } = useAuth()
   const navigate = useNavigate()
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleRequestCode(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      const { token, user } = await authService.login(email, password)
-      login(token, user)
+      const response = await authService.requestLoginCode(email)
+      if (!response.success) throw new Error(response.message)
+      setStep('code')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not send login code')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const { token } = await authService.login(email, code)
+      apiClient.setToken(token)
+      const users = await usersService.getAll()
+      const currentUser = users.find((u) => u.kitEmail.toLowerCase() === email.toLowerCase())
+      if (!currentUser) throw new Error('Logged in, but could not find your admin account')
+
+      login(token, { id: currentUser.id, name: currentUser.username, email: currentUser.kitEmail, role: currentUser.role })
       navigate('/dashboard')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed')
+      apiClient.setToken(null)
     } finally {
       setLoading(false)
     }
@@ -42,7 +68,6 @@ export default function Login() {
       }}
     >
       <Panel style={{ width: 400, borderRadius: 14, padding: '36px 32px' }}>
-        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
           <Box
             style={{
@@ -71,7 +96,9 @@ export default function Login() {
           Sign in
         </Text>
         <Text size="sm" c="#6b7280" mb={24}>
-          Enter your credentials to access the admin panel.
+          {step === 'email'
+            ? 'Enter your KIT student email to receive a login code.'
+            : `Enter the code sent to ${email}.`}
         </Text>
 
         {error && (
@@ -86,43 +113,54 @@ export default function Login() {
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <Stack gap={14}>
-            <TextInput
-              label="Email"
-              placeholder="admin@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              styles={{
-                label: { color: '#9ca3af', fontSize: 13, marginBottom: 6 },
-                input: { ...darkInputStyles.input, borderRadius: 8 },
-              }}
-            />
-            <PasswordInput
-              label="Password"
-              placeholder="Your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              styles={{
-                label: { color: '#9ca3af', fontSize: 13, marginBottom: 6 },
-                input: { ...darkInputStyles.input, borderRadius: 8 },
-              }}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              mt={6}
-              loading={loading}
-              color="green"
-              radius="md"
-              style={{ fontWeight: 600 }}
-            >
-              Sign In
-            </Button>
-          </Stack>
-        </form>
+        {step === 'email' ? (
+          <form onSubmit={handleRequestCode}>
+            <Stack gap={14}>
+              <TextInput
+                label="Email"
+                placeholder="admin@student.kit.edu"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                styles={{
+                  label: { color: '#9ca3af', fontSize: 13, marginBottom: 6 },
+                  input: { ...darkInputStyles.input, borderRadius: 8 },
+                }}
+              />
+              <Button type="submit" fullWidth mt={6} loading={loading} color="green" radius="md" style={{ fontWeight: 600 }}>
+                Send login code
+              </Button>
+            </Stack>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyCode}>
+            <Stack gap={14}>
+              <TextInput
+                label="Login code"
+                placeholder="Code from your email"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                required
+                styles={{
+                  label: { color: '#9ca3af', fontSize: 13, marginBottom: 6 },
+                  input: { ...darkInputStyles.input, borderRadius: 8 },
+                }}
+              />
+              <Button type="submit" fullWidth mt={6} loading={loading} color="green" radius="md" style={{ fontWeight: 600 }}>
+                Sign In
+              </Button>
+              <Button
+                type="button"
+                fullWidth
+                variant="subtle"
+                color="gray"
+                onClick={() => { setStep('email'); setCode(''); setError('') }}
+              >
+                Use a different email
+              </Button>
+            </Stack>
+          </form>
+        )}
       </Panel>
     </div>
   )

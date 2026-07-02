@@ -1,34 +1,41 @@
 import { apiClient, type ApiClient } from './ApiClient'
-import { RemoteBackedService, delay } from './RemoteBackedService'
-import { FeedbackRepository, type BugReport, type ReportStatus } from './FeedbackRepository'
 
-export type { BugReport, ReportStatus, Severity } from './FeedbackRepository'
+export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+export type ReportStatus = 'OPEN' | 'REVIEWED' | 'DISMISSED' | 'ACTION_TAKEN'
 
-export class FeedbackService extends RemoteBackedService {
-  private readonly repository = new FeedbackRepository()
+export interface BugReport {
+  id: string
+  title: string
+  description: string
+  severity: Severity
+  status: ReportStatus
+  reporterName: string
+  reportedAt: string
+}
+
+interface BasicResponse {
+  message: string
+  success: boolean
+}
+
+interface BugReportsResponse extends BasicResponse {
+  bugReports: BugReport[]
+}
+
+export class FeedbackService {
+  private readonly client: ApiClient
 
   constructor(client: ApiClient) {
-    super(client)
+    this.client = client
   }
 
-  getReports(): Promise<BugReport[]> {
-    return this.execute(
-      () => this.client.get<BugReport[]>('/feedback'),
-      async () => {
-        await delay(400)
-        return this.repository.getAll()
-      }
-    )
+  async getReports(): Promise<BugReport[]> {
+    const response = await this.client.get<BugReportsResponse>('/reports')
+    return response.bugReports
   }
 
-  updateStatus(id: number, status: ReportStatus): Promise<void> {
-    return this.execute(
-      () => this.client.patch(`/feedback/${id}`, { status }),
-      async () => {
-        await delay(300)
-        this.repository.setStatus(id, status)
-      }
-    )
+  updateStatus(id: string, status: ReportStatus): Promise<BasicResponse> {
+    return this.client.withQueryParams('PATCH', `/reports/${id}`, { status })
   }
 }
 

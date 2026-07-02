@@ -1,12 +1,28 @@
-export class ApiClient {
-  private readonly baseUrl: string | null
+export class ApiError extends Error {
+  readonly status: number
 
-  constructor(baseUrl: string | null) {
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
+export class ApiClient {
+  private readonly baseUrl: string
+  private token: string | null = null
+  private onUnauthorized: (() => void) | null = null
+
+  constructor(baseUrl: string) {
     this.baseUrl = baseUrl
   }
 
-  get isConfigured(): boolean {
-    return this.baseUrl !== null
+  setToken(token: string | null): void {
+    this.token = token
+  }
+
+  /** Called when an authenticated request comes back 401, i.e. the session expired. */
+  setOnUnauthorized(handler: (() => void) | null): void {
+    this.onUnauthorized = handler
   }
 
   async get<T>(path: string): Promise<T> {
@@ -17,27 +33,53 @@ export class ApiClient {
     return this.request<T>(path, { method: 'POST', body: JSON.stringify(body) })
   }
 
-  async patch<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>(path, { method: 'PATCH', body: JSON.stringify(body) })
-  }
-
   async delete<T>(path: string): Promise<T> {
     return this.request<T>(path, { method: 'DELETE' })
   }
 
+  /**
+   * Sends `params` as a query string with no body, matching backend endpoints whose
+   * parameters aren't annotated with @RequestBody and so are bound from the query string.
+   */
+  async withQueryParams<T>(method: 'POST' | 'PATCH', path: string, params: Record<string, string>): Promise<T> {
+    const query = new URLSearchParams(params).toString()
+    return this.request<T>(`${path}?${query}`, { method })
+  }
+
   private async request<T>(path: string, init: RequestInit): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      ...init,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (this.token) headers.Authorization = `Bearer ${this.token}`
+
+    let response: Response
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, { ...init, headers })
+    } catch {
+      throw new ApiError(0, 'Could not reach the server. Check your connection and try again.')
+    }
+
+    if (response.status === 401 && this.token) {
+      this.onUnauthorized?.()
+    }
 
     if (!response.ok) {
-      throw new Error(`Request to ${path} failed with status ${response.status}`)
+      throw new ApiError(response.status, await this.extractErrorMessage(response, path))
     }
 
     if (response.status === 204) return undefined as T
     return (await response.json()) as T
   }
+
+  private async extractErrorMessage(response: Response, path: string): Promise<string> {
+    try {
+      const body: unknown = await response.json()
+      if (body && typeof body === 'object' && 'message' in body && typeof body.message === 'string' && body.message) {
+        return body.message
+      }
+    } catch {
+      // Body was not JSON; fall through to the generic message.
+    }
+    return `Request to ${path} failed with status ${response.status}`
+  }
 }
 
-export const apiClient = new ApiClient(import.meta.env.VITE_API_BASE_URL || null)
+export const apiClient = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')

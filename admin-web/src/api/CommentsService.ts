@@ -1,34 +1,60 @@
 import { apiClient, type ApiClient } from './ApiClient'
-import { RemoteBackedService, delay } from './RemoteBackedService'
-import { CommentsRepository, type ReportedComment, type CommentReportStatus } from './CommentsRepository'
+import type { UserRole, UserStatus } from './UsersService'
 
-export type { ReportedComment, CommentReportStatus, ReportReason, CommentUserRef } from './CommentsRepository'
+export type CommentReportStatus = 'OPEN' | 'REVIEWED' | 'DISMISSED' | 'ACTION_TAKEN'
+export type ReportReason =
+  | 'SPAM'
+  | 'INSULT'
+  | 'HARASSMENT'
+  | 'HATE_SPEECH'
+  | 'PERSONAL_INFORMATION'
+  | 'OFF_TOPIC'
+  | 'INAPPROPRIATE_CONTENT'
+  | 'OTHER'
 
-export class CommentsService extends RemoteBackedService {
-  private readonly repository = new CommentsRepository()
+export interface CommentUserRef {
+  id: string
+  name: string
+  role: UserRole
+  warnings: number
+  status: UserStatus
+}
+
+export interface ReportedComment {
+  id: string
+  commentContent: string
+  postContext: string
+  reportText: string
+  reportedUser: CommentUserRef
+  reporter: CommentUserRef
+  reason: ReportReason
+  status: CommentReportStatus
+  date: string
+}
+
+interface BasicResponse {
+  message: string
+  success: boolean
+}
+
+interface ReportedCommentsResponse extends BasicResponse {
+  comments: ReportedComment[]
+}
+
+export class CommentsService {
+  private readonly client: ApiClient
 
   constructor(client: ApiClient) {
-    super(client)
+    this.client = client
   }
 
-  getReported(): Promise<ReportedComment[]> {
-    return this.execute(
-      () => this.client.get<ReportedComment[]>('/comments/reported'),
-      async () => {
-        await delay(400)
-        return this.repository.getAll()
-      }
-    )
+  async getReported(): Promise<ReportedComment[]> {
+    const response = await this.client.get<ReportedCommentsResponse>('/comments/reported')
+    return response.comments
   }
 
-  updateStatus(id: number, status: CommentReportStatus): Promise<void> {
-    return this.execute(
-      () => this.client.patch(`/comments/reported/${id}`, { status }),
-      async () => {
-        await delay(300)
-        this.repository.setStatus(id, status)
-      }
-    )
+  updateStatus(id: string, status: CommentReportStatus): Promise<BasicResponse> {
+    return this.client.withQueryParams('PATCH', `/comments/reported/${id}`, { status })
   }
 }
 
