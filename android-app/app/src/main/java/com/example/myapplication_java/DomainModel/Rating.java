@@ -1,12 +1,12 @@
 package com.example.myapplication_java.DomainModel;
 
+import java.util.List;
+
 public class Rating {
-    public String ratingId;
-    public int value;
-    public RatingCategory ratingCategory;
-    public Rating(String ratingId, int value, RatingCategory ratingCategory) {
-        this.ratingCategory = ratingCategory;
-        this.ratingId = ratingId;
-        this.value = value;
+    public String lectureId;
+    List<RatingTopic> topics;
+    public Rating(String lectureId, List<RatingTopic> topics) {
+        this.lectureId = lectureId;
+        this.topics = topics;
     }
 }

@@ -15,15 +15,14 @@ public class Professor {
     public String id;
     public String firstName;
     public String lastName;
-    public int ratingCount;
     public float averageRating;
-    public String department;
-    public Professor(String id, String firstName, String lastName, String department, float averageRating) {
+    public int ratingCount;
+    public Professor(String id, String firstName, String lastName, float averageRating, int ratingCount) {
         this.id = id;
-        this.department = department;
         this.firstName = firstName;
         this.lastName = lastName;
         this.averageRating = averageRating;
+        this.ratingCount = ratingCount;
     }
 
     //TODO: Implement here

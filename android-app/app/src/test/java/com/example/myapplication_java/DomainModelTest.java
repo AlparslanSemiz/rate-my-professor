@@ -64,7 +64,7 @@ public class DomainModelTest {
 
         Rating rating = new Rating("rating-1", 5, category);
 
-        assertEquals("rating-1", rating.ratingId);
+        assertEquals("rating-1", rating.lectureId);
         assertEquals(5, rating.value);
         assertEquals(category, rating.ratingCategory);
         assertNotNull(rating.ratingCategory);

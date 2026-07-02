@@ -36,8 +36,8 @@ public interface APIService {
     );
 
     @GET("/data/professor")
-    Call<List<Professor>> getProfessors();
+    Call<ProfessorResponse> getProfessors();
 
     @GET("/data/lectures")
-    Call<List<Lecture>> getLectures();
+    Call<LecturesResponse> getLectures();
 }
