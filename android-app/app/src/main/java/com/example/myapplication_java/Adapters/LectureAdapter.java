@@ -50,7 +50,7 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
 
         public LectureViewHolder(@NonNull View itemView) {
             super(itemView);
-            textView = itemView.findViewById(R.id.lectureName);
+            textView = itemView.findViewById(R.id.lecture_name);
         }
     }
     public interface OnLectureClickListener {
