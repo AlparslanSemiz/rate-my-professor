@@ -30,6 +30,11 @@ public interface APIService {
             @Body LoginRequest request
     );
 
+    @POST("/auth/delete-account")
+    Call<ServerResponse> deleteAccount(
+            @Body LoginRequest request
+    );
+
     @GET("/data/professor")
     Call<List<Professor>> getProfessors();
 

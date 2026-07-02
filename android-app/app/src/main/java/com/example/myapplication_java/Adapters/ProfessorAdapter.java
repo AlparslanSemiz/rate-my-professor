@@ -15,9 +15,11 @@ import java.util.List;
 
 public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.ProfessorViewHolder> {
     private List<Professor> professors;
+    private OnProfessorClickListener listener;
 
-    public ProfessorAdapter(List<Professor> professors) {
+    public ProfessorAdapter(List<Professor> professors, OnProfessorClickListener listener) {
         this.professors = professors;
+        this.listener = listener;
     }
 
     @NonNull
@@ -32,6 +34,7 @@ public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.Prof
     public void onBindViewHolder(@NonNull ProfessorViewHolder holder, int position) {
         Professor professor = professors.get(position);
         holder.textView.setText(professor.firstName + " " + professor.lastName);
+        holder.itemView.setOnClickListener(v -> listener.onProfessorClick(professor));
     }
 
     @Override
@@ -55,5 +58,9 @@ public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.Prof
     public void setData(List<Professor> professors) {
         this.professors = professors;
         notifyDataSetChanged();
+    }
+
+    public interface OnProfessorClickListener {
+        void onProfessorClick(Professor professor);
     }
 }

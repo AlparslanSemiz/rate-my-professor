@@ -1,6 +1,6 @@
 package com.example.myapplication_java.DomainModel;
 
-public enum SemesterType {
+public enum SemesterSeason {
     SUMMER,
     WINTER
 }

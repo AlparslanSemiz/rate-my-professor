@@ -1,20 +1,21 @@
 package com.example.myapplication_java.Fragments;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.room.Room;
-import androidx.lifecycle.ViewModelProvider;
 
+import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.Adapters.LectureAdapter;
 import com.example.myapplication_java.Adapters.ProfessorAdapter;
 import com.example.myapplication_java.Adapters.SearchService;
@@ -29,42 +30,45 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class SelectionFragment extends Fragment {
-    /**
-     *  This look absolutely wrong here, but logically it only interacts with the SelectionFragment so...
-     *  This actually makes sense :D
-      */
+
     public interface UserInteractionListener {
         void onUserInteractedWithList();
     }
-    private UserInteractionListener userInteractionListener;
+
+    private static final String ARG_SELECTION_TYPE = "selection_type";
+
     private FragmentSelectionBinding binding;
+    private SearchService service;
     private SearchViewModel searchViewModel;
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private SelectionType selectionType;
+
     private ProfessorAdapter professorAdapter;
     private LectureAdapter lectureAdapter;
-    private SearchService service;
-    private ArrayList<Lecture> lectures;
-    private ArrayList<Professor> professors;
-    private static final String ARG_SELECTION_TYPE = "selection_type";
-    private SelectionType selectionType;
-    private static final String TYPE_PROFESSORS = "professors";
-    private static final String TYPE_LECTURES = "lectures";
 
-    /**
-     * The fragments get a new type everytime it gets created.
-     * This is how we differentiate between Lecture list and Prof list.
-     * @param type
-     * @return
-     */
+    private ControlFlowInterface flowInterface;
+    private UserInteractionListener userInteractionListener;
+
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+
     public static SelectionFragment newInstance(SelectionType type) {
         SelectionFragment fragment = new SelectionFragment();
 
         Bundle args = new Bundle();
-
         args.putString(ARG_SELECTION_TYPE, type.name());
         fragment.setArguments(args);
 
         return fragment;
+    }
+
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+
+        if (context instanceof ControlFlowInterface) {
+            flowInterface = (ControlFlowInterface) context;
+        } else {
+            throw new RuntimeException(context + " must implement ControlFlowInterface");
+        }
     }
 
     @Nullable
@@ -76,25 +80,15 @@ public class SelectionFragment extends Fragment {
     ) {
         binding = FragmentSelectionBinding.inflate(inflater, container, false);
 
-        binding.list.setLayoutManager(new LinearLayoutManager(getContext()));
+        binding.list.setLayoutManager(new LinearLayoutManager(requireContext()));
 
-        // This is needed to close the search when the user touches anywhere on screen
-        binding.list.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
-            @Override
-            public boolean onInterceptTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {
-                System.out.println("GOT A SWIPE");
-                if (userInteractionListener != null) {
-                    userInteractionListener.onUserInteractedWithList();
-                }
-                return false;
-            }
-        });
+        setupUserInteractionListener();
 
         Database database = Room.databaseBuilder(
-                getContext(),
+                requireContext(),
                 Database.class,
                 Database.DB_NAME
-        ).build();
+        ).fallbackToDestructiveMigration(true).build();
 
         service = database.searchService();
 
@@ -102,52 +96,64 @@ public class SelectionFragment extends Fragment {
         selectionType = SelectionType.valueOf(type);
 
         searchViewModel = new ViewModelProvider(requireParentFragment()).get(SearchViewModel.class);
+
         setupAdapter();
         observeSearchQuery();
 
         return binding.getRoot();
     }
 
+    private void setupUserInteractionListener() {
+        binding.list.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
+            @Override
+            public boolean onInterceptTouchEvent(
+                    @NonNull RecyclerView rv,
+                    @NonNull MotionEvent e
+            ) {
+                if (userInteractionListener != null) {
+                    userInteractionListener.onUserInteractedWithList();
+                }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        binding = null;
+                return false;
+            }
+        });
     }
+
     private void setupAdapter() {
         switch (selectionType) {
             case PROFESSORS:
-                professorAdapter = new ProfessorAdapter(new ArrayList<>());
+                professorAdapter = new ProfessorAdapter(
+                        new ArrayList<>(),
+                        flowInterface::onProfessorSelected
+                );
                 binding.list.setAdapter(professorAdapter);
                 break;
 
             case LECTURES:
-                lectureAdapter = new LectureAdapter(new ArrayList<>());
+                lectureAdapter = new LectureAdapter(
+                        new ArrayList<>(),
+                        flowInterface::onLectureSelected
+                );
                 binding.list.setAdapter(lectureAdapter);
                 break;
         }
     }
+
     private void observeSearchQuery() {
-        searchViewModel.getQuery().observe(getViewLifecycleOwner(), query -> {
-            System.out.println("QUERY IN SELECTION FRAGMENT: " + query);
-            search(query);
-        });
+        searchViewModel.getQuery().observe(getViewLifecycleOwner(), this::search);
     }
+
     private void search(String query) {
-
-        System.out.println("SEARCH CALLED WITH: " + query + " TYPE: " + selectionType);
-
-
         executorService.execute(() -> {
             switch (selectionType) {
                 case PROFESSORS:
                     ArrayList<Professor> professorResults =
                             new ArrayList<>(service.searchProfessors(query));
 
-                    System.out.println("PROF RESULTS: " + professorResults.size());
-
                     requireActivity().runOnUiThread(() -> {
-                        professorAdapter.setData(professorResults);
+                        if (binding != null && professorAdapter != null) {
+                            professorAdapter.setData(professorResults);
+                        }
                     });
                     break;
 
@@ -155,73 +161,29 @@ public class SelectionFragment extends Fragment {
                     ArrayList<Lecture> lectureResults =
                             new ArrayList<>(service.searchLectures(query));
 
-                    System.out.println("LECTURE RESULTS: " + lectureResults.size());
-
                     requireActivity().runOnUiThread(() -> {
-                        lectureAdapter.setData(lectureResults);
+                        if (binding != null && lectureAdapter != null) {
+                            lectureAdapter.setData(lectureResults);
+                        }
                     });
                     break;
             }
         });
     }
 
-    public void setMockDatabase(boolean professor) {
-        if (professor) {
-            //dont forget to clear the database
-            try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
-                executor.execute(() -> {
-                    service.deleteProfessors();
-                });
-            }
-            insertProf("001", "Mustafa", "Mathematik");
-            insertProf("002", "Erik", "Informatik");
-            insertProf("003", "Stefan", "Mathematik");
-            insertProf("004", "Linda", "Geologie");
-            insertProf("005", "Paul", "Lehramt");
-            insertProf("006", "Qaul", "Lehramt");
-            insertProf("007", "Raul", "Lehramt");
-            insertProf("008", "Saul", "Lehramt");
-            insertProf("009", "Taul", "Lehramt");
-            insertProf("010", "Uaul", "Lehramt");
-            insertProf("011", "Vaul", "Lehramt");
-            insertProf("012", "Waul", "Lehramt");
-            insertProf("013", "Xaul", "Lehramt");
-        } else {
-            try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
-                executor.execute(() -> {
-                    service.deleteLectures();
-                });
-            }
-            insertLecture("001", "mathe", "mathematik");
-            insertLecture("002", "swt", "informatik");
-            insertLecture("003", "lineare algebra", "mathematik");
-            insertLecture("004", "hohere mathematik", "geologie");
-            insertLecture("005", "und so weiter", "lehramt");
-        }
-    }
-
-    public void insertProf(String id, String name, String dep) {
-        Professor professor = new Professor(id, name, "lastname", dep, 5.0f);
-        try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
-            executor.execute(() -> {
-                service.insertProfessor(professor);
-            });
-        }
-    }
-    public void insertLecture(String id, String title, String desc) {
-        Lecture lecture = new Lecture(id, title, "010101");
-        try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
-            executor.execute(() -> {
-                service.insertLecture(lecture);
-            });
-        }
-    }
-
-    /**
-     * This
-     * @param listener
-     */
     public void setUserInteractionListener(UserInteractionListener listener) {
         this.userInteractionListener = listener;
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        executorService.shutdown();
     }
 }

@@ -14,10 +14,23 @@ public class Lecture {
     public String id;
     public String name;
     public String code;
-    public Lecture(String id, String name, String code) {
+    public int semesterYear;
+    public SemesterSeason semesterSeason;
+    public boolean active;
+    public String professorId;
+    public int commentCount;
+    public int ratingCount;
+    public Lecture(String id, String name, String code, int semesterYear, SemesterSeason semesterSeason,
+                   boolean active, String professorId, int commentCount, int ratingCount) {
         this.name = name;
         this.code = code;
         this.id = id;
+        this.semesterYear = semesterYear;
+        this.semesterSeason = semesterSeason;
+        this.active = active;
+        this.professorId = professorId;
+        this.commentCount = commentCount;
+        this.ratingCount = ratingCount;
     }
 
     public List<Professor> getProfessors() {

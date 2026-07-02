@@ -30,7 +30,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import androidx.lifecycle.ViewModelProvider;
 
-import com.example.myapplication_java.Adapters.ProfessorAdapter;
+import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.Adapters.SearchPagerAdapter;
 import com.example.myapplication_java.Adapters.SearchService;
 import com.example.myapplication_java.DomainModel.Professor;
@@ -50,6 +50,7 @@ public class SearchFragment extends Fragment {
     private SearchViewModel searchViewModel;
 
     private FragmentSearchBinding binding;
+    private ControlFlowInterface flowInterface;
     @NonNull
     @Override
     public CreationExtras getDefaultViewModelCreationExtras() {
@@ -95,17 +96,6 @@ public class SearchFragment extends Fragment {
             System.out.println("LECTURE BOTTOM GOT CLICKED");
             binding.searchViewPager.setCurrentItem(1, true);
         });
-
-//        binding.searchButton.setOnClickListener(v -> {
-//            if (binding.searchBar.getVisibility() == View.GONE) {
-//                binding.searchBar.setVisibility(View.VISIBLE);
-//                binding.searchInput.requestFocus();
-//            } else {
-//                binding.searchBar.setVisibility(View.GONE);
-//                binding.searchInput.setText("");
-//                searchViewModel.clearQuery();
-//            }
-//        });
 
 
         binding.clearSearchButton.setOnClickListener(v -> {
@@ -157,6 +147,15 @@ public class SearchFragment extends Fragment {
         binding.lecturesButton.setSelected(true);
     }
 
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        if (context instanceof ControlFlowInterface) {
+            flowInterface = (ControlFlowInterface) context;
+        } else {
+            throw new RuntimeException(context + "must implement ControlFlowInterface");
+        }
+    }
     @Override
     public void onDestroyView() {
         super.onDestroyView();

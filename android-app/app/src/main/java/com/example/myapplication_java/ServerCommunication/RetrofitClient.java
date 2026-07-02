@@ -14,7 +14,7 @@ public class RetrofitClient {
 
             retrofit = new Retrofit.Builder()
 
-                    .baseUrl("https://server.example.org")
+                    .baseUrl("https://server.example.org/")
                     .client(debugClient)
                     .addConverterFactory(
                             GsonConverterFactory.create()
