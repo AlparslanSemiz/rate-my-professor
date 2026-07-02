@@ -50,6 +50,16 @@ public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.Prof
             textView = itemview.findViewById(R.id.profName);
         }
     }
+
+    /**
+     * This method is used to update list of profs on runtime
+     * @param professors
+     */
+    public void setData(List<Professor> professors) {
+        this.professors = professors;
+        notifyDataSetChanged();
+    }
+
     public interface OnProfessorClickListener {
         void onProfessorClick(Professor professor);
     }

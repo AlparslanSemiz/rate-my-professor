@@ -2,9 +2,12 @@ package com.example.myapplication_java.Activities;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.room.Room;
 
@@ -37,6 +40,16 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
         EdgeToEdge.enable(this);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        View root = binding.getRoot();
+        //This should hide the menu bar when the keyboard is visible
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            boolean keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+
+            binding.bottomNav.setVisibility(keyboardVisible ? View.GONE : View.VISIBLE);
+
+            return insets;
+        });
 
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);

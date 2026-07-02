@@ -18,6 +18,7 @@ import com.example.myapplication_java.Adapters.SearchPagerAdapter;
 import com.example.myapplication_java.Adapters.SearchService;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.Fragments.SelectionFragment;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.Database;
@@ -67,7 +68,8 @@ public class ProfessorFeatureInstrumentedTest {
         ArrayList<Professor> professors = new ArrayList<>();
         professors.add(new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f));
         professors.add(new Professor("prof-2", "Grace", "Hopper", "Informatik", 4.8f));
-        ProfessorAdapter adapter = new ProfessorAdapter(professors);
+        // Added null listener to fix constructor mismatch
+        ProfessorAdapter adapter = new ProfessorAdapter(professors, prof -> {});
         ViewGroup parent = new FrameLayout(context);
 
         ProfessorAdapter.ProfessorViewHolder holder = adapter.onCreateViewHolder(parent, 0);
@@ -80,7 +82,7 @@ public class ProfessorFeatureInstrumentedTest {
 
     @Test
     public void professorAdapterReportsZeroItemsForEmptyList() {
-        ProfessorAdapter adapter = new ProfessorAdapter(new ArrayList<>());
+        ProfessorAdapter adapter = new ProfessorAdapter(new ArrayList<>(), prof -> {});
 
         assertEquals(0, adapter.getItemCount());
     }
@@ -129,12 +131,12 @@ public class ProfessorFeatureInstrumentedTest {
 
     @Test
     public void updateDBReplacesExistingLecturesWithServerLectures() throws Exception {
-        searchService.insertLecture(new Lecture("old-lecture", "Old Lecture", "000000"));
+        searchService.insertLecture(new Lecture("old-lecture", "Old Lecture", "000000", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0));
         APIService apiService = new FakeAPIService(
                 Collections.emptyList(),
                 Arrays.asList(
-                        new Lecture("lecture-2", "Softwaretechnik", "240002"),
-                        new Lecture("lecture-1", "Algorithms", "240001")
+                        new Lecture("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SUMMER, true, "prof-1", 0, 0),
+                        new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-2", 0, 0)
                 )
         );
 
@@ -148,7 +150,7 @@ public class ProfessorFeatureInstrumentedTest {
     @Test
     public void updateDBLeavesExistingDataWhenServerBodiesAreNull() {
         searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f));
-        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001"));
+        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0));
         APIService apiService = new FakeAPIService(null, null);
 
         database.updateDB(apiService);
@@ -198,12 +200,12 @@ public class ProfessorFeatureInstrumentedTest {
 
         @Override
         public Call<ServerResponse> requestLogin(LoginRequest request) {
-            throw new UnsupportedOperationException();
+            return null;
         }
 
         @Override
         public Call<ServerResponse> login(LoginRequest request) {
-            throw new UnsupportedOperationException();
+            return null;
         }
 
         @Override

@@ -95,8 +95,13 @@ public class ProfessorProfileFragment extends Fragment {
             Log.println(Log.DEBUG, "lesson", lectureTitle);
             onLectureClicked(lectureTitle);
         });
-        binding.name.setText(professor.firstName);
-        binding.surname.setText(professor.lastName);
+        if (profMode) {
+            binding.name.setText(professor.firstName);
+            binding.surname.setText(professor.lastName);
+        } else {
+            binding.name.setText("");
+            binding.surname.setText(lectureTitle);
+        }
         return binding.getRoot();
 
     }

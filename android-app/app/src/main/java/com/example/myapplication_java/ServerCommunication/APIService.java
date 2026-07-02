@@ -40,11 +40,11 @@ public interface APIService {
      * Loads all professors from the backend.
      */
     @GET("/data/professor")
-    Call<List<Professor>> getProfessors();
+    Call<ProfessorResponse> getProfessors();
 
     /**
      * Loads all lectures from the backend.
      */
     @GET("/data/lectures")
-    Call<List<Lecture>> getLectures();
+    Call<LecturesResponse> getLectures();
 }

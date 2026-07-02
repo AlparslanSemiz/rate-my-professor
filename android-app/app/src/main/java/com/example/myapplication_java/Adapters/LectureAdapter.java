@@ -50,10 +50,19 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
 
         public LectureViewHolder(@NonNull View itemView) {
             super(itemView);
-            textView = itemView.findViewById(R.id.lectureName);
+            textView = itemView.findViewById(R.id.lecture_name);
         }
     }
     public interface OnLectureClickListener {
         void onLectureClick(String lectureTitle);
+    }
+
+    /**
+     * This method is used to update the list of lectures on runtime.
+     * @param lectures
+     */
+    public void setData(List<Lecture> lectures) {
+        this.lectures = lectures;
+        notifyDataSetChanged();
     }
 }

@@ -20,7 +20,7 @@ import retrofit2.Response;
 
 @androidx.room.Database(
         entities = {Lecture.class, Professor.class},
-        version = 2
+        version = 4
 )
 public abstract class Database extends RoomDatabase {
     public static String DB_NAME = "database.db";
@@ -33,15 +33,19 @@ public abstract class Database extends RoomDatabase {
     public void updateDB(APIService apiService) {
         Log.println(Log.DEBUG, "updateDB", "rein");
         SearchService service = searchService();
-        Call<List<Professor>> professorCall = apiService.getProfessors();
-        Call<List<Lecture>> lectureCall = apiService.getLectures();
+        Call<ProfessorResponse> professorCall = apiService.getProfessors();
+        Call<LecturesResponse> lectureCall = apiService.getLectures();
         List<Lecture> lectures = new ArrayList<>();
         ExecutorService executor = Executors.newSingleThreadExecutor();
 
-        professorCall.enqueue(new retrofit2.Callback<List<Professor>>() {
+        professorCall.enqueue(new retrofit2.Callback<ProfessorResponse>() {
             @Override
-            public void onResponse(Call<List<Professor>> call, Response<List<Professor>> response) {
-                List<Professor> professors = response.body();
+            public void onResponse(Call<ProfessorResponse> call, Response<ProfessorResponse> response) {
+                if (!response.isSuccessful()) {
+                    Log.println(Log.DEBUG, "Database update failure", "response not successful");
+                    return;
+                }
+                List<Professor> professors = response.body().professors;
 
                 if (professors == null) {
                     Log.e("Database", "Professor response body is null");
@@ -57,15 +61,19 @@ public abstract class Database extends RoomDatabase {
             }
 
             @Override
-            public void onFailure(Call<List<Professor>> call, Throwable throwable) {
+            public void onFailure(Call<ProfessorResponse> call, Throwable throwable) {
                 Log.println(Log.DEBUG, "Database update failure", throwable.getMessage());
             }
         });
 
-        lectureCall.enqueue(new retrofit2.Callback<List<Lecture>>() {
+        lectureCall.enqueue(new retrofit2.Callback<LecturesResponse>() {
             @Override
-            public void onResponse(Call<List<Lecture>> call, Response<List<Lecture>> response) {
-                List<Lecture> lectures = response.body();
+            public void onResponse(Call<LecturesResponse> call, Response<LecturesResponse> response) {
+                if (!response.isSuccessful()) {
+                    Log.println(Log.DEBUG, "Database update failure", "response not successful");
+                    return;
+                }
+                List<Lecture> lectures = response.body().lectures;
 
                 if (lectures == null) {
                     Log.e("Database", "Lecture response body is null");
@@ -83,7 +91,7 @@ public abstract class Database extends RoomDatabase {
             }
 
             @Override
-            public void onFailure(Call<List<Lecture>> call, Throwable throwable) {
+            public void onFailure(Call<LecturesResponse> call, Throwable throwable) {
                 Log.println(Log.DEBUG, "Database update failure", throwable.getMessage());
             }
         });

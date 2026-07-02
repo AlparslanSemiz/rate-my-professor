@@ -1,6 +1,5 @@
 package com.example.myapplication_java.Fragments;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,13 +9,46 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.viewmodel.CreationExtras;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.View;
+
+
+
+import android.content.Context;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.inputmethod.InputMethodManager;
+
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+
+
+import androidx.lifecycle.ViewModelProvider;
 
 import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.Adapters.SearchPagerAdapter;
+import com.example.myapplication_java.Adapters.SearchService;
+import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.R;
+import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.databinding.FragmentSelectionBinding;
 import com.example.myapplication_java.databinding.FragmentSearchBinding;
+import com.example.myapplication_java.logic.SearchViewModel;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
+
+import java.util.ArrayList;
 
 public class SearchFragment extends Fragment {
+
+    private boolean searchModeOpen = false;
+    private SearchViewModel searchViewModel;
+
     private FragmentSearchBinding binding;
     private ControlFlowInterface flowInterface;
     @NonNull
@@ -27,22 +59,63 @@ public class SearchFragment extends Fragment {
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
 
         binding = FragmentSearchBinding.inflate(inflater, container, false);
 
-        SearchPagerAdapter adapter = new SearchPagerAdapter(this);
+        SearchPagerAdapter adapter = new SearchPagerAdapter(this, () -> {
+            if (searchModeOpen) {
+                closeSearchMode();
+            }
+        });
+
         binding.searchViewPager.setAdapter(adapter);
 
+        searchViewModel = new ViewModelProvider(this).get(SearchViewModel.class);
+
+        setupSearchBarKeyboardMovement();
+        setupSearchModeButtons();
+        setupCloseSearchOnOutsideTouch();
+
         binding.profsButton.setOnClickListener(v -> {
+            if (searchModeOpen) {
+                closeSearchMode();
+            }
+
             System.out.println("PROF BOTTOM GOT CLICKED");
             binding.searchViewPager.setCurrentItem(0, true);
         });
 
         binding.lecturesButton.setOnClickListener(v -> {
+            if (searchModeOpen) {
+                closeSearchMode();
+            }
+
             System.out.println("LECTURE BOTTOM GOT CLICKED");
             binding.searchViewPager.setCurrentItem(1, true);
         });
+
+
+        binding.clearSearchButton.setOnClickListener(v -> {
+            binding.searchInput.setText("");
+            searchViewModel.clearQuery();
+        });
+
+        binding.searchInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                searchViewModel.setQuery(s.toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
 
         binding.searchViewPager.registerOnPageChangeCallback(
                 new ViewPager2.OnPageChangeCallback() {
@@ -87,5 +160,111 @@ public class SearchFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         binding = null;
+    }
+
+    private void setupSearchBarKeyboardMovement() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+            Insets imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime());
+            boolean keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+
+            if (keyboardVisible && binding.searchBar.getVisibility() == View.VISIBLE) {
+                binding.searchBar.setTranslationY(-imeInsets.bottom);
+            } else {
+                binding.searchBar.setTranslationY(0);
+            }
+
+            return insets;
+        });
+    }
+
+    private void setupSearchModeButtons() {
+        binding.searchButton.setOnClickListener(v -> {
+            openSearchMode();
+        });
+
+        binding.clearSearchButton.setOnClickListener(v -> {
+            closeSearchMode();
+        });
+    }
+
+    private void openSearchMode() {
+        searchModeOpen = true;
+
+        binding.searchBar.setVisibility(View.VISIBLE);
+        binding.searchButton.setVisibility(View.GONE);
+
+        View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
+        if (bottomNav != null) {
+            bottomNav.setVisibility(View.GONE);
+        }
+
+        binding.searchInput.requestFocus();
+        showKeyboard();
+    }
+
+    private void closeSearchMode() {
+        if (!searchModeOpen) {
+            return;
+        }
+        System.out.println("SEARCH_FRAGMENT: closeSearchMode");
+        searchModeOpen = false;
+
+        //binding.searchInput.setText("");
+        //searchViewModel.clearQuery();
+
+        binding.searchBar.setVisibility(View.GONE);
+        binding.searchBar.setTranslationY(0);
+        binding.searchButton.setVisibility(View.VISIBLE);
+
+        hideKeyboard();
+
+        View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
+        if (bottomNav != null) {
+            bottomNav.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void showKeyboard() {
+        binding.searchInput.post(() -> {
+            InputMethodManager imm =
+                    (InputMethodManager) requireContext()
+                            .getSystemService(Context.INPUT_METHOD_SERVICE);
+
+            if (imm != null) {
+                imm.showSoftInput(binding.searchInput, InputMethodManager.SHOW_IMPLICIT);
+            }
+        });
+    }
+
+    private void hideKeyboard() {
+        InputMethodManager imm =
+                (InputMethodManager) requireContext()
+                        .getSystemService(Context.INPUT_METHOD_SERVICE);
+
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(binding.searchInput.getWindowToken(), 0);
+        }
+    }
+
+    // If you click anywhere on the screen the search gets canceled.
+    private void setupCloseSearchOnOutsideTouch() {
+
+        System.out.println("SEARCH_FRAGMENT: setupCloseSearchOnOutsideTouch()");
+        binding.searchRoot.setOnClickListener(v -> {
+            if (searchModeOpen) {
+                closeSearchMode();
+            }
+        });
+
+        binding.searchViewPager.setOnClickListener(v -> {
+            if (searchModeOpen) {
+                closeSearchMode();
+            }
+        });
+
+        binding.searchBar.setOnClickListener(v -> {
+            // Should not do anything since clicking on the search bar should not close the search lol
+        });
+
     }
 }
