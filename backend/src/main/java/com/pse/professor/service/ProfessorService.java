@@ -3,6 +3,7 @@ package com.pse.professor.service;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.lecture.model.Lecture;
+import com.pse.lecture.repository.LectureRepository;
 import com.pse.lecture.service.LectureService;
 import com.pse.moderation.service.ModerationUserService;
 import com.pse.professor.dto.request.ProfessorAddRequest;
@@ -24,7 +25,8 @@ public class ProfessorService {
     @Autowired
     private ProfessorRepository professorRepository;
     @Autowired
-    private LectureService lectureService;
+    private LectureRepository lectureRepository;
+
     @Autowired
     private ModerationUserService moderationUserService;
 
@@ -92,7 +94,7 @@ public class ProfessorService {
         if (request.lectureIDs() != null) {
             for (UUID lectureID : request.lectureIDs()) {
 
-                Lecture lecture = lectureService.findById(lectureID);
+                Lecture lecture = lectureRepository.findById(lectureID).orElse(null);
 
                 if (lecture == null) {
                     return new BasicResponse(
@@ -102,8 +104,9 @@ public class ProfessorService {
                 }
 
                 // link Prof <=> Lecture
-                lectureService.linkProfToLecture(professor, lecture);
+                lecture.setProfessor(professor);
                 professor.getLectures().add(lecture);
+                lectureRepository.save(lecture);
             }
         }
 

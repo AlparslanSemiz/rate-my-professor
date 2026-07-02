@@ -10,6 +10,7 @@ import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.moderation.service.ModerationUserService;
 import com.pse.professor.model.Professor;
+import com.pse.professor.repository.ProfessorRepository;
 import com.pse.professor.service.ProfessorService;
 import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,14 +26,13 @@ public class LectureService {
 
     @Autowired
     private LectureRepository lectureRepository;
+    @Autowired
+    private ProfessorRepository professorRepository;
 
     @Autowired
     private ModerationUserService moderationUserService;
     @Autowired
     private AuthService authService;
-    @Autowired
-    private ProfessorService professorService;
-
 
 
     public LecturesResponse getLectures() {
@@ -97,7 +97,7 @@ public class LectureService {
             return new BasicResponse("User is not authorized to add Lectures (isnt Admin)", false);
         }
 
-        Professor professor = professorService.findById(request.professorId());
+        Professor professor = professorRepository.findById(request.professorId()).orElse(null);
 
         if(professor == null){
             return new BasicResponse("Professor not found", false);
@@ -114,13 +114,13 @@ public class LectureService {
         //Link Prof to lecture
         if(request.professorId() != null){
 
-            professorService.linkLectureToProf(professor, lecture);
             lecture.setProfessor(professor);
+            professor.getLectures().add(lecture);
 
         }
 
         lectureRepository.save(lecture);
-
+        professorRepository.save(professor);
 
         return new BasicResponse("Successfully added Lectures", true);
     }
@@ -138,10 +138,7 @@ public class LectureService {
     }
 
 
-    public void linkProfToLecture(Professor professor, Lecture lecture) {
-        lecture.setProfessor(professor);
-        lectureRepository.save(lecture);
-    }
+
 
 
 }
