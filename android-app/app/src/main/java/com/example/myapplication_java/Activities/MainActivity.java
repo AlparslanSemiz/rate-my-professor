@@ -2,9 +2,12 @@ package com.example.myapplication_java.Activities;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.room.Room;
 
