@@ -38,7 +38,7 @@ public class ModerationCommentService {
     //TODO: undefined flied: "postContext"
     public ReportedCommentsResponse getReportedComments(String authHeader) {
 
-        if(moderationUserService.validateAdminToken(authHeader)) {
+        if(!moderationUserService.validateAdminToken(authHeader)) {
             return null;
         }
 
@@ -80,7 +80,7 @@ public class ModerationCommentService {
     public BasicResponse updateReportStatus(String authHeader, UUID reportId, ReportStatus status) {
 
 
-        if(moderationUserService.validateAdminToken(authHeader)) {
+        if(!moderationUserService.validateAdminToken(authHeader)) {
             return new BasicResponse("Couldnt authenticate Admin", false);
         }
 

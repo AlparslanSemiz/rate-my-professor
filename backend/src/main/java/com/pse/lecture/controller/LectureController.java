@@ -3,18 +3,18 @@ package com.pse.lecture.controller;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.lecture.dto.request.AddLectureRequest;
-import com.pse.lecture.dto.response.LectureResponse;
-import com.pse.lecture.model.Lecture;
+import com.pse.lecture.dto.response.LectureDetailResponse;
+import com.pse.lecture.dto.response.LecturesResponse;
 import com.pse.lecture.service.LectureService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/data")
@@ -26,10 +26,18 @@ public class LectureController {
 
 
     @GetMapping("/lectures")
-    public List<LectureResponse> getLectures() {
+    public LecturesResponse getLectures() {
 
         return lectureService.getLectures();
         
+    }
+
+
+    @GetMapping("/professor/{lecture_id}")
+    public LectureDetailResponse getLecture(@PathVariable UUID lecture_id) {
+
+        return lectureService.getLecture(lecture_id);
+
     }
 
 
@@ -40,7 +48,7 @@ public class LectureController {
      * @param request
      * @return
      */
-    @PostMapping("/lecutres")
+    @PostMapping("/lectures")
     public BasicResponse addLecture(@RequestHeader("Authorization") String authHeader, AddLectureRequest request) {
 
         return lectureService.addLecture(authHeader, request);

@@ -25,7 +25,7 @@ public class ModerationBugReportService {
 
     public BugReportsResponse getAllReports(String authHeader) {
 
-        if(moderationUserService.validateAdminToken(authHeader)) {
+        if(!moderationUserService.validateAdminToken(authHeader)) {
             return null;
         }
 
@@ -51,7 +51,7 @@ public class ModerationBugReportService {
 
     public BasicResponse updateBugReportStatus(String authHeader, UUID report_id, ReportStatus status) {
 
-        if(moderationUserService.validateAdminToken(authHeader)) {
+        if(!moderationUserService.validateAdminToken(authHeader)) {
             return null;
         }
 

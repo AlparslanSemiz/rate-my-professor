@@ -11,7 +11,7 @@ public class TokenGenerator {
 
     private static final SecureRandom secureRandom = new SecureRandom();
 
-    //Human friendly alphabet (soem fonts make e.g. l and I look the same)
+    //Human friendly alphabet (some fonts make e.g. l and I look the same)
     private static final String CHARACTERS = "23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ";
 
     /**

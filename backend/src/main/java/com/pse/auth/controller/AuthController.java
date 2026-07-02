@@ -70,7 +70,7 @@ public class AuthController {
     /**
      * Checks whether user is logged in (using only the auth Token)
      */
-     @GetMapping("/me")
+    @GetMapping("/me")
     public BasicResponse me(@RequestHeader("Authorization") String authHeader) {
 
          return authService.me(authHeader);

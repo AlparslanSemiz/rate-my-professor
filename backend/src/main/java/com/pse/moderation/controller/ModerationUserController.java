@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -69,7 +70,7 @@ public class ModerationUserController {
 
 
     @PostMapping("/{student_id}/warnings")
-    public BasicResponse warnStudent(@RequestHeader("Authorization") String authHeader, @PathVariable UUID student_id, WarningRequest warningRequest) {
+    public BasicResponse warnStudent(@RequestHeader("Authorization") String authHeader, @PathVariable UUID student_id, @RequestBody WarningRequest warningRequest) {
 
         return moderationUserService.warnStudent(authHeader, student_id, warningRequest);
 

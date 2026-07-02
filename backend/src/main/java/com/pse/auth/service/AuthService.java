@@ -163,7 +163,7 @@ public class AuthService {
     /**
      * Creates the OTP and saves it in the login table.
      */
-    public String createAndSaveOTP(String email) {
+    private String createAndSaveOTP(String email) {
 
         String otp = TokenGenerator.generateOneTimePassword();
 
@@ -190,7 +190,7 @@ public class AuthService {
     /**
      * Verifies the OTP by checking if it exists, is unused, and isnt expired.
      */
-    public void consumeOTP(String email, String otp) {
+    private void consumeOTP(String email, String otp) {
 
         OneTimePassword oneTimePassword = oneTimePasswordRepository
                 .findByEmailAndValueAndUsedFalseAndExpiresAtAfter(
@@ -210,7 +210,7 @@ public class AuthService {
 
 
 
-    public String createAndSaveAuthToken(Student student) {
+    private String createAndSaveAuthToken(Student student) {
 
         String authToken = TokenGenerator.generateToken();
 
@@ -273,7 +273,7 @@ public class AuthService {
 
 
 
-    public BasicResponse validateCredentials(String authHeader, String emailAddress){
+    private BasicResponse validateCredentials(String authHeader, String emailAddress){
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return new BasicResponse("Error, no Auth-Token supplied", false);

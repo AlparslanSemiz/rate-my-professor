@@ -54,7 +54,7 @@ public class ModerationUserService {
 
     public UserListResponse getStudents(String authHeader) {
 
-        if(validateAdminToken(authHeader)) {
+        if(!validateAdminToken(authHeader)) {
             return null;
         }
 
@@ -86,7 +86,7 @@ public class ModerationUserService {
 
     public UserResponse getStudent(String authHeader, UUID studentId) {
 
-        if(validateAdminToken(authHeader)) {
+        if(!validateAdminToken(authHeader)) {
             return null;
         }
 
@@ -114,7 +114,7 @@ public class ModerationUserService {
 
     public BasicResponse deleteStudent(String authHeader, UUID studentId) {
 
-        if(validateAdminToken(authHeader)) {
+        if(!validateAdminToken(authHeader)) {
             return new BasicResponse("Couldnt authenticate Admin", false);
         }
 
@@ -127,7 +127,7 @@ public class ModerationUserService {
     }
 
     public BasicResponse blockStudent(String authHeader, UUID studentId) {
-        if(validateAdminToken(authHeader)) {
+        if(!validateAdminToken(authHeader)) {
             return new BasicResponse("Couldnt authenticate Admin", false);
         }
 
@@ -140,7 +140,7 @@ public class ModerationUserService {
 
     public BasicResponse unblockStudent(String authHeader, UUID studentId) {
 
-        if(validateAdminToken(authHeader)) {
+        if(!validateAdminToken(authHeader)) {
             return new BasicResponse("Couldnt authenticate Admin", false);
         }
 
@@ -155,7 +155,7 @@ public class ModerationUserService {
     public BasicResponse warnStudent(String authHeader, UUID studentId, WarningRequest warningRequest) {
 
 
-        if(validateAdminToken(authHeader)) {
+        if(!validateAdminToken(authHeader)) {
             return new BasicResponse("Couldnt authenticate Admin", false);
         }
 
@@ -175,7 +175,7 @@ public class ModerationUserService {
 
     public WarningHistoryResponse getWarningsForStudent(String authHeader, UUID studentId) {
 
-        if(validateAdminToken(authHeader)) {
+        if(!validateAdminToken(authHeader)) {
             return new WarningHistoryResponse("Couldnt authenticate Admin", false, null);
         }
 

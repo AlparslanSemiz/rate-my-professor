@@ -3,7 +3,9 @@ package com.pse.lecture.service;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.lecture.dto.request.AddLectureRequest;
+import com.pse.lecture.dto.response.LectureDetailResponse;
 import com.pse.lecture.dto.response.LectureResponse;
+import com.pse.lecture.dto.response.LecturesResponse;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.moderation.service.ModerationUserService;
@@ -33,7 +35,7 @@ public class LectureService {
 
 
 
-    public List<LectureResponse> getLectures() {
+    public LecturesResponse getLectures() {
 
         List<Lecture> lectures = lectureRepository.findByActiveTrueOrderByNameAsc();
 
@@ -58,9 +60,35 @@ public class LectureService {
             );
         }
 
-        return responses;
+        return new LecturesResponse("Found " + responses.size() + " lectures", true, responses);
     }
 
+
+    public LectureDetailResponse getLecture(UUID lectureId) {
+
+        Lecture lecture = lectureRepository.findById(lectureId).orElse(null);
+
+        if(lecture == null){
+            return new LectureDetailResponse("Couldn find lecture with uuid: " + lectureId, false, null);
+        }
+
+        LectureResponse lectureResponse = new LectureResponse(
+                lecture.getId(),
+                lecture.getName(),
+                lecture.getCode(),
+                lecture.getSemesterYear(),
+                lecture.getSemesterSeason(),
+                lecture.isActive(),
+                lecture.getProfessor().getId(),
+                lecture.getProfessor().getFirstName(),
+                lecture.getProfessor().getLastName(),
+                lecture.getComments().size(),
+                lecture.getRatings().size()
+        );
+
+
+        return new LectureDetailResponse("Found lecture", true, lectureResponse);
+    }
 
     public BasicResponse addLecture(String authHeader, AddLectureRequest request) {
 
@@ -82,14 +110,20 @@ public class LectureService {
         lecture.setSemesterYear(request.semesterYear());
         lecture.setSemesterSeason(request.semesterSeason());
         lecture.setActive(true);
-        lecture.setProfessor(professor);
+
+        //Link Prof to lecture
+        if(request.professorId() != null){
+
+            professorService.linkLectureToProf(professor, lecture);
+            lecture.setProfessor(professor);
+
+        }
+
         lectureRepository.save(lecture);
+
 
         return new BasicResponse("Successfully added Lectures", true);
     }
-
-
-
 
 
 
@@ -103,6 +137,11 @@ public class LectureService {
         return lectureRepository.findById(UUID.fromString(lectureID)).orElse(null);
     }
 
+
+    public void linkProfToLecture(Professor professor, Lecture lecture) {
+        lecture.setProfessor(professor);
+        lectureRepository.save(lecture);
+    }
 
 
 }
