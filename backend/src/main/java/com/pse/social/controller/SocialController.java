@@ -5,13 +5,19 @@ import com.pse.social.dto.request.AnswerReportRequest;
 import com.pse.social.dto.request.AnswerSubmitRequest;
 import com.pse.social.dto.request.CommentReportRequest;
 import com.pse.social.dto.request.CommentSubmitRequest;
+import com.pse.social.dto.response.AnswersResponse;
+import com.pse.social.dto.response.CommentsResponse;
 import com.pse.social.service.SocialService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 
 @RestController
@@ -29,7 +35,18 @@ public class SocialController {
 
         return socialService.submitComment(authHeader, request);
 
+
+
     }
+
+
+    //Returns both Comments *AND* answers
+    @GetMapping("/comments/{lecture_id}")
+    public CommentsResponse getComments(@PathVariable UUID lecture_id){
+
+        return socialService.getComments(lecture_id);
+    }
+
 
     @PostMapping("/answers")
     public BasicResponse submitAnswer(@RequestHeader("Authorization") String authHeader, @RequestBody AnswerSubmitRequest request) {
@@ -37,6 +54,12 @@ public class SocialController {
         return socialService.submitAnswer(authHeader, request);
 
     }
+
+
+
+
+
+
 
     @PostMapping("/comments/report")
     public BasicResponse submitCommentReport(@RequestHeader("Authorization") String authHeader, @RequestBody CommentReportRequest request) {
@@ -51,6 +74,11 @@ public class SocialController {
         return socialService.submitAnswerReport(authHeader, request);
 
     }
+
+
+
+
+
 
 
 }
