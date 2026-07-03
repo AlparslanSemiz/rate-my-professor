@@ -55,12 +55,6 @@ public class ProfessorService {
 
 
 
-
-    public Professor findById(UUID uuid) {
-        return professorRepository.findById(uuid).orElse(null);
-    }
-
-
     public ProfessorDetailResponse getProfessor(UUID professor_id) {
 
         Professor professor = professorRepository.findById(professor_id).orElse(null);

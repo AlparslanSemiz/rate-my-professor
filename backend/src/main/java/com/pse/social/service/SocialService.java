@@ -10,6 +10,10 @@ import com.pse.social.dto.request.AnswerReportRequest;
 import com.pse.social.dto.request.AnswerSubmitRequest;
 import com.pse.social.dto.request.CommentReportRequest;
 import com.pse.social.dto.request.CommentSubmitRequest;
+import com.pse.social.dto.response.AnswerResponse;
+import com.pse.social.dto.response.AnswersResponse;
+import com.pse.social.dto.response.CommentResponse;
+import com.pse.social.dto.response.CommentsResponse;
 import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerReport;
 import com.pse.social.model.Comment;
@@ -22,6 +26,7 @@ import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -218,7 +223,48 @@ public class SocialService {
     }
 
 
+    public CommentsResponse getComments(UUID lecture_id) {
 
+        List<Comment> comments = commentRepository.findAllByLectureId(lecture_id);
+
+        List<CommentResponse> commentsResponses = new ArrayList<>();
+
+        for(Comment comment : comments) {
+
+            List<AnswerResponse> answerResponses = getAnswerResponses(comment);
+
+            commentsResponses.add(new CommentResponse(
+                    comment.getContent(),
+                    comment.getStatus(),
+                    comment.getStudent().getUsername(),
+                    comment.getLecture().getId(),
+                    comment.getCreatedAt(),
+                    answerResponses
+            ));
+
+        }
+
+
+
+        return new CommentsResponse("Found comments", true, commentsResponses);
+    }
+
+    private List<AnswerResponse> getAnswerResponses(Comment comment) {
+
+        List<Answer> answers = comment.getAnswers();
+        List<AnswerResponse> answerResponses = new ArrayList<>();
+        for(Answer answer : answers) {
+
+            answerResponses.add(new AnswerResponse(
+                    answer.getComment().getId(),
+                    answer.getContent(),
+                    answer.getStatus(),
+                    answer.getStudent().getUsername(),
+                    answer.getCreatedAt()
+                    ));
+        }
+        return answerResponses;
+    }
 
 
 }

@@ -9,6 +9,7 @@ import java.util.UUID;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.lecture.service.LectureService;
+import com.pse.rating.dto.response.RatingsAverageResponse;
 import com.pse.user.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -81,7 +82,7 @@ public class RatingService {
     }
 
 
-    public List<TopicAverageResponse> getRatings(UUID lectureId) {
+    public RatingsAverageResponse getRatings(UUID lectureId) {
 
         List<Rating> ratings = ratingRepository.findByLectureId(lectureId);
 
@@ -109,7 +110,8 @@ public class RatingService {
             result.add(new TopicAverageResponse(name, average));
         }
 
-        return result;
+        return new RatingsAverageResponse("Success, found " + result.size() + " ratings", true, result);
+
     }
 
 

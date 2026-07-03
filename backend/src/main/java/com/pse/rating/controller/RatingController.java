@@ -1,8 +1,8 @@
 package com.pse.rating.controller;
 
-import java.util.List;
 import java.util.UUID;
 
+import com.pse.rating.dto.response.RatingsAverageResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.rating.dto.request.RatingRequest;
-import com.pse.rating.dto.response.TopicAverageResponse;
 import com.pse.rating.service.RatingService;
 
 
@@ -36,7 +35,7 @@ public class RatingController {
     }
 
     @GetMapping("/{lectureId}")
-    public List<TopicAverageResponse> getRatings(@PathVariable UUID lectureId) {
+    public RatingsAverageResponse getRatings(@PathVariable UUID lectureId) {
 
         return ratingService.getRatings(lectureId);
 
