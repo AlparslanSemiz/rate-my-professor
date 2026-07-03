@@ -46,7 +46,11 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
                         .getClient(client)
                         .create(APIService.class);
 
-        loadFragment(new HomeFragment());
+        // On recreation (e.g. after a dark mode change) the fragment manager restores
+        // the previous fragment, so only load the home screen on a fresh start.
+        if (savedInstanceState == null) {
+            loadFragment(new HomeFragment());
+        }
         Database database = Room.databaseBuilder(
                 this,
                 Database.class,

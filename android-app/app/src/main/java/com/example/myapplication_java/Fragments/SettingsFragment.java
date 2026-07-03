@@ -8,6 +8,8 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,6 +21,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
 import com.example.myapplication_java.Activities.LoginActivity;
+import com.example.myapplication_java.MyApplication;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
@@ -105,9 +108,15 @@ public class SettingsFragment extends Fragment {
     }
 
     /**
-     * Applies the selected theme mode to the app.
+     * Applies the selected theme mode to the app and saves it for the next start.
      */
     private void setNightMode(boolean isEnabled) {
+        requireActivity()
+                .getSharedPreferences(MyApplication.SETTINGS_STORAGE, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(MyApplication.DARK_MODE_KEY, isEnabled)
+                .apply();
+
         int nightMode = isEnabled
                 ? AppCompatDelegate.MODE_NIGHT_YES
                 : AppCompatDelegate.MODE_NIGHT_NO;
@@ -140,6 +149,23 @@ public class SettingsFragment extends Fragment {
         dialogBinding.bugReportClose.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.bugReportCancel.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.bugReportSubmit.setOnClickListener(v -> submitBugReport(dialogBinding, dialog));
+        dialogBinding.bugReportInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            /**
+             * Clears the empty-input error once the user starts typing.
+             */
+            @Override
+            public void afterTextChanged(Editable s) {
+                dialogBinding.bugReportInputLayout.setError(null);
+            }
+        });
 
         dialog.setOnShowListener(dialogInterface -> {
             if (dialog.getWindow() != null) {
@@ -208,6 +234,10 @@ public class SettingsFragment extends Fragment {
              */
             @Override
             public void onResponse(@NonNull Call<ServerResponse> call, @NonNull Response<ServerResponse> response) {
+                if (!isAdded()) {
+                    return;
+                }
+
                 ServerResponse responseBody = response.body();
                 if (!response.isSuccessful() || responseBody == null || !responseBody.success) {
                     Toast.makeText(requireContext(), R.string.delete_account_failed, Toast.LENGTH_LONG).show();
@@ -224,6 +254,10 @@ public class SettingsFragment extends Fragment {
              */
             @Override
             public void onFailure(@NonNull Call<ServerResponse> call, @NonNull Throwable throwable) {
+                if (!isAdded()) {
+                    return;
+                }
+
                 Toast.makeText(requireContext(), R.string.delete_account_failed, Toast.LENGTH_LONG).show();
             }
         });
