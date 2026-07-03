@@ -13,6 +13,7 @@ import com.example.myapplication_java.DomainModel.Notification;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Rating;
 import com.example.myapplication_java.DomainModel.RatingCategory;
+import com.example.myapplication_java.DomainModel.RatingTopic;
 import com.example.myapplication_java.DomainModel.Review;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
@@ -25,6 +26,7 @@ import com.example.myapplication_java.ServerCommunication.ServerResponse;
 
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.Date;
 
 public class DomainModelTest {
@@ -34,15 +36,15 @@ public class DomainModelTest {
                 "prof-1",
                 "Ada",
                 "Lovelace",
-                "Informatik",
-                4.5f
+                4.5f,
+                12
         );
 
         assertEquals("prof-1", professor.id);
         assertEquals("Ada", professor.firstName);
         assertEquals("Lovelace", professor.lastName);
-        assertEquals("Informatik", professor.department);
         assertEquals(4.5f, professor.averageRating, 0.001f);
+        assertEquals(12, professor.ratingCount);
     }
 
     @Test
@@ -58,18 +60,35 @@ public class DomainModelTest {
 
     @Test
     public void ratingConstructorStoresImplementedFields() {
+        RatingTopic topic = new RatingTopic("Clarity", 5);
+
+        Rating rating = new Rating("lecture-1", Collections.singletonList(topic));
+
+        assertEquals("lecture-1", rating.lectureId);
+        assertEquals("Clarity", topic.name);
+        assertEquals(5, topic.value);
+    }
+
+    @Test
+    public void ratingCategoryConstructorStoresImplementedFields() {
         RatingCategory category = new RatingCategory(
                 "category-1",
                 "Clarity",
                 "How clearly the material is explained"
         );
 
+<<<<<<< Updated upstream
         Rating rating = new Rating("rating-1", 5, category);
 
         assertEquals("rating-1", rating.lectureId);
         assertEquals(5, rating.value);
         assertEquals(category, rating.ratingCategory);
         assertNotNull(rating.ratingCategory);
+=======
+        assertEquals("category-1", category.categoryId);
+        assertEquals("Clarity", category.name);
+        assertEquals("How clearly the material is explained", category.description);
+>>>>>>> Stashed changes
     }
 
     @Test
@@ -145,7 +164,7 @@ public class DomainModelTest {
 
     @Test
     public void professorGetLecturesCurrentlyReturnsEmptyList() {
-        Professor professor = new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f);
+        Professor professor = new Professor("prof-1", "Ada", "Lovelace", 4.5f, 12);
 
         assertTrue(professor.getLectures().isEmpty());
     }
@@ -170,7 +189,7 @@ public class DomainModelTest {
     @Test
     public void lectureOfferingStoresRelationsAndCurrentAverageRatingPlaceholder() {
         Lecture lecture = createLecture();
-        Professor professor = new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f);
+        Professor professor = new Professor("prof-1", "Ada", "Lovelace", 4.5f, 12);
         Semester semester = new Semester(2026, SemesterSeason.WINTER);
 
         LectureOffering offering = new LectureOffering("offering-1", lecture, professor, semester);
