@@ -23,15 +23,16 @@ import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.ServerCommunication.Database;
-import com.example.myapplication_java.databinding.FragmentProfProfileBinding;
+
+import com.example.myapplication_java.databinding.FragmentProfileBinding;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class ProfessorProfileFragment extends Fragment {
-    private FragmentProfProfileBinding binding;
-    private boolean profMode;
+public class ProfileFragment extends Fragment {
+    private FragmentProfileBinding binding;
+    private SelectionType selectionType;
     private Professor professor;
     private SearchService service;
     private ExecutorService executor;
@@ -39,18 +40,18 @@ public class ProfessorProfileFragment extends Fragment {
     private String lectureTitle;
     private ControlFlowInterface flowInterface;
 
-    public ProfessorProfileFragment() {
+    public ProfileFragment() {
         // Required empty public constructor
     }
 
-    public ProfessorProfileFragment(Professor currentProfessor) {
+    public ProfileFragment(Professor currentProfessor) {
         this.professor = currentProfessor;
-        profMode = true;
+        selectionType = SelectionType.PROFESSORS;
     }
 
-    public ProfessorProfileFragment(String lectureTitle) {
+    public ProfileFragment(String lectureTitle) {
         this.lectureTitle = lectureTitle;
-        profMode = false;
+        selectionType = SelectionType.LECTURES;
     }
 
     @Override
@@ -62,7 +63,7 @@ public class ProfessorProfileFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        binding = FragmentProfProfileBinding.inflate(inflater, container, false);
+        binding = FragmentProfileBinding.inflate(inflater, container, false);
         binding.averageRatingBackground.setText("5");
         binding.lectureList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         binding.semesterList.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -77,7 +78,7 @@ public class ProfessorProfileFragment extends Fragment {
         RecyclerView lectureList = binding.lectureList;
         executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
-            if (profMode) {
+            if (selectionType == SelectionType.PROFESSORS) {
                 List<String> lectures = service.getLectureTitlesByProfessor(professor.id);
                 ProfileLectureAdapter adapter = new ProfileLectureAdapter(lectures, this::onLectureClicked);
                 requireActivity().runOnUiThread(()-> {
@@ -95,7 +96,7 @@ public class ProfessorProfileFragment extends Fragment {
             Log.println(Log.DEBUG, "lesson", lectureTitle);
             onLectureClicked(lectureTitle);
         });
-        if (profMode) {
+        if (selectionType == SelectionType.PROFESSORS) {
             binding.name.setText(professor.firstName);
             binding.surname.setText(professor.lastName);
         } else {

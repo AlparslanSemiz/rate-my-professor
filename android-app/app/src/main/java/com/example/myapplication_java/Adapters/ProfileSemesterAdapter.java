@@ -27,7 +27,7 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
     @Override
     public SemesterViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_lecture_name_small, parent, false);
+                .inflate(R.layout.item_semester_name, parent, false);
         return new SemesterViewHolder(view);
     }
 
@@ -35,7 +35,7 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
     public void onBindViewHolder(@NonNull SemesterViewHolder holder, int position) {
         Semester semester = semesters.get(position);
 
-        holder.textView.setText(semester.semesterSeason.toString() + semester.semesterYear);
+        holder.textView.setText(semester.semesterSeason.toString() + " " + semester.semesterYear);
         holder.itemView.setOnClickListener(v -> listener.onLectureClick(semester));
     }
 
@@ -50,7 +50,7 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
 
         public SemesterViewHolder(@NonNull View itemView) {
             super(itemView);
-            textView = itemView.findViewById(R.id.lectureName);
+            textView = itemView.findViewById(R.id.semester_name);
         }
     }
     public interface OnSemesterClickListener {

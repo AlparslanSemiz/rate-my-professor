@@ -21,7 +21,7 @@ import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.ServerCommunication.Database;
-import com.example.myapplication_java.databinding.FragmentProfProfileBinding;
+import com.example.myapplication_java.databinding.FragmentProfileBinding;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -29,7 +29,7 @@ import java.util.concurrent.Executors;
 
 public class LectureProfileFragment extends Fragment {
 
-    FragmentProfProfileBinding binding;
+    FragmentProfileBinding binding;
     private Professor professor;
     private SearchService service;
     private String currentLectureTitle;
@@ -55,7 +55,7 @@ public class LectureProfileFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        binding = FragmentProfProfileBinding.inflate(inflater, container, false);
+        binding = FragmentProfileBinding.inflate(inflater, container, false);
         binding.averageRatingBackground.setText("5");
         binding.lectureList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         binding.semesterList.setLayoutManager(new LinearLayoutManager(requireContext()));

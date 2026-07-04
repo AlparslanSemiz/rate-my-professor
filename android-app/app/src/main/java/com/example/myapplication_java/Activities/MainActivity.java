@@ -1,7 +1,6 @@
 package com.example.myapplication_java.Activities;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 
 import androidx.activity.EdgeToEdge;
@@ -17,7 +16,7 @@ import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.Fragments.HomeFragment;
 import com.example.myapplication_java.Fragments.LectureRatingsFragment;
-import com.example.myapplication_java.Fragments.ProfessorProfileFragment;
+import com.example.myapplication_java.Fragments.ProfileFragment;
 import com.example.myapplication_java.Fragments.SearchFragment;
 import com.example.myapplication_java.Fragments.SettingsFragment;
 import com.example.myapplication_java.R;
@@ -110,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
     public void onProfessorSelected(Professor professor) {
         getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.fragment_container, new ProfessorProfileFragment(professor))
+                .replace(R.id.fragment_container, new ProfileFragment(professor))
                 .commit();
     }
 
@@ -118,7 +117,7 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
     public void onLectureSelected(String lectureTitle) {
         getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.fragment_container, new ProfessorProfileFragment(lectureTitle))
+                .replace(R.id.fragment_container, new ProfileFragment(lectureTitle))
                 .commit();
     }
 

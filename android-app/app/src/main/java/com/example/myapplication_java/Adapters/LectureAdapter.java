@@ -9,7 +9,6 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.DomainModel.Lecture;
-import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.R;
 
 import java.util.List;
@@ -50,7 +49,7 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
 
         public LectureViewHolder(@NonNull View itemView) {
             super(itemView);
-            textView = itemView.findViewById(R.id.lecture_name);
+            textView = itemView.findViewById(R.id.semester_name);
         }
     }
     public interface OnLectureClickListener {

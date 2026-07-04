@@ -35,7 +35,7 @@ public class ProfileProfessorAdapter extends RecyclerView.Adapter<ProfileProfess
     public void onBindViewHolder(@NonNull LectureViewHolder holder, int position) {
         Professor professor = professors.get(position);
 
-        holder.textView.setText(professor.firstName+ " " + professor.lastName);
+        holder.textView.setText(professor.firstName + " " + professor.lastName);
         holder.itemView.setOnClickListener(v -> listener.onProfessorClick(professor));
     }
 
