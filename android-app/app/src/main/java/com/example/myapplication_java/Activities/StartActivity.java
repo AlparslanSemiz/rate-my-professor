@@ -36,6 +36,9 @@ public class StartActivity extends AppCompatActivity {
         //debug
         System.out.println("mail: " + mail);
         System.out.println("otp: " + otp);
+        for (int i = 0; i < 10; i++) {
+            System.out.println(".");
+        }
 
         if (mail.isEmpty() || otp.isEmpty()) {
             startActivity(loginActivityEntry);
