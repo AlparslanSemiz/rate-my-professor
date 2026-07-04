@@ -9,18 +9,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.viewmodel.CreationExtras;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.View;
-
 
 
 import android.content.Context;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.inputmethod.InputMethodManager;
 
 import androidx.core.graphics.Insets;
@@ -32,17 +26,9 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.Adapters.SearchPagerAdapter;
-import com.example.myapplication_java.Adapters.SearchService;
-import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.R;
-import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.databinding.FragmentSelectionBinding;
 import com.example.myapplication_java.databinding.FragmentSearchBinding;
 import com.example.myapplication_java.logic.SearchViewModel;
-import com.google.android.material.tabs.TabLayout;
-import com.google.android.material.tabs.TabLayoutMediator;
-
-import java.util.ArrayList;
 
 public class SearchFragment extends Fragment {
 
@@ -193,7 +179,7 @@ public class SearchFragment extends Fragment {
         binding.searchBar.setVisibility(View.VISIBLE);
         binding.searchButton.setVisibility(View.GONE);
 
-        View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
+        View bottomNav = requireActivity().findViewById(R.id.custom_bottom_nav);
         if (bottomNav != null) {
             bottomNav.setVisibility(View.GONE);
         }
@@ -218,7 +204,7 @@ public class SearchFragment extends Fragment {
 
         hideKeyboard();
 
-        View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
+        View bottomNav = requireActivity().findViewById(R.id.custom_bottom_nav);
         if (bottomNav != null) {
             bottomNav.setVisibility(View.VISIBLE);
         }

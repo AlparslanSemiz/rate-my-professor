@@ -127,7 +127,7 @@ public class SettingsFragment extends Fragment {
      * Navigates back to the home tab from settings.
      */
     private void navigateToHome() {
-        BottomNavigationView bottomNavigationView = requireActivity().findViewById(R.id.bottom_nav);
+        BottomNavigationView bottomNavigationView = requireActivity().findViewById(R.id.custom_bottom_nav);
         if (bottomNavigationView != null) {
             bottomNavigationView.setSelectedItemId(R.id.nav_home);
             return;

@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
             boolean keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
 
-            binding.bottomNav.setVisibility(keyboardVisible ? View.GONE : View.VISIBLE);
+            binding.customBottomNav.setVisibility(keyboardVisible ? View.GONE : View.VISIBLE);
 
             return insets;
         });
@@ -71,35 +71,16 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
         ).fallbackToDestructiveMigration(true).build();
         database.updateDB(apiService);
 
-        binding.bottomNav.setOnItemSelectedListener(item -> {
-            int itemId = item.getItemId();
+        binding.navHome.setOnClickListener(v -> {
+            loadFragment(new HomeFragment());
+        });
 
-            if (itemId == R.id.nav_home) {
-                // open homeFragment
-                getSupportFragmentManager()
-                        .beginTransaction()
-                        .replace(R.id.fragment_container, new HomeFragment())
-                        .commit();
-                return true;
+        binding.navSearch.setOnClickListener(v -> {
+            loadFragment(new SearchFragment());
+        });
 
-            } else if (itemId == R.id.nav_search) {
-                // open searchFragment
-                getSupportFragmentManager()
-                        .beginTransaction()
-                        .replace(R.id.fragment_container, new SearchFragment())
-                        .commit();
-                return true;
-
-            } else if (itemId == R.id.nav_settings) {
-                // open settingsFragment
-                getSupportFragmentManager()
-                        .beginTransaction()
-                        .replace(R.id.fragment_container, new SettingsFragment())
-                        .commit();
-                return true;
-            }
-
-            return false;
+        binding.navSettings.setOnClickListener(v -> {
+            loadFragment(new SettingsFragment());
         });
     }
 
