@@ -23,6 +23,7 @@ web:check:
   stage: check
   script:
     - npm run lint
+    - npm run typecheck
 
 web:test:
   extends: .node-npm

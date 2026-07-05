@@ -9,6 +9,7 @@ import {
   IconShield,
   IconCircleFilled,
 } from '@tabler/icons-react'
+import { useAuth } from '../context/useAuth'
 
 const navItems = [
   {
