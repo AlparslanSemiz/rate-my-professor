@@ -16,7 +16,9 @@ describe('App routing and authentication', () => {
 
     render(<App />)
 
-    expect(await screen.findByText('Sign in to your account')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Enter your credentials to access the admin panel.')
+    ).toBeInTheDocument()
     expect(window.location.pathname).toBe('/login')
   })
 
@@ -28,7 +30,7 @@ describe('App routing and authentication', () => {
     render(<App />)
 
     expect(
-      await screen.findByRole('heading', { name: 'Dashboard' })
+      await screen.findByText('Live user activity, moderation queue and system health at a glance.')
     ).toBeInTheDocument()
     expect(screen.getByText(adminUser.email)).toBeInTheDocument()
   })
@@ -44,7 +46,7 @@ describe('App routing and authentication', () => {
     await user.click(screen.getByRole('button', { name: 'Sign In' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'Dashboard' })
+      await screen.findByText('Live user activity, moderation queue and system health at a glance.')
     ).toBeInTheDocument()
     expect(localStorage.getItem('token')).toBe('mock-token-1')
     expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(adminUser)

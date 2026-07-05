@@ -43,14 +43,17 @@ export function useUserProfile(
   async function warn(message: string) {
     if (!user || !message.trim()) return
     setWarnLoading(true)
-    const newWarning = await usersService.warn(user.id, message.trim())
-    setProfile((prev) => prev && prev.user?.id === user.id ? {
-      ...prev,
-      user: { ...prev.user, warningCount: prev.user.warningCount + 1 },
-      warnings: [newWarning, ...prev.warnings],
-    } : prev)
-    setWarnLoading(false)
-    onUserChanged?.(user.id, 'warned')
+    try {
+      const newWarning = await usersService.warn(user.id, message.trim())
+      setProfile((prev) => prev && prev.user?.id === user.id ? {
+        ...prev,
+        user: { ...prev.user, warningCount: prev.user.warningCount + 1 },
+        warnings: [newWarning, ...prev.warnings],
+      } : prev)
+      onUserChanged?.(user.id, 'warned')
+    } finally {
+      setWarnLoading(false)
+    }
   }
 
   async function block() {

@@ -124,22 +124,35 @@ export class UsersRepository {
   private warnings: Record<number, Warning[]> = { ...INITIAL_WARNINGS }
 
   getAll(): User[] {
-    return [...this.users]
+    return this.users.map(copyUser)
   }
 
   getById(id: number): User | undefined {
-    return this.users.find((u) => u.id === id)
+    const user = this.users.find((u) => u.id === id)
+    return user ? copyUser(user) : undefined
   }
 
   delete(id: number): void {
+    if (!this.users.some((user) => user.id === id)) {
+      throw new Error(`User with id ${id} not found`)
+    }
+
     this.users = this.users.filter((u) => u.id !== id)
   }
 
   setStatus(id: number, status: UserStatus): void {
+    if (!this.users.some((user) => user.id === id)) {
+      throw new Error(`User with id ${id} not found`)
+    }
+
     this.users = this.users.map((u) => (u.id === id ? { ...u, status } : u))
   }
 
   addWarning(id: number, message: string): Warning {
+    if (!this.users.some((user) => user.id === id)) {
+      throw new Error(`User with id ${id} not found`)
+    }
+
     const warning: Warning = {
       id: Date.now(),
       message,
@@ -150,10 +163,18 @@ export class UsersRepository {
     this.users = this.users.map((u) =>
       u.id === id ? { ...u, warningCount: u.warningCount + 1 } : u
     )
-    return warning
+    return copyWarning(warning)
   }
 
   getWarnings(id: number): Warning[] {
-    return this.warnings[id] ?? []
+    return (this.warnings[id] ?? []).map(copyWarning)
   }
+}
+
+function copyUser(user: User): User {
+  return { ...user }
+}
+
+function copyWarning(warning: Warning): Warning {
+  return { ...warning }
 }

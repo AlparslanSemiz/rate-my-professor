@@ -73,12 +73,28 @@ export class CommentsRepository {
   private reportedComments: ReportedComment[] = [...INITIAL_REPORTED_COMMENTS]
 
   getAll(): ReportedComment[] {
-    return [...this.reportedComments]
+    return this.reportedComments.map(copyReportedComment)
   }
 
   setStatus(id: number, status: CommentReportStatus): void {
+    if (!this.reportedComments.some((report) => report.id === id)) {
+      throw new Error(`Comment report with id ${id} not found`)
+    }
+
     this.reportedComments = this.reportedComments.map((r) =>
       r.id === id ? { ...r, status } : r
     )
+  }
+}
+
+function copyUserRef(user: CommentUserRef): CommentUserRef {
+  return { ...user }
+}
+
+function copyReportedComment(report: ReportedComment): ReportedComment {
+  return {
+    ...report,
+    reportedUser: copyUserRef(report.reportedUser),
+    reportingUser: copyUserRef(report.reportingUser),
   }
 }

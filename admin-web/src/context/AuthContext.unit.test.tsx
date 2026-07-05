@@ -51,6 +51,28 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('user-email')).toHaveTextContent(testUser.email)
   })
 
+  it('does not authenticate partial stored sessions', () => {
+    localStorage.setItem('token', 'stored-token')
+
+    renderAuthHarness()
+
+    expect(screen.getByTestId('auth-state')).toHaveTextContent('anonymous')
+    expect(screen.getByTestId('token')).toHaveTextContent('no-token')
+    expect(screen.getByTestId('user-email')).toHaveTextContent('no-user')
+    expect(localStorage.getItem('token')).toBeNull()
+  })
+
+  it('clears malformed stored sessions instead of crashing', () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', '{bad json')
+
+    renderAuthHarness()
+
+    expect(screen.getByTestId('auth-state')).toHaveTextContent('anonymous')
+    expect(localStorage.getItem('token')).toBeNull()
+    expect(localStorage.getItem('user')).toBeNull()
+  })
+
   it('persists login and clears state on logout', async () => {
     const user = userEvent.setup()
     renderAuthHarness()

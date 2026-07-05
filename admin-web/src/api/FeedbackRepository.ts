@@ -16,7 +16,7 @@ export class FeedbackRepository {
   private reports: BugReport[] = []
 
   getAll(): BugReport[] {
-    return [...this.reports]
+    return this.reports.map((report) => ({ ...report }))
   }
 
   setStatus(id: number, status: ReportStatus): void {

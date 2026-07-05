@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { loginRequest } from './auth'
+import { ApiClient } from './ApiClient'
+import { AuthService } from './AuthService'
 
 async function finishLogin<T>(promise: Promise<T>) {
   const settled = promise.then(
@@ -13,12 +14,17 @@ async function finishLogin<T>(promise: Promise<T>) {
   return result.value
 }
 
-describe('loginRequest', () => {
+function createAuthService() {
+  return new AuthService(new ApiClient(null))
+}
+
+describe('AuthService', () => {
   it('returns a token and public user profile for valid credentials', async () => {
     vi.useFakeTimers()
+    const service = createAuthService()
 
     const response = await finishLogin(
-      loginRequest('admin@example.com', 'admin123')
+      service.login('admin@example.com', 'admin123')
     )
 
     expect(response).toEqual({
@@ -35,9 +41,10 @@ describe('loginRequest', () => {
 
   it('rejects invalid credentials', async () => {
     vi.useFakeTimers()
+    const service = createAuthService()
 
     await expect(
-      finishLogin(loginRequest('admin@example.com', 'wrong-password'))
+      finishLogin(service.login('admin@example.com', 'wrong-password'))
     ).rejects.toThrow('Invalid email or password')
   })
 })
