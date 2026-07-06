@@ -30,6 +30,18 @@ import com.example.myapplication_java.R;
 import com.example.myapplication_java.databinding.FragmentSearchBinding;
 import com.example.myapplication_java.logic.SearchViewModel;
 
+/**
+ * Fragment for the search screen of the application.
+ *
+ * <p>This fragment contains the professor and lecture tabs inside a {@link ViewPager2}.
+ * It also controls the search mode, including opening and closing the search bar,
+ * moving the search bar above the soft keyboard, hiding the bottom navigation bar
+ * while searching, and forwarding the current search query to the shared
+ * {@link SearchViewModel}.</p>
+ *
+ * <p>The actual result lists are displayed by child {@link SelectionFragment}
+ * instances through the {@link SearchPagerAdapter}.</p>
+ */
 public class SearchFragment extends Fragment {
 
     private boolean searchModeOpen = false;
