@@ -29,6 +29,18 @@ import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Fragment for displaying either a list of professors or a list of lectures.
+ *
+ * <p>The concrete content of this fragment is determined by a {@link SelectionType}
+ * argument. If the type is {@code PROFESSORS}, the fragment uses a
+ * {@link ProfessorAdapter}; if the type is {@code LECTURES}, it uses a
+ * {@link LectureAdapter}.</p>
+ *
+ * <p>The fragment observes the search query from the parent fragment's
+ * {@link SearchViewModel} and updates the displayed list by querying the local
+ * Room database through {@link SearchService}.</p>
+ */
 public class SelectionFragment extends Fragment {
 
     public interface UserInteractionListener {

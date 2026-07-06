@@ -13,6 +13,7 @@ import com.example.myapplication_java.DomainModel.Notification;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Rating;
 import com.example.myapplication_java.DomainModel.RatingCategory;
+import com.example.myapplication_java.DomainModel.RatingTopic;
 import com.example.myapplication_java.DomainModel.Review;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
@@ -25,6 +26,7 @@ import com.example.myapplication_java.ServerCommunication.ServerResponse;
 
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.Date;
 
 public class DomainModelTest {
@@ -34,40 +36,59 @@ public class DomainModelTest {
                 "prof-1",
                 "Ada",
                 "Lovelace",
-                "Informatik",
-                4.5f
+                4.5f,
+                12
         );
 
         assertEquals("prof-1", professor.id);
         assertEquals("Ada", professor.firstName);
         assertEquals("Lovelace", professor.lastName);
-        assertEquals("Informatik", professor.department);
         assertEquals(4.5f, professor.averageRating, 0.001f);
+        assertEquals(12, professor.ratingCount);
     }
 
     @Test
     public void lectureConstructorStoresImplementedFields() {
-        Lecture lecture = new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0);
+        Lecture lecture = createLecture();
 
         assertEquals("lecture-1", lecture.id);
         assertEquals("Algorithms", lecture.name);
         assertEquals("240001", lecture.code);
+        assertEquals(2026, lecture.semesterYear);
+        assertEquals(SemesterSeason.WINTER, lecture.semesterSeason);
     }
 
     @Test
     public void ratingConstructorStoresImplementedFields() {
+        RatingTopic topic = new RatingTopic("Clarity", 5);
+
+        Rating rating = new Rating("lecture-1", Collections.singletonList(topic));
+
+        assertEquals("lecture-1", rating.lectureId);
+        assertEquals("Clarity", topic.name);
+        assertEquals(5, topic.value);
+    }
+
+    @Test
+    public void ratingCategoryConstructorStoresImplementedFields() {
         RatingCategory category = new RatingCategory(
                 "category-1",
                 "Clarity",
                 "How clearly the material is explained"
         );
 
+<<<<<<< Updated upstream
         Rating rating = new Rating("rating-1", 5, category);
 
         assertEquals("rating-1", rating.lectureId);
         assertEquals(5, rating.value);
         assertEquals(category, rating.ratingCategory);
         assertNotNull(rating.ratingCategory);
+=======
+        assertEquals("category-1", category.categoryId);
+        assertEquals("Clarity", category.name);
+        assertEquals("How clearly the material is explained", category.description);
+>>>>>>> Stashed changes
     }
 
     @Test
@@ -143,14 +164,14 @@ public class DomainModelTest {
 
     @Test
     public void professorGetLecturesCurrentlyReturnsEmptyList() {
-        Professor professor = new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f);
+        Professor professor = new Professor("prof-1", "Ada", "Lovelace", 4.5f, 12);
 
         assertTrue(professor.getLectures().isEmpty());
     }
 
     @Test
     public void lectureGetProfessorsCurrentlyReturnsEmptyList() {
-        Lecture lecture = new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0);
+        Lecture lecture = createLecture();
 
         assertTrue(lecture.getProfessors().isEmpty());
     }
@@ -167,8 +188,8 @@ public class DomainModelTest {
 
     @Test
     public void lectureOfferingStoresRelationsAndCurrentAverageRatingPlaceholder() {
-        Lecture lecture = new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0);
-        Professor professor = new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f);
+        Lecture lecture = createLecture();
+        Professor professor = new Professor("prof-1", "Ada", "Lovelace", 4.5f, 12);
         Semester semester = new Semester(2026, SemesterSeason.WINTER);
 
         LectureOffering offering = new LectureOffering("offering-1", lecture, professor, semester);
@@ -253,5 +274,19 @@ public class DomainModelTest {
         assertEquals(SemesterSeason.WINTER, SemesterSeason.valueOf("WINTER"));
         assertEquals(VoteType.UPVOTE, VoteType.valueOf("UPVOTE"));
         assertEquals(VoteType.DOWNVOTE, VoteType.valueOf("DOWNVOTE"));
+    }
+
+    private Lecture createLecture() {
+        return new Lecture(
+                "lecture-1",
+                "Algorithms",
+                "240001",
+                2026,
+                SemesterSeason.WINTER,
+                true,
+                "prof-1",
+                3,
+                4
+        );
     }
 }

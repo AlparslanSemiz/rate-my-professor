@@ -222,13 +222,14 @@
         android:layout_marginStart="8dp"
         android:layout_marginTop="32dp"
         android:layout_marginBottom="8dp"
+        android:background="@drawable/rounded_box_light"
+        android:scaleX="1.0"
+        android:scaleY="1.0"
+        android:src="@drawable/profile_icon"
         app:layout_constraintBottom_toTopOf="@+id/your_stats_background"
         app:layout_constraintStart_toStartOf="@+id/profile"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.348"
-        android:src="@drawable/profile_icon"
-        android:scaleX="2.0"
-        android:scaleY="2.0"/>
+        app:layout_constraintVertical_bias="0.348" />
 
 
 

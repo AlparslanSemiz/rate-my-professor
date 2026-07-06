@@ -13,7 +13,7 @@ import retrofit2.http.POST;
 public interface APIService {
 
     /**
-     * Used to start the 'request-login' routine in the Backend Code.
+     * Requests a one-time login token for the given email address.
      */
     @POST("/auth/request-login")
     Call<ServerResponse> requestLogin(
@@ -21,23 +21,30 @@ public interface APIService {
     );
 
     /**
-     * used to log in with the token.
-     * @param request the request with the token and mail.
-     * @return the server response.
+     * Verifies the email and token pair with the backend.
      */
     @POST("/auth/login")
     Call<ServerResponse> login(
             @Body LoginRequest request
     );
 
+    /**
+     * Deletes the account for the currently verified email/token pair.
+     */
     @POST("/auth/delete-account")
     Call<ServerResponse> deleteAccount(
             @Body LoginRequest request
     );
 
+    /**
+     * Loads all professors from the backend.
+     */
     @GET("/data/professor")
     Call<ProfessorResponse> getProfessors();
 
+    /**
+     * Loads all lectures from the backend.
+     */
     @GET("/data/lectures")
     Call<LecturesResponse> getLectures();
 }

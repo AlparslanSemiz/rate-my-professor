@@ -21,7 +21,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:fontFamily="@font/inter_bold"
-            android:text="Bug Report"
+            android:text="@string/settings_bug_report"
             android:textColor="#E9E9E9"
             android:textSize="22sp" />
 
@@ -41,7 +41,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:fontFamily="@font/inter"
-        android:text="What went wrong?"
+        android:text="@string/bug_report_prompt"
         android:textColor="#9D9D9D"
         android:textSize="15sp" />
 
@@ -50,7 +50,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:hint="Describe the bug"
+        android:hint="@string/bug_report_hint"
         app:boxBackgroundColor="#1C1C1C"
         app:boxBackgroundMode="filled"
         app:boxCornerRadiusBottomEnd="20dp"
@@ -95,7 +95,7 @@
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:letterSpacing="0"
-            android:text="Cancel"
+            android:text="@string/cancel"
             android:textColor="#E9E9E9"
             android:textSize="16sp"
             app:cornerRadius="26dp" />
@@ -111,7 +111,7 @@
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:letterSpacing="0"
-            android:text="Submit"
+            android:text="@string/submit"
             android:textColor="#000000"
             android:textSize="16sp"
             app:cornerRadius="26dp" />
