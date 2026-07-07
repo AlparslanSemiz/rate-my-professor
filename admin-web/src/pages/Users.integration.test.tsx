@@ -1,0 +1,111 @@
+import { MantineProvider } from '@mantine/core'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { usersService, type User } from '../api/UsersService'
+import { AuthProvider } from '../context/AuthContext'
+import Users from './Users'
+
+vi.mock('../api/UsersService', () => ({
+  usersService: {
+    getAll: vi.fn(),
+    getById: vi.fn(),
+    getWarnings: vi.fn(),
+    delete: vi.fn(),
+    block: vi.fn(),
+    unblock: vi.fn(),
+    warn: vi.fn(),
+  },
+}))
+
+const authUser = {
+  id: 'admin-1',
+  name: 'Admin User',
+  email: 'admin@student.kit.edu',
+  role: 'ADMIN',
+}
+
+const users: User[] = [
+  {
+    id: 'user-1',
+    username: 'Alice Smith',
+    kitEmail: 'alice@student.kit.edu',
+    role: 'ADMIN',
+    status: 'ACTIVE',
+    joined: '2025-01-10',
+    lastOnline: '2026-06-11T18:30:00Z',
+    biography: 'Platform administrator.',
+    warnings: 0,
+    reports: 0,
+  },
+  {
+    id: 'user-2',
+    username: 'Bob Johnson',
+    kitEmail: 'bob@student.kit.edu',
+    role: 'STUDENT',
+    status: 'ACTIVE',
+    joined: '2025-02-14',
+    lastOnline: '2026-06-10T22:15:00Z',
+    biography: 'Computer Science student.',
+    warnings: 0,
+    reports: 0,
+  },
+]
+
+function renderUsers() {
+  localStorage.setItem('token', 'admin-token')
+  localStorage.setItem('user', JSON.stringify(authUser))
+
+  return render(
+    <MantineProvider>
+      <AuthProvider>
+        <Users />
+      </AuthProvider>
+    </MantineProvider>
+  )
+}
+
+describe('Users page', () => {
+  beforeEach(() => {
+    vi.mocked(usersService.getAll).mockResolvedValue(users)
+    vi.mocked(usersService.getById).mockImplementation(async (id) => {
+      const user = users.find((candidate) => candidate.id === id)
+      if (!user) throw new Error('User not found')
+      return user
+    })
+    vi.mocked(usersService.getWarnings).mockResolvedValue([])
+    vi.mocked(usersService.delete).mockResolvedValue({ success: true, message: 'Deleted' })
+    vi.mocked(usersService.block).mockResolvedValue({ success: true, message: 'Blocked' })
+    vi.mocked(usersService.unblock).mockResolvedValue({ success: true, message: 'Unblocked' })
+    vi.mocked(usersService.warn).mockResolvedValue({ success: true, message: 'Warned' })
+  })
+
+  it('loads users and filters by name or email', async () => {
+    const user = userEvent.setup()
+    renderUsers()
+
+    expect(await screen.findByText('Alice Smith')).toBeInTheDocument()
+    expect(screen.getByText('Bob Johnson')).toBeInTheDocument()
+
+    await user.type(screen.getByPlaceholderText('Search by name or email...'), 'bob')
+
+    expect(screen.queryByText('Alice Smith')).not.toBeInTheDocument()
+    expect(screen.getByText('Bob Johnson')).toBeInTheDocument()
+    expect(screen.getByText('bob@student.kit.edu')).toBeInTheDocument()
+  })
+
+  it('deletes a user from the profile modal after the API confirms removal', async () => {
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Alice Smith'))
+    expect(await screen.findByText('User Profile')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete account' }))
+    await user.click(await screen.findByRole('button', { name: 'Delete permanently' }))
+
+    await waitFor(() => expect(usersService.delete).toHaveBeenCalledWith('user-1'))
+    expect(screen.queryByText('Alice Smith')).not.toBeInTheDocument()
+    expect(screen.getByText('Bob Johnson')).toBeInTheDocument()
+  })
+})
