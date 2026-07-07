@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, type CSSProperties } from 'react'
 import {
   Badge,
   Text,
@@ -51,7 +51,110 @@ const REASON_OPTIONS: ReportReason[] = [
   'INAPPROPRIATE_CONTENT',
   'OTHER',
 ]
-const TABLE_COLUMNS = ['Comment & Report', 'Reported user', 'Reported by', 'Reason', 'Date', 'Status']
+const TABLE_COLUMNS = ['Comment & Report', 'Reported user', 'Reported by', 'Reason', 'Date', 'Status'] as const
+const LOAD_ERROR_MESSAGE = 'Failed to load reported comments'
+
+type StatusFilter = typeof ALL | CommentReportStatus
+type ReasonFilter = typeof ALL | ReportReason
+
+const statusSelectOptions = STATUS_OPTIONS.map((status) => ({ value: status, label: enumLabel(status) }))
+const reasonSelectOptions = REASON_OPTIONS.map((reason) => ({ value: reason, label: enumLabel(reason) }))
+const statusFilterOptions = [{ value: ALL, label: ALL }, ...statusSelectOptions]
+const reasonFilterOptions = [{ value: ALL, label: ALL }, ...reasonSelectOptions]
+
+const filtersPanelStyle: CSSProperties = {
+  padding: '14px 20px',
+}
+
+const searchInputStyle: CSSProperties = {
+  flex: 1,
+  minWidth: 200,
+}
+
+const panelOverflowStyle: CSSProperties = {
+  overflow: 'hidden',
+}
+
+const panelHeaderStyle: CSSProperties = {
+  borderBottom: '1px solid #21262d',
+}
+
+const emptyStateStyle: CSSProperties = {
+  textAlign: 'center',
+}
+
+const emptyIconStyle: CSSProperties = {
+  marginBottom: 12,
+}
+
+const tableScrollStyle: CSSProperties = {
+  overflowX: 'auto',
+}
+
+const tableStyle: CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  minWidth: 900,
+}
+
+const commentCellStyle: CSSProperties = {
+  padding: '16px 20px',
+  maxWidth: 340,
+}
+
+const userCellStyle: CSSProperties = {
+  padding: '16px 20px',
+  whiteSpace: 'nowrap',
+}
+
+const cellStyle: CSSProperties = {
+  padding: '16px 20px',
+}
+
+const dateCellStyle: CSSProperties = {
+  ...cellStyle,
+  whiteSpace: 'nowrap',
+}
+
+const reportTextBoxStyle: CSSProperties = {
+  background: 'rgba(239,68,68,0.06)',
+  border: '1px solid rgba(239,68,68,0.15)',
+  borderRadius: 6,
+  padding: '5px 8px',
+}
+
+const breakWordStyle: CSSProperties = {
+  wordBreak: 'break-word',
+}
+
+function commentTextStyle(hasTooltip: boolean): CSSProperties {
+  return {
+    ...breakWordStyle,
+    cursor: hasTooltip ? 'help' : 'default',
+  }
+}
+
+function rowStyle(isLast: boolean): CSSProperties {
+  return {
+    borderBottom: isLast ? 'none' : '1px solid #1c2128',
+  }
+}
+
+function statusSelectStyles(status: CommentReportStatus) {
+  return {
+    input: {
+      background: '#0f1117',
+      border: '1px solid #21262d',
+      color: `var(--mantine-color-${reportStatusColor[status]}-4)`,
+      fontWeight: 600,
+      fontSize: 11,
+    },
+  }
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
 
 function matchesQuery(report: ReportedComment, query: string) {
   return (
@@ -66,25 +169,28 @@ function countByStatus(reports: ReportedComment[], status: CommentReportStatus) 
   return reports.filter((r) => r.status === status).length
 }
 
+function matchesFilters(report: ReportedComment, status: StatusFilter, reason: ReasonFilter) {
+  return (status === ALL || report.status === status) && (reason === ALL || report.reason === reason)
+}
+
+function updateReportStatus(reports: ReportedComment[], id: string, status: CommentReportStatus) {
+  return reports.map((report) => (report.id === id ? { ...report, status } : report))
+}
+
 export default function CommentsPage() {
   const [reports, setReports] = useState<ReportedComment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
-  const [filterStatus, setFilterStatus] = useState<string>(ALL)
-  const [filterReason, setFilterReason] = useState<string>(ALL)
+  const [filterStatus, setFilterStatus] = useState<StatusFilter>(ALL)
+  const [filterReason, setFilterReason] = useState<ReasonFilter>(ALL)
   const [profileUserId, setProfileUserId] = useState<string | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
 
   const { search, setSearch, filtered: searchFiltered } = useSearch(reports, matchesQuery)
 
   const filtered = useMemo(
-    () =>
-      searchFiltered.filter(
-        (r) =>
-          (filterStatus === ALL || r.status === filterStatus) &&
-          (filterReason === ALL || r.reason === filterReason)
-      ),
+    () => searchFiltered.filter((report) => matchesFilters(report, filterStatus, filterReason)),
     [searchFiltered, filterStatus, filterReason]
   )
 
@@ -92,7 +198,7 @@ export default function CommentsPage() {
     commentsService
       .getReported()
       .then(setReports)
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load reported comments'))
+      .catch((err: unknown) => setError(getErrorMessage(err, LOAD_ERROR_MESSAGE)))
       .finally(() => setLoading(false))
   }, [reloadKey])
 
@@ -104,7 +210,7 @@ export default function CommentsPage() {
 
   async function handleStatusChange(id: string, status: CommentReportStatus) {
     await commentsService.updateStatus(id, status)
-    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
+    setReports((prev) => updateReportStatus(prev, id, status))
   }
 
   function openProfile(userId: string) {
@@ -128,82 +234,22 @@ export default function CommentsPage() {
         description="User-flagged comments awaiting moderation. Click a user name to view their profile."
       />
 
-      <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
-        <StatCard label="Open" value={countByStatus(reports, 'OPEN')} icon={IconClock} accent="#f97316" />
-        <StatCard label="Reviewed" value={countByStatus(reports, 'REVIEWED')} icon={IconEye} accent="#3b82f6" />
-        <StatCard label="Dismissed" value={countByStatus(reports, 'DISMISSED')} icon={IconX} accent="#6b7280" />
-        <StatCard label="Action taken" value={countByStatus(reports, 'ACTION_TAKEN')} icon={IconCheck} accent="#ef4444" />
-      </SimpleGrid>
+      <CommentsStats reports={reports} />
 
-      <Panel mb={16} style={{ padding: '14px 20px' }}>
-        <Group gap={12} wrap="wrap">
-          <TextInput
-            placeholder="Search by comment, user, or report message..."
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            leftSection={<IconSearch size={14} color="#6b7280" />}
-            style={{ flex: 1, minWidth: 200 }}
-            size="sm"
-            aria-label="Search reported comments"
-            styles={darkInputStyles}
-          />
-          <Select
-            placeholder="All Statuses"
-            data={[ALL, ...STATUS_OPTIONS.map((s) => ({ value: s, label: enumLabel(s) }))]}
-            value={filterStatus}
-            onChange={(v) => setFilterStatus(v ?? ALL)}
-            w={150}
-            size="sm"
-            clearable={false}
-            styles={darkInputStyles}
-          />
-          <Select
-            placeholder="All Reasons"
-            data={[ALL, ...REASON_OPTIONS.map((r) => ({ value: r, label: enumLabel(r) }))]}
-            value={filterReason}
-            onChange={(v) => setFilterReason(v ?? ALL)}
-            w={180}
-            size="sm"
-            clearable={false}
-            styles={darkInputStyles}
-          />
-        </Group>
-      </Panel>
+      <CommentFilters
+        search={search}
+        status={filterStatus}
+        reason={filterReason}
+        onSearchChange={setSearch}
+        onStatusChange={setFilterStatus}
+        onReasonChange={setFilterReason}
+      />
 
-      <Panel style={{ overflow: 'hidden' }}>
-        <Box px={20} py={14} style={{ borderBottom: '1px solid #21262d' }}>
-          <Group gap={6}>
-            <IconMessageReport size={14} color="#6b7280" />
-            <Text size="xs" c="#6b7280">
-              {filtered.length} report{filtered.length !== 1 ? 's' : ''} matching filters
-            </Text>
-          </Group>
-        </Box>
-
-        {filtered.length === 0 ? (
-          <Box py={60} style={{ textAlign: 'center' }}>
-            <IconMessageReport size={32} color="#374151" style={{ marginBottom: 12 }} />
-            <Text c="#4b5563" size="sm">No reported comments match the current filters.</Text>
-          </Box>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
-              <TableHeaderRow columns={TABLE_COLUMNS} />
-              <tbody>
-                {filtered.map((report, i) => (
-                  <ReportRow
-                    key={report.id}
-                    report={report}
-                    isLast={i === filtered.length - 1}
-                    onOpenProfile={openProfile}
-                    onStatusChange={handleStatusChange}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Panel>
+      <CommentsTable
+        reports={filtered}
+        onOpenProfile={openProfile}
+        onStatusChange={handleStatusChange}
+      />
 
       <UserProfileModal
         userId={profileUserId}
@@ -211,6 +257,127 @@ export default function CommentsPage() {
         onClose={() => setProfileOpen(false)}
       />
     </>
+  )
+}
+
+function CommentsStats({ reports }: { reports: ReportedComment[] }) {
+  return (
+    <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
+      <StatCard label="Open" value={countByStatus(reports, 'OPEN')} icon={IconClock} accent="#f97316" />
+      <StatCard label="Reviewed" value={countByStatus(reports, 'REVIEWED')} icon={IconEye} accent="#3b82f6" />
+      <StatCard label="Dismissed" value={countByStatus(reports, 'DISMISSED')} icon={IconX} accent="#6b7280" />
+      <StatCard label="Action taken" value={countByStatus(reports, 'ACTION_TAKEN')} icon={IconCheck} accent="#ef4444" />
+    </SimpleGrid>
+  )
+}
+
+interface CommentFiltersProps {
+  search: string
+  status: StatusFilter
+  reason: ReasonFilter
+  onSearchChange: (value: string) => void
+  onStatusChange: (value: StatusFilter) => void
+  onReasonChange: (value: ReasonFilter) => void
+}
+
+function CommentFilters({
+  search,
+  status,
+  reason,
+  onSearchChange,
+  onStatusChange,
+  onReasonChange,
+}: CommentFiltersProps) {
+  return (
+    <Panel mb={16} style={filtersPanelStyle}>
+      <Group gap={12} wrap="wrap">
+        <TextInput
+          placeholder="Search by comment, user, or report message..."
+          value={search}
+          onChange={(event) => onSearchChange(event.currentTarget.value)}
+          leftSection={<IconSearch size={14} color="#6b7280" />}
+          style={searchInputStyle}
+          size="sm"
+          aria-label="Search reported comments"
+          styles={darkInputStyles}
+        />
+        <Select
+          placeholder="All Statuses"
+          data={statusFilterOptions}
+          value={status}
+          onChange={(value) => onStatusChange((value ?? ALL) as StatusFilter)}
+          w={150}
+          size="sm"
+          clearable={false}
+          styles={darkInputStyles}
+        />
+        <Select
+          placeholder="All Reasons"
+          data={reasonFilterOptions}
+          value={reason}
+          onChange={(value) => onReasonChange((value ?? ALL) as ReasonFilter)}
+          w={180}
+          size="sm"
+          clearable={false}
+          styles={darkInputStyles}
+        />
+      </Group>
+    </Panel>
+  )
+}
+
+function CommentsTable({
+  reports,
+  onOpenProfile,
+  onStatusChange,
+}: {
+  reports: ReportedComment[]
+  onOpenProfile: (userId: string) => void
+  onStatusChange: (id: string, status: CommentReportStatus) => void
+}) {
+  return (
+    <Panel style={panelOverflowStyle}>
+      <Box px={20} py={14} style={panelHeaderStyle}>
+        <Group gap={6}>
+          <IconMessageReport size={14} color="#6b7280" />
+          <Text size="xs" c="#6b7280">
+            {reports.length} report{reports.length !== 1 ? 's' : ''} matching filters
+          </Text>
+        </Group>
+      </Box>
+
+      {reports.length === 0 ? (
+        <EmptyCommentsTable />
+      ) : (
+        <div style={tableScrollStyle}>
+          <table style={tableStyle}>
+            <TableHeaderRow columns={TABLE_COLUMNS} />
+            <tbody>
+              {reports.map((report, index) => (
+                <ReportRow
+                  key={report.id}
+                  report={report}
+                  isLast={index === reports.length - 1}
+                  onOpenProfile={onOpenProfile}
+                  onStatusChange={onStatusChange}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  )
+}
+
+function EmptyCommentsTable() {
+  return (
+    <Box py={60} style={emptyStateStyle}>
+      <IconMessageReport size={32} color="#374151" style={emptyIconStyle} />
+      <Text c="#4b5563" size="sm">
+        No reported comments match the current filters.
+      </Text>
+    </Box>
   )
 }
 
@@ -224,38 +391,15 @@ interface ReportRowProps {
 function ReportRow({ report, isLast, onOpenProfile, onStatusChange }: ReportRowProps) {
   return (
     <tr
-      style={{ borderBottom: isLast ? 'none' : '1px solid #1c2128' }}
+      style={rowStyle(isLast)}
       onMouseEnter={(e) => { e.currentTarget.style.background = '#1c2128' }}
       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
     >
-      <td style={{ padding: '16px 20px', maxWidth: 340 }}>
-        <Tooltip
-          label={report.commentContent}
-          multiline
-          w={340}
-          withArrow
-          disabled={report.commentContent.length <= 80}
-        >
-          <Text
-            size="sm"
-            c="#d1d5db"
-            lineClamp={2}
-            mb={4}
-            style={{ cursor: report.commentContent.length > 80 ? 'help' : 'default', wordBreak: 'break-word' }}
-          >
-            "{report.commentContent}"
-          </Text>
-        </Tooltip>
-        {report.reportText && (
-          <Box style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 6, padding: '5px 8px' }}>
-            <Text size="xs" c="#fca5a5" lineClamp={2} style={{ wordBreak: 'break-word' }}>
-              Report: {report.reportText}
-            </Text>
-          </Box>
-        )}
+      <td style={commentCellStyle}>
+        <CommentPreview report={report} />
       </td>
 
-      <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
+      <td style={userCellStyle}>
         <UserChip
           id={report.reportedUser.id}
           name={report.reportedUser.name}
@@ -266,7 +410,7 @@ function ReportRow({ report, isLast, onOpenProfile, onStatusChange }: ReportRowP
         />
       </td>
 
-      <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
+      <td style={userCellStyle}>
         <UserChip
           id={report.reporter.id}
           name={report.reporter.name}
@@ -277,33 +421,58 @@ function ReportRow({ report, isLast, onOpenProfile, onStatusChange }: ReportRowP
         />
       </td>
 
-      <td style={{ padding: '16px 20px' }}>
+      <td style={cellStyle}>
         <Badge color={reportReasonColor[report.reason]} variant="light" size="sm">
           {enumLabel(report.reason)}
         </Badge>
       </td>
 
-      <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
+      <td style={dateCellStyle}>
         <Text size="xs" c="#6b7280">{formatDate(report.date, { withTime: true })}</Text>
       </td>
 
-      <td style={{ padding: '16px 20px' }}>
+      <td style={cellStyle}>
         <Select
           size="xs"
           value={report.status}
-          data={STATUS_OPTIONS.map((s) => ({ value: s, label: enumLabel(s) }))}
-          styles={{
-            input: {
-              background: '#0f1117',
-              border: '1px solid #21262d',
-              color: `var(--mantine-color-${reportStatusColor[report.status]}-4)`,
-              fontWeight: 600,
-              fontSize: 11,
-            },
-          }}
+          data={statusSelectOptions}
+          styles={statusSelectStyles(report.status)}
           onChange={(val) => val && onStatusChange(report.id, val as CommentReportStatus)}
         />
       </td>
     </tr>
+  )
+}
+
+function CommentPreview({ report }: { report: ReportedComment }) {
+  const hasTooltip = report.commentContent.length > 80
+
+  return (
+    <>
+      <Tooltip
+        label={report.commentContent}
+        multiline
+        w={340}
+        withArrow
+        disabled={!hasTooltip}
+      >
+        <Text
+          size="sm"
+          c="#d1d5db"
+          lineClamp={2}
+          mb={4}
+          style={commentTextStyle(hasTooltip)}
+        >
+          "{report.commentContent}"
+        </Text>
+      </Tooltip>
+      {report.reportText && (
+        <Box style={reportTextBoxStyle}>
+          <Text size="xs" c="#fca5a5" lineClamp={2} style={breakWordStyle}>
+            Report: {report.reportText}
+          </Text>
+        </Box>
+      )}
+    </>
   )
 }
