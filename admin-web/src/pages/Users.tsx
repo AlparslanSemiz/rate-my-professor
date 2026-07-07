@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties, type KeyboardEvent } from 'react'
-import { Badge, TextInput, Group, Text, Loader, Center, SimpleGrid, Box } from '@mantine/core'
+import { Badge, TextInput, Group, Text, SimpleGrid, Box } from '@mantine/core'
 import {
   IconSearch,
   IconUsers,
@@ -10,6 +10,7 @@ import {
 import { usersService, type User } from '../api/UsersService'
 import UserProfileModal from '../components/UserProfileModal'
 import LoadError from '../components/LoadError'
+import PageLoader from '../components/PageLoader'
 import StatCard from '../components/StatCard'
 import Panel from '../components/Panel'
 import PageHeader from '../components/PageHeader'
@@ -18,6 +19,7 @@ import { roleColor, userStatusColor } from '../constants/colors'
 import { darkInputStyles } from '../constants/inputStyles'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
+import { getErrorMessage } from '../utils/getErrorMessage'
 import { useSearch } from '../hooks/useSearch'
 import type { UserChange } from '../hooks/useUserProfile'
 import { statGridCols } from '../constants/layout'
@@ -58,10 +60,6 @@ const userCellStyle: CSSProperties = {
 
 const dateTextStyle: CSSProperties = {
   whiteSpace: 'nowrap',
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
 }
 
 function matchesQuery(user: User, query: string) {
@@ -122,12 +120,7 @@ export default function Users() {
     }
   }
 
-  if (loading)
-    return (
-      <Center h={200}>
-        <Loader color="green" />
-      </Center>
-    )
+  if (loading) return <PageLoader />
 
   if (error) return <LoadError message={error} onRetry={retry} />
 

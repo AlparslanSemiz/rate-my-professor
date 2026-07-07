@@ -8,6 +8,7 @@ import { usersService, type User } from '../api/UsersService'
 import { apiClient } from '../api/ApiClient'
 import Panel from '../components/Panel'
 import { darkInputStyles } from '../constants/inputStyles'
+import { getErrorMessage } from '../utils/getErrorMessage'
 
 type Step = 'email' | 'code'
 
@@ -56,10 +57,6 @@ const submitButtonStyle: CSSProperties = {
 const loginInputStyles = {
   label: { color: '#9ca3af', fontSize: 13, marginBottom: 6 },
   input: { ...darkInputStyles.input, borderRadius: 8 },
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
 }
 
 function findUserByEmail(users: User[], email: string) {

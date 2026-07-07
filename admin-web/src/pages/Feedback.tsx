@@ -1,14 +1,16 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { Text, Badge, Box, SimpleGrid, Select, Group, Loader, Center } from '@mantine/core'
+import { Text, Badge, Box, SimpleGrid, Select, Group } from '@mantine/core'
 import { IconBug, IconAlertCircle, IconCircleCheck, IconClock } from '@tabler/icons-react'
 import { feedbackService, type BugReport, type ReportStatus } from '../api/FeedbackService'
 import StatCard from '../components/StatCard'
 import LoadError from '../components/LoadError'
+import PageLoader from '../components/PageLoader'
 import Panel from '../components/Panel'
 import PageHeader from '../components/PageHeader'
 import { severityColor, severityAccent, reportStatusColor } from '../constants/colors'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
+import { getErrorMessage } from '../utils/getErrorMessage'
 import { statGridCols } from '../constants/layout'
 
 const STATUS_OPTIONS: ReportStatus[] = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN']
@@ -46,10 +48,6 @@ const statusSelectStyles = {
   },
 }
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
-}
-
 function countByStatus(reports: BugReport[], status: ReportStatus) {
   return reports.filter((r) => r.status === status).length
 }
@@ -83,12 +81,7 @@ export default function FeedbackPage() {
     setReports((prev) => updateReportStatus(prev, id, status))
   }
 
-  if (loading)
-    return (
-      <Center h={200}>
-        <Loader color="green" />
-      </Center>
-    )
+  if (loading) return <PageLoader />
 
   if (error) return <LoadError message={error} onRetry={retry} />
 

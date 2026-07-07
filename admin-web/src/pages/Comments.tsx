@@ -5,8 +5,6 @@ import {
   Select,
   TextInput,
   Group,
-  Loader,
-  Center,
   Tooltip,
   Box,
   SimpleGrid,
@@ -27,6 +25,7 @@ import {
 } from '../api/CommentsService'
 import UserProfileModal from '../components/UserProfileModal'
 import LoadError from '../components/LoadError'
+import PageLoader from '../components/PageLoader'
 import StatCard from '../components/StatCard'
 import UserChip from '../components/UserChip'
 import Panel from '../components/Panel'
@@ -36,6 +35,7 @@ import { reportStatusColor, reportReasonColor } from '../constants/colors'
 import { darkInputStyles } from '../constants/inputStyles'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
+import { getErrorMessage } from '../utils/getErrorMessage'
 import { useSearch } from '../hooks/useSearch'
 import { statGridCols } from '../constants/layout'
 
@@ -152,10 +152,6 @@ function statusSelectStyles(status: CommentReportStatus) {
   }
 }
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
-}
-
 function matchesQuery(report: ReportedComment, query: string) {
   return (
     report.commentContent.toLowerCase().includes(query) ||
@@ -218,12 +214,7 @@ export default function CommentsPage() {
     setProfileOpen(true)
   }
 
-  if (loading)
-    return (
-      <Center h={200}>
-        <Loader color="green" />
-      </Center>
-    )
+  if (loading) return <PageLoader />
 
   if (error) return <LoadError message={error} onRetry={retry} />
 
