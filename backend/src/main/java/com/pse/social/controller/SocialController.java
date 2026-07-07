@@ -5,7 +5,6 @@ import com.pse.social.dto.request.AnswerReportRequest;
 import com.pse.social.dto.request.AnswerSubmitRequest;
 import com.pse.social.dto.request.CommentReportRequest;
 import com.pse.social.dto.request.CommentSubmitRequest;
-import com.pse.social.dto.response.AnswersResponse;
 import com.pse.social.dto.response.CommentsResponse;
 import com.pse.social.service.SocialService;
 import org.springframework.beans.factory.annotation.Autowired;

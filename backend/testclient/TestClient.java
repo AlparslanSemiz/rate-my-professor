@@ -21,8 +21,41 @@ public class TestClient {
 
     private static final HttpClient client = HttpClient.newHttpClient();
 
-    private static String authToken = "REDACTED";
+    private static String authToken = "REDACTED  ";
 
+
+
+    public static void main(String[] args) throws Exception {
+
+
+        sendBugReport();
+
+
+    }
+
+    public static void sendBugReport() throws Exception {
+
+        String json = """
+        {
+            "title": "Test Bug Report",
+            "description": "Das ist ein Test-Bugreport vom TestClient.",
+            "severity": "LOW"
+        }
+        """;
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(SERVER_IP + "/reports"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + authToken)
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+        HttpResponse<String> response =
+                client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        System.out.println("SEND BUG REPORT STATUS: " + response.statusCode());
+        System.out.println(response.body());
+    }
 
     /**
      * Requests all ratings of the currently logged-in user.
@@ -31,7 +64,7 @@ public class TestClient {
 
         String json = """
             {
-                "email": "u-kisi6@student.kit.edu"
+                "email": "uabcd@student.kit.edu"
             }
             """;
 
@@ -47,19 +80,6 @@ public class TestClient {
 
         System.out.println("RATINGS STATUS: " + response.statusCode());
         System.out.println(response.body());
-    }
-
-
-
-    public static void main(String[] args) throws Exception {
-
-        //requestLogin(); 
-        System.out.println();
-
-        login("u-kisi6@student.kit.edu", "679475");
-        System.out.println();
-
-        me();
     }
 
 
