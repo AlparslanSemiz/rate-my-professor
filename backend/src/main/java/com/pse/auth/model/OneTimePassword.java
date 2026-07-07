@@ -17,7 +17,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class OneTimePassword {
+public class    OneTimePassword {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
