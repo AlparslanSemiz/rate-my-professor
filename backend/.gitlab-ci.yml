@@ -11,8 +11,8 @@ stages:
 
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
-  IMAGE_TAG: "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
-
+  IMAGE_TAG: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+  
 default:
   cache:
     key: "maven-${CI_COMMIT_REF_SLUG}"
