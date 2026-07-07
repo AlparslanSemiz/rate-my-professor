@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { Badge, TextInput, Group, Text, Loader, Center, SimpleGrid, Box } from '@mantine/core'
 import {
   IconSearch,
@@ -22,7 +22,47 @@ import { useSearch } from '../hooks/useSearch'
 import type { UserChange } from '../hooks/useUserProfile'
 import { statGridCols } from '../constants/layout'
 
-const TABLE_COLUMNS = ['Name', 'Email', 'Role', 'Status', 'Warnings', 'Reports', 'Last seen', 'Joined']
+const TABLE_COLUMNS = ['Name', 'Email', 'Role', 'Status', 'Warnings', 'Reports', 'Last seen', 'Joined'] as const
+const LOAD_ERROR_MESSAGE = 'Failed to load users'
+
+const panelOverflowStyle: CSSProperties = {
+  overflow: 'hidden',
+}
+
+const panelHeaderStyle: CSSProperties = {
+  borderBottom: '1px solid #21262d',
+}
+
+const searchInputStyle: CSSProperties = {
+  flex: '1 1 240px',
+  maxWidth: 320,
+}
+
+const tableScrollStyle: CSSProperties = {
+  overflowX: 'auto',
+}
+
+const tableStyle: CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+}
+
+const emptyCellStyle: CSSProperties = {
+  padding: '40px 20px',
+  textAlign: 'center',
+}
+
+const userCellStyle: CSSProperties = {
+  padding: '13px 20px',
+}
+
+const dateTextStyle: CSSProperties = {
+  whiteSpace: 'nowrap',
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
 
 function matchesQuery(user: User, query: string) {
   return user.username.toLowerCase().includes(query) || user.kitEmail.toLowerCase().includes(query)
@@ -30,6 +70,10 @@ function matchesQuery(user: User, query: string) {
 
 function countByStatus(users: User[], status: User['status']) {
   return users.filter((u) => u.status === status).length
+}
+
+function updateUser(users: User[], id: string, update: (user: User) => User) {
+  return users.map((user) => (user.id === id ? update(user) : user))
 }
 
 export default function Users() {
@@ -45,7 +89,7 @@ export default function Users() {
     usersService
       .getAll()
       .then(setUsers)
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load users'))
+      .catch((err: unknown) => setError(getErrorMessage(err, LOAD_ERROR_MESSAGE)))
       .finally(() => setLoading(false))
   }, [reloadKey])
 
@@ -61,15 +105,20 @@ export default function Users() {
   }
 
   function handleUserChanged(id: string, change: UserChange) {
-    if (change === 'deleted') {
-      setUsers((prev) => prev.filter((u) => u.id !== id))
-      setProfileOpen(false)
-    } else if (change === 'blocked') {
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'BLOCKED' } : u)))
-    } else if (change === 'unblocked') {
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'ACTIVE' } : u)))
-    } else if (change === 'warned') {
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, warnings: u.warnings + 1 } : u)))
+    switch (change) {
+      case 'deleted':
+        setUsers((prev) => prev.filter((user) => user.id !== id))
+        setProfileOpen(false)
+        break
+      case 'blocked':
+        setUsers((prev) => updateUser(prev, id, (user) => ({ ...user, status: 'BLOCKED' })))
+        break
+      case 'unblocked':
+        setUsers((prev) => updateUser(prev, id, (user) => ({ ...user, status: 'ACTIVE' })))
+        break
+      case 'warned':
+        setUsers((prev) => updateUser(prev, id, (user) => ({ ...user, warnings: user.warnings + 1 })))
+        break
     }
   }
 
@@ -89,116 +138,15 @@ export default function Users() {
         description="Profile health, sessions and moderation status for all registered accounts."
       />
 
-      <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
-        <StatCard label="Total users" value={users.length} icon={IconUsers} accent="#3b82f6" />
-        <StatCard label="Active" value={countByStatus(users, 'ACTIVE')} icon={IconUserCheck} accent="#22c55e" />
-        <StatCard label="Admin accounts" value={users.filter((u) => u.role === 'ADMIN').length} icon={IconShieldCheck} accent="#f59e0b" />
-        <StatCard label="Blocked" value={countByStatus(users, 'BLOCKED')} icon={IconShieldOff} accent="#ef4444" />
-      </SimpleGrid>
+      <UsersStats users={users} />
 
-      <Panel style={{ overflow: 'hidden' }}>
-        <Box px={20} py={16} style={{ borderBottom: '1px solid #21262d' }}>
-          <Group justify="space-between">
-            <div>
-              <Text fw={600} c="#e2e8f0" size="sm">All users</Text>
-              <Text size="xs" c="#4b5563">
-                {filtered.length} of {users.length} accounts · click a row to view profile
-              </Text>
-            </div>
-            <TextInput
-              placeholder="Search by name or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ flex: '1 1 240px', maxWidth: 320 }}
-              size="sm"
-              aria-label="Search users"
-              leftSection={<IconSearch size={14} color="#6b7280" />}
-              styles={darkInputStyles}
-            />
-          </Group>
-        </Box>
-
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <TableHeaderRow columns={TABLE_COLUMNS} />
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={TABLE_COLUMNS.length} style={{ padding: '40px 20px', textAlign: 'center' }}>
-                    <Text c="#4b5563" size="sm">No users found</Text>
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((user, i) => (
-                  <tr
-                    key={user.id}
-                    style={{
-                      borderBottom: i < filtered.length - 1 ? '1px solid #1c2128' : 'none',
-                      cursor: 'pointer',
-                      transition: 'background 0.1s',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#1c2128' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-                    onClick={() => openProfile(user.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        openProfile(user.id)
-                      }
-                    }}
-                    tabIndex={0}
-                  >
-                    <td style={{ padding: '13px 20px' }}>
-                      <Text size="sm" fw={500} c="#e2e8f0">{user.username}</Text>
-                    </td>
-                    <td style={{ padding: '13px 20px' }}>
-                      <Text size="sm" c="#6b7280">{user.kitEmail}</Text>
-                    </td>
-                    <td style={{ padding: '13px 20px' }}>
-                      <Badge color={roleColor[user.role]} variant="light" size="sm">
-                        {enumLabel(user.role)}
-                      </Badge>
-                    </td>
-                    <td style={{ padding: '13px 20px' }}>
-                      <Badge color={userStatusColor[user.status]} variant="dot" size="sm">
-                        {enumLabel(user.status)}
-                      </Badge>
-                    </td>
-                    <td style={{ padding: '13px 20px' }}>
-                      {user.warnings > 0 ? (
-                        <Badge color="yellow" variant="light" size="sm">
-                          {user.warnings}
-                        </Badge>
-                      ) : (
-                        <Text size="xs" c="#374151">—</Text>
-                      )}
-                    </td>
-                    <td style={{ padding: '13px 20px' }}>
-                      {user.reports > 0 ? (
-                        <Badge color="red" variant="light" size="sm">
-                          {user.reports}
-                        </Badge>
-                      ) : (
-                        <Text size="xs" c="#374151">—</Text>
-                      )}
-                    </td>
-                    <td style={{ padding: '13px 20px' }}>
-                      <Text size="xs" c="#6b7280" style={{ whiteSpace: 'nowrap' }}>
-                        {formatDate(user.lastOnline)}
-                      </Text>
-                    </td>
-                    <td style={{ padding: '13px 20px' }}>
-                      <Text size="xs" c="#6b7280" style={{ whiteSpace: 'nowrap' }}>
-                        {formatDate(user.joined)}
-                      </Text>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Panel>
+      <UsersTable
+        users={users}
+        filteredUsers={filtered}
+        search={search}
+        onSearchChange={setSearch}
+        onOpenProfile={openProfile}
+      />
 
       <UserProfileModal
         userId={selectedUserId}
@@ -207,5 +155,170 @@ export default function Users() {
         onUserChanged={handleUserChanged}
       />
     </>
+  )
+}
+
+function UsersStats({ users }: { users: User[] }) {
+  const adminCount = users.filter((user) => user.role === 'ADMIN').length
+
+  return (
+    <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
+      <StatCard label="Total users" value={users.length} icon={IconUsers} accent="#3b82f6" />
+      <StatCard label="Active" value={countByStatus(users, 'ACTIVE')} icon={IconUserCheck} accent="#22c55e" />
+      <StatCard label="Admin accounts" value={adminCount} icon={IconShieldCheck} accent="#f59e0b" />
+      <StatCard label="Blocked" value={countByStatus(users, 'BLOCKED')} icon={IconShieldOff} accent="#ef4444" />
+    </SimpleGrid>
+  )
+}
+
+interface UsersTableProps {
+  users: User[]
+  filteredUsers: User[]
+  search: string
+  onSearchChange: (value: string) => void
+  onOpenProfile: (id: string) => void
+}
+
+function UsersTable({ users, filteredUsers, search, onSearchChange, onOpenProfile }: UsersTableProps) {
+  return (
+    <Panel style={panelOverflowStyle}>
+      <Box px={20} py={16} style={panelHeaderStyle}>
+        <Group justify="space-between">
+          <div>
+            <Text fw={600} c="#e2e8f0" size="sm">
+              All users
+            </Text>
+            <Text size="xs" c="#4b5563">
+              {filteredUsers.length} of {users.length} accounts · click a row to view profile
+            </Text>
+          </div>
+          <TextInput
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            style={searchInputStyle}
+            size="sm"
+            aria-label="Search users"
+            leftSection={<IconSearch size={14} color="#6b7280" />}
+            styles={darkInputStyles}
+          />
+        </Group>
+      </Box>
+
+      <div style={tableScrollStyle}>
+        <table style={tableStyle}>
+          <TableHeaderRow columns={TABLE_COLUMNS} />
+          <tbody>
+            {filteredUsers.length === 0 ? (
+              <EmptyUsersRow />
+            ) : (
+              filteredUsers.map((user, index) => (
+                <UserRow
+                  key={user.id}
+                  user={user}
+                  isLast={index === filteredUsers.length - 1}
+                  onOpenProfile={onOpenProfile}
+                />
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  )
+}
+
+function EmptyUsersRow() {
+  return (
+    <tr>
+      <td colSpan={TABLE_COLUMNS.length} style={emptyCellStyle}>
+        <Text c="#4b5563" size="sm">
+          No users found
+        </Text>
+      </td>
+    </tr>
+  )
+}
+
+function rowStyle(isLast: boolean): CSSProperties {
+  return {
+    borderBottom: isLast ? 'none' : '1px solid #1c2128',
+    cursor: 'pointer',
+    transition: 'background 0.1s',
+  }
+}
+
+function handleRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>, onOpen: () => void) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    onOpen()
+  }
+}
+
+function UserRow({ user, isLast, onOpenProfile }: { user: User; isLast: boolean; onOpenProfile: (id: string) => void }) {
+  const openProfile = () => onOpenProfile(user.id)
+
+  return (
+    <tr
+      style={rowStyle(isLast)}
+      onMouseEnter={(event) => { event.currentTarget.style.background = '#1c2128' }}
+      onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent' }}
+      onClick={openProfile}
+      onKeyDown={(event) => handleRowKeyDown(event, openProfile)}
+      tabIndex={0}
+    >
+      <td style={userCellStyle}>
+        <Text size="sm" fw={500} c="#e2e8f0">
+          {user.username}
+        </Text>
+      </td>
+      <td style={userCellStyle}>
+        <Text size="sm" c="#6b7280">
+          {user.kitEmail}
+        </Text>
+      </td>
+      <td style={userCellStyle}>
+        <Badge color={roleColor[user.role]} variant="light" size="sm">
+          {enumLabel(user.role)}
+        </Badge>
+      </td>
+      <td style={userCellStyle}>
+        <Badge color={userStatusColor[user.status]} variant="dot" size="sm">
+          {enumLabel(user.status)}
+        </Badge>
+      </td>
+      <td style={userCellStyle}>
+        <CountBadge value={user.warnings} color="yellow" />
+      </td>
+      <td style={userCellStyle}>
+        <CountBadge value={user.reports} color="red" />
+      </td>
+      <td style={userCellStyle}>
+        <Text size="xs" c="#6b7280" style={dateTextStyle}>
+          {formatDate(user.lastOnline)}
+        </Text>
+      </td>
+      <td style={userCellStyle}>
+        <Text size="xs" c="#6b7280" style={dateTextStyle}>
+          {formatDate(user.joined)}
+        </Text>
+      </td>
+    </tr>
+  )
+}
+
+function CountBadge({ value, color }: { value: number; color: string }) {
+  if (value <= 0) {
+    return (
+      <Text size="xs" c="#374151">
+        —
+      </Text>
+    )
+  }
+
+  return (
+    <Badge color={color} variant="light" size="sm">
+      {value}
+    </Badge>
   )
 }
