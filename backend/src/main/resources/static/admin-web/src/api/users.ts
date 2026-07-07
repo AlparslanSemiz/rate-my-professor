@@ -22,5 +22,6 @@ export async function getUsers(): Promise<User[]> {
 }
 
 export async function deleteUser(id: number): Promise<void> {
+  void id
   await new Promise((r) => setTimeout(r, 300))
 }

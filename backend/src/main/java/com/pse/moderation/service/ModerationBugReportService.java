@@ -1,11 +1,15 @@
 package com.pse.moderation.service;
 
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.service.AuthService;
+import com.pse.moderation.dto.request.BugReportRequest;
+import com.pse.moderation.dto.request.UpdateStatusRequest;
 import com.pse.moderation.dto.response.BugReportResponse;
 import com.pse.moderation.dto.response.BugReportsResponse;
 import com.pse.moderation.model.BugReport;
 import com.pse.moderation.repository.BugReportRepository;
 import com.pse.shared.enums.ReportStatus;
+import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +25,9 @@ public class ModerationBugReportService {
     private ModerationUserService moderationUserService;
     @Autowired
     private BugReportRepository bugReportRepository;
+
+    @Autowired
+    private AuthService authService;
 
 
     public BugReportsResponse getAllReports(String authHeader) {
@@ -63,5 +70,27 @@ public class ModerationBugReportService {
         bugReport.setStatus(status);
         bugReportRepository.save(bugReport);
         return new BasicResponse("Successfully updated BugReport", true);
+    }
+
+    public BasicResponse sendBugReport(String authHeader, BugReportRequest request) {
+
+
+        Student student = authService.verifyUser(authHeader);
+
+        if(student == null) {
+            return new BasicResponse("Error, couldnt find Student", false);
+        }
+
+        BugReport bugReport = new BugReport();
+        bugReport.setTitle(request.title());
+        bugReport.setDescription(request.description());
+        bugReport.setSeverity(request.severity());
+        bugReport.setReporter(student);
+
+
+        bugReportRepository.save(bugReport);
+
+        return new BasicResponse("Successfully sent BugReport", true);
+
     }
 }
