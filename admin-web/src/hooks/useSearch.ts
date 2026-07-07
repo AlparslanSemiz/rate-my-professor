@@ -1,10 +1,14 @@
 import { useMemo, useState } from 'react'
 
+function normalizeSearchQuery(value: string) {
+  return value.trim().toLowerCase()
+}
+
 export function useSearch<T>(items: T[], matches: (item: T, query: string) => boolean) {
   const [search, setSearch] = useState('')
 
   const filtered = useMemo(() => {
-    const query = search.toLowerCase().trim()
+    const query = normalizeSearchQuery(search)
     if (!query) return items
     return items.filter((item) => matches(item, query))
   }, [items, search, matches])

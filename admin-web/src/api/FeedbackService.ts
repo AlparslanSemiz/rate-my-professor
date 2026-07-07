@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient } from './ApiClient'
+import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
 
 export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 export type ReportStatus = 'OPEN' | 'REVIEWED' | 'DISMISSED' | 'ACTION_TAKEN'
@@ -11,11 +11,6 @@ export interface BugReport {
   status: ReportStatus
   reporterName: string
   reportedAt: string
-}
-
-interface BasicResponse {
-  message: string
-  success: boolean
 }
 
 interface BugReportsResponse extends BasicResponse {

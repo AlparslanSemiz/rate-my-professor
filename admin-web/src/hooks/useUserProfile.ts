@@ -10,6 +10,10 @@ interface LoadedProfile {
   warnings: Warning[]
 }
 
+function emptyProfile(userId: string): LoadedProfile {
+  return { userId, user: null, warnings: [] }
+}
+
 export function useUserProfile(
   userId: string | null,
   opened: boolean,
@@ -26,18 +30,26 @@ export function useUserProfile(
 
   useEffect(() => {
     if (!opened || userId === null) return
+    const requestedUserId = userId
     let canceled = false
 
-    Promise.all([usersService.getById(userId), usersService.getWarnings(userId)])
-      .then(([u, w]) => {
+    async function loadProfile() {
+      try {
+        const [loadedUser, loadedWarnings] = await Promise.all([
+          usersService.getById(requestedUserId),
+          usersService.getWarnings(requestedUserId),
+        ])
+
         if (canceled) return
-        setProfile({ userId, user: u ?? null, warnings: w })
-      })
-      .catch(() => {
+        setProfile({ userId: requestedUserId, user: loadedUser ?? null, warnings: loadedWarnings })
+      } catch {
         // Surface the "User not found" state instead of an endless spinner.
         if (canceled) return
-        setProfile({ userId, user: null, warnings: [] })
-      })
+        setProfile(emptyProfile(requestedUserId))
+      }
+    }
+
+    void loadProfile()
 
     return () => {
       canceled = true
@@ -48,37 +60,47 @@ export function useUserProfile(
     setProfile(null)
   }
 
+  function updateLoadedUser(id: string, update: (user: User) => User, nextWarnings?: Warning[]) {
+    setProfile((prev) => {
+      if (!prev?.user || prev.user.id !== id) return prev
+
+      return {
+        ...prev,
+        user: update(prev.user),
+        warnings: nextWarnings ?? prev.warnings,
+      }
+    })
+  }
+
   async function warn(message: string) {
-    if (!user || !message.trim() || !currentAdmin) return
+    const trimmedMessage = message.trim()
+    if (!user || !trimmedMessage || !currentAdmin) return
+
     setWarnLoading(true)
-    await usersService.warn(user.id, message.trim(), currentAdmin.id)
-    const refreshedWarnings = await usersService.getWarnings(user.id)
-    setProfile((prev) => prev && prev.user?.id === user.id ? {
-      ...prev,
-      user: { ...prev.user, warnings: prev.user.warnings + 1 },
-      warnings: refreshedWarnings,
-    } : prev)
-    setWarnLoading(false)
-    onUserChanged?.(user.id, 'warned')
+    try {
+      await usersService.warn(user.id, trimmedMessage, currentAdmin.id)
+      const refreshedWarnings = await usersService.getWarnings(user.id)
+      updateLoadedUser(user.id, (currentUser) => ({
+        ...currentUser,
+        warnings: currentUser.warnings + 1,
+      }), refreshedWarnings)
+      onUserChanged?.(user.id, 'warned')
+    } finally {
+      setWarnLoading(false)
+    }
   }
 
   async function block() {
     if (!user) return
     await usersService.block(user.id)
-    setProfile((prev) => prev && prev.user?.id === user.id ? {
-      ...prev,
-      user: { ...prev.user, status: 'BLOCKED' },
-    } : prev)
+    updateLoadedUser(user.id, (currentUser) => ({ ...currentUser, status: 'BLOCKED' }))
     onUserChanged?.(user.id, 'blocked')
   }
 
   async function unblock() {
     if (!user) return
     await usersService.unblock(user.id)
-    setProfile((prev) => prev && prev.user?.id === user.id ? {
-      ...prev,
-      user: { ...prev.user, status: 'ACTIVE' },
-    } : prev)
+    updateLoadedUser(user.id, (currentUser) => ({ ...currentUser, status: 'ACTIVE' }))
     onUserChanged?.(user.id, 'unblocked')
   }
 

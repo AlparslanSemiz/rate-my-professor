@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient } from './ApiClient'
+import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
 import type { UserRole, UserStatus } from './UsersService'
 
 export type CommentReportStatus = 'OPEN' | 'REVIEWED' | 'DISMISSED' | 'ACTION_TAKEN'
@@ -30,11 +30,6 @@ export interface ReportedComment {
   reason: ReportReason
   status: CommentReportStatus
   date: string
-}
-
-interface BasicResponse {
-  message: string
-  success: boolean
 }
 
 interface ReportedCommentsResponse extends BasicResponse {

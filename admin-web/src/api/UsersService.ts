@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient } from './ApiClient'
+import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
 
 export type UserRole = 'STUDENT' | 'ADMIN'
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED' | 'DELETED'
@@ -21,11 +21,6 @@ export interface User {
   biography: string
   warnings: number
   reports: number
-}
-
-interface BasicResponse {
-  message: string
-  success: boolean
 }
 
 interface UserListResponse extends BasicResponse {

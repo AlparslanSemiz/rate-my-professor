@@ -1,15 +1,10 @@
-import { apiClient, type ApiClient } from './ApiClient'
+import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
 
 export interface AuthUser {
   id: string
   name: string
   email: string
   role: string
-}
-
-interface BasicResponse {
-  message: string
-  success: boolean
 }
 
 interface LoginResponse extends BasicResponse {

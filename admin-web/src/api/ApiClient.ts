@@ -1,11 +1,22 @@
+export interface BasicResponse {
+  message: string
+  success: boolean
+}
+
 export class ApiError extends Error {
   readonly status: number
 
   constructor(status: number, message: string) {
     super(message)
+    this.name = 'ApiError'
     this.status = status
   }
 }
+
+type QueryMethod = 'POST' | 'PATCH'
+
+const DEFAULT_API_BASE_URL = 'http://localhost:8080'
+const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Check your connection and try again.'
 
 export class ApiClient {
   private readonly baseUrl: string
@@ -41,20 +52,16 @@ export class ApiClient {
    * Sends `params` as a query string with no body, matching backend endpoints whose
    * parameters aren't annotated with @RequestBody and so are bound from the query string.
    */
-  async withQueryParams<T>(method: 'POST' | 'PATCH', path: string, params: Record<string, string>): Promise<T> {
-    const query = new URLSearchParams(params).toString()
-    return this.request<T>(`${path}?${query}`, { method })
+  async withQueryParams<T>(method: QueryMethod, path: string, params: Record<string, string>): Promise<T> {
+    return this.request<T>(this.withQueryString(path, params), { method })
   }
 
   private async request<T>(path: string, init: RequestInit): Promise<T> {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (this.token) headers.Authorization = `Bearer ${this.token}`
-
     let response: Response
     try {
-      response = await fetch(`${this.baseUrl}${path}`, { ...init, headers })
+      response = await fetch(`${this.baseUrl}${path}`, { ...init, headers: this.headers() })
     } catch {
-      throw new ApiError(0, 'Could not reach the server. Check your connection and try again.')
+      throw new ApiError(0, NETWORK_ERROR_MESSAGE)
     }
 
     if (response.status === 401 && this.token) {
@@ -67,6 +74,17 @@ export class ApiClient {
 
     if (response.status === 204) return undefined as T
     return (await response.json()) as T
+  }
+
+  private headers(): Record<string, string> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (this.token) headers.Authorization = `Bearer ${this.token}`
+    return headers
+  }
+
+  private withQueryString(path: string, params: Record<string, string>): string {
+    const query = new URLSearchParams(params).toString()
+    return query ? `${path}?${query}` : path
   }
 
   private async extractErrorMessage(response: Response, path: string): Promise<string> {
@@ -82,4 +100,4 @@ export class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080')
+export const apiClient = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL)
