@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Text, Box, SimpleGrid, Group, Badge, Progress } from '@mantine/core'
 import {
   IconUsers,
@@ -17,6 +17,13 @@ import { roleColor } from '../constants/colors'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
 import { moduleGridCols, statGridCols, twoColumnGridCols } from '../constants/layout'
+
+interface DashboardStats {
+  total: number
+  active: number
+  admins: number
+  openReports: number
+}
 
 const MODULES = [
   {
@@ -42,7 +49,92 @@ const MODULES = [
   },
 ]
 
-function useUserStats() {
+const pageTitleStyle: CSSProperties = {
+  fontSize: 32,
+  lineHeight: 1.1,
+}
+
+const heroStyle: CSSProperties = {
+  background: 'linear-gradient(135deg, #0d1b12 0%, #111318 60%, #0f1117 100%)',
+  border: '1px solid #1e2028',
+  borderRadius: 14,
+  padding: '28px 32px',
+  position: 'relative',
+  overflow: 'hidden',
+}
+
+const heroGlowStyle: CSSProperties = {
+  position: 'absolute',
+  top: -40,
+  right: -40,
+  width: 200,
+  height: 200,
+  borderRadius: '50%',
+  background: 'radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 70%)',
+}
+
+const heroBadgeStyle: CSSProperties = {
+  background: 'rgba(34,197,94,0.1)',
+  color: '#22c55e',
+  borderColor: 'rgba(34,197,94,0.2)',
+  marginBottom: 14,
+  fontWeight: 600,
+  letterSpacing: '0.06em',
+}
+
+const heroTitleStyle: CSSProperties = {
+  fontSize: 22,
+  lineHeight: 1.2,
+}
+
+const heroMetricStyle: CSSProperties = {
+  background: 'rgba(255,255,255,0.03)',
+  border: '1px solid #1e2028',
+  borderRadius: 10,
+  padding: '14px 16px',
+}
+
+const panelPaddingStyle: CSSProperties = {
+  padding: '20px 24px',
+}
+
+const viewAllStyle: CSSProperties = {
+  cursor: 'pointer',
+}
+
+const emptyRegistrationsStyle: CSSProperties = {
+  textAlign: 'center',
+}
+
+const registrationRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+}
+
+const registrationTextStyle: CSSProperties = {
+  minWidth: 0,
+}
+
+function countOpenReports(reports: { status: string }[]) {
+  return reports.filter((report) => report.status === 'OPEN').length
+}
+
+function calculateDashboardStats(users: User[], openReports: number): DashboardStats {
+  return {
+    total: users.length,
+    active: users.filter((user) => user.status === 'ACTIVE').length,
+    admins: users.filter((user) => user.role === 'ADMIN').length,
+    openReports,
+  }
+}
+
+function activeRate({ total, active }: DashboardStats) {
+  return total ? Math.round((active / total) * 100) : 0
+}
+
+function useDashboardData() {
   const [users, setUsers] = useState<User[]>([])
   const [openReports, setOpenReports] = useState(0)
 
@@ -52,24 +144,39 @@ function useUserStats() {
     usersService.getAll().then(setUsers).catch(() => {})
     feedbackService
       .getReports()
-      .then((reports) => setOpenReports(reports.filter((r) => r.status === 'OPEN').length))
+      .then((reports) => setOpenReports(countOpenReports(reports)))
       .catch(() => {})
   }, [])
 
-  const total = users.length
-  const active = users.filter((u) => u.status === 'ACTIVE').length
-  const admins = users.filter((u) => u.role === 'ADMIN').length
-
-  return { users, total, active, admins, openReports }
+  return { users, stats: calculateDashboardStats(users, openReports) }
 }
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { users, total, active, admins, openReports } = useUserStats()
-  const activeRate = total ? Math.round((active / total) * 100) : 0
+  const { users, stats } = useDashboardData()
+  const activePercentage = activeRate(stats)
 
   return (
     <div>
+      <DashboardHeader />
+
+      <OverviewHero activeRate={activePercentage} />
+
+      <DashboardStatGrid stats={stats} />
+
+      <SimpleGrid cols={twoColumnGridCols} spacing={16} mb={28}>
+        <SystemPulse activeRate={activePercentage} />
+        <RecentRegistrations users={users} onViewAll={() => navigate('/users')} />
+      </SimpleGrid>
+
+      <ModuleNavigation onNavigate={navigate} />
+    </div>
+  )
+}
+
+function DashboardHeader() {
+  return (
+    <>
       <Group gap={6} mb={24}>
         <IconRefresh size={14} color="#4b5563" />
         <Text size="xs" c="#4b5563">
@@ -77,41 +184,24 @@ export default function Dashboard() {
         </Text>
       </Group>
 
-      <Text fw={700} c="#f1f5f9" mb={4} style={{ fontSize: 32, lineHeight: 1.1 }}>
+      <Text fw={700} c="#f1f5f9" mb={4} style={pageTitleStyle}>
         Dashboard
       </Text>
       <Text size="sm" c="#6b7280" mb={32}>
         Live user activity, moderation queue and system health at a glance.
       </Text>
+    </>
+  )
+}
 
-      <OverviewHero activeRate={activeRate} />
-
-      <SimpleGrid cols={statGridCols} spacing={16} mb={28}>
-        <StatCardDetailed label="Total users" value={total} sub={`${active} active`} icon={IconUsers} accent="#3b82f6" />
-        <StatCardDetailed label="Active users" value={active} sub="Currently active" icon={IconUserCheck} accent="#22c55e" />
-        <StatCardDetailed label="Admin accounts" value={admins} sub="Privileged accounts" icon={IconShieldCheck} accent="#f59e0b" />
-        <StatCardDetailed label="Open reports" value={openReports} sub="Bug reports open" icon={IconBug} accent="#f97316" />
-      </SimpleGrid>
-
-      <SimpleGrid cols={twoColumnGridCols} spacing={16} mb={28}>
-        <SystemPulse activeRate={activeRate} />
-        <RecentRegistrations users={users} onViewAll={() => navigate('/users')} />
-      </SimpleGrid>
-
-      <Box mb={8}>
-        <Text fw={600} c="#e2e8f0" mb={4} size="sm">
-          Modules
-        </Text>
-        <Text size="xs" c="#6b7280" mb={16}>
-          Quick navigation to all admin sections.
-        </Text>
-        <SimpleGrid cols={moduleGridCols} spacing={16}>
-          {MODULES.map((m) => (
-            <ModuleCard key={m.path} {...m} onClick={navigate} />
-          ))}
-        </SimpleGrid>
-      </Box>
-    </div>
+function DashboardStatGrid({ stats }: { stats: DashboardStats }) {
+  return (
+    <SimpleGrid cols={statGridCols} spacing={16} mb={28}>
+      <StatCardDetailed label="Total users" value={stats.total} sub={`${stats.active} active`} icon={IconUsers} accent="#3b82f6" />
+      <StatCardDetailed label="Active users" value={stats.active} sub="Currently active" icon={IconUserCheck} accent="#22c55e" />
+      <StatCardDetailed label="Admin accounts" value={stats.admins} sub="Privileged accounts" icon={IconShieldCheck} accent="#f59e0b" />
+      <StatCardDetailed label="Open reports" value={stats.openReports} sub="Bug reports open" icon={IconBug} accent="#f97316" />
+    </SimpleGrid>
   )
 }
 
@@ -123,43 +213,16 @@ function OverviewHero({ activeRate }: { activeRate: number }) {
   ]
 
   return (
-    <Box
-      mb={28}
-      style={{
-        background: 'linear-gradient(135deg, #0d1b12 0%, #111318 60%, #0f1117 100%)',
-        border: '1px solid #1e2028',
-        borderRadius: 14,
-        padding: '28px 32px',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      <Box
-        style={{
-          position: 'absolute',
-          top: -40,
-          right: -40,
-          width: 200,
-          height: 200,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 70%)',
-        }}
-      />
+    <Box mb={28} style={heroStyle}>
+      <Box style={heroGlowStyle} />
       <Badge
         size="sm"
         variant="light"
-        style={{
-          background: 'rgba(34,197,94,0.1)',
-          color: '#22c55e',
-          borderColor: 'rgba(34,197,94,0.2)',
-          marginBottom: 14,
-          fontWeight: 600,
-          letterSpacing: '0.06em',
-        }}
+        style={heroBadgeStyle}
       >
         TODAY'S OPERATION OVERVIEW
       </Badge>
-      <Text fw={700} c="#f1f5f9" mb={6} style={{ fontSize: 22, lineHeight: 1.2 }}>
+      <Text fw={700} c="#f1f5f9" mb={6} style={heroTitleStyle}>
         Users, moderation and system health — one panel.
       </Text>
       <Text size="sm" c="#6b7280" mb={24}>
@@ -170,12 +233,7 @@ function OverviewHero({ activeRate }: { activeRate: number }) {
         {metrics.map((m) => (
           <Box
             key={m.label}
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid #1e2028',
-              borderRadius: 10,
-              padding: '14px 16px',
-            }}
+            style={heroMetricStyle}
           >
             <Text size="xs" c="#6b7280" mb={4}>
               {m.label}
@@ -198,7 +256,7 @@ function SystemPulse({ activeRate }: { activeRate: number }) {
   ]
 
   return (
-    <Panel style={{ padding: '20px 24px' }}>
+    <Panel style={panelPaddingStyle}>
       <Text fw={600} c="#e2e8f0" mb={4} size="sm">
         System pulse
       </Text>
@@ -224,12 +282,12 @@ function SystemPulse({ activeRate }: { activeRate: number }) {
 
 function RecentRegistrations({ users, onViewAll }: { users: User[]; onViewAll: () => void }) {
   return (
-    <Panel style={{ padding: '20px 24px' }}>
+    <Panel style={panelPaddingStyle}>
       <Group justify="space-between" mb={4}>
         <Text fw={600} c="#e2e8f0" size="sm">
           Recent registrations
         </Text>
-        <Text size="xs" c="#22c55e" style={{ cursor: 'pointer' }} onClick={onViewAll}>
+        <Text size="xs" c="#22c55e" style={viewAllStyle} onClick={onViewAll}>
           View all →
         </Text>
       </Group>
@@ -237,15 +295,15 @@ function RecentRegistrations({ users, onViewAll }: { users: User[]; onViewAll: (
         Latest joined accounts.
       </Text>
       {users.length === 0 ? (
-        <Box py={18} style={{ textAlign: 'center' }}>
+        <Box py={18} style={emptyRegistrationsStyle}>
           <Text size="sm" c="#4b5563">
             No registrations loaded yet.
           </Text>
         </Box>
       ) : (
         users.slice(0, 4).map((u) => (
-          <Box key={u.id} mb={12} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <div style={{ minWidth: 0 }}>
+          <Box key={u.id} mb={12} style={registrationRowStyle}>
+            <div style={registrationTextStyle}>
               <Text size="sm" fw={500} c="#d1d5db" truncate>
                 {u.username}
               </Text>
@@ -260,5 +318,23 @@ function RecentRegistrations({ users, onViewAll }: { users: User[]; onViewAll: (
         ))
       )}
     </Panel>
+  )
+}
+
+function ModuleNavigation({ onNavigate }: { onNavigate: (path: string) => void }) {
+  return (
+    <Box mb={8}>
+      <Text fw={600} c="#e2e8f0" mb={4} size="sm">
+        Modules
+      </Text>
+      <Text size="xs" c="#6b7280" mb={16}>
+        Quick navigation to all admin sections.
+      </Text>
+      <SimpleGrid cols={moduleGridCols} spacing={16}>
+        {MODULES.map((module) => (
+          <ModuleCard key={module.path} {...module} onClick={onNavigate} />
+        ))}
+      </SimpleGrid>
+    </Box>
   )
 }
