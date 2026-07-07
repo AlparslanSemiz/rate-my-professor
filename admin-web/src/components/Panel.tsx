@@ -1,11 +1,15 @@
 import { Box, type BoxProps } from '@mantine/core'
-import type { ReactNode } from 'react'
+import type { AriaRole, KeyboardEventHandler, MouseEventHandler, ReactNode } from 'react'
 
 type PanelProps = BoxProps & {
   children?: ReactNode
-  onClick?: () => void
-  onMouseEnter?: React.MouseEventHandler<HTMLDivElement>
-  onMouseLeave?: React.MouseEventHandler<HTMLDivElement>
+  onClick?: MouseEventHandler<HTMLDivElement>
+  onMouseEnter?: MouseEventHandler<HTMLDivElement>
+  onMouseLeave?: MouseEventHandler<HTMLDivElement>
+  onKeyDown?: KeyboardEventHandler<HTMLDivElement>
+  role?: AriaRole
+  tabIndex?: number
+  'aria-label'?: string
 }
 
 export default function Panel({ style, ...rest }: PanelProps) {

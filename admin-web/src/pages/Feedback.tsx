@@ -9,6 +9,7 @@ import PageHeader from '../components/PageHeader'
 import { severityColor, severityAccent, reportStatusColor } from '../constants/colors'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
+import { statGridCols } from '../constants/layout'
 
 const STATUS_OPTIONS: ReportStatus[] = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN']
 
@@ -57,7 +58,7 @@ export default function FeedbackPage() {
         description="User-submitted bug forms, screenshots, device info and automatic crash logs."
       />
 
-      <SimpleGrid cols={4} spacing={14} mb={28}>
+      <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
         <StatCard label="Total reports" value={reports.length} icon={IconBug} accent="#f97316" />
         <StatCard label="Open" value={countByStatus(reports, 'OPEN')} icon={IconAlertCircle} accent="#ef4444" />
         <StatCard label="Reviewed" value={countByStatus(reports, 'REVIEWED')} icon={IconClock} accent="#3b82f6" />

@@ -26,7 +26,7 @@ export default function AdminLayout() {
         <Sidebar />
       </AppShell.Navbar>
       <AppShell.Main>
-        <div style={{ padding: '32px 32px 32px 32px', minHeight: '100vh' }}>
+        <div style={{ padding: 'clamp(16px, 4vw, 32px)', minHeight: '100vh' }}>
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/users" element={<Users />} />

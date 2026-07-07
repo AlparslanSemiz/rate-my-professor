@@ -12,9 +12,24 @@ interface ModuleCardProps {
 }
 
 export default function ModuleCard({ label, title, description, accent, path, onClick }: ModuleCardProps) {
+  function openModule() {
+    onClick(path)
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      openModule()
+    }
+  }
+
   return (
     <Panel
-      onClick={() => onClick(path)}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${title}`}
+      onClick={openModule}
+      onKeyDown={handleKeyDown}
       style={{
         padding: '18px 20px',
         cursor: 'pointer',

@@ -20,6 +20,7 @@ import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
 import { useSearch } from '../hooks/useSearch'
 import type { UserChange } from '../hooks/useUserProfile'
+import { statGridCols } from '../constants/layout'
 
 const TABLE_COLUMNS = ['Name', 'Email', 'Role', 'Status', 'Warnings', 'Reports', 'Last seen', 'Joined']
 
@@ -88,7 +89,7 @@ export default function Users() {
         description="Profile health, sessions and moderation status for all registered accounts."
       />
 
-      <SimpleGrid cols={4} spacing={14} mb={28}>
+      <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
         <StatCard label="Total users" value={users.length} icon={IconUsers} accent="#3b82f6" />
         <StatCard label="Active" value={countByStatus(users, 'ACTIVE')} icon={IconUserCheck} accent="#22c55e" />
         <StatCard label="Admin accounts" value={users.filter((u) => u.role === 'ADMIN').length} icon={IconShieldCheck} accent="#f59e0b" />
@@ -108,8 +109,9 @@ export default function Users() {
               placeholder="Search by name or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              w={260}
+              style={{ flex: '1 1 240px', maxWidth: 320 }}
               size="sm"
+              aria-label="Search users"
               leftSection={<IconSearch size={14} color="#6b7280" />}
               styles={darkInputStyles}
             />
@@ -138,6 +140,13 @@ export default function Users() {
                     onMouseEnter={(e) => { e.currentTarget.style.background = '#1c2128' }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                     onClick={() => openProfile(user.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        openProfile(user.id)
+                      }
+                    }}
+                    tabIndex={0}
                   >
                     <td style={{ padding: '13px 20px' }}>
                       <Text size="sm" fw={500} c="#e2e8f0">{user.username}</Text>

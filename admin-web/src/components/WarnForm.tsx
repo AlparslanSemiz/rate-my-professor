@@ -13,7 +13,7 @@ export default function WarnForm({ userName, loading, onCancel, onSubmit }: Warn
   const [message, setMessage] = useState('')
 
   async function handleSubmit() {
-    await onSubmit(message)
+    await onSubmit(message.trim())
     setMessage('')
   }
 

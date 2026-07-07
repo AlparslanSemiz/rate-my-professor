@@ -2,6 +2,20 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthUser } from './AuthContextValue'
 import { apiClient } from '../api/ApiClient'
 
+function readStoredUser(): AuthUser | null {
+  const stored = localStorage.getItem('user')
+  if (!stored) return null
+
+  try {
+    return JSON.parse(stored) as AuthUser
+  } catch {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    apiClient.setToken(null)
+    return null
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => {
     // Set the token on the client synchronously: child effects run before this
@@ -11,10 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     apiClient.setToken(stored)
     return stored
   })
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    const stored = localStorage.getItem('user')
-    return stored ? JSON.parse(stored) : null
-  })
+  const [user, setUser] = useState<AuthUser | null>(readStoredUser)
 
   function login(newToken: string, newUser: AuthUser) {
     localStorage.setItem('token', newToken)
@@ -39,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token && !!user }}>
       {children}
     </AuthContext.Provider>
   )

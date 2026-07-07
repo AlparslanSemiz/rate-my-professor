@@ -37,6 +37,7 @@ import { darkInputStyles } from '../constants/inputStyles'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
 import { useSearch } from '../hooks/useSearch'
+import { statGridCols } from '../constants/layout'
 
 const ALL = 'All'
 const STATUS_OPTIONS: CommentReportStatus[] = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN']
@@ -127,7 +128,7 @@ export default function CommentsPage() {
         description="User-flagged comments awaiting moderation. Click a user name to view their profile."
       />
 
-      <SimpleGrid cols={4} spacing={14} mb={28}>
+      <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
         <StatCard label="Open" value={countByStatus(reports, 'OPEN')} icon={IconClock} accent="#f97316" />
         <StatCard label="Reviewed" value={countByStatus(reports, 'REVIEWED')} icon={IconEye} accent="#3b82f6" />
         <StatCard label="Dismissed" value={countByStatus(reports, 'DISMISSED')} icon={IconX} accent="#6b7280" />
@@ -143,6 +144,7 @@ export default function CommentsPage() {
             leftSection={<IconSearch size={14} color="#6b7280" />}
             style={{ flex: 1, minWidth: 200 }}
             size="sm"
+            aria-label="Search reported comments"
             styles={darkInputStyles}
           />
           <Select

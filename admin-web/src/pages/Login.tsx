@@ -23,11 +23,15 @@ export default function Login() {
 
   async function handleRequestCode(e: React.FormEvent) {
     e.preventDefault()
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) return
+
     setError('')
     setLoading(true)
     try {
-      const response = await authService.requestLoginCode(email)
+      const response = await authService.requestLoginCode(trimmedEmail)
       if (!response.success) throw new Error(response.message)
+      setEmail(trimmedEmail)
       setStep('code')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not send login code')
@@ -38,13 +42,17 @@ export default function Login() {
 
   async function handleVerifyCode(e: React.FormEvent) {
     e.preventDefault()
+    const trimmedEmail = email.trim()
+    const trimmedCode = code.trim()
+    if (!trimmedEmail || !trimmedCode) return
+
     setError('')
     setLoading(true)
     try {
-      const { token } = await authService.login(email, code)
+      const { token } = await authService.login(trimmedEmail, trimmedCode)
       apiClient.setToken(token)
       const users = await usersService.getAll()
-      const currentUser = users.find((u) => u.kitEmail.toLowerCase() === email.toLowerCase())
+      const currentUser = users.find((u) => u.kitEmail.toLowerCase() === trimmedEmail.toLowerCase())
       if (!currentUser) throw new Error('Logged in, but could not find your admin account')
 
       login(token, { id: currentUser.id, name: currentUser.username, email: currentUser.kitEmail, role: currentUser.role })
@@ -119,6 +127,9 @@ export default function Login() {
               <TextInput
                 label="Email"
                 placeholder="admin@student.kit.edu"
+                type="email"
+                autoComplete="email"
+                autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -127,7 +138,7 @@ export default function Login() {
                   input: { ...darkInputStyles.input, borderRadius: 8 },
                 }}
               />
-              <Button type="submit" fullWidth mt={6} loading={loading} color="green" radius="md" style={{ fontWeight: 600 }}>
+              <Button type="submit" fullWidth mt={6} loading={loading} disabled={!email.trim()} color="green" radius="md" style={{ fontWeight: 600 }}>
                 Send login code
               </Button>
             </Stack>
@@ -138,6 +149,8 @@ export default function Login() {
               <TextInput
                 label="Login code"
                 placeholder="Code from your email"
+                autoComplete="one-time-code"
+                autoFocus
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 required
@@ -146,7 +159,7 @@ export default function Login() {
                   input: { ...darkInputStyles.input, borderRadius: 8 },
                 }}
               />
-              <Button type="submit" fullWidth mt={6} loading={loading} color="green" radius="md" style={{ fontWeight: 600 }}>
+              <Button type="submit" fullWidth mt={6} loading={loading} disabled={!code.trim()} color="green" radius="md" style={{ fontWeight: 600 }}>
                 Sign In
               </Button>
               <Button

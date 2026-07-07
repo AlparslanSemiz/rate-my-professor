@@ -1,5 +1,8 @@
 export function formatDate(iso: string, options?: { withTime?: boolean }): string {
-  return new Date(iso).toLocaleString('en-GB', {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '-'
+
+  return date.toLocaleString('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',

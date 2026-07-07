@@ -87,6 +87,7 @@ export default function Sidebar() {
               <UnstyledButton
                 key={item.path}
                 onClick={() => navigate(item.path)}
+                aria-current={isActive ? 'page' : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',

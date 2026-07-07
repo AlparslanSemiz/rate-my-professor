@@ -17,9 +17,12 @@ export default function ConfirmModal({ opened, title, description, confirmLabel,
 
   async function handleConfirm() {
     setLoading(true)
-    await onConfirm()
-    setLoading(false)
-    onClose()
+    try {
+      await onConfirm()
+      onClose()
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

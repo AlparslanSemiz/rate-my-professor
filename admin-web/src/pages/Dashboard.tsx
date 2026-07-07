@@ -16,6 +16,7 @@ import Panel from '../components/Panel'
 import { roleColor } from '../constants/colors'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
+import { moduleGridCols, statGridCols, twoColumnGridCols } from '../constants/layout'
 
 const MODULES = [
   {
@@ -85,14 +86,14 @@ export default function Dashboard() {
 
       <OverviewHero activeRate={activeRate} />
 
-      <SimpleGrid cols={4} spacing={16} mb={28}>
+      <SimpleGrid cols={statGridCols} spacing={16} mb={28}>
         <StatCardDetailed label="Total users" value={total} sub={`${active} active`} icon={IconUsers} accent="#3b82f6" />
         <StatCardDetailed label="Active users" value={active} sub="Currently active" icon={IconUserCheck} accent="#22c55e" />
         <StatCardDetailed label="Admin accounts" value={admins} sub="Privileged accounts" icon={IconShieldCheck} accent="#f59e0b" />
         <StatCardDetailed label="Open reports" value={openReports} sub="Bug reports open" icon={IconBug} accent="#f97316" />
       </SimpleGrid>
 
-      <SimpleGrid cols={2} spacing={16} mb={28}>
+      <SimpleGrid cols={twoColumnGridCols} spacing={16} mb={28}>
         <SystemPulse activeRate={activeRate} />
         <RecentRegistrations users={users} onViewAll={() => navigate('/users')} />
       </SimpleGrid>
@@ -104,7 +105,7 @@ export default function Dashboard() {
         <Text size="xs" c="#6b7280" mb={16}>
           Quick navigation to all admin sections.
         </Text>
-        <SimpleGrid cols={3} spacing={16}>
+        <SimpleGrid cols={moduleGridCols} spacing={16}>
           {MODULES.map((m) => (
             <ModuleCard key={m.path} {...m} onClick={navigate} />
           ))}
@@ -165,7 +166,7 @@ function OverviewHero({ activeRate }: { activeRate: number }) {
         Quickly review active sessions, pending reports and maintenance signals in one place.
       </Text>
 
-      <SimpleGrid cols={3} spacing={16}>
+      <SimpleGrid cols={moduleGridCols} spacing={16}>
         {metrics.map((m) => (
           <Box
             key={m.label}
@@ -235,21 +236,29 @@ function RecentRegistrations({ users, onViewAll }: { users: User[]; onViewAll: (
       <Text size="xs" c="#6b7280" mb={16}>
         Latest joined accounts.
       </Text>
-      {users.slice(0, 4).map((u) => (
-        <Box key={u.id} mb={12} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <Text size="sm" fw={500} c="#d1d5db">
-              {u.username}
-            </Text>
-            <Text size="xs" c="#4b5563">
-              {u.kitEmail}
-            </Text>
-          </div>
-          <Badge size="xs" variant="light" color={roleColor[u.role]}>
-            {enumLabel(u.role)}
-          </Badge>
+      {users.length === 0 ? (
+        <Box py={18} style={{ textAlign: 'center' }}>
+          <Text size="sm" c="#4b5563">
+            No registrations loaded yet.
+          </Text>
         </Box>
-      ))}
+      ) : (
+        users.slice(0, 4).map((u) => (
+          <Box key={u.id} mb={12} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <Text size="sm" fw={500} c="#d1d5db" truncate>
+                {u.username}
+              </Text>
+              <Text size="xs" c="#4b5563" truncate>
+                {u.kitEmail}
+              </Text>
+            </div>
+            <Badge size="xs" variant="light" color={roleColor[u.role]}>
+              {enumLabel(u.role)}
+            </Badge>
+          </Box>
+        ))
+      )}
     </Panel>
   )
 }
