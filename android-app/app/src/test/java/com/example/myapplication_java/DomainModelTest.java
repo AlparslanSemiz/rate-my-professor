@@ -22,7 +22,7 @@ import com.example.myapplication_java.DomainModel.UserStatistics;
 import com.example.myapplication_java.DomainModel.Vote;
 import com.example.myapplication_java.DomainModel.VoteType;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
-import com.example.myapplication_java.ServerCommunication.ServerResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 
 import org.junit.Test;
 
@@ -76,19 +76,6 @@ public class DomainModelTest {
                 "Clarity",
                 "How clearly the material is explained"
         );
-
-<<<<<<< Updated upstream
-        Rating rating = new Rating("rating-1", 5, category);
-
-        assertEquals("rating-1", rating.lectureId);
-        assertEquals(5, rating.value);
-        assertEquals(category, rating.ratingCategory);
-        assertNotNull(rating.ratingCategory);
-=======
-        assertEquals("category-1", category.categoryId);
-        assertEquals("Clarity", category.name);
-        assertEquals("How clearly the material is explained", category.description);
->>>>>>> Stashed changes
     }
 
     @Test

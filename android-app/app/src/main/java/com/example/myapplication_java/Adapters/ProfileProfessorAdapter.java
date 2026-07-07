@@ -27,7 +27,7 @@ public class ProfileProfessorAdapter extends RecyclerView.Adapter<ProfileProfess
     @Override
     public LectureViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_lecture_name_small, parent, false);
+                .inflate(R.layout.item_prof_name_small, parent, false);
         return new LectureViewHolder(view);
     }
 

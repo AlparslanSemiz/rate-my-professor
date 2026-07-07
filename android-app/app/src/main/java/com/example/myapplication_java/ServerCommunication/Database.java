@@ -7,15 +7,15 @@ import androidx.room.RoomDatabase;
 import com.example.myapplication_java.Adapters.SearchService;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import retrofit2.Call;
-import retrofit2.Callback;
 import retrofit2.Response;
 
 @androidx.room.Database(

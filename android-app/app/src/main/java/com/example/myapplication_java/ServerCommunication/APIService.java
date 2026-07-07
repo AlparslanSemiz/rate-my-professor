@@ -1,7 +1,10 @@
 package com.example.myapplication_java.ServerCommunication;
 
-import com.example.myapplication_java.DomainModel.Lecture;
-import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
 
 import java.util.List;
 
@@ -9,6 +12,7 @@ import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.Path;
 
 public interface APIService {
 
@@ -47,4 +51,13 @@ public interface APIService {
      */
     @GET("/data/lectures")
     Call<LecturesResponse> getLectures();
+
+    /**
+     *
+     * Loads the average ratings for a lecture Offering
+     */
+    @GET("/ratings/{lectureId}")
+    Call<RatingAverageResponse> getRatings(
+            @Path("lectureId") String lectureId
+    );
 }
