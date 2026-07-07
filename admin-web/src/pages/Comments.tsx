@@ -36,6 +36,7 @@ import { darkInputStyles } from '../constants/inputStyles'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import { countByValue, updateById } from '../utils/collection'
 import { useSearch } from '../hooks/useSearch'
 import { statGridCols } from '../constants/layout'
 
@@ -161,16 +162,8 @@ function matchesQuery(report: ReportedComment, query: string) {
   )
 }
 
-function countByStatus(reports: ReportedComment[], status: CommentReportStatus) {
-  return reports.filter((r) => r.status === status).length
-}
-
 function matchesFilters(report: ReportedComment, status: StatusFilter, reason: ReasonFilter) {
   return (status === ALL || report.status === status) && (reason === ALL || report.reason === reason)
-}
-
-function updateReportStatus(reports: ReportedComment[], id: string, status: CommentReportStatus) {
-  return reports.map((report) => (report.id === id ? { ...report, status } : report))
 }
 
 export default function CommentsPage() {
@@ -206,7 +199,7 @@ export default function CommentsPage() {
 
   async function handleStatusChange(id: string, status: CommentReportStatus) {
     await commentsService.updateStatus(id, status)
-    setReports((prev) => updateReportStatus(prev, id, status))
+    setReports((prev) => updateById(prev, id, (report) => ({ ...report, status })))
   }
 
   function openProfile(userId: string) {
@@ -254,10 +247,10 @@ export default function CommentsPage() {
 function CommentsStats({ reports }: { reports: ReportedComment[] }) {
   return (
     <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
-      <StatCard label="Open" value={countByStatus(reports, 'OPEN')} icon={IconClock} accent="#f97316" />
-      <StatCard label="Reviewed" value={countByStatus(reports, 'REVIEWED')} icon={IconEye} accent="#3b82f6" />
-      <StatCard label="Dismissed" value={countByStatus(reports, 'DISMISSED')} icon={IconX} accent="#6b7280" />
-      <StatCard label="Action taken" value={countByStatus(reports, 'ACTION_TAKEN')} icon={IconCheck} accent="#ef4444" />
+      <StatCard label="Open" value={countByValue(reports, 'status', 'OPEN')} icon={IconClock} accent="#f97316" />
+      <StatCard label="Reviewed" value={countByValue(reports, 'status', 'REVIEWED')} icon={IconEye} accent="#3b82f6" />
+      <StatCard label="Dismissed" value={countByValue(reports, 'status', 'DISMISSED')} icon={IconX} accent="#6b7280" />
+      <StatCard label="Action taken" value={countByValue(reports, 'status', 'ACTION_TAKEN')} icon={IconCheck} accent="#ef4444" />
     </SimpleGrid>
   )
 }

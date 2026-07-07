@@ -20,6 +20,7 @@ import { darkInputStyles } from '../constants/inputStyles'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import { countByValue, updateById } from '../utils/collection'
 import { useSearch } from '../hooks/useSearch'
 import type { UserChange } from '../hooks/useUserProfile'
 import { statGridCols } from '../constants/layout'
@@ -66,14 +67,6 @@ function matchesQuery(user: User, query: string) {
   return user.username.toLowerCase().includes(query) || user.kitEmail.toLowerCase().includes(query)
 }
 
-function countByStatus(users: User[], status: User['status']) {
-  return users.filter((u) => u.status === status).length
-}
-
-function updateUser(users: User[], id: string, update: (user: User) => User) {
-  return users.map((user) => (user.id === id ? update(user) : user))
-}
-
 export default function Users() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -109,13 +102,13 @@ export default function Users() {
         setProfileOpen(false)
         break
       case 'blocked':
-        setUsers((prev) => updateUser(prev, id, (user) => ({ ...user, status: 'BLOCKED' })))
+        setUsers((prev) => updateById(prev, id, (user) => ({ ...user, status: 'BLOCKED' })))
         break
       case 'unblocked':
-        setUsers((prev) => updateUser(prev, id, (user) => ({ ...user, status: 'ACTIVE' })))
+        setUsers((prev) => updateById(prev, id, (user) => ({ ...user, status: 'ACTIVE' })))
         break
       case 'warned':
-        setUsers((prev) => updateUser(prev, id, (user) => ({ ...user, warnings: user.warnings + 1 })))
+        setUsers((prev) => updateById(prev, id, (user) => ({ ...user, warnings: user.warnings + 1 })))
         break
     }
   }
@@ -157,9 +150,9 @@ function UsersStats({ users }: { users: User[] }) {
   return (
     <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
       <StatCard label="Total users" value={users.length} icon={IconUsers} accent="#3b82f6" />
-      <StatCard label="Active" value={countByStatus(users, 'ACTIVE')} icon={IconUserCheck} accent="#22c55e" />
+      <StatCard label="Active" value={countByValue(users, 'status', 'ACTIVE')} icon={IconUserCheck} accent="#22c55e" />
       <StatCard label="Admin accounts" value={adminCount} icon={IconShieldCheck} accent="#f59e0b" />
-      <StatCard label="Blocked" value={countByStatus(users, 'BLOCKED')} icon={IconShieldOff} accent="#ef4444" />
+      <StatCard label="Blocked" value={countByValue(users, 'status', 'BLOCKED')} icon={IconShieldOff} accent="#ef4444" />
     </SimpleGrid>
   )
 }

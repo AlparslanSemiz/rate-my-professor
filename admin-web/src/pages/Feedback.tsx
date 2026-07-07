@@ -11,6 +11,7 @@ import { severityColor, severityAccent, reportStatusColor } from '../constants/c
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
 import { getErrorMessage } from '../utils/getErrorMessage'
+import { countByValue, updateById } from '../utils/collection'
 import { statGridCols } from '../constants/layout'
 
 const STATUS_OPTIONS: ReportStatus[] = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN']
@@ -48,14 +49,6 @@ const statusSelectStyles = {
   },
 }
 
-function countByStatus(reports: BugReport[], status: ReportStatus) {
-  return reports.filter((r) => r.status === status).length
-}
-
-function updateReportStatus(reports: BugReport[], id: string, status: ReportStatus) {
-  return reports.map((report) => (report.id === id ? { ...report, status } : report))
-}
-
 export default function FeedbackPage() {
   const [reports, setReports] = useState<BugReport[]>([])
   const [loading, setLoading] = useState(true)
@@ -78,7 +71,7 @@ export default function FeedbackPage() {
 
   async function handleStatusChange(id: string, status: ReportStatus) {
     await feedbackService.updateStatus(id, status)
-    setReports((prev) => updateReportStatus(prev, id, status))
+    setReports((prev) => updateById(prev, id, (report) => ({ ...report, status })))
   }
 
   if (loading) return <PageLoader />
@@ -102,9 +95,9 @@ function FeedbackStats({ reports }: { reports: BugReport[] }) {
   return (
     <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
       <StatCard label="Total reports" value={reports.length} icon={IconBug} accent="#f97316" />
-      <StatCard label="Open" value={countByStatus(reports, 'OPEN')} icon={IconAlertCircle} accent="#ef4444" />
-      <StatCard label="Reviewed" value={countByStatus(reports, 'REVIEWED')} icon={IconClock} accent="#3b82f6" />
-      <StatCard label="Action taken" value={countByStatus(reports, 'ACTION_TAKEN')} icon={IconCircleCheck} accent="#22c55e" />
+      <StatCard label="Open" value={countByValue(reports, 'status', 'OPEN')} icon={IconAlertCircle} accent="#ef4444" />
+      <StatCard label="Reviewed" value={countByValue(reports, 'status', 'REVIEWED')} icon={IconClock} accent="#3b82f6" />
+      <StatCard label="Action taken" value={countByValue(reports, 'status', 'ACTION_TAKEN')} icon={IconCircleCheck} accent="#22c55e" />
     </SimpleGrid>
   )
 }
