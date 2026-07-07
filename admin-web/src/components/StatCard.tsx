@@ -1,6 +1,18 @@
-import { Text } from '@mantine/core'
-import type { ElementType } from 'react'
+import { Box, Text } from '@mantine/core'
+import type { CSSProperties, ElementType } from 'react'
 import Panel from './Panel'
+
+const STAT_ICON_SIZE = 36
+const STAT_ICON_RADIUS = 8
+const statIconBaseStyle: CSSProperties = {
+  width: STAT_ICON_SIZE,
+  height: STAT_ICON_SIZE,
+  borderRadius: STAT_ICON_RADIUS,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+}
 
 interface StatIconProps {
   icon: ElementType
@@ -10,22 +22,15 @@ interface StatIconProps {
 
 function StatIcon({ icon: Icon, accent, floating }: StatIconProps) {
   return (
-    <Panel
+    <Box
       style={{
-        width: 36,
-        height: 36,
-        borderRadius: 8,
+        ...statIconBaseStyle,
         background: `${accent}18`,
-        border: 'none',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
         ...(floating ? { position: 'absolute', top: 16, right: 16 } : {}),
       }}
     >
       <Icon size={18} color={accent} />
-    </Panel>
+    </Box>
   )
 }
 

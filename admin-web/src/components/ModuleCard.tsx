@@ -1,5 +1,6 @@
 import { Badge, Group, Text } from '@mantine/core'
 import { IconArrowRight } from '@tabler/icons-react'
+import type { CSSProperties } from 'react'
 import Panel from './Panel'
 
 interface ModuleCardProps {
@@ -9,6 +10,16 @@ interface ModuleCardProps {
   accent: string
   path: string
   onClick: (path: string) => void
+}
+
+const BASE_BACKGROUND = '#161b22'
+const HOVER_BACKGROUND = '#1c2128'
+const BASE_BORDER = '#21262d'
+
+const cardStyle: CSSProperties = {
+  padding: '18px 20px',
+  cursor: 'pointer',
+  transition: 'border-color 0.15s, background 0.15s',
 }
 
 export default function ModuleCard({ label, title, description, accent, path, onClick }: ModuleCardProps) {
@@ -23,6 +34,11 @@ export default function ModuleCard({ label, title, description, accent, path, on
     }
   }
 
+  function setHoverState(element: HTMLDivElement, hovered: boolean) {
+    element.style.borderColor = hovered ? `${accent}55` : BASE_BORDER
+    element.style.background = hovered ? HOVER_BACKGROUND : BASE_BACKGROUND
+  }
+
   return (
     <Panel
       role="button"
@@ -30,19 +46,9 @@ export default function ModuleCard({ label, title, description, accent, path, on
       aria-label={`Open ${title}`}
       onClick={openModule}
       onKeyDown={handleKeyDown}
-      style={{
-        padding: '18px 20px',
-        cursor: 'pointer',
-        transition: 'border-color 0.15s, background 0.15s',
-      }}
-      onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-        e.currentTarget.style.borderColor = `${accent}55`
-        e.currentTarget.style.background = '#1c2128'
-      }}
-      onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-        e.currentTarget.style.borderColor = '#21262d'
-        e.currentTarget.style.background = '#161b22'
-      }}
+      style={cardStyle}
+      onMouseEnter={(event) => setHoverState(event.currentTarget, true)}
+      onMouseLeave={(event) => setHoverState(event.currentTarget, false)}
     >
       <Badge
         size="xs"
