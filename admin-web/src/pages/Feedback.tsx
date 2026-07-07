@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Text, Badge, Box, SimpleGrid, Select, Group, Loader, Center } from '@mantine/core'
 import { IconBug, IconAlertCircle, IconCircleCheck, IconClock } from '@tabler/icons-react'
 import { feedbackService, type BugReport, type ReportStatus } from '../api/FeedbackService'
@@ -12,9 +12,50 @@ import { enumLabel } from '../utils/enumLabel'
 import { statGridCols } from '../constants/layout'
 
 const STATUS_OPTIONS: ReportStatus[] = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN']
+const LOAD_ERROR_MESSAGE = 'Failed to load bug reports'
+
+const panelOverflowStyle: CSSProperties = {
+  overflow: 'hidden',
+}
+
+const panelHeaderStyle: CSSProperties = {
+  borderBottom: '1px solid #21262d',
+}
+
+const emptyStateStyle: CSSProperties = {
+  textAlign: 'center',
+}
+
+const emptyIconStyle: CSSProperties = {
+  marginBottom: 12,
+}
+
+const severityBarStyle: CSSProperties = {
+  width: 3,
+  height: 36,
+  borderRadius: 2,
+  flexShrink: 0,
+}
+
+const statusSelectStyles = {
+  input: {
+    background: '#0f1117',
+    border: '1px solid #21262d',
+    color: '#e2e8f0',
+    fontSize: 12,
+  },
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
 
 function countByStatus(reports: BugReport[], status: ReportStatus) {
   return reports.filter((r) => r.status === status).length
+}
+
+function updateReportStatus(reports: BugReport[], id: string, status: ReportStatus) {
+  return reports.map((report) => (report.id === id ? { ...report, status } : report))
 }
 
 export default function FeedbackPage() {
@@ -27,7 +68,7 @@ export default function FeedbackPage() {
     feedbackService
       .getReports()
       .then(setReports)
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load bug reports'))
+      .catch((err: unknown) => setError(getErrorMessage(err, LOAD_ERROR_MESSAGE)))
       .finally(() => setLoading(false))
   }, [reloadKey])
 
@@ -39,7 +80,7 @@ export default function FeedbackPage() {
 
   async function handleStatusChange(id: string, status: ReportStatus) {
     await feedbackService.updateStatus(id, status)
-    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
+    setReports((prev) => updateReportStatus(prev, id, status))
   }
 
   if (loading)
@@ -58,44 +99,67 @@ export default function FeedbackPage() {
         description="User-submitted bug forms, screenshots, device info and automatic crash logs."
       />
 
-      <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
-        <StatCard label="Total reports" value={reports.length} icon={IconBug} accent="#f97316" />
-        <StatCard label="Open" value={countByStatus(reports, 'OPEN')} icon={IconAlertCircle} accent="#ef4444" />
-        <StatCard label="Reviewed" value={countByStatus(reports, 'REVIEWED')} icon={IconClock} accent="#3b82f6" />
-        <StatCard label="Action taken" value={countByStatus(reports, 'ACTION_TAKEN')} icon={IconCircleCheck} accent="#22c55e" />
-      </SimpleGrid>
-
-      <Panel style={{ overflow: 'hidden' }}>
-        <Box px={20} py={16} style={{ borderBottom: '1px solid #21262d' }}>
-          <Text fw={600} c="#e2e8f0" size="sm">
-            Report queue
-          </Text>
-          <Text size="xs" c="#4b5563">
-            Newest entries shown first.
-          </Text>
-        </Box>
-
-        {reports.length === 0 ? (
-          <Box py={60} style={{ textAlign: 'center' }}>
-            <IconBug size={32} color="#374151" style={{ marginBottom: 12 }} />
-            <Text c="#4b5563" size="sm">
-              No bug reports yet.
-            </Text>
-          </Box>
-        ) : (
-          <div>
-            {reports.map((report, i) => (
-              <ReportItem
-                key={report.id}
-                report={report}
-                isLast={i === reports.length - 1}
-                onStatusChange={handleStatusChange}
-              />
-            ))}
-          </div>
-        )}
-      </Panel>
+      <FeedbackStats reports={reports} />
+      <ReportQueue reports={reports} onStatusChange={handleStatusChange} />
     </div>
+  )
+}
+
+function FeedbackStats({ reports }: { reports: BugReport[] }) {
+  return (
+    <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
+      <StatCard label="Total reports" value={reports.length} icon={IconBug} accent="#f97316" />
+      <StatCard label="Open" value={countByStatus(reports, 'OPEN')} icon={IconAlertCircle} accent="#ef4444" />
+      <StatCard label="Reviewed" value={countByStatus(reports, 'REVIEWED')} icon={IconClock} accent="#3b82f6" />
+      <StatCard label="Action taken" value={countByStatus(reports, 'ACTION_TAKEN')} icon={IconCircleCheck} accent="#22c55e" />
+    </SimpleGrid>
+  )
+}
+
+function ReportQueue({
+  reports,
+  onStatusChange,
+}: {
+  reports: BugReport[]
+  onStatusChange: (id: string, status: ReportStatus) => void
+}) {
+  return (
+    <Panel style={panelOverflowStyle}>
+      <Box px={20} py={16} style={panelHeaderStyle}>
+        <Text fw={600} c="#e2e8f0" size="sm">
+          Report queue
+        </Text>
+        <Text size="xs" c="#4b5563">
+          Newest entries shown first.
+        </Text>
+      </Box>
+
+      {reports.length === 0 ? (
+        <EmptyReportQueue />
+      ) : (
+        <div>
+          {reports.map((report, index) => (
+            <ReportItem
+              key={report.id}
+              report={report}
+              isLast={index === reports.length - 1}
+              onStatusChange={onStatusChange}
+            />
+          ))}
+        </div>
+      )}
+    </Panel>
+  )
+}
+
+function EmptyReportQueue() {
+  return (
+    <Box py={60} style={emptyStateStyle}>
+      <IconBug size={32} color="#374151" style={emptyIconStyle} />
+      <Text c="#4b5563" size="sm">
+        No bug reports yet.
+      </Text>
+    </Box>
   )
 }
 
@@ -112,11 +176,8 @@ function ReportItem({ report, isLast, onStatusChange }: ReportItemProps) {
         <Group gap={8}>
           <Box
             style={{
-              width: 3,
-              height: 36,
-              borderRadius: 2,
+              ...severityBarStyle,
               background: severityAccent[report.severity] ?? '#6b7280',
-              flexShrink: 0,
             }}
           />
           <div>
@@ -142,7 +203,7 @@ function ReportItem({ report, isLast, onStatusChange }: ReportItemProps) {
             w={140}
             value={report.status}
             data={STATUS_OPTIONS.map((s) => ({ value: s, label: enumLabel(s) }))}
-            styles={{ input: { background: '#0f1117', border: '1px solid #21262d', color: '#e2e8f0', fontSize: 12 } }}
+            styles={statusSelectStyles}
             onChange={(val) => val && onStatusChange(report.id, val as ReportStatus)}
           />
         </Group>
