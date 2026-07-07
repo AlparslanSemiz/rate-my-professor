@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Modal, Text, Group, Button } from '@mantine/core'
+import type { MantineColor } from '@mantine/core'
 import { darkModalStyles } from '../constants/modalStyles'
 
 interface ConfirmModalProps {
@@ -7,7 +8,7 @@ interface ConfirmModalProps {
   title: string
   description: string
   confirmLabel: string
-  confirmColor: string
+  confirmColor: MantineColor
   onConfirm: () => Promise<void>
   onClose: () => void
 }

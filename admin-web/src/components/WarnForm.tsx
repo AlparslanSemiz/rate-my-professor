@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Box, Text, Textarea, Group, Button } from '@mantine/core'
+import type { CSSProperties } from 'react'
 import { darkInputStyles } from '../constants/inputStyles'
 
 interface WarnFormProps {
@@ -7,6 +8,17 @@ interface WarnFormProps {
   loading: boolean
   onCancel: () => void
   onSubmit: (message: string) => Promise<void>
+}
+
+const warnFormStyle: CSSProperties = {
+  background: 'rgba(234,179,8,0.05)',
+  border: '1px solid rgba(234,179,8,0.2)',
+  borderRadius: 10,
+  padding: '14px 16px',
+}
+
+const warningTextareaStyles = {
+  input: { ...darkInputStyles.input, fontSize: 13 },
 }
 
 export default function WarnForm({ userName, loading, onCancel, onSubmit }: WarnFormProps) {
@@ -18,15 +30,7 @@ export default function WarnForm({ userName, loading, onCancel, onSubmit }: Warn
   }
 
   return (
-    <Box
-      mb={20}
-      style={{
-        background: 'rgba(234,179,8,0.05)',
-        border: '1px solid rgba(234,179,8,0.2)',
-        borderRadius: 10,
-        padding: '14px 16px',
-      }}
-    >
+    <Box mb={20} style={warnFormStyle}>
       <Text size="xs" fw={600} c="#eab308" mb={8}>
         Issue a warning to {userName}
       </Text>
@@ -36,7 +40,7 @@ export default function WarnForm({ userName, loading, onCancel, onSubmit }: Warn
         onChange={(e) => setMessage(e.currentTarget.value)}
         minRows={3}
         mb={10}
-        styles={{ input: { ...darkInputStyles.input, fontSize: 13 } }}
+        styles={warningTextareaStyles}
       />
       <Group gap={8} justify="flex-end">
         <Button size="xs" variant="subtle" color="gray" onClick={onCancel}>
