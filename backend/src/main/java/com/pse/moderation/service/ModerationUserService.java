@@ -47,7 +47,7 @@ public class ModerationUserService {
 
     public boolean verifyAdmin(Student student) {
 
-        return moderationRepository.existsById(student.getId());
+        return moderationRepository.existsByStudent(student);
     }
 
 
