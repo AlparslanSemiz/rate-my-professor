@@ -63,7 +63,7 @@ public class ProfessorProfileFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         binding = FragmentProfProfileBinding.inflate(inflater, container, false);
-        binding.averageRatingBackground.setText("5");
+        binding.averageRatingBackground.setText("5.0");
         binding.lectureList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         binding.semesterList.setLayoutManager(new LinearLayoutManager(requireContext()));
         Database database = Room.databaseBuilder(
