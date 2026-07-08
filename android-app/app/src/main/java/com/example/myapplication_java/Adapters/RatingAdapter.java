@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
-import com.example.myapplication_java.Util.RatingColourCalculator;
+import com.example.myapplication_java.logic.RatingColorCalculator;
 
 import java.util.List;
 
@@ -40,7 +40,7 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
 
         holder.name.setText(rating.name());
         holder.averageRating.setText(String.valueOf(rating.value()));
-        holder.averageRating.setTextColor(RatingColourCalculator.ratingColourCalculator(rating.value()));
+        holder.averageRating.setTextColor(RatingColorCalculator.ratingColourCalculator(rating.value()));
         holder.averageBar.setRating((float) rating.value());
 
         System.out.println(rating.name() + " " + rating.value());
@@ -75,7 +75,7 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
             userRatingBar.setOnRatingBarChangeListener(
                     (bar, rating, fromUser) -> {
                         userRatingNum.setText(String.valueOf((double) rating));
-                        userRatingNum.setTextColor(RatingColourCalculator.ratingColourCalculator(rating));
+                        userRatingNum.setTextColor(RatingColorCalculator.ratingColourCalculator(rating));
                     }
             );
         }

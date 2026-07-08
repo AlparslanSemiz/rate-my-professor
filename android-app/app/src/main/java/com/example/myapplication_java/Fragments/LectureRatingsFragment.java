@@ -10,8 +10,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.RatingBar;
-import android.widget.TextView;
 
 import com.example.myapplication_java.Adapters.RatingAdapter;
 import com.example.myapplication_java.DomainModel.Lecture;
@@ -21,7 +19,7 @@ import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
-import com.example.myapplication_java.Util.RatingColourCalculator;
+import com.example.myapplication_java.logic.RatingColorCalculator;
 import com.example.myapplication_java.databinding.FragmentLectureRatingsBinding;
 
 import java.util.List;
@@ -103,7 +101,7 @@ public class LectureRatingsFragment extends Fragment {
                 }
                 double lectureRating = sum / ratings.size();
                 binding.averageLectureRating.setText(String.valueOf(lectureRating));
-                binding.averageLectureRating.setTextColor(RatingColourCalculator.ratingColourCalculator(lectureRating));
+                binding.averageLectureRating.setTextColor(RatingColorCalculator.ratingColourCalculator(lectureRating));
 
 
                 RatingAdapter adapter = new RatingAdapter(ratings);
