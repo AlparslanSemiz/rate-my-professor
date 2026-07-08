@@ -121,7 +121,7 @@ server:deploy:staging:jar:
       docker rm $DEPLOY_CONTAINER_NAME || true;
       docker run -d --name $DEPLOY_CONTAINER_NAME
       $DEPLOY_DOCKER_ARGS
-      -v \"$DEPLOY_PATH/app.jar:/app/app.jar:ro\"
+      -v \"\$(pwd)/app.jar:/app/app.jar:ro\"
       -e SERVER_PORT=8080
       -e SPRING_DATASOURCE_URL=\"${SPRING_DATASOURCE_URL:-jdbc:postgresql://host.docker.internal:5432/postgres}\"
       -e SPRING_DATASOURCE_USERNAME=\"${SPRING_DATASOURCE_USERNAME:-postgres}\"
