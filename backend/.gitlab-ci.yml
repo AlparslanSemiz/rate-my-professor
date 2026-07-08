@@ -6,10 +6,12 @@ workflow:
 stages:
   - test
   - build
+  - package
   - deploy
 
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  IMAGE_TAG: "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
 
 default:
   cache:
@@ -34,7 +36,59 @@ server:build:
       - target/*.jar
     expire_in: 1 week
 
+server:package:
+  stage: package
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [""]
+  needs:
+    - job: server:build
+      artifacts: true
+  before_script:
+    - mkdir -p /kaniko/.docker
+    - printf '{"auths":{"%s":{"username":"%s","password":"%s"}}}' "$CI_REGISTRY" "$CI_REGISTRY_USER" "$CI_REGISTRY_PASSWORD" > /kaniko/.docker/config.json
+  script:
+    - /kaniko/executor --context "$CI_PROJECT_DIR" --dockerfile "$CI_PROJECT_DIR/src/Dockerfile" --destination "$IMAGE_TAG"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
 server:deploy:staging:
+  stage: deploy
+  image: alpine:3.20
+  needs:
+    - server:package
+  variables:
+    DEPLOY_CONTAINER_NAME: app-server
+    DEPLOY_DOCKER_ARGS: "-p 8080:8080 --restart unless-stopped --add-host=host.docker.internal:host-gateway"
+  before_script:
+    - apk add --no-cache openssh-client
+    - chmod 400 "$SSH_PRIVATE_KEY"
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+  script:
+    - >
+      ssh -i "$SSH_PRIVATE_KEY" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST"
+      "set -e;
+      mkdir -p \"$DEPLOY_PATH\";
+      cd \"$DEPLOY_PATH\";
+      echo \"$CI_REGISTRY_PASSWORD\" | docker login \"$CI_REGISTRY\" -u \"$CI_REGISTRY_USER\" --password-stdin;
+      docker pull $IMAGE_TAG;
+      docker stop $DEPLOY_CONTAINER_NAME || true;
+      docker rm $DEPLOY_CONTAINER_NAME || true;
+      docker run -d --name $DEPLOY_CONTAINER_NAME
+      $DEPLOY_DOCKER_ARGS
+      -e SERVER_PORT=8080
+      -e SPRING_DATASOURCE_URL=\"${SPRING_DATASOURCE_URL:-jdbc:postgresql://host.docker.internal:5432/postgres}\"
+      -e SPRING_DATASOURCE_USERNAME=\"${SPRING_DATASOURCE_USERNAME:-postgres}\"
+      -e SPRING_DATASOURCE_PASSWORD=\"${SPRING_DATASOURCE_PASSWORD:-REDACTED}\"
+      -e ADMIN_FRONTEND_ORIGINS=\"${ADMIN_FRONTEND_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,https://*.ka.bw-cloud-instance.org}\"
+      $IMAGE_TAG"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+
+server:deploy:staging:jar:
   stage: deploy
   image: alpine:3.20
   needs:
