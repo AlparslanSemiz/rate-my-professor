@@ -8,6 +8,9 @@ stages:
   - build
   - package
 
+variables:
+  VITE_API_BASE_URL: "https://server.example.org"
+
 .node-npm:
   image: node:24-alpine
   cache:
