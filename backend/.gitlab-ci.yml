@@ -6,12 +6,10 @@ workflow:
 stages:
   - test
   - build
-  - package
   - deploy
 
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
-  IMAGE_TAG: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
 
 default:
   cache:
@@ -36,28 +34,12 @@ server:build:
       - target/*.jar
     expire_in: 1 week
 
-server:package:
-  stage: package
-  image:
-    name: gcr.io/kaniko-project/executor:v1.23.2-debug
-    entrypoint: [""]
-  retry: 2
-  needs:
-    - job: server:build
-      artifacts: true
-  before_script:
-    - mkdir -p /kaniko/.docker
-    - printf '{"auths":{"%s":{"username":"%s","password":"%s"}}}' "$CI_REGISTRY" "$CI_REGISTRY_USER" "$CI_REGISTRY_PASSWORD" > /kaniko/.docker/config.json
-  script:
-    - /kaniko/executor --context "$CI_PROJECT_DIR" --dockerfile "$CI_PROJECT_DIR/src/Dockerfile" --destination "$IMAGE_TAG"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-
 server:deploy:staging:
   stage: deploy
   image: alpine:3.20
   needs:
-    - server:package
+    - job: server:build
+      artifacts: true
   variables:
     DEPLOY_CONTAINER_NAME: app-server
     DEPLOY_DOCKER_ARGS: "-p 8080:8080 --restart unless-stopped --add-host=host.docker.internal:host-gateway"
@@ -71,20 +53,31 @@ server:deploy:staging:
     - >
       ssh -i "$SSH_PRIVATE_KEY" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST"
       "set -e;
-      mkdir -p \"$DEPLOY_PATH\";
+      mkdir -p \"$DEPLOY_PATH\""
+    - >
+      scp -i "$SSH_PRIVATE_KEY" -P "$DEPLOY_PORT"
+      target/*.jar
+      "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/app.jar"
+    - >
+      ssh -i "$SSH_PRIVATE_KEY" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST"
+      "set -e;
       cd \"$DEPLOY_PATH\";
-      echo \"$CI_REGISTRY_PASSWORD\" | docker login \"$CI_REGISTRY\" -u \"$CI_REGISTRY_USER\" --password-stdin;
-      docker pull $IMAGE_TAG;
+      docker pull eclipse-temurin:21-jre;
       docker stop $DEPLOY_CONTAINER_NAME || true;
       docker rm $DEPLOY_CONTAINER_NAME || true;
       docker run -d --name $DEPLOY_CONTAINER_NAME
       $DEPLOY_DOCKER_ARGS
+      -v \"$DEPLOY_PATH/app.jar:/app/app.jar:ro\"
       -e SERVER_PORT=8080
       -e SPRING_DATASOURCE_URL=\"${SPRING_DATASOURCE_URL:-jdbc:postgresql://host.docker.internal:5432/postgres}\"
       -e SPRING_DATASOURCE_USERNAME=\"${SPRING_DATASOURCE_USERNAME:-postgres}\"
       -e SPRING_DATASOURCE_PASSWORD=\"${SPRING_DATASOURCE_PASSWORD:-REDACTED}\"
       -e ADMIN_FRONTEND_ORIGINS=\"${ADMIN_FRONTEND_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,https://*.ka.bw-cloud-instance.org}\"
-      $IMAGE_TAG"
+      eclipse-temurin:21-jre
+      java -jar /app/app.jar;
+      sleep 10;
+      docker inspect -f '{{.State.Running}}' $DEPLOY_CONTAINER_NAME | grep true;
+      docker logs --tail 100 $DEPLOY_CONTAINER_NAME"
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
