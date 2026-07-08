@@ -11,7 +11,7 @@ stages:
 
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
-  IMAGE_TAG: "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
+  IMAGE_TAG: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
 
 default:
   cache:
@@ -41,6 +41,7 @@ server:package:
   image:
     name: gcr.io/kaniko-project/executor:v1.23.2-debug
     entrypoint: [""]
+  retry: 2
   needs:
     - job: server:build
       artifacts: true
