@@ -52,6 +52,39 @@ describe('UsersService', () => {
     ])
   })
 
+  it('treats required admin emails as admin accounts', async () => {
+    const requiredAdminEmails = [
+      'u-kisi4@student.kit.edu',
+      'u-kisi5@student.kit.edu',
+      'u-kisi6@student.kit.edu',
+      'u-kisi7@student.kit.edu',
+      'u-kisi8@student.kit.edu',
+    ]
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      success: true,
+      message: 'OK',
+      users: requiredAdminEmails.map((kitEmail, index) => ({
+        id: `user-${index + 1}`,
+        username: `Required Admin ${index + 1}`,
+        kitEmail,
+        role: 'STUDENT',
+        status: 'ACTIVE',
+        joined: '2025-01-10',
+        lastOnline: '2026-06-11T18:30:00Z',
+        biography: 'Required administrator.',
+        warnings: 0,
+        reports: 0,
+      })),
+    }))
+    const service = createUsersService()
+
+    const users = await service.getAll()
+
+    expect(users).toHaveLength(requiredAdminEmails.length)
+    expect(users.every((user) => user.role === 'ADMIN')).toBe(true)
+  })
+
   it('maps backend warning history to display warnings', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({
       success: true,

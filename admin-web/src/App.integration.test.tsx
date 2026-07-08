@@ -47,6 +47,28 @@ const adminUser = {
   role: adminAccount.role,
 }
 
+const requiredAdminAccount: User = {
+  ...adminAccount,
+  id: 'required-admin-1',
+  username: 'Required Admin',
+  kitEmail: 'u-kisi4@student.kit.edu',
+  role: 'STUDENT',
+}
+
+const requiredAdminUser = {
+  id: requiredAdminAccount.id,
+  name: requiredAdminAccount.username,
+  email: requiredAdminAccount.kitEmail,
+  role: 'ADMIN',
+}
+
+const requiredAdminFallbackUser = {
+  id: requiredAdminAccount.kitEmail,
+  name: 'u-kisi4',
+  email: requiredAdminAccount.kitEmail,
+  role: 'ADMIN',
+}
+
 describe('App routing and authentication', () => {
   beforeEach(() => {
     apiClient.setToken(null)
@@ -93,5 +115,39 @@ describe('App routing and authentication', () => {
     expect(await screen.findByText('Live user activity, moderation queue and system health at a glance.')).toBeInTheDocument()
     expect(localStorage.getItem('token')).toBe('mock-token-1')
     expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(adminUser)
+  })
+
+  it('logs in the required admin email as admin even when the backend user role is student', async () => {
+    const user = userEvent.setup()
+    vi.mocked(usersService.getAll).mockResolvedValue([requiredAdminAccount])
+    window.history.pushState({}, '', '/login')
+
+    render(<App />)
+
+    await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), requiredAdminUser.email)
+    await user.click(screen.getByRole('button', { name: 'Send login code' }))
+    await user.type(await screen.findByPlaceholderText('Code from your email'), '123456')
+    await user.click(screen.getByRole('button', { name: 'Sign In' }))
+
+    await waitFor(() => expect(authService.login).toHaveBeenCalledWith(requiredAdminUser.email, '123456'))
+    expect(await screen.findByText('Live user activity, moderation queue and system health at a glance.')).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(requiredAdminUser)
+  })
+
+  it('logs in the required admin email when the backend user list is unavailable', async () => {
+    const user = userEvent.setup()
+    vi.mocked(usersService.getAll).mockRejectedValueOnce(new Error('The server returned an empty response.'))
+    window.history.pushState({}, '', '/login')
+
+    render(<App />)
+
+    await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), requiredAdminFallbackUser.email)
+    await user.click(screen.getByRole('button', { name: 'Send login code' }))
+    await user.type(await screen.findByPlaceholderText('Code from your email'), '123456')
+    await user.click(screen.getByRole('button', { name: 'Sign In' }))
+
+    await waitFor(() => expect(authService.login).toHaveBeenCalledWith(requiredAdminFallbackUser.email, '123456'))
+    expect(await screen.findByText('Live user activity, moderation queue and system health at a glance.')).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(requiredAdminFallbackUser)
   })
 })

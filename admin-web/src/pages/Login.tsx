@@ -5,15 +5,17 @@ import { IconShield, IconAlertCircle } from '@tabler/icons-react'
 import { useAuth } from '../context/useAuth'
 import { authService } from '../api/AuthService'
 import { usersService, type User } from '../api/UsersService'
-import { apiClient } from '../api/ApiClient'
+import { ApiError, apiClient, EMPTY_RESPONSE_MESSAGE } from '../api/ApiClient'
 import Panel from '../components/Panel'
 import { darkInputStyles } from '../constants/inputStyles'
+import { getRequiredAdminUser, hasAdminAccess, normalizeEmail, withRequiredAdminRole } from '../utils/adminAccess'
 import { getErrorMessage } from '../utils/getErrorMessage'
 
 type Step = 'email' | 'code'
 
 const LOGIN_ERROR_FALLBACK = 'Login failed'
 const REQUEST_CODE_ERROR_FALLBACK = 'Could not send login code'
+const ADMIN_ACCESS_ERROR = 'Login succeeded, but this account is not authorized for the admin panel.'
 
 const pageStyle: CSSProperties = {
   minHeight: '100vh',
@@ -60,8 +62,15 @@ const loginInputStyles = {
 }
 
 function findUserByEmail(users: User[], email: string) {
-  const normalizedEmail = email.toLowerCase()
-  return users.find((user) => user.kitEmail.toLowerCase() === normalizedEmail)
+  const normalizedEmail = normalizeEmail(email)
+  return users.find((user) => normalizeEmail(user.kitEmail) === normalizedEmail)
+}
+
+function getLoginErrorMessage(error: unknown) {
+  if (error instanceof ApiError && error.message === EMPTY_RESPONSE_MESSAGE) {
+    return ADMIN_ACCESS_ERROR
+  }
+  return getErrorMessage(error, LOGIN_ERROR_FALLBACK)
 }
 
 export default function Login() {
@@ -104,14 +113,28 @@ export default function Login() {
     try {
       const { token } = await authService.login(trimmedEmail, trimmedCode)
       apiClient.setToken(token)
-      const users = await usersService.getAll()
-      const currentUser = findUserByEmail(users, trimmedEmail)
-      if (!currentUser) throw new Error('Logged in, but could not find your admin account')
+      const requiredAdminUser = getRequiredAdminUser(trimmedEmail)
+      let users: User[] = []
+      try {
+        users = await usersService.getAll()
+      } catch (err: unknown) {
+        if (!requiredAdminUser) throw err
+      }
 
-      login(token, { id: currentUser.id, name: currentUser.username, email: currentUser.kitEmail, role: currentUser.role })
+      const currentUser = findUserByEmail(users, trimmedEmail)
+      if (!currentUser && requiredAdminUser) {
+        login(token, requiredAdminUser)
+        navigate('/dashboard')
+        return
+      }
+      if (!currentUser) throw new Error('Logged in, but could not find your admin account')
+      const adminUser = withRequiredAdminRole(currentUser)
+      if (!hasAdminAccess(adminUser)) throw new Error(ADMIN_ACCESS_ERROR)
+
+      login(token, { id: adminUser.id, name: adminUser.username, email: adminUser.kitEmail, role: adminUser.role })
       navigate('/dashboard')
     } catch (err: unknown) {
-      setError(getErrorMessage(err, LOGIN_ERROR_FALLBACK))
+      setError(getLoginErrorMessage(err))
       apiClient.setToken(null)
     } finally {
       setLoading(false)

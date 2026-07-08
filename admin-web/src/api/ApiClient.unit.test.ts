@@ -47,4 +47,11 @@ describe('ApiClient', () => {
 
     expect(onUnauthorized).toHaveBeenCalledOnce()
   })
+
+  it('rejects empty successful responses with a readable error', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('', { status: 200 }))
+    const client = new ApiClient(API_BASE_URL)
+
+    await expect(client.get('/users')).rejects.toThrow('The server returned an empty response.')
+  })
 })

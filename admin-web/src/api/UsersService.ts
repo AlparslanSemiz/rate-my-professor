@@ -1,4 +1,5 @@
 import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { withRequiredAdminRole } from '../utils/adminAccess'
 
 export type UserRole = 'STUDENT' | 'ADMIN'
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED' | 'DELETED'
@@ -56,7 +57,7 @@ export class UsersService {
 
   async getAll(): Promise<User[]> {
     const response = await this.client.get<UserListResponse>('/users')
-    return response.users
+    return response.users.map(withRequiredAdminRole)
   }
 
   getById(id: string): Promise<User> {

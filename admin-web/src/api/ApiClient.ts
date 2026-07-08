@@ -17,6 +17,7 @@ type QueryMethod = 'POST' | 'PATCH'
 
 const DEFAULT_API_BASE_URL = 'http://localhost:8080'
 const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Check your connection and try again.'
+export const EMPTY_RESPONSE_MESSAGE = 'The server returned an empty response.'
 
 export class ApiClient {
   private readonly baseUrl: string
@@ -73,7 +74,12 @@ export class ApiClient {
     }
 
     if (response.status === 204) return undefined as T
-    return (await response.json()) as T
+
+    const text = await response.text()
+    if (!text) {
+      throw new ApiError(response.status, EMPTY_RESPONSE_MESSAGE)
+    }
+    return JSON.parse(text) as T
   }
 
   private headers(): Record<string, string> {
