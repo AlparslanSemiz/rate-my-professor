@@ -41,6 +41,10 @@ server:package:
   image:
     name: gcr.io/kaniko-project/executor:v1.23.2-debug
     entrypoint: [""]
+  retry:
+    max: 2
+    when:
+      - script_failure
   needs:
     - job: server:build
       artifacts: true
@@ -48,7 +52,7 @@ server:package:
     - mkdir -p /kaniko/.docker
     - printf '{"auths":{"%s":{"username":"%s","password":"%s"}}}' "$CI_REGISTRY" "$CI_REGISTRY_USER" "$CI_REGISTRY_PASSWORD" > /kaniko/.docker/config.json
   script:
-    - /kaniko/executor --context "$CI_PROJECT_DIR" --dockerfile "$CI_PROJECT_DIR/src/Dockerfile" --destination "$IMAGE_TAG"
+    - /kaniko/executor --context "$CI_PROJECT_DIR" --dockerfile "$CI_PROJECT_DIR/src/Dockerfile" --destination "$IMAGE_TAG" --skip-push-permission-check
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
 
