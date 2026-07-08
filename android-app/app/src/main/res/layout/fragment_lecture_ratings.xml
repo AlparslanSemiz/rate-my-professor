@@ -68,7 +68,8 @@
         android:background="@drawable/search_button"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/back_icon" />
+        app:srcCompat="@drawable/go_back_icon"
+        android:scaleType="center"/>
 
     <ScrollView
         android:layout_width="0dp"
