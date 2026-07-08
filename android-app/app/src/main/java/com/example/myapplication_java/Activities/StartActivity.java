@@ -9,7 +9,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
-import com.example.myapplication_java.ServerCommunication.ServerResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;

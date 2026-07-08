@@ -17,13 +17,13 @@
         android:background="@drawable/rounded_box"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
-        app:layout_constraintBottom_toBottomOf="@+id/average_rating_background"
+        app:layout_constraintBottom_toBottomOf="@+id/averageRatingBackground"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/average_rating_background" />
+        app:layout_constraintTop_toTopOf="@+id/averageRatingBackground" />
 
     <TextView
-        android:id="@+id/average_rating_background"
+        android:id="@+id/averageRatingBackground"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
@@ -45,8 +45,8 @@
         android:fontFamily="@font/inter_bold"
         android:text="Firstname"
         android:textColor="#FFFFFF"
-        app:layout_constraintStart_toEndOf="@+id/average_rating_background"
-        app:layout_constraintTop_toTopOf="@+id/average_rating_background" />
+        app:layout_constraintStart_toEndOf="@+id/averageRatingBackground"
+        app:layout_constraintTop_toTopOf="@+id/averageRatingBackground" />
 
     <TextView
         android:id="@+id/surname"
@@ -58,7 +58,7 @@
         android:text="Surname"
         android:textColor="#FFFFFF"
         android:textSize="34sp"
-        app:layout_constraintStart_toEndOf="@+id/average_rating_background"
+        app:layout_constraintStart_toEndOf="@+id/averageRatingBackground"
         app:layout_constraintTop_toBottomOf="@+id/name" />
 
     <ScrollView
@@ -202,6 +202,7 @@
         android:background="@drawable/search_button"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/back_icon" />
+        app:srcCompat="@drawable/go_back_icon"
+        android:scaleType="center"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
