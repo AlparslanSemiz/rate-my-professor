@@ -26,7 +26,7 @@ import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
-import com.example.myapplication_java.ServerCommunication.ServerResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.databinding.DialogBugReportBinding;
 import com.example.myapplication_java.databinding.FragmentSettingsBinding;
 import com.google.android.material.bottomnavigation.BottomNavigationView;

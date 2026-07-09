@@ -23,7 +23,9 @@ import com.example.myapplication_java.Fragments.SelectionFragment;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.Database;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
-import com.example.myapplication_java.ServerCommunication.ServerResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 
 import org.junit.After;
 import org.junit.Before;
@@ -209,12 +211,12 @@ public class ProfessorFeatureInstrumentedTest {
         }
 
         @Override
-        public Call<List<Professor>> getProfessors() {
+        public Call<ProfessorResponse> getProfessors() {
             return new SuccessfulCall<>(professors);
         }
 
         @Override
-        public Call<List<Lecture>> getLectures() {
+        public Call<LecturesResponse> getLectures() {
             return new SuccessfulCall<>(lectures);
         }
     }

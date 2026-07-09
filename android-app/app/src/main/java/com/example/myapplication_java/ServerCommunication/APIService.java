@@ -1,7 +1,10 @@
 package com.example.myapplication_java.ServerCommunication;
 
-import com.example.myapplication_java.DomainModel.Lecture;
-import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
 
 import java.util.List;
 
@@ -58,4 +61,13 @@ public interface APIService {
 
     @GET("/social/comments/{lecture_id}")
     Call<CommentsResponse> getComments(@Path("lecture_id") String lectureId);
+
+    /**
+     *
+     * Loads the average ratings for a lecture Offering
+     */
+    @GET("/ratings/{lectureId}")
+    Call<RatingAverageResponse> getRatings(
+            @Path("lectureId") String lectureId
+    );
 }

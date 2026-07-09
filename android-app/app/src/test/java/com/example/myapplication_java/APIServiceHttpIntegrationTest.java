@@ -9,10 +9,10 @@ import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.ServerCommunication.LecturesResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
-import com.example.myapplication_java.ServerCommunication.ProfessorResponse;
-import com.example.myapplication_java.ServerCommunication.ServerResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 
 import org.junit.After;
 import org.junit.Before;

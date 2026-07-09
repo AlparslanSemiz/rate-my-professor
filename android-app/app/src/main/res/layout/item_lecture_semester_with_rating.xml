@@ -15,13 +15,13 @@
         android:background="@drawable/rounded_box"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
-        app:layout_constraintBottom_toBottomOf="@+id/average_rating_background"
+        app:layout_constraintBottom_toBottomOf="@+id/averageRatingBackground"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/average_rating_background" />
+        app:layout_constraintTop_toTopOf="@+id/averageRatingBackground" />
 
     <TextView
-        android:id="@+id/average_rating_background"
+        android:id="@+id/averageRatingBackground"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
@@ -46,8 +46,8 @@
         android:text="Lecture Name Zeilenumbruchstest"
         android:textColor="#FFFFFF"
         android:textSize="30sp"
-        app:layout_constraintBottom_toBottomOf="@+id/average_rating_background"
-        app:layout_constraintEnd_toStartOf="@+id/average_rating_background"
+        app:layout_constraintBottom_toBottomOf="@+id/averageRatingBackground"
+        app:layout_constraintEnd_toStartOf="@+id/averageRatingBackground"
         app:layout_constraintStart_toStartOf="@+id/header_background"
-        app:layout_constraintTop_toTopOf="@+id/average_rating_background" />
+        app:layout_constraintTop_toTopOf="@+id/averageRatingBackground" />
 </androidx.constraintlayout.widget.ConstraintLayout>
