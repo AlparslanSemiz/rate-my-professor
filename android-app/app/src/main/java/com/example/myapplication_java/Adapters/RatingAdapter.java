@@ -14,6 +14,7 @@ import com.example.myapplication_java.ServerCommunication.Responses.TopicAverage
 import com.example.myapplication_java.logic.RatingColorCalculator;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * This adapter is used to display a rating category of a lectures rating.
@@ -39,7 +40,7 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
         TopicAverageResponse rating = ratings.get(position);
 
         holder.name.setText(rating.name());
-        holder.averageRating.setText(String.valueOf(rating.value()));
+        holder.averageRating.setText(String.format(Locale.ROOT, "%.1f", rating.value()));
         holder.averageRating.setTextColor(RatingColorCalculator.ratingColourCalculator(rating.value()));
         holder.averageBar.setRating((float) rating.value());
 

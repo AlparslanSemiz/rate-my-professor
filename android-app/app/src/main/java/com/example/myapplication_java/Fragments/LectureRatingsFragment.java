@@ -23,6 +23,7 @@ import com.example.myapplication_java.logic.RatingColorCalculator;
 import com.example.myapplication_java.databinding.FragmentLectureRatingsBinding;
 
 import java.util.List;
+import java.util.Locale;
 
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
@@ -100,7 +101,7 @@ public class LectureRatingsFragment extends Fragment {
                     sum += rating.value();
                 }
                 double lectureRating = sum / ratings.size();
-                binding.averageLectureRating.setText(String.valueOf(lectureRating));
+                binding.averageLectureRating.setText(String.format(Locale.ROOT, "%.1f", lectureRating));
                 binding.averageLectureRating.setTextColor(RatingColorCalculator.ratingColourCalculator(lectureRating));
 
 
