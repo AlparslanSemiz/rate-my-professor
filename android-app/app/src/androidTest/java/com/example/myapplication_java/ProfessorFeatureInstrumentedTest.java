@@ -16,15 +16,19 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import com.example.myapplication_java.Adapters.ProfessorAdapter;
 import com.example.myapplication_java.Adapters.SearchPagerAdapter;
 import com.example.myapplication_java.Adapters.SearchService;
+import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.Fragments.SelectionFragment;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Database;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.PostCommentRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 
 import org.junit.After;
@@ -68,9 +72,8 @@ public class ProfessorFeatureInstrumentedTest {
     public void professorAdapterBindsFullNameAndItemCount() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         ArrayList<Professor> professors = new ArrayList<>();
-        professors.add(new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f));
-        professors.add(new Professor("prof-2", "Grace", "Hopper", "Informatik", 4.8f));
-        // Added null listener to fix constructor mismatch
+        professors.add(new Professor("prof-1", "Ada", "Lovelace", 4.5f, 10));
+        professors.add(new Professor("prof-2", "Grace", "Hopper", 4.8f, 20));
         ProfessorAdapter adapter = new ProfessorAdapter(professors, prof -> {});
         ViewGroup parent = new FrameLayout(context);
 
@@ -91,7 +94,7 @@ public class ProfessorFeatureInstrumentedTest {
 
     @Test
     public void searchPagerAdapterCreatesProfessorPage() {
-        SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment());
+        SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment(), () -> {});
 
         Fragment fragment = adapter.createFragment(0);
 
@@ -102,9 +105,9 @@ public class ProfessorFeatureInstrumentedTest {
 
     @Test
     public void searchServiceReturnsProfessorsMatchingFirstNameOrderedByFirstName() {
-        searchService.insertProfessor(new Professor("prof-2", "Grace", "Hopper", "Informatik", 4.8f));
-        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f));
-        searchService.insertProfessor(new Professor("prof-3", "Alan", "Turing", "Informatik", 4.9f));
+        searchService.insertProfessor(new Professor("prof-2", "Grace", "Hopper", 4.8f, 20));
+        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", 4.5f, 10));
+        searchService.insertProfessor(new Professor("prof-3", "Alan", "Turing", 4.9f, 30));
 
         List<Professor> results = searchService.searchProfessors("A");
 
@@ -115,11 +118,11 @@ public class ProfessorFeatureInstrumentedTest {
 
     @Test
     public void updateDBReplacesExistingProfessorsWithServerProfessors() throws Exception {
-        searchService.insertProfessor(new Professor("old-prof", "Old", "Professor", "Mathematik", 1.0f));
+        searchService.insertProfessor(new Professor("old-prof", "Old", "Professor", 1.0f, 1));
         APIService apiService = new FakeAPIService(
                 Arrays.asList(
-                        new Professor("prof-2", "Grace", "Hopper", "Informatik", 4.8f),
-                        new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f)
+                        new Professor("prof-2", "Grace", "Hopper", 4.8f, 20),
+                        new Professor("prof-1", "Ada", "Lovelace", 4.5f, 10)
                 ),
                 Collections.emptyList()
         );
@@ -151,7 +154,7 @@ public class ProfessorFeatureInstrumentedTest {
 
     @Test
     public void updateDBLeavesExistingDataWhenServerBodiesAreNull() {
-        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f));
+        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", 4.5f, 10));
         searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0));
         APIService apiService = new FakeAPIService(null, null);
 
@@ -201,24 +204,34 @@ public class ProfessorFeatureInstrumentedTest {
         }
 
         @Override
-        public Call<ServerResponse> requestLogin(LoginRequest request) {
-            return null;
-        }
-
+        public Call<ServerResponse> requestLogin(LoginRequest request) { return null; }
         @Override
-        public Call<ServerResponse> login(LoginRequest request) {
-            return null;
-        }
+        public Call<ServerResponse> login(LoginRequest request) { return null; }
+        @Override
+        public Call<ServerResponse> deleteAccount(LoginRequest request) { return null; }
 
         @Override
         public Call<ProfessorResponse> getProfessors() {
-            return new SuccessfulCall<>(professors);
+            ProfessorResponse resp = new ProfessorResponse();
+            resp.success = true;
+            resp.professors = professors;
+            return new SuccessfulCall<>(resp);
         }
 
         @Override
         public Call<LecturesResponse> getLectures() {
-            return new SuccessfulCall<>(lectures);
+            LecturesResponse resp = new LecturesResponse();
+            resp.success = true;
+            resp.lectures = lectures;
+            return new SuccessfulCall<>(resp);
         }
+
+        @Override
+        public Call<ServerResponse> postComment(String token, PostCommentRequest request) { return null; }
+        @Override
+        public Call<CommentsResponse> getComments(String lectureId) { return null; }
+        @Override
+        public Call<RatingAverageResponse> getRatings(String lectureId) { return null; }
     }
 
     private static class SuccessfulCall<T> implements Call<T> {
@@ -243,35 +256,18 @@ public class ProfessorFeatureInstrumentedTest {
         }
 
         @Override
-        public boolean isExecuted() {
-            return executed;
-        }
-
+        public boolean isExecuted() { return executed; }
         @Override
-        public void cancel() {
-            canceled = true;
-        }
-
+        public void cancel() { canceled = true; }
         @Override
-        public boolean isCanceled() {
-            return canceled;
-        }
-
+        public boolean isCanceled() { return canceled; }
         @Override
-        public Call<T> clone() {
-            return new SuccessfulCall<>(body);
-        }
-
+        public Call<T> clone() { return new SuccessfulCall<>(body); }
         @Override
         public Request request() {
-            return new Request.Builder()
-                    .url("https://example.test/")
-                    .build();
+            return new Request.Builder().url("https://example.test/").build();
         }
-
         @Override
-        public Timeout timeout() {
-            return Timeout.NONE;
-        }
+        public Timeout timeout() { return Timeout.NONE; }
     }
 }

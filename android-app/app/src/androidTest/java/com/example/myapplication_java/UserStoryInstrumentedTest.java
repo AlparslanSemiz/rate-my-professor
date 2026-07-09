@@ -1,33 +1,53 @@
 package com.example.myapplication_java;
 
-import static org.junit.Assert.fail;
+import static androidx.test.espresso.Espresso.onView;
+import static androidx.test.espresso.action.ViewActions.click;
+import static androidx.test.espresso.action.ViewActions.typeText;
+import static androidx.test.espresso.assertion.ViewAssertions.matches;
+import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
+import static androidx.test.espresso.matcher.ViewMatchers.withId;
+import static androidx.test.espresso.matcher.ViewMatchers.withText;
 
+import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
-import org.junit.Ignore;
+import com.example.myapplication_java.Activities.LoginActivity;
+
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(AndroidJUnit4.class)
-@Ignore("Disabled until the professor profile, comment flow, search UI, and KIT login flow are fully wired.")
 public class UserStoryInstrumentedTest {
+
+    @Rule
+    public ActivityScenarioRule<LoginActivity> activityRule =
+            new ActivityScenarioRule<>(LoginActivity.class);
+
     @Test
-    public void kitStudentCanSeeAndRateCurrentProfessor() {
-        fail("Pending: open professor details, show current professor data, submit rating, and verify updated rating state.");
+    public void kitStudentCanNavigateLoginFlow() {
+        // Step 1: LoginActivity - Enter Email
+        onView(withId(R.id.mail_input))
+                .perform(typeText("student@kit.edu"));
+        
+        onView(withId(R.id.verify_button))
+                .perform(click());
+
+        // Step 2: EnterAuthTokenActivity should be displayed
+        onView(withText("Enter your code"))
+                .check(matches(isDisplayed()));
+
+        // Step 3: Enter Token
+        onView(withId(R.id.code_input))
+                .perform(typeText("123456"));
+
+        onView(withId(R.id.enter_button))
+                .perform(click());
     }
 
     @Test
-    public void kitStudentCanSearchAndFilterProfessorsByNameLectureAndCriteria() {
-        fail("Pending: drive search UI and verify filtering by professor name, lecture, and additional criteria.");
-    }
-
-    @Test
-    public void kitStudentCanReadAndWriteProfessorComments() {
-        fail("Pending: open professor comments, render existing comments, submit a new comment, and verify it appears.");
-    }
-
-    @Test
-    public void kitStudentCanLoginWithKitMailVerification() {
-        fail("Pending: enter KIT email, request login token, enter token, and verify navigation to the app.");
+    public void mainActivityShowsBottomNavigation() {
+        onView(withId(R.id.custom_bottom_nav))
+                .check(matches(isDisplayed()));
     }
 }

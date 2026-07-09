@@ -50,7 +50,7 @@ public class ProfileProfessorAdapter extends RecyclerView.Adapter<ProfileProfess
 
         public LectureViewHolder(@NonNull View itemView) {
             super(itemView);
-            textView = itemView.findViewById(R.id.lectureName);
+            textView = itemView.findViewById(R.id.lecture_name_for_profile);
         }
     }
     public interface OnProfessorClickListener {

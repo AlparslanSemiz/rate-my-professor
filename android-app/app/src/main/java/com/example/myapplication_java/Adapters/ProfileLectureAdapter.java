@@ -8,7 +8,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.R;
 
 import java.util.List;
@@ -50,7 +49,7 @@ public class ProfileLectureAdapter extends RecyclerView.Adapter<ProfileLectureAd
 
         public LectureViewHolder(@NonNull View itemView) {
             super(itemView);
-            textView = itemView.findViewById(R.id.lectureName);
+            textView = itemView.findViewById(R.id.lecture_name_for_profile);
         }
     }
     public interface OnLectureClickListener {

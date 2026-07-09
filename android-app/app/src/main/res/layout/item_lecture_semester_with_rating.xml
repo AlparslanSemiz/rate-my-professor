@@ -37,7 +37,7 @@
         android:paddingTop="8dp"/>
 
     <TextView
-        android:id="@+id/lectureName"
+        android:id="@+id/lecture_name_for_profile"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"

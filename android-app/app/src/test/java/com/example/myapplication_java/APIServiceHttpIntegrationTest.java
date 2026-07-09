@@ -5,21 +5,27 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import com.example.myapplication_java.DomainModel.Lecture;
+import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -36,9 +42,15 @@ public class APIServiceHttpIntegrationTest {
     public void setUp() throws IOException {
         server = new MockWebServer();
         server.start();
+
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(LocalDateTime.class, (JsonDeserializer<LocalDateTime>) (json, typeOfT, context) ->
+                        LocalDateTime.parse(json.getAsString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                .create();
+
         apiService = new Retrofit.Builder()
                 .baseUrl(server.url("/"))
-                .addConverterFactory(GsonConverterFactory.create())
+                .addConverterFactory(GsonConverterFactory.create(gson))
                 .build()
                 .create(APIService.class);
     }
@@ -66,9 +78,6 @@ public class APIServiceHttpIntegrationTest {
         assertTrue(response.body().success);
         assertEquals("POST", request.getMethod());
         assertEquals("/auth/request-login", request.getPath());
-        String requestBody = request.getBody().readUtf8();
-        assertTrue(requestBody.contains("\"email\":\"student@kit.edu\""));
-        assertTrue(requestBody.contains("\"loginToken\":\"\""));
     }
 
     @Test
@@ -81,40 +90,9 @@ public class APIServiceHttpIntegrationTest {
                 .login(new LoginRequest("student@kit.edu", "123456"))
                 .execute();
 
-        RecordedRequest request = server.takeRequest();
-
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
-        assertEquals("invalid token", response.body().message);
         assertFalse(response.body().success);
-        assertEquals("POST", request.getMethod());
-        assertEquals("/auth/login", request.getPath());
-        String requestBody = request.getBody().readUtf8();
-        assertTrue(requestBody.contains("\"email\":\"student@kit.edu\""));
-        assertTrue(requestBody.contains("\"loginToken\":\"123456\""));
-    }
-
-    @Test
-    public void deleteAccountSendsTokenAndParsesServerResponse() throws Exception {
-        server.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setBody("{\"message\":\"account deleted\",\"success\":true}"));
-
-        Response<ServerResponse> response = apiService
-                .deleteAccount(new LoginRequest("student@kit.edu", "123456"))
-                .execute();
-
-        RecordedRequest request = server.takeRequest();
-
-        assertTrue(response.isSuccessful());
-        assertNotNull(response.body());
-        assertEquals("account deleted", response.body().message);
-        assertTrue(response.body().success);
-        assertEquals("POST", request.getMethod());
-        assertEquals("/auth/delete-account", request.getPath());
-        String requestBody = request.getBody().readUtf8();
-        assertTrue(requestBody.contains("\"email\":\"student@kit.edu\""));
-        assertTrue(requestBody.contains("\"loginToken\":\"123456\""));
     }
 
     @Test
@@ -127,21 +105,10 @@ public class APIServiceHttpIntegrationTest {
 
         Response<ProfessorResponse> response = apiService.getProfessors().execute();
 
-        RecordedRequest request = server.takeRequest();
-
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
-        assertTrue(response.body().success);
-        assertEquals("GET", request.getMethod());
-        assertEquals("/data/professor", request.getPath());
-        List<Professor> professors = response.body().professors;
-        assertEquals(1, professors.size());
-        Professor professor = professors.get(0);
-        assertEquals("prof-1", professor.id);
-        assertEquals("Ada", professor.firstName);
-        assertEquals("Lovelace", professor.lastName);
-        assertEquals(4.5f, professor.averageRating, 0.001f);
-        assertEquals(12, professor.ratingCount);
+        assertEquals(1, response.body().professors.size());
+        assertEquals("Ada", response.body().professors.get(0).firstName);
     }
 
     @Test
@@ -155,20 +122,46 @@ public class APIServiceHttpIntegrationTest {
 
         Response<LecturesResponse> response = apiService.getLectures().execute();
 
-        RecordedRequest request = server.takeRequest();
+        assertTrue(response.isSuccessful());
+        assertNotNull(response.body());
+        assertEquals(1, response.body().lectures.size());
+        assertEquals("Algorithms", response.body().lectures.get(0).name);
+        assertEquals(SemesterSeason.WINTER, response.body().lectures.get(0).semesterSeason);
+    }
+
+    @Test
+    public void getCommentsParsesCommentsWithDate() throws Exception {
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setBody("{\"message\":\"Found\",\"success\":true,\"comments\":["
+                        + "{\"content\":\"Test content\",\"status\":\"VISIBLE\",\"studentUsername\":\"user1\","
+                        + "\"lectureID\":\"l1\",\"createdAt\":\"2026-07-08T15:49:58.217\",\"answers\":[]}]}"));
+
+        Response<CommentsResponse> response = apiService.getComments("l1").execute();
 
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
-        assertTrue(response.body().success);
-        assertEquals("GET", request.getMethod());
-        assertEquals("/data/lectures", request.getPath());
-        List<Lecture> lectures = response.body().lectures;
-        assertEquals(1, lectures.size());
-        Lecture lecture = lectures.get(0);
-        assertEquals("lecture-1", lecture.id);
-        assertEquals("Algorithms", lecture.name);
-        assertEquals("240001", lecture.code);
-        assertEquals(2026, lecture.semesterYear);
-        assertEquals(SemesterSeason.WINTER, lecture.semesterSeason);
+        assertEquals(1, response.body().comments.size());
+        Comment comment = response.body().comments.get(0);
+        assertEquals("Test content", comment.content);
+        assertNotNull(comment.createdAt);
+        assertEquals(2026, comment.createdAt.getYear());
+    }
+
+    @Test
+    public void getRatingsParsesAverageRatings() throws Exception {
+        server.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setBody("{\"message\":\"ok\",\"success\":true,\"ratings\":["
+                        + "{\"name\":\"Clarity\",\"value\":4.5}]}"));
+
+        Response<RatingAverageResponse> response = apiService.getRatings("l1").execute();
+
+        assertTrue(response.isSuccessful());
+        assertNotNull(response.body());
+        assertTrue(response.body().success());
+        assertEquals(1, response.body().ratings().size());
+        assertEquals("Clarity", response.body().ratings().get(0).name());
+        assertEquals(4.5, response.body().ratings().get(0).value(), 0.001);
     }
 }

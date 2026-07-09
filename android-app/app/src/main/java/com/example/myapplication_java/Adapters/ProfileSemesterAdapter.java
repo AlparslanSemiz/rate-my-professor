@@ -28,6 +28,7 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
     public SemesterViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_lecture_semester_with_rating, parent, false);
+        // R.layout.item_lecture_semester_with_rating ?
         return new SemesterViewHolder(view);
     }
 
@@ -50,7 +51,7 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
 
         public SemesterViewHolder(@NonNull View itemView) {
             super(itemView);
-            textView = itemView.findViewById(R.id.semester_name);
+            textView = itemView.findViewById(R.id.lecture_name_for_profile);
         }
     }
     public interface OnSemesterClickListener {

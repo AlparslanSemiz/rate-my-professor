@@ -33,7 +33,7 @@ import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.PostCommentRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
-import com.example.myapplication_java.ServerCommunication.ServerResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.databinding.FragmentLectureRatingsBinding;
 
 import java.util.List;
@@ -44,9 +44,6 @@ import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Response;
 
-/**
- * The rating (and comment) Screen for a lecture Offering.
- */
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -57,6 +54,9 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * The rating (and comment) Screen for a lecture Offering.
+ */
 public class LectureRatingsFragment extends Fragment {
 
     private Lecture lecture;

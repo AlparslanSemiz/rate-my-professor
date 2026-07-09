@@ -51,8 +51,8 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void searchServiceReturnsEmptyProfessorListWhenFirstNameDoesNotMatch() {
-        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f));
-        searchService.insertProfessor(new Professor("prof-2", "Grace", "Hopper", "Informatik", 4.8f));
+        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", 4.5f, 10));
+        searchService.insertProfessor(new Professor("prof-2", "Grace", "Hopper", 4.8f, 20));
 
         List<Professor> results = searchService.searchProfessors("Alan");
 
@@ -61,9 +61,9 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void searchServiceReturnsAllProfessorsOrderedByFirstNameForBlankQuery() {
-        searchService.insertProfessor(new Professor("prof-3", "Grace", "Hopper", "Informatik", 4.8f));
-        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f));
-        searchService.insertProfessor(new Professor("prof-2", "Alan", "Turing", "Informatik", 4.9f));
+        searchService.insertProfessor(new Professor("prof-3", "Grace", "Hopper", 4.8f, 20));
+        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", 4.5f, 10));
+        searchService.insertProfessor(new Professor("prof-2", "Alan", "Turing", 4.9f, 30));
 
         List<Professor> results = searchService.searchProfessors("");
 
@@ -75,8 +75,8 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void deleteProfessorsClearsProfessorTable() {
-        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", "Informatik", 4.5f));
-        searchService.insertProfessor(new Professor("prof-2", "Grace", "Hopper", "Informatik", 4.8f));
+        searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", 4.5f, 10));
+        searchService.insertProfessor(new Professor("prof-2", "Grace", "Hopper", 4.8f, 20));
 
         searchService.deleteProfessors();
 
@@ -156,7 +156,7 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void searchPagerAdapterCreatesLecturePage() {
-        SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment());
+        SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment(), () -> {});
 
         Fragment fragment = adapter.createFragment(1);
 
@@ -167,7 +167,7 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void searchPagerAdapterTreatsUnknownPositionAsLecturePage() {
-        SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment());
+        SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment(), () -> {});
 
         Fragment fragment = adapter.createFragment(99);
 
