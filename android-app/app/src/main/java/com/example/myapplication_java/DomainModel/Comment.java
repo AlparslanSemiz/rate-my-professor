@@ -1,25 +1,16 @@
 package com.example.myapplication_java.DomainModel;
 
-import java.util.Date;
+import com.example.myapplication_java.ServerCommunication.AnswerResponse;
+import com.example.myapplication_java.ServerCommunication.ContentStatus;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 public class Comment {
-    public String commentId;
-    public String text;
-    public Date createdAt;
-    public Date updatedAt;
-
-    public Comment(String commentId, String text, Date createdAt, Date updatedAt) {
-        this.commentId = commentId;
-        this.text = text;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
-
-    //TODO: Implement the following methods.
-    public void addReply(Comment reply) {}
-
-    public int getVoteScore() {
-        return 0;
-    }
-
+    public String content;
+    public ContentStatus status;
+    public String studentUsername;
+    public String lectureID;
+    public LocalDateTime createdAt;
+    public List<AnswerResponse> answers;
 }

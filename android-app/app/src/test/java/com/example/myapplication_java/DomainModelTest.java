@@ -6,7 +6,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.LectureOffering;
 import com.example.myapplication_java.DomainModel.Notification;

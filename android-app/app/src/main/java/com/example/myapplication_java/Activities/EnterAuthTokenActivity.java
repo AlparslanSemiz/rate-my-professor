@@ -74,8 +74,8 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
                         // Saving the OneTimePassword for future logins
                         SharedPreferences.Editor editor = loginDataStorage.edit();
                         editor.putString("OTP", token);
+                        editor.putString("authToken", response.body().authToken);
                         editor.apply();
-
                         EnterAuthTokenActivity.this.startActivity(mainActivity);
                     }
 

@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.myapplication_java"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -43,6 +43,7 @@ dependencies {
     implementation(libs.activity.ktx)
     implementation(libs.appcompat)
     implementation(libs.constraintlayout)
+    implementation(libs.core.i18n)
     implementation(libs.material)
     implementation(libs.recyclerview)
     implementation(libs.viewpager2)
