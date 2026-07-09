@@ -1,12 +1,13 @@
-import { useEffect, useState, type CSSProperties } from 'react'
-import { Text, Badge, Box, SimpleGrid, Select, Group } from '@mantine/core'
+import { useEffect, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { Text, Badge, Box, SimpleGrid, Group } from '@mantine/core'
 import { IconBug, IconAlertCircle, IconCircleCheck, IconClock } from '@tabler/icons-react'
-import { feedbackService, type BugReport, type ReportStatus } from '../api/FeedbackService'
+import { feedbackService, type BugReport, type BugReportUpdate } from '../api/FeedbackService'
 import StatCard from '../components/StatCard'
 import LoadError from '../components/LoadError'
 import PageLoader from '../components/PageLoader'
 import Panel from '../components/Panel'
 import PageHeader from '../components/PageHeader'
+import BugReportModal from '../components/BugReportModal'
 import { severityColor, severityAccent, reportStatusColor } from '../constants/colors'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
@@ -14,7 +15,6 @@ import { getErrorMessage } from '../utils/getErrorMessage'
 import { countByValue, updateById } from '../utils/collection'
 import { statGridCols } from '../constants/layout'
 
-const STATUS_OPTIONS: ReportStatus[] = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN']
 const LOAD_ERROR_MESSAGE = 'Failed to load bug reports'
 
 const panelOverflowStyle: CSSProperties = {
@@ -40,20 +40,15 @@ const severityBarStyle: CSSProperties = {
   flexShrink: 0,
 }
 
-const statusSelectStyles = {
-  input: {
-    background: '#0f1117',
-    border: '1px solid #21262d',
-    color: '#e2e8f0',
-    fontSize: 12,
-  },
-}
-
 export default function FeedbackPage() {
   const [reports, setReports] = useState<BugReport[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [statusUpdating, setStatusUpdating] = useState(false)
+  const [statusError, setStatusError] = useState('')
 
   useEffect(() => {
     feedbackService
@@ -69,14 +64,35 @@ export default function FeedbackPage() {
     setReloadKey((k) => k + 1)
   }
 
-  async function handleStatusChange(id: string, status: ReportStatus) {
-    await feedbackService.updateStatus(id, status)
-    setReports((prev) => updateById(prev, id, (report) => ({ ...report, status })))
+  function openReport(id: string) {
+    setSelectedReportId(id)
+    setDetailOpen(true)
+    setStatusError('')
+  }
+
+  function closeReport() {
+    setDetailOpen(false)
+    setStatusError('')
+  }
+
+  async function handleReportUpdate(id: string, update: BugReportUpdate) {
+    setStatusUpdating(true)
+    setStatusError('')
+    try {
+      await feedbackService.updateReport(id, update)
+      setReports((prev) => updateById(prev, id, (report) => ({ ...report, ...update })))
+    } catch (err: unknown) {
+      setStatusError(getErrorMessage(err, 'Failed to update the report. The change was not saved.'))
+    } finally {
+      setStatusUpdating(false)
+    }
   }
 
   if (loading) return <PageLoader />
 
   if (error) return <LoadError message={error} onRetry={retry} />
+
+  const selectedReport = reports.find((report) => report.id === selectedReportId) ?? null
 
   return (
     <div>
@@ -86,7 +102,16 @@ export default function FeedbackPage() {
       />
 
       <FeedbackStats reports={reports} />
-      <ReportQueue reports={reports} onStatusChange={handleStatusChange} />
+      <ReportQueue reports={reports} onOpenReport={openReport} />
+
+      <BugReportModal
+        report={selectedReport}
+        opened={detailOpen}
+        onClose={closeReport}
+        onUpdate={handleReportUpdate}
+        statusUpdating={statusUpdating}
+        statusError={statusError}
+      />
     </div>
   )
 }
@@ -104,10 +129,10 @@ function FeedbackStats({ reports }: { reports: BugReport[] }) {
 
 function ReportQueue({
   reports,
-  onStatusChange,
+  onOpenReport,
 }: {
   reports: BugReport[]
-  onStatusChange: (id: string, status: ReportStatus) => void
+  onOpenReport: (id: string) => void
 }) {
   return (
     <Panel style={panelOverflowStyle}>
@@ -116,7 +141,7 @@ function ReportQueue({
           Report queue
         </Text>
         <Text size="xs" c="#4b5563">
-          Newest entries shown first.
+          Newest entries shown first · click a report to view details.
         </Text>
       </Box>
 
@@ -129,7 +154,7 @@ function ReportQueue({
               key={report.id}
               report={report}
               isLast={index === reports.length - 1}
-              onStatusChange={onStatusChange}
+              onOpenReport={onOpenReport}
             />
           ))}
         </div>
@@ -152,12 +177,38 @@ function EmptyReportQueue() {
 interface ReportItemProps {
   report: BugReport
   isLast: boolean
-  onStatusChange: (id: string, status: ReportStatus) => void
+  onOpenReport: (id: string) => void
 }
 
-function ReportItem({ report, isLast, onStatusChange }: ReportItemProps) {
+function reportRowStyle(isLast: boolean): CSSProperties {
+  return {
+    borderBottom: isLast ? 'none' : '1px solid #1c2128',
+    cursor: 'pointer',
+    transition: 'background 0.1s',
+  }
+}
+
+function handleReportKeyDown(event: KeyboardEvent<HTMLDivElement>, onOpen: () => void) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    onOpen()
+  }
+}
+
+function ReportItem({ report, isLast, onOpenReport }: ReportItemProps) {
+  const openReport = () => onOpenReport(report.id)
+
   return (
-    <Box px={20} py={18} style={{ borderBottom: isLast ? 'none' : '1px solid #1c2128' }}>
+    <Box
+      px={20}
+      py={18}
+      style={reportRowStyle(isLast)}
+      onMouseEnter={(event) => { event.currentTarget.style.background = '#1c2128' }}
+      onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent' }}
+      onClick={openReport}
+      onKeyDown={(event) => handleReportKeyDown(event, openReport)}
+      tabIndex={0}
+    >
       <Group justify="space-between" mb={8}>
         <Group gap={8}>
           <Box
@@ -180,19 +231,9 @@ function ReportItem({ report, isLast, onStatusChange }: ReportItemProps) {
             </Group>
           </div>
         </Group>
-        <Group gap={10} align="center">
-          <Text size="xs" c="#4b5563">
-            {formatDate(report.reportedAt, { withTime: true })}
-          </Text>
-          <Select
-            size="xs"
-            w={140}
-            value={report.status}
-            data={STATUS_OPTIONS.map((s) => ({ value: s, label: enumLabel(s) }))}
-            styles={statusSelectStyles}
-            onChange={(val) => val && onStatusChange(report.id, val as ReportStatus)}
-          />
-        </Group>
+        <Text size="xs" c="#4b5563">
+          {formatDate(report.reportedAt, { withTime: true })}
+        </Text>
       </Group>
       <Text size="sm" c="#6b7280" ml={11}>
         {report.description}

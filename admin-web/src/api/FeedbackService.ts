@@ -17,6 +17,11 @@ interface BugReportsResponse extends BasicResponse {
   bugReports: BugReport[]
 }
 
+export interface BugReportUpdate {
+  status?: ReportStatus
+  severity?: Severity
+}
+
 export class FeedbackService {
   private readonly client: ApiClient
 
@@ -29,8 +34,8 @@ export class FeedbackService {
     return response.bugReports
   }
 
-  updateStatus(id: string, status: ReportStatus): Promise<BasicResponse> {
-    return this.client.withQueryParams('PATCH', `/reports/${id}`, { status })
+  updateReport(id: string, update: BugReportUpdate): Promise<BasicResponse> {
+    return this.client.patch(`/reports/${id}`, update)
   }
 }
 

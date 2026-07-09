@@ -77,15 +77,15 @@ export class UsersService {
   }
 
   /**
-   * The backend expects the issuing admin's id as `createdFrom.id` — it does not derive
-   * this from the auth token. `adminId` should be the id of the currently logged-in admin.
+   * The backend expects the issuing admin's id nested as `createdFrom.id` — it does not
+   * derive this from the auth token. `adminId` should be the id of the currently logged-in
+   * admin. `id`/`createdAt` are omitted: the backend generates both itself.
    */
   async warn(id: string, message: string, adminId: string): Promise<BasicResponse> {
-    return this.client.withQueryParams<BasicResponse>('POST', `/users/${id}/warnings`, {
-      id: crypto.randomUUID(),
+    return this.client.post<BasicResponse>(`/users/${id}/warnings`, {
       userID: id,
       message,
-      'createdFrom.id': adminId,
+      createdFrom: { id: adminId },
     })
   }
 

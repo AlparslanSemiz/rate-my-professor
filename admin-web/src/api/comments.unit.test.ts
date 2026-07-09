@@ -54,17 +54,16 @@ describe('CommentsService', () => {
     })
   })
 
-  it('updates report status with a PATCH query parameter request', async () => {
+  it('updates report status with a PATCH request body', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'Updated' }))
     const service = createCommentsService()
 
     await service.updateStatus('comment-1', 'ACTION_TAKEN')
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    const parsedUrl = new URL(url)
-    expect(parsedUrl.pathname).toBe('/comments/reported/comment-1')
-    expect(parsedUrl.searchParams.get('status')).toBe('ACTION_TAKEN')
+    expect(url).toBe(`${API_BASE_URL}/comments/reported/comment-1`)
     expect(init.method).toBe('PATCH')
+    expect(JSON.parse(init.body as string)).toEqual({ status: 'ACTION_TAKEN' })
   })
 
   it('surfaces backend errors for missing comment reports', async () => {

@@ -117,12 +117,12 @@ describe('UsersService', () => {
     await service.warn('user-1', 'Bad behavior', 'admin-1')
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    const parsedUrl = new URL(url)
-    expect(parsedUrl.pathname).toBe('/users/user-1/warnings')
-    expect(parsedUrl.searchParams.get('userID')).toBe('user-1')
-    expect(parsedUrl.searchParams.get('message')).toBe('Bad behavior')
-    expect(parsedUrl.searchParams.get('createdFrom.id')).toBe('admin-1')
-    expect(parsedUrl.searchParams.get('id')).toBeTruthy()
+    expect(url).toBe(`${API_BASE_URL}/users/user-1/warnings`)
     expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body as string)).toEqual({
+      userID: 'user-1',
+      message: 'Bad behavior',
+      createdFrom: { id: 'admin-1' },
+    })
   })
 })
