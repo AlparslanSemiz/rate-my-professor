@@ -47,31 +47,27 @@
         android:textColor="#FFFFFF"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/average_text" />
+        app:layout_constraintTop_toBottomOf="@id/ratingBar_average" />
 
     <RatingBar
         android:id="@+id/ratingBar_average"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:scaleX="0.8"
-        android:scaleY="0.8"
         android:progressTint="#E6B400"
         android:isIndicator="true"
-        app:layout_constraintBottom_toBottomOf="@+id/average_text"
-        app:layout_constraintEnd_toStartOf="@id/average_rating_num"
-        app:layout_constraintTop_toTopOf="@+id/average_text" />
+        android:layout_marginStart="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/average_text" />
 
 
     <RatingBar
         android:id="@+id/ratingBar_your_rating"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:scaleX="0.8"
-        android:scaleY="0.8"
+        android:layout_marginStart="8dp"
         android:progressTint="#E6B400"
-        app:layout_constraintBottom_toBottomOf="@+id/your_rating_text"
-        app:layout_constraintEnd_toStartOf="@id/your_rating_num"
-        app:layout_constraintTop_toTopOf="@+id/your_rating_text" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/your_rating_text" />
 
     <TextView
         android:id="@+id/average_rating_num"
@@ -82,9 +78,9 @@
         android:text="4,0"
         android:textColor="#228B22"
         android:textSize="24sp"
-        app:layout_constraintBottom_toBottomOf="@id/average_text"
+        app:layout_constraintBottom_toBottomOf="@id/ratingBar_average"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/average_text" />
+        app:layout_constraintTop_toTopOf="@id/ratingBar_average" />
 
     <TextView
         android:id="@+id/your_rating_num"
@@ -95,9 +91,9 @@
         android:text="tbd"
         android:textColor="#228B22"
         android:textSize="24sp"
-        app:layout_constraintBottom_toBottomOf="@id/your_rating_text"
+        app:layout_constraintBottom_toBottomOf="@id/ratingBar_your_rating"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/your_rating_text" />
+        app:layout_constraintTop_toTopOf="@id/ratingBar_your_rating" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
