@@ -5,7 +5,6 @@ import {
   IconUserCheck,
   IconShieldCheck,
   IconBug,
-  IconRefresh,
 } from '@tabler/icons-react'
 import { usersService, type User } from '../api/UsersService'
 import { feedbackService } from '../api/FeedbackService'
@@ -134,33 +133,51 @@ function activeRate({ total, active }: DashboardStats) {
   return total ? Math.round((active / total) * 100) : 0
 }
 
+const REFRESH_INTERVAL_MS = 15_000
+
 function useDashboardData() {
   const [users, setUsers] = useState<User[]>([])
   const [openReports, setOpenReports] = useState(0)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   useEffect(() => {
-    // The dashboard is an overview; if a request fails we keep the zeros
-    // rather than blocking the whole page.
-    usersService.getAll().then(setUsers).catch(() => {})
-    feedbackService
-      .getReports()
-      .then((reports) => setOpenReports(countOpenReports(reports)))
-      .catch(() => {})
+    let cancelled = false
+
+    function refresh() {
+      // The dashboard is an overview; if a request fails we keep the previous
+      // values rather than blocking the whole page.
+      Promise.all([
+        usersService.getAll().catch(() => null),
+        feedbackService.getReports().catch(() => null),
+      ]).then(([fetchedUsers, reports]) => {
+        if (cancelled) return
+        if (fetchedUsers) setUsers(fetchedUsers)
+        if (reports) setOpenReports(countOpenReports(reports))
+        setLastUpdated(new Date())
+      })
+    }
+
+    refresh()
+    const interval = setInterval(refresh, REFRESH_INTERVAL_MS)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
   }, [])
 
-  return { users, stats: calculateDashboardStats(users, openReports) }
+  return { users, stats: calculateDashboardStats(users, openReports), lastUpdated }
 }
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { users, stats } = useDashboardData()
+  const { users, stats, lastUpdated } = useDashboardData()
   const activePercentage = activeRate(stats)
 
   return (
     <div>
       <DashboardHeader />
 
-      <OverviewHero activeRate={activePercentage} />
+      <OverviewHero activeRate={activePercentage} lastUpdated={lastUpdated} />
 
       <DashboardStatGrid stats={stats} />
 
@@ -178,7 +195,6 @@ function DashboardHeader() {
   return (
     <>
       <Group gap={6} mb={24}>
-        <IconRefresh size={14} color="#4b5563" />
         <Text size="xs" c="#4b5563">
           Operation center
         </Text>
@@ -205,11 +221,14 @@ function DashboardStatGrid({ stats }: { stats: DashboardStats }) {
   )
 }
 
-function OverviewHero({ activeRate }: { activeRate: number }) {
+function OverviewHero({ activeRate, lastUpdated }: { activeRate: number; lastUpdated: Date | null }) {
   const metrics = [
     { label: 'Active users rate', value: `${activeRate}%` },
     { label: 'Approval rate', value: '100%' },
-    { label: 'Last refresh', value: formatDate(new Date().toISOString(), { withTime: true }) },
+    {
+      label: 'Last refresh',
+      value: lastUpdated ? formatDate(lastUpdated.toISOString(), { withTime: true }) : '—',
+    },
   ]
 
   return (
