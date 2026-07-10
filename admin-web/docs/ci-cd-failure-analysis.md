@@ -161,6 +161,14 @@ This is not a replacement for future unit or integration tests, but it makes the
 | `test` | `npm run test` | Passes |
 | `build` | `npm run build` | Passes |
 | `package` | `npm run build` then archive | Should pass after build succeeds |
+| `deploy` | Extract packaged artifact and sync `dist/` to the configured host | Optional manual job on `main`; requires deployment CI variables |
+
+The deploy stage syncs the built app to `/var/www/admin-web` and expects these GitLab CI/CD variables:
+
+- `DEPLOY_HOST`
+- `DEPLOY_USER`
+- `DEPLOY_SSH_PRIVATE_KEY`
+- `DEPLOY_PORT` (optional, defaults to `22`)
 
 ## Remaining recommendation
 
