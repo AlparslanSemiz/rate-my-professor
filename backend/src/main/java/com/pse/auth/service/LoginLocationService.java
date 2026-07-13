@@ -1,0 +1,302 @@
+package com.pse.auth.service;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
+import com.pse.shared.enums.IpInfoResponse;
+import com.pse.shared.enums.LoginLocation;
+import org.springframework.web.util.HtmlUtils;
+
+
+@Service
+public class LoginLocationService {
+
+    private final RestClient ipInfoClient;
+    private final String ipInfoToken;
+    private final String geoapifyApiKey;
+
+    public LoginLocationService(
+            @Value("${ipinfo.token:}") String ipInfoToken,
+            @Value("${geoapify.api.key:}") String geoapifyApiKey
+    ) {
+        this.ipInfoToken = ipInfoToken;
+        this.geoapifyApiKey = geoapifyApiKey;
+
+        this.ipInfoClient = RestClient.builder()
+                .baseUrl("https://ipinfo.io")
+                .build();
+    }
+
+    /**
+     * Resolves an approximate location for an IP address.
+     */
+    public LoginLocation getLoginLocation(String rawIp) {
+
+        String ip = normalizeIp(rawIp);
+
+        if (ip == null || ipInfoToken.isBlank()) {
+            return new LoginLocation("Unknown", null, null);
+        }
+
+        try {
+            IpInfoResponse response = ipInfoClient
+                    .get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/{ip}/json")
+                            .queryParam("token", ipInfoToken)
+                            .build(ip)
+                    )
+                    .retrieve()
+                    .body(IpInfoResponse.class);
+
+            if (response == null) {
+                return new LoginLocation("Unknown", null, null);
+            }
+
+            String description = createLocationDescription(response);
+
+            String mapsUrl = createMapsUrl(response.loc());
+
+            return new LoginLocation(description, mapsUrl, response.loc());
+
+        } catch (Exception exception) {
+            System.err.println(
+                    "Could not determine location for IP "
+                            + ip
+                            + ": "
+                            + exception.getMessage()
+            );
+
+            return new LoginLocation("Unknown", null, null);
+        }
+    }
+
+    /**
+     * Creates HTML containing either a static map or a Maps button.
+     */
+    public String createStaticMap(String mapsUrl, String coordinates) {
+
+
+        String imageUrl = createStaticMapUrl(coordinates);
+
+        if (imageUrl == null) {
+            return createMapsButton(mapsUrl);
+        }
+
+        String safeMapsUrl = escapeHtml(mapsUrl);
+        String safeImageUrl = escapeHtml(imageUrl);
+
+        return """
+                <div style="
+                    margin-top: 15px;
+                    margin-bottom: 15px;
+                    text-align: center;
+                ">
+                    <a
+                        href="%s"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <img
+                            src="%s"
+                            alt="Approximate login location"
+                            width="520"
+                            style="
+                                width: 100%%;
+                                max-width: 520px;
+                                border-radius: 8px;
+                                border: 1px solid #dddddd;
+                                display: block;
+                            "
+                        >
+                    </a>
+
+                    <p style="
+                        margin-top: 6px;
+                        font-size: 11px;
+                        color: #888888;
+                    ">
+                        © OpenStreetMap contributors
+                    </p>
+                </div>
+                """.formatted(
+                safeMapsUrl,
+                safeImageUrl
+        );
+    }
+
+    /**
+     * Creates a readable location such as:
+     * Karlsruhe, Baden-Württemberg, DE
+     */
+    private String createLocationDescription(IpInfoResponse response) {
+
+        StringBuilder location = new StringBuilder();
+
+        appendLocationPart(location, response.city());
+        appendLocationPart(location, response.region());
+        appendLocationPart(location, response.country());
+
+        if (location.isEmpty()) {
+            return "Unknown";
+        }
+
+        return location.toString();
+    }
+
+    /**
+     * Adds a non-empty value to the location description.
+     */
+    private void appendLocationPart(StringBuilder location, String value) {
+
+        if (value == null || value.isBlank()) {
+            return;
+        }
+
+        if (!location.isEmpty()) {
+            location.append(", ");
+        }
+
+        location.append(value.trim());
+    }
+
+    /**
+     * Creates a Google Maps URL from IPinfo coordinates.
+     */
+    private String createMapsUrl(String coordinates) {
+
+        if (!isValidCoordinates(coordinates)) {
+            return null;
+        }
+
+        String encodedCoordinates = URLEncoder.encode(
+                coordinates,
+                StandardCharsets.UTF_8
+        );
+
+        return "https://www.google.com/maps/search/"
+                + "?api=1&query="
+                + encodedCoordinates;
+    }
+
+    /**
+     * Creates a Geoapify static map URL.
+     */
+    private String createStaticMapUrl(String coordinates) {
+
+        if (!isValidCoordinates(coordinates) || geoapifyApiKey == null || geoapifyApiKey.isBlank()) {
+            return null;
+        }
+
+        String[] parts = coordinates.split(",");
+
+        String latitude = parts[0].trim();
+        String longitude = parts[1].trim();
+
+        return "https://maps.geoapify.com/v1/staticmap"
+                + "?style=osm-bright"
+                + "&width=520"
+                + "&height=280"
+                + "&center=lonlat:"
+                + longitude
+                + ","
+                + latitude
+                + "&zoom=9"
+                + "&marker=lonlat:"
+                + longitude
+                + ","
+                + latitude
+                + ";type:awesome;color:%23d32f2f"
+                + "&apiKey="
+                + URLEncoder.encode(
+                geoapifyApiKey,
+                StandardCharsets.UTF_8
+        );
+    }
+
+    /**
+     * Creates a Google Maps button when no static map is available.
+     */
+    private String createMapsButton(String mapsUrl) {
+
+        if (mapsUrl == null || mapsUrl.isBlank()) {
+            return "";
+        }
+
+        return """
+                <div style="
+                    margin-top: 5px;
+                    margin-bottom: 10px;
+                ">
+                    <a
+                        href="%s"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style="
+                            display: inline-block;
+                            padding: 10px 16px;
+                            background-color: #1a73e8;
+                            color: #ffffff;
+                            text-decoration: none;
+                            font-size: 14px;
+                            font-weight: bold;
+                            border-radius: 6px;
+                        "
+                    >
+                        View on Google Maps
+                    </a>
+                </div>
+                """.formatted(escapeHtml(mapsUrl));
+    }
+
+    /**
+     * Problem rawIp = X-Forwarded-For: "203.0.113.42, 10.0.0.5"
+     *
+     * Handles X-Forwarded-For values containing multiple addresses.
+     */
+    private String normalizeIp(String rawIp) {
+
+        if (rawIp == null || rawIp.isBlank()) {
+            return null;
+        }
+
+        String ip = rawIp.split(",")[0].trim();
+
+        if (ip.isBlank()) {
+            return null;
+        }
+
+        return ip;
+    }
+
+    /**
+     * Validates coordinates in latitude,longitude format.
+     */
+    private boolean isValidCoordinates(String coordinates) {
+
+        if (coordinates == null || coordinates.isBlank()) {
+            return false;
+        }
+
+        return coordinates.matches("-?\\d{1,3}(\\.\\d+)?,-?\\d{1,3}(\\.\\d+)?");
+    }
+
+
+
+    /**
+     * Escapes values inserted into generated HTML.
+     */
+    private String escapeHtml(String value) {
+
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+
+        return HtmlUtils.htmlEscape(value);
+    }
+
+}
