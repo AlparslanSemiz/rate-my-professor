@@ -215,7 +215,7 @@ export default function CommentsPage() {
     <>
       <PageHeader
         title="Reported Comments"
-        description="User-flagged comments awaiting moderation. Click a user name to view their profile."
+        description="Comments your community flagged, waiting for a look. Tap a name to open their profile."
       />
 
       <CommentsStats reports={reports} />
@@ -359,7 +359,7 @@ function EmptyCommentsTable() {
     <Box py={60} style={emptyStateStyle}>
       <IconMessageReport size={32} color="#374151" style={emptyIconStyle} />
       <Text c="#4b5563" size="sm">
-        No reported comments match the current filters.
+        Nothing here — no comments match these filters.
       </Text>
     </Box>
   )

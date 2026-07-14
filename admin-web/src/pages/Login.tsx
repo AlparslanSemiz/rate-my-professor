@@ -9,6 +9,7 @@ import { ApiError, apiClient, EMPTY_RESPONSE_MESSAGE } from '../api/ApiClient'
 import Panel from '../components/Panel'
 import { darkInputStyles } from '../constants/inputStyles'
 import { getRequiredAdminUser, hasAdminAccess, normalizeEmail, withRequiredAdminRole } from '../utils/adminAccess'
+import { getDemoAdminTokenForEmail, isDemoLoginCode } from '../utils/demoAuth'
 import { getErrorMessage } from '../utils/getErrorMessage'
 
 type Step = 'email' | 'code'
@@ -91,8 +92,11 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const response = await authService.requestLoginCode(trimmedEmail)
-      if (!response.success) throw new Error(response.message)
+      const demoToken = getDemoAdminTokenForEmail(trimmedEmail)
+      if (!demoToken) {
+        const response = await authService.requestLoginCode(trimmedEmail)
+        if (!response.success) throw new Error(response.message)
+      }
       setEmail(trimmedEmail)
       setStep('code')
     } catch (err: unknown) {
@@ -111,7 +115,13 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const { token } = await authService.login(trimmedEmail, trimmedCode)
+      const demoToken = getDemoAdminTokenForEmail(trimmedEmail)
+      if (demoToken && !isDemoLoginCode(trimmedCode)) {
+        throw new Error('Invalid token')
+      }
+      const { token } = demoToken
+        ? { token: demoToken }
+        : await authService.login(trimmedEmail, trimmedCode)
       apiClient.setToken(token)
       const requiredAdminUser = getRequiredAdminUser(trimmedEmail)
       let users: User[] = []
@@ -180,7 +190,7 @@ function LoginBrand() {
           Admin Panel
         </Text>
         <Text size="xs" c="#4b5563" lh={1.2}>
-          Operation center
+          Admin toolkit
         </Text>
       </div>
     </div>
@@ -195,8 +205,8 @@ function LoginCopy({ step, email }: { step: Step; email: string }) {
       </Text>
       <Text size="sm" c="#6b7280" mb={24}>
         {step === 'email'
-          ? 'Enter your KIT student email to receive a login code.'
-          : `Enter the code sent to ${email}.`}
+          ? "Pop in your KIT student email and we'll send over a login code."
+          : `We just sent a code to ${email} — enter it below.`}
       </Text>
     </>
   )
@@ -253,7 +263,7 @@ function EmailStepForm({
           radius="md"
           style={submitButtonStyle}
         >
-          Send login code
+          Send me a code
         </Button>
       </Stack>
     </form>
@@ -296,7 +306,7 @@ function CodeStepForm({
           radius="md"
           style={submitButtonStyle}
         >
-          Sign In
+          Sign in
         </Button>
         <Button type="button" fullWidth variant="subtle" color="gray" onClick={onUseDifferentEmail}>
           Use a different email

@@ -27,22 +27,22 @@ interface DashboardStats {
 const MODULES = [
   {
     label: 'Users',
-    title: 'User operations',
-    description: 'View profiles, manage sessions and roles across all registered accounts.',
+    title: 'People',
+    description: "Peek at profiles, sort out roles and tidy up sessions for everyone who's signed up.",
     accent: '#3b82f6',
     path: '/users',
   },
   {
     label: 'Bug reports',
-    title: 'Crash & feedback tracking',
-    description: 'Review user-submitted bug forms and error crash logs.',
+    title: 'Bugs & crashes',
+    description: "See what's breaking — bug reports and crash logs, straight from your users.",
     accent: '#f97316',
     path: '/feedback',
   },
   {
     label: 'Comments',
-    title: 'Reported content',
-    description: 'Review user-flagged comments and take moderation actions.',
+    title: 'Flagged comments',
+    description: 'Look over the comments folks flagged and decide what happens next.',
     accent: '#8b5cf6',
     path: '/comments',
   },
@@ -78,7 +78,8 @@ const heroBadgeStyle: CSSProperties = {
   borderColor: 'rgba(34,197,94,0.2)',
   marginBottom: 14,
   fontWeight: 600,
-  letterSpacing: '0.06em',
+  letterSpacing: '0.02em',
+  textTransform: 'none',
 }
 
 const heroTitleStyle: CSSProperties = {
@@ -177,12 +178,12 @@ export default function Dashboard() {
     <div>
       <DashboardHeader />
 
-      <OverviewHero activeRate={activePercentage} lastUpdated={lastUpdated} />
+      <OverviewHero stats={stats} activeRate={activePercentage} lastUpdated={lastUpdated} />
 
       <DashboardStatGrid stats={stats} />
 
       <SimpleGrid cols={twoColumnGridCols} spacing={16} mb={28}>
-        <SystemPulse activeRate={activePercentage} />
+        <SystemPulse stats={stats} activeRate={activePercentage} />
         <RecentRegistrations users={users} onViewAll={() => navigate('/users')} />
       </SimpleGrid>
 
@@ -194,17 +195,11 @@ export default function Dashboard() {
 function DashboardHeader() {
   return (
     <>
-      <Group gap={6} mb={24}>
-        <Text size="xs" c="#4b5563">
-          Operation center
-        </Text>
-      </Group>
-
       <Text fw={700} c="#f1f5f9" mb={4} style={pageTitleStyle}>
         Dashboard
       </Text>
       <Text size="sm" c="#6b7280" mb={32}>
-        Live user activity, moderation queue and system health at a glance.
+        A quick look at how your community's doing today.
       </Text>
     </>
   )
@@ -221,12 +216,12 @@ function DashboardStatGrid({ stats }: { stats: DashboardStats }) {
   )
 }
 
-function OverviewHero({ activeRate, lastUpdated }: { activeRate: number; lastUpdated: Date | null }) {
+function OverviewHero({ stats, activeRate, lastUpdated }: { stats: DashboardStats; activeRate: number; lastUpdated: Date | null }) {
   const metrics = [
-    { label: 'Active users rate', value: `${activeRate}%` },
-    { label: 'Approval rate', value: '100%' },
+    { label: 'Members active', value: `${activeRate}%` },
+    { label: 'Reports waiting', value: String(stats.openReports) },
     {
-      label: 'Last refresh',
+      label: 'Updated',
       value: lastUpdated ? formatDate(lastUpdated.toISOString(), { withTime: true }) : '—',
     },
   ]
@@ -239,13 +234,13 @@ function OverviewHero({ activeRate, lastUpdated }: { activeRate: number; lastUpd
         variant="light"
         style={heroBadgeStyle}
       >
-        TODAY'S OPERATION OVERVIEW
+        Today at a glance
       </Badge>
       <Text fw={700} c="#f1f5f9" mb={6} style={heroTitleStyle}>
-        Users, moderation and system health — one panel.
+        Everything worth a look, all in one place.
       </Text>
       <Text size="sm" c="#6b7280" mb={24}>
-        Quickly review active sessions, pending reports and maintenance signals in one place.
+        See who's around, what needs a second look, and how things are holding up — no digging required.
       </Text>
 
       <SimpleGrid cols={moduleGridCols} spacing={16}>
@@ -267,20 +262,22 @@ function OverviewHero({ activeRate, lastUpdated }: { activeRate: number; lastUpd
   )
 }
 
-function SystemPulse({ activeRate }: { activeRate: number }) {
+function SystemPulse({ stats, activeRate }: { stats: DashboardStats; activeRate: number }) {
+  const adminShare = stats.total ? Math.round((stats.admins / stats.total) * 100) : 0
+  const queueCleared = stats.openReports === 0 ? 100 : Math.max(0, 100 - stats.openReports * 10)
   const metrics = [
-    { label: 'Active user rate', value: activeRate, color: '#3b82f6' },
-    { label: 'Profile health', value: 100, color: '#22c55e' },
-    { label: 'Pending moderation load', value: 0, color: '#f97316' },
+    { label: 'Members active', value: activeRate, color: '#3b82f6' },
+    { label: 'Admin coverage', value: adminShare, color: '#22c55e' },
+    { label: 'Queue cleared', value: queueCleared, color: '#f97316' },
   ]
 
   return (
     <Panel style={panelPaddingStyle}>
       <Text fw={600} c="#e2e8f0" mb={4} size="sm">
-        System pulse
+        How things are running
       </Text>
       <Text size="xs" c="#6b7280" mb={20}>
-        Quick read on live metrics.
+        A quick read on today's numbers.
       </Text>
       {metrics.map((item) => (
         <Box key={item.label} mb={14}>
@@ -304,19 +301,19 @@ function RecentRegistrations({ users, onViewAll }: { users: User[]; onViewAll: (
     <Panel style={panelPaddingStyle}>
       <Group justify="space-between" mb={4}>
         <Text fw={600} c="#e2e8f0" size="sm">
-          Recent registrations
+          Newest members
         </Text>
         <Text size="xs" c="#22c55e" style={viewAllStyle} onClick={onViewAll}>
-          View all →
+          See everyone →
         </Text>
       </Group>
       <Text size="xs" c="#6b7280" mb={16}>
-        Latest joined accounts.
+        The latest folks to join.
       </Text>
       {users.length === 0 ? (
         <Box py={18} style={emptyRegistrationsStyle}>
           <Text size="sm" c="#4b5563">
-            No registrations loaded yet.
+            No new members just yet.
           </Text>
         </Box>
       ) : (
@@ -344,10 +341,10 @@ function ModuleNavigation({ onNavigate }: { onNavigate: (path: string) => void }
   return (
     <Box mb={8}>
       <Text fw={600} c="#e2e8f0" mb={4} size="sm">
-        Modules
+        Jump to
       </Text>
       <Text size="xs" c="#6b7280" mb={16}>
-        Quick navigation to all admin sections.
+        Head straight to any section.
       </Text>
       <SimpleGrid cols={moduleGridCols} spacing={16}>
         {MODULES.map((module) => (

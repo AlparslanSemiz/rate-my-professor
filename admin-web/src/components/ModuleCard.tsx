@@ -12,14 +12,14 @@ interface ModuleCardProps {
   onClick: (path: string) => void
 }
 
-const BASE_BACKGROUND = '#161b22'
-const HOVER_BACKGROUND = '#1c2128'
-const BASE_BORDER = '#21262d'
+const BASE_BACKGROUND = 'linear-gradient(180deg, #171b23 0%, #14171e 100%)'
+const HOVER_BACKGROUND = 'linear-gradient(180deg, #1c212b 0%, #181c25 100%)'
+const BASE_BORDER = '#232935'
 
 const cardStyle: CSSProperties = {
   padding: '18px 20px',
   cursor: 'pointer',
-  transition: 'border-color 0.15s, background 0.15s',
+  transition: 'border-color 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease',
 }
 
 export default function ModuleCard({ label, title, description, accent, path, onClick }: ModuleCardProps) {
@@ -37,6 +37,10 @@ export default function ModuleCard({ label, title, description, accent, path, on
   function setHoverState(element: HTMLDivElement, hovered: boolean) {
     element.style.borderColor = hovered ? `${accent}55` : BASE_BORDER
     element.style.background = hovered ? HOVER_BACKGROUND : BASE_BACKGROUND
+    element.style.transform = hovered ? 'translateY(-2px)' : 'translateY(0)'
+    element.style.boxShadow = hovered
+      ? `0 1px 2px rgba(0,0,0,0.35), 0 14px 32px rgba(0,0,0,0.28), 0 0 0 1px ${accent}22`
+      : '0 1px 2px rgba(0,0,0,0.35), 0 10px 28px rgba(0,0,0,0.16)'
   }
 
   return (

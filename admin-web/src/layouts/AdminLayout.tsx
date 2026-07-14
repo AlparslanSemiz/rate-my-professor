@@ -13,12 +13,13 @@ export default function AdminLayout() {
       padding={0}
       styles={{
         main: {
-          background: '#0f1117',
+          background: 'transparent',
           minHeight: '100vh',
         },
         navbar: {
-          background: '#111318',
-          borderRight: '1px solid #1e2028',
+          background: 'linear-gradient(180deg, #12151c 0%, #0f1217 100%)',
+          borderRight: '1px solid #1b1f27',
+          boxShadow: '1px 0 0 rgba(255,255,255,0.02) inset',
         },
       }}
     >

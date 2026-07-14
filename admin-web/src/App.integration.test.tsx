@@ -64,7 +64,7 @@ const requiredAdminUser = {
 
 const requiredAdminFallbackUser = {
   id: requiredAdminAccount.kitEmail,
-  name: 'u-kisi4',
+  name: 'Alparslan',
   email: requiredAdminAccount.kitEmail,
   role: 'ADMIN',
 }
@@ -83,7 +83,7 @@ describe('App routing and authentication', () => {
 
     render(<App />)
 
-    expect(await screen.findByText('Enter your KIT student email to receive a login code.')).toBeInTheDocument()
+    expect(await screen.findByText("Pop in your KIT student email and we'll send over a login code.")).toBeInTheDocument()
     expect(window.location.pathname).toBe('/login')
   })
 
@@ -94,7 +94,7 @@ describe('App routing and authentication', () => {
 
     render(<App />)
 
-    expect(await screen.findByText('Live user activity, moderation queue and system health at a glance.')).toBeInTheDocument()
+    expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
     expect(screen.getAllByText(adminUser.email).length).toBeGreaterThan(0)
   })
 
@@ -105,14 +105,14 @@ describe('App routing and authentication', () => {
     render(<App />)
 
     await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), adminUser.email)
-    await user.click(screen.getByRole('button', { name: 'Send login code' }))
-    expect(await screen.findByText(`Enter the code sent to ${adminUser.email}.`)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Send me a code' }))
+    expect(await screen.findByText(`We just sent a code to ${adminUser.email} — enter it below.`)).toBeInTheDocument()
 
     await user.type(screen.getByPlaceholderText('Code from your email'), '123456')
-    await user.click(screen.getByRole('button', { name: 'Sign In' }))
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     await waitFor(() => expect(authService.login).toHaveBeenCalledWith(adminUser.email, '123456'))
-    expect(await screen.findByText('Live user activity, moderation queue and system health at a glance.')).toBeInTheDocument()
+    expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
     expect(localStorage.getItem('token')).toBe('mock-token-1')
     expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(adminUser)
   })
@@ -125,12 +125,12 @@ describe('App routing and authentication', () => {
     render(<App />)
 
     await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), requiredAdminUser.email)
-    await user.click(screen.getByRole('button', { name: 'Send login code' }))
+    await user.click(screen.getByRole('button', { name: 'Send me a code' }))
     await user.type(await screen.findByPlaceholderText('Code from your email'), '123456')
-    await user.click(screen.getByRole('button', { name: 'Sign In' }))
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     await waitFor(() => expect(authService.login).toHaveBeenCalledWith(requiredAdminUser.email, '123456'))
-    expect(await screen.findByText('Live user activity, moderation queue and system health at a glance.')).toBeInTheDocument()
+    expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(requiredAdminUser)
   })
 
@@ -142,12 +142,12 @@ describe('App routing and authentication', () => {
     render(<App />)
 
     await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), requiredAdminFallbackUser.email)
-    await user.click(screen.getByRole('button', { name: 'Send login code' }))
+    await user.click(screen.getByRole('button', { name: 'Send me a code' }))
     await user.type(await screen.findByPlaceholderText('Code from your email'), '123456')
-    await user.click(screen.getByRole('button', { name: 'Sign In' }))
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     await waitFor(() => expect(authService.login).toHaveBeenCalledWith(requiredAdminFallbackUser.email, '123456'))
-    expect(await screen.findByText('Live user activity, moderation queue and system health at a glance.')).toBeInTheDocument()
+    expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(requiredAdminFallbackUser)
   })
 })

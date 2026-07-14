@@ -20,27 +20,27 @@ const MUTED_TEXT = '#4b5563'
 const navItems = [
   {
     label: 'Dashboard',
-    sublabel: 'Operation overview',
+    sublabel: 'The big picture',
     path: '/dashboard',
     icon: IconLayoutDashboard,
   },
   {
     label: 'Users',
-    sublabel: 'Profiles & sessions',
+    sublabel: 'People & profiles',
     path: '/users',
     icon: IconUsers,
   },
   {
-    label: 'Bug Reports',
-    sublabel: 'Errors & crash tracking',
-    path: '/feedback',
-    icon: IconBug,
-  },
-  {
     label: 'Comments',
-    sublabel: 'Reported content',
+    sublabel: 'Flagged comments',
     path: '/comments',
     icon: IconMessageReport,
+  },
+  {
+    label: 'Bug Reports',
+    sublabel: 'Bugs & crashes',
+    path: '/feedback',
+    icon: IconBug,
   },
 ]
 
@@ -55,10 +55,11 @@ const brandRowStyle: CSSProperties = {
 }
 
 const brandMarkStyle: CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: 8,
-  background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+  width: 34,
+  height: 34,
+  borderRadius: 10,
+  background: 'linear-gradient(135deg, #34d17a, #16a34a)',
+  boxShadow: '0 4px 14px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -70,8 +71,8 @@ const navButtonBaseStyle: CSSProperties = {
   alignItems: 'center',
   gap: 12,
   padding: '10px 12px',
-  borderRadius: 8,
-  transition: 'background 0.15s ease',
+  borderRadius: 10,
+  transition: 'background 0.18s ease, box-shadow 0.18s ease',
   cursor: 'pointer',
   width: '100%',
 }
@@ -102,8 +103,11 @@ const logoutButtonStyle: CSSProperties = {
 function navButtonStyle(isActive: boolean): CSSProperties {
   return {
     ...navButtonBaseStyle,
-    background: isActive ? 'rgba(34, 197, 94, 0.08)' : 'transparent',
-    borderLeft: isActive ? `2px solid ${ACTIVE_COLOR}` : '2px solid transparent',
+    background: isActive
+      ? 'linear-gradient(180deg, rgba(34,197,94,0.14), rgba(34,197,94,0.06))'
+      : 'transparent',
+    border: isActive ? '1px solid rgba(34,197,94,0.22)' : '1px solid transparent',
+    boxShadow: isActive ? 'inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 14px rgba(34,197,94,0.10)' : 'none',
   }
 }
 
@@ -111,12 +115,14 @@ function navIconStyle(isActive: boolean): CSSProperties {
   return {
     width: 32,
     height: 32,
-    borderRadius: 6,
-    background: isActive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    background: isActive ? 'rgba(34, 197, 94, 0.18)' : 'rgba(255,255,255,0.05)',
+    boxShadow: isActive ? '0 0 0 1px rgba(34,197,94,0.22), 0 2px 10px rgba(34,197,94,0.18)' : 'none',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    transition: 'background 0.18s ease, box-shadow 0.18s ease',
   }
 }
 
@@ -160,7 +166,7 @@ function SidebarHeader() {
             Admin Panel
           </Text>
           <Text size="xs" c={MUTED_TEXT} lh={1.2}>
-            Operation center
+            Admin toolkit
           </Text>
         </div>
       </div>
@@ -228,7 +234,7 @@ function SessionFooter({ user, onLogout }: { user: AuthUser | null; onLogout: ()
           </Box>
           <div style={sessionInfoStyle}>
             <Text size="xs" fw={500} c="#d1fae5" lh={1.3}>
-              Admin session active
+              You're signed in
             </Text>
             <Text size="xs" c={MUTED_TEXT} lh={1.3} truncate>
               {user?.name ?? 'Admin'}

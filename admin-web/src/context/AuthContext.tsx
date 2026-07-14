@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthUser } from './AuthContextValue'
 import { apiClient } from '../api/ApiClient'
+import { getDemoAdminTokenForEmail } from '../utils/demoAuth'
 
 const TOKEN_STORAGE_KEY = 'token'
 const USER_STORAGE_KEY = 'user'
@@ -38,8 +39,13 @@ function readStoredSession(): AuthState {
 
   try {
     const user = JSON.parse(stored) as AuthUser
-    apiClient.setToken(token)
-    return { token, user }
+    const demoToken = getDemoAdminTokenForEmail(user.email)
+    const activeToken = demoToken ?? token
+    if (demoToken && demoToken !== token) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, demoToken)
+    }
+    apiClient.setToken(activeToken)
+    return { token: activeToken, user }
   } catch {
     clearStoredSession()
     return emptyAuthState

@@ -121,7 +121,7 @@ export default function Users() {
     <>
       <PageHeader
         title="Users"
-        description="Profile health, sessions and moderation status for all registered accounts."
+        description="Everyone who's signed up — profiles, sessions and moderation, all in one place."
       />
 
       <UsersStats users={users} />
@@ -175,7 +175,7 @@ function UsersTable({ users, filteredUsers, search, onSearchChange, onOpenProfil
               All users
             </Text>
             <Text size="xs" c="#4b5563">
-              {filteredUsers.length} of {users.length} accounts · click a row to view profile
+              {filteredUsers.length} of {users.length} members · tap a row to open a profile
             </Text>
           </div>
           <TextInput

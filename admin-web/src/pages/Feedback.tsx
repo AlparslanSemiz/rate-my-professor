@@ -98,7 +98,7 @@ export default function FeedbackPage() {
     <div>
       <PageHeader
         title="Bug Reports"
-        description="User-submitted bug forms, screenshots, device info and automatic crash logs."
+        description="Bug reports and crash logs sent in by your users — screenshots, device info and all."
       />
 
       <FeedbackStats reports={reports} />
@@ -141,7 +141,7 @@ function ReportQueue({
           Report queue
         </Text>
         <Text size="xs" c="#4b5563">
-          Newest entries shown first · click a report to view details.
+          Newest first · tap a report for the full story.
         </Text>
       </Box>
 
@@ -168,7 +168,7 @@ function EmptyReportQueue() {
     <Box py={60} style={emptyStateStyle}>
       <IconBug size={32} color="#374151" style={emptyIconStyle} />
       <Text c="#4b5563" size="sm">
-        No bug reports yet.
+        All quiet — no bug reports yet.
       </Text>
     </Box>
   )
