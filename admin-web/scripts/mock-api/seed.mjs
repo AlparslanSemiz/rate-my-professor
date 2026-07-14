@@ -234,6 +234,14 @@ async function seedBugReports(client) {
   }
 }
 
+async function seedAll(client) {
+  await seedUsers(client)
+  await seedTokens(client)
+  await seedWarnings(client)
+  await seedCommentReports(client)
+  await seedBugReports(client)
+}
+
 export async function resetMockDatabase() {
   await withTransaction(async (client) => {
     await createSchema(client)
@@ -247,11 +255,19 @@ export async function resetMockDatabase() {
         mock_users
       CASCADE
     `)
-    await seedUsers(client)
-    await seedTokens(client)
-    await seedWarnings(client)
-    await seedCommentReports(client)
-    await seedBugReports(client)
+    await seedAll(client)
+  })
+}
+
+// Idempotent startup path: create the schema if missing and seed only when the
+// database is empty, so restarting the API never discards data created at runtime.
+export async function ensureMockDatabase() {
+  await withTransaction(async (client) => {
+    await createSchema(client)
+    const { rows } = await client.query('SELECT count(*)::int AS count FROM mock_users')
+    if (rows[0].count === 0) {
+      await seedAll(client)
+    }
   })
 }
 

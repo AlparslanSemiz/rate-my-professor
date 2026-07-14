@@ -2,7 +2,23 @@ import crypto from 'node:crypto'
 import http from 'node:http'
 import { apiConfig, demoAdminToken, demoLoginCode } from './config.mjs'
 import { closePool, query } from './db.mjs'
-import { resetMockDatabase } from './seed.mjs'
+import { ensureMockDatabase } from './seed.mjs'
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isUuid(value) {
+  return typeof value === 'string' && UUID_PATTERN.test(value)
+}
+
+// Shared SELECT used by both the user list and single-user lookup so the stats
+// subqueries stay in one place.
+const USER_WITH_STATS_SELECT = `
+  SELECT
+    u.*,
+    (SELECT count(*) FROM mock_warnings w WHERE w.user_id = u.id) AS warnings,
+    (SELECT count(*) FROM mock_comment_reports r WHERE r.reported_user_id = u.id) AS reports
+  FROM mock_users u
+`
 
 const requiredAdmins = {
   'u-kisi4@student.kit.edu': 'Alparslan',
@@ -85,17 +101,7 @@ function toCommentUser(row, prefix) {
 }
 
 async function findUserWithStatsById(id) {
-  const result = await query(
-    `
-      SELECT
-        u.*,
-        (SELECT count(*) FROM mock_warnings w WHERE w.user_id = u.id) AS warnings,
-        (SELECT count(*) FROM mock_comment_reports r WHERE r.reported_user_id = u.id) AS reports
-      FROM mock_users u
-      WHERE u.id = $1
-    `,
-    [id]
-  )
+  const result = await query(`${USER_WITH_STATS_SELECT} WHERE u.id = $1`, [id])
   return result.rows[0] ? toUser(result.rows[0]) : null
 }
 
@@ -219,19 +225,12 @@ async function handleUsers(req, res, parts) {
   if (!admin) return
 
   if (req.method === 'GET' && parts.length === 1) {
-    const result = await query(`
-      SELECT
-        u.*,
-        (SELECT count(*) FROM mock_warnings w WHERE w.user_id = u.id) AS warnings,
-        (SELECT count(*) FROM mock_comment_reports r WHERE r.reported_user_id = u.id) AS reports
-      FROM mock_users u
-      ORDER BY u.role = 'ADMIN' DESC, u.joined DESC
-    `)
+    const result = await query(`${USER_WITH_STATS_SELECT} ORDER BY u.role = 'ADMIN' DESC, u.joined DESC`)
     return sendJson(res, 200, { message: 'Success', success: true, users: result.rows.map(toUser) })
   }
 
   const userId = parts[1]
-  if (!userId) return sendJson(res, 404, { message: 'Not found', success: false })
+  if (!isUuid(userId)) return sendJson(res, 404, { message: 'User not found', success: false })
 
   if (req.method === 'GET' && parts.length === 2) {
     const user = await findUserWithStatsById(userId)
@@ -337,6 +336,7 @@ async function handleComments(req, res, parts) {
   }
 
   if (req.method === 'PATCH' && parts[1] === 'reported' && parts[2]) {
+    if (!isUuid(parts[2])) return sendJson(res, 404, { message: 'Report not found', success: false })
     const body = await readBody(req)
     const status = String(body.status ?? '')
     if (!validReportStatuses.has(status)) {
@@ -377,6 +377,7 @@ async function handleReports(req, res, parts) {
   }
 
   if (req.method === 'PATCH' && parts[1]) {
+    if (!isUuid(parts[1])) return sendJson(res, 404, { message: 'Bug report not found', success: false })
     const body = await readBody(req)
     const updates = []
     const values = []
@@ -427,7 +428,14 @@ async function route(req, res) {
   }
 }
 
-await resetMockDatabase()
+try {
+  await ensureMockDatabase()
+} catch (error) {
+  console.error('Could not connect to the mock database. Is it running? Try `npm run db:up`.')
+  console.error(error)
+  await closePool()
+  process.exit(1)
+}
 
 const server = http.createServer(route)
 

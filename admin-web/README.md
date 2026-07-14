@@ -19,7 +19,10 @@ This repo owns the local mock flow for admin development: Postgres, seeded demo 
 Default local database connection:
 
 ```text
-jdbc:postgresql://localhost:5432/admin_web
+postgresql://admin_web:admin_web@localhost:5432/admin_web
+host:     localhost
+port:     5432
+database: admin_web
 username: admin_web
 password: admin_web
 ```
@@ -65,23 +68,61 @@ The login flow stores `/auth/login` response field `authToken` and sends it on a
 Authorization: Bearer <authToken>
 ```
 
-Mocked admin endpoints:
+All endpoints except `GET /health` and the two `/auth` POST routes require an `Authorization: Bearer <authToken>` header for an admin user.
+
+Auth:
 
 - `POST /auth/request-login` with `{ "email": "user@student.kit.edu" }`
 - `POST /auth/login` with `{ "email": "user@student.kit.edu", "loginToken": "123456" }`
-- `GET /auth/me` with `Authorization`
-- `GET /users` with `Authorization`
-- `GET /comments/reported` with `Authorization`
-- `GET /reports` with `Authorization`
+- `GET /auth/me`
+
+Users:
+
+- `GET /users`
+- `GET /users/:id`
+- `DELETE /users/:id`
+- `PATCH /users/:id/block`
+- `PATCH /users/:id/unblock`
+- `GET /users/:id/warnings`
+- `POST /users/:id/warnings` with `{ "message": "..." }`
+
+Comments:
+
+- `GET /comments/reported`
+- `PATCH /comments/reported/:id` with `{ "status": "..." }`
+
+Bug reports:
+
+- `GET /reports`
+- `PATCH /reports/:id` with `{ "status": "...", "severity": "..." }`
+
+Health:
+
+- `GET /health`
 
 ## Scripts
 
 ```bash
-npm run dev
-npm run dev:local
-npm run test
-npm run build
-npm run db:up
-npm run mock:up
-npm run mock:reset
+# App
+npm run dev              # Vite dev server
+npm run dev:local        # Vite against the local mock API (demo-local mode)
+npm run build            # Type-check and build for production
+npm run preview          # Preview the production build
+
+# Quality
+npm run check            # lint + typecheck
+npm run lint             # ESLint
+npm run typecheck        # tsc -b
+npm run test             # Run all tests
+npm run test:unit        # Unit tests only
+npm run test:integration # Integration tests only
+
+# Mock API + database
+npm run mock:up          # Start the DB and the mock API
+npm run mock:api         # Start the mock API only
+npm run mock:seed        # Reseed the mock database
+npm run mock:reset       # Start the DB and reseed it
+npm run db:up            # Start the Postgres container
+npm run db:down          # Stop and remove the Postgres container
+npm run db:logs          # Follow the Postgres container logs
 ```
