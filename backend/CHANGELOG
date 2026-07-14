@@ -14,3 +14,36 @@ Changes at "/social" Interface:
 
 
 
+14.07
+
+Added Up/Down Votes to Comments/answers
+
+=> Changed GET Comments
++ added 2 int's fpr upVotes and downVotes
+
+public record CommentResponse(
+        String content,
+        ContentStatus status,
+        String studentUsername,
+        UUID lectureID,
+        LocalDateTime createdAt,
+++      int downVotes,
+++      int upVotes,
+
+        List<AnswerResponse> answers
+
+) {
+}
+
+
+public record AnswerResponse(
+        UUID commentId,
+        String content,
+        ContentStatus status,
+        String studentUsername,
+        LocalDateTime createdAt,
+++      int downVotes,
+++      int upVotes
+) {
+}
+
