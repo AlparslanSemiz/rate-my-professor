@@ -1,5 +1,5 @@
 const REQUIRED_ADMINS = {
-  'u-kisi4@student.kit.edu': { name: 'u-kisi4' },
+  'u-kisi4@student.kit.edu': { name: 'Alparslan' },
   'u-kisi5@student.kit.edu': { name: 'Mustafa' },
   'u-kisi6@student.kit.edu': { name: 'Luis' },
   'u-kisi7@student.kit.edu': { name: 'Yavuz' },
