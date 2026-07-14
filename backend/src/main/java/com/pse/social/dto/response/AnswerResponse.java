@@ -10,6 +10,8 @@ public record AnswerResponse(
         String content,
         ContentStatus status,
         String studentUsername,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        int downVotes,
+        int upVotes
 ) {
 }

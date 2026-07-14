@@ -5,6 +5,8 @@ import com.pse.social.dto.request.AnswerReportRequest;
 import com.pse.social.dto.request.AnswerSubmitRequest;
 import com.pse.social.dto.request.CommentReportRequest;
 import com.pse.social.dto.request.CommentSubmitRequest;
+import com.pse.social.dto.request.VoteAnswerRequest;
+import com.pse.social.dto.request.VoteCommentRequest;
 import com.pse.social.dto.response.CommentsResponse;
 import com.pse.social.service.SocialService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,9 +36,17 @@ public class SocialController {
 
         return socialService.submitComment(authHeader, request);
 
+    }
 
+
+    @PostMapping("/comments/vote/comment/{comment_id}")
+    public BasicResponse voteComment(@PathVariable UUID comment_id, @RequestHeader("Authorization") String authHeader, @RequestBody VoteCommentRequest request) {
+
+        return socialService.voteComment(comment_id, authHeader, request);
 
     }
+
+
 
 
     //Returns both Comments *AND* answers
@@ -54,9 +64,12 @@ public class SocialController {
 
     }
 
+    @PostMapping("/comments/vote/answer{answer_id}")
+    public BasicResponse voteAnswer(@PathVariable UUID answer_id, @RequestHeader("Authorization") String authHeader, @RequestBody VoteAnswerRequest request) {
 
+        return socialService.voteAnswer(answer_id, authHeader, request);
 
-
+    }
 
 
 
@@ -73,8 +86,6 @@ public class SocialController {
         return socialService.submitAnswerReport(authHeader, request);
 
     }
-
-
 
 
 

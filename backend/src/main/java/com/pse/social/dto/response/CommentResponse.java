@@ -8,12 +8,13 @@ import java.util.UUID;
 
 public record CommentResponse(
 
-
         String content,
         ContentStatus status,
         String studentUsername,
         UUID lectureID,
         LocalDateTime createdAt,
+        int downVotes,
+        int upVotes,
 
         List<AnswerResponse> answers
 
