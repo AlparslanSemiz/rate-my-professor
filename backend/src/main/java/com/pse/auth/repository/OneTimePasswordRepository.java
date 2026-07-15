@@ -3,6 +3,7 @@ package com.pse.auth.repository;
 
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,5 +19,10 @@ public interface OneTimePasswordRepository extends JpaRepository<OneTimePassword
         String email,
         String value,
         LocalDateTime now
+    );
+
+    List<OneTimePassword> findByEmailAndUsedFalseAndExpiresAtAfter(
+            String email,
+            LocalDateTime expiresAt
     );
 }

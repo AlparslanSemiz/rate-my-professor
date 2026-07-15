@@ -16,7 +16,8 @@ import com.pse.auth.model.OneTimePassword;
 import com.pse.auth.model.Token;
 import com.pse.auth.repository.OneTimePasswordRepository;
 import com.pse.auth.repository.TokenRepository;
-import com.pse.shared.util.Utility;
+import com.pse.shared.util.HashGenerator;
+import com.pse.shared.util.NameGenerator;
 import com.pse.user.model.Student;
 import com.pse.user.service.StudentService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -57,12 +58,12 @@ public class AuthService {
         }
 
 
-        String token = createAndSaveOTP(userEmail);
+        String otp = createAndSaveOTP(userEmail);
 
-        mailService.sendLoginMail(userEmail, token);
+        mailService.sendLoginMail(userEmail, otp);
 
         //FOR FUTURE: Don't tell, whether user has an existing account (only e.g. if user has account email has been sent)
-        return new BasicResponse("Login Token sent to: " + userEmail, true);
+        return new BasicResponse("Login OneTimePassword sent to: " + userEmail, true);
     }
 
 
@@ -81,13 +82,13 @@ public class AuthService {
         String userEmail = request.email().trim().toLowerCase();
         String otp = request.loginToken().trim();
 
-        boolean valid = verifyOTP(userEmail, otp);
+        boolean valid = verifyOTP(userEmail, otp); //Also consumes OTP
 
         if (!valid) {
             //TODO: More fine-grained error message (e.g. token expired...)
             return new LoginResponse("Invalid token", false, null);
         }
-        consumeOTP(userEmail, otp);
+
 
         //TODO check if Student exists in Databse and if not add him
 
@@ -98,7 +99,7 @@ public class AuthService {
             student = new Student();
             student.setKitEmail(userEmail);
 
-            String userName = Utility.generateUsername();
+            String userName = NameGenerator.generateUsername();
 
             student.setUsername(userName);
 
@@ -175,7 +176,8 @@ public class AuthService {
         OneTimePassword oneTimePassword = new OneTimePassword();
 
         oneTimePassword.setEmail(email);
-        oneTimePassword.setValue(otp);
+        //oneTimePassword.setValue(otp);
+        oneTimePassword.setHash(HashGenerator.hashPassword(otp));
         oneTimePassword.setExpiresAt(expiresAt);
 
         oneTimePasswordRepository.save(oneTimePassword);
@@ -185,28 +187,6 @@ public class AuthService {
     }
 
 
-
-
-    /**
-     * Verifies the OTP by checking if it exists, is unused, and isnt expired.
-     */
-    private void consumeOTP(String email, String otp) {
-
-        OneTimePassword oneTimePassword = oneTimePasswordRepository
-                .findByEmailAndValueAndUsedFalseAndExpiresAtAfter(
-                        email,
-                        otp,
-                        LocalDateTime.now()
-                ).orElse(null);
-
-        if (oneTimePassword == null) {
-            return;
-        }
-
-        oneTimePassword.setUsed(true);
-
-        oneTimePasswordRepository.save(oneTimePassword);
-    }
 
 
 
@@ -232,9 +212,6 @@ public class AuthService {
 
 
 
-
-
-
     public int invalidateAllAuthTokensForEmail(String email) {
 
         List<Token> tokens = tokenRepository.findByEmail(email);
@@ -246,7 +223,6 @@ public class AuthService {
         return tokens.size();
     
     }
-
 
 
     public Student verifyUser(String authHeader) {
@@ -299,8 +275,6 @@ public class AuthService {
     }
 
 
-
-
     //Repository Methods:
 
     private String verifyAuthToken(String authToken) {
@@ -326,12 +300,21 @@ public class AuthService {
      */
     private boolean verifyOTP(String email, String otp) {
 
-        return oneTimePasswordRepository.findByEmailAndValueAndUsedFalseAndExpiresAtAfter(
-                email,
-                otp,
-                LocalDateTime.now()
-        ).isPresent();
+        List<OneTimePassword> otps = oneTimePasswordRepository.findByEmailAndUsedFalseAndExpiresAtAfter(email, LocalDateTime.now());
 
+        for (OneTimePassword storedOtp : otps) {
+
+            if (HashGenerator.passwordMatchesHash(otp, storedOtp.getValue())) {
+
+                storedOtp.setUsed(true);
+                oneTimePasswordRepository.save(storedOtp);
+
+                return true;
+            }
+
+        }
+
+        return false;
     }
 
 

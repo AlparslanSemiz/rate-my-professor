@@ -29,6 +29,9 @@ public class    OneTimePassword {
     @Column(nullable = false)
     private String value;
 
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String hash;
+
     @Column(nullable = false)
     private boolean used = false;
 

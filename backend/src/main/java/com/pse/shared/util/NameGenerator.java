@@ -1,6 +1,6 @@
 package com.pse.shared.util;
 
-public class Utility {
+public class NameGenerator {
 
     private static final String[] ADJECTIVES = {
             "Schneller", "Mutiger", "Schlauer", "Frecher",
