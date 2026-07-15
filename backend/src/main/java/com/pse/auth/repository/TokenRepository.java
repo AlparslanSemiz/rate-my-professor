@@ -11,8 +11,8 @@ import com.pse.auth.model.Token;
 
 public interface TokenRepository extends JpaRepository<Token, UUID> {
 
-    Optional<Token> findByValueAndRevokedFalseAndExpiresAtAfter(
-            String value,
+    Optional<Token> findByHashAndRevokedFalseAndExpiresAtAfter(
+            String hash,
             LocalDateTime now
     );
 
