@@ -57,7 +57,7 @@ public class MailService {
 
 
         String body = mailTemplateService.create(
-                "login-code.html",
+                "OTPMailTemplate.html",
                 Map.of("otp", escapeHtml(otp))
         );
 
@@ -84,7 +84,7 @@ public class MailService {
                 );
 
         String body = mailTemplateService.create(
-                "successful-login.html",
+                "SuccessfulLoginMailTemplate.html",
                 Map.of(
                         "location",
                         escapeHtml(loginLocation.description()),

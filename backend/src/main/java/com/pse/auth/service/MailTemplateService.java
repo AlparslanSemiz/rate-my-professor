@@ -11,7 +11,7 @@ import org.springframework.util.StreamUtils;
 @Service
 public class MailTemplateService {
 
-    private static final String TEMPLATE_DIRECTORY =  "static/mail";
+    private static final String TEMPLATE_DIRECTORY =  "static/mail/";
 
     public String create(
             String templateName,

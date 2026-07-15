@@ -304,7 +304,7 @@ public class AuthService {
 
         for (OneTimePassword storedOtp : otps) {
 
-            if (HashGenerator.passwordMatchesHash(otp, storedOtp.getValue())) {
+            if (HashGenerator.passwordMatchesHash(otp, storedOtp.getHash())) {
 
                 storedOtp.setUsed(true);
                 oneTimePasswordRepository.save(storedOtp);

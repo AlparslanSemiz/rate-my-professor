@@ -12,15 +12,7 @@ import com.pse.auth.model.OneTimePassword;
 
 public interface OneTimePasswordRepository extends JpaRepository<OneTimePassword, Integer> {
 
-    /**
-     * used for "validateOTP"
-     */
-    Optional<OneTimePassword> findByEmailAndValueAndUsedFalseAndExpiresAtAfter(
-        String email,
-        String value,
-        LocalDateTime now
-    );
-
+   
     List<OneTimePassword> findByEmailAndUsedFalseAndExpiresAtAfter(
             String email,
             LocalDateTime expiresAt
