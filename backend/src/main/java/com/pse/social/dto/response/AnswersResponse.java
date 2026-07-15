@@ -8,6 +8,5 @@ public record AnswersResponse(
         boolean success,
         List<AnswerResponse> answers
 
-
 ) {
 }

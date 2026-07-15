@@ -6,22 +6,29 @@ import com.pse.lecture.model.Lecture;
 import com.pse.lecture.service.LectureService;
 import com.pse.shared.enums.ReportReason;
 import com.pse.shared.enums.ReportStatus;
+import com.pse.shared.enums.VoteType;
 import com.pse.social.dto.request.AnswerReportRequest;
 import com.pse.social.dto.request.AnswerSubmitRequest;
 import com.pse.social.dto.request.CommentReportRequest;
 import com.pse.social.dto.request.CommentSubmitRequest;
+import com.pse.social.dto.request.VoteAnswerRequest;
+import com.pse.social.dto.request.VoteCommentRequest;
 import com.pse.social.dto.response.AnswerResponse;
 import com.pse.social.dto.response.AnswersResponse;
 import com.pse.social.dto.response.CommentResponse;
 import com.pse.social.dto.response.CommentsResponse;
 import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerReport;
+import com.pse.social.model.AnswerVote;
 import com.pse.social.model.Comment;
 import com.pse.social.model.CommentReport;
+import com.pse.social.model.CommentVote;
 import com.pse.social.repository.AnswerReportRepository;
 import com.pse.social.repository.AnswerRepository;
+import com.pse.social.repository.AnswerVoteRepository;
 import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.CommentRepository;
+import com.pse.social.repository.CommentVoteRepository;
 import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,6 +59,12 @@ public class SocialService {
     private CommentReportRepository commentReportRepository;
     @Autowired
     private AnswerReportRepository answerReportRepository;
+    @Autowired
+    private CommentVoteRepository commentVoteRepository;
+    @Autowired
+    private AnswerVoteRepository answerVoteRepository;
+
+
 
 
 
@@ -89,6 +102,41 @@ public class SocialService {
 
     }
 
+    public BasicResponse voteComment(UUID commentId, String authHeader, VoteCommentRequest request) {
+
+        Student student = authService.verifyUser(authHeader);
+
+        if (student == null) {
+            return new BasicResponse("Error, cannot authenticate user", false);
+        }
+
+        Comment comment = commentRepository.findById(commentId).orElse(null);
+        if (comment == null) {
+            return new BasicResponse("Error, cannot find comment", false);
+        }
+
+
+        //check if user has already up/down voted this comment
+        //Falls ja, update diesen Eintrag
+
+        CommentVote commentVote = commentVoteRepository.findByStudentAndComment(student, comment).orElse(null);
+
+        if(commentVote != null) {
+
+            commentVote.setVote(request.voteType());
+
+        }else{
+            commentVote = new CommentVote();
+            commentVote.setStudent(student);
+            commentVote.setComment(comment);
+            commentVote.setVote(request.voteType());
+        }
+
+        commentVoteRepository.save(commentVote);
+
+        return new BasicResponse("Comment vote saved successfully", true);
+
+    }
 
 
     public BasicResponse submitAnswer(String authHeader, AnswerSubmitRequest request) {
@@ -120,6 +168,45 @@ public class SocialService {
 
         answerRepository.save(answer);
         return true;
+    }
+
+
+    public BasicResponse voteAnswer(UUID answerID, String authHeader, VoteAnswerRequest request) {
+
+
+        Student student = authService.verifyUser(authHeader);
+
+        if (student == null) {
+            return new BasicResponse("Error, cannot authenticate user", false);
+        }
+
+        Answer answer = answerRepository.findById(answerID).orElse(null);
+        if (answer == null) {
+            return new BasicResponse("Error, cannot find Answer", false);
+        }
+
+
+        //check if user has already up/down voted this comment
+        //Falls ja, update diesen Eintrag
+
+        AnswerVote answerVote = answerVoteRepository.findByStudentAndAnswer(student, answer).orElse(null);
+
+        if(answerVote != null) {
+
+            answerVote.setVote(request.voteType());
+
+        }else{
+            answerVote = new AnswerVote();
+            answerVote.setStudent(student);
+            answerVote.setAnswer(answer);
+            answerVote.setVote(request.voteType());
+        }
+
+        answerVoteRepository.save(answerVote);
+
+        return new BasicResponse("Answer vote saved successfully", true);
+
+
     }
 
 
@@ -239,6 +326,8 @@ public class SocialService {
                     comment.getStudent().getUsername(),
                     comment.getLecture().getId(),
                     comment.getCreatedAt(),
+                    commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
+                    commentVoteRepository.countByCommentAndVote(comment, VoteType.UP),
                     answerResponses
             ));
 
@@ -260,11 +349,14 @@ public class SocialService {
                     answer.getContent(),
                     answer.getStatus(),
                     answer.getStudent().getUsername(),
-                    answer.getCreatedAt()
+                    answer.getCreatedAt(),
+                    answerVoteRepository.countByAnswerAndVote(answer, VoteType.DOWN),
+                    answerVoteRepository.countByAnswerAndVote(answer, VoteType.UP)
                     ));
         }
         return answerResponses;
     }
+
 
 
 }

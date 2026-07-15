@@ -52,6 +52,9 @@ public class Answer {
     @JoinColumn(name = "comment_id")
     private Comment comment;
 
+
+
+
     @OneToMany(mappedBy = "answer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AnswerReport> reports = new ArrayList<>();
 
