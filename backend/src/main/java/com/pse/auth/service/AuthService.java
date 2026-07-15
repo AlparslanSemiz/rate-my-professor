@@ -90,8 +90,6 @@ public class AuthService {
         }
 
 
-        //TODO check if Student exists in Databse and if not add him
-
         Student student = studentService.findByKitEmail(userEmail);
 
 
@@ -201,7 +199,7 @@ public class AuthService {
 
         Token token = new Token();
         token.setEmail(email);
-        token.setValue(authToken);
+        token.setHash(HashGenerator.hashToken(authToken));
         token.setExpiresAt(expiresAt);
         token.setStudent(student);
 
@@ -234,8 +232,8 @@ public class AuthService {
         String authToken = authHeader.substring("Bearer ".length());
 
         Token token = tokenRepository
-                .findByValueAndRevokedFalseAndExpiresAtAfter(
-                        authToken,
+                .findByHashAndRevokedFalseAndExpiresAtAfter(
+                        HashGenerator.hashToken(authToken),
                         LocalDateTime.now()
                 )
                 .orElse(null);
@@ -280,8 +278,8 @@ public class AuthService {
     private String verifyAuthToken(String authToken) {
 
         Token token = tokenRepository
-                .findByValueAndRevokedFalseAndExpiresAtAfter(
-                        authToken,
+                .findByHashAndRevokedFalseAndExpiresAtAfter(
+                        HashGenerator.hashToken(authToken),
                         LocalDateTime.now()
                 )
                 .orElse(null);
