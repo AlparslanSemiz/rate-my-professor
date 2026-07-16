@@ -21,6 +21,7 @@ import com.example.myapplication_java.Adapters.ProfessorAdapter;
 import com.example.myapplication_java.Adapters.SearchService;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.DomainModel.SelectionType;
 import com.example.myapplication_java.ServerCommunication.Database;
 import com.example.myapplication_java.databinding.FragmentSelectionBinding;
 import com.example.myapplication_java.logic.SearchViewModel;
@@ -131,6 +132,7 @@ public class SelectionFragment extends Fragment {
         });
     }
 
+    ///Sets the adapter according to the selection type.
     private void setupAdapter() {
         switch (selectionType) {
             case PROFESSORS:

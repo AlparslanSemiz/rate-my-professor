@@ -239,7 +239,7 @@ public class SettingsFragment extends Fragment {
                 }
 
                 ServerResponse responseBody = response.body();
-                if (!response.isSuccessful() || responseBody == null || !responseBody.success) {
+                if (!response.isSuccessful() || responseBody == null || !responseBody.success()) {
                     Toast.makeText(requireContext(), R.string.delete_account_failed, Toast.LENGTH_LONG).show();
                     return;
                 }
@@ -270,12 +270,7 @@ public class SettingsFragment extends Fragment {
         /**
          * Keep request logging consistent with the existing login flow.
          */
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        OkHttpClient client = new OkHttpClient.Builder()
-                .addInterceptor(loggingInterceptor)
-                .build();
-        return RetrofitClient.getClient(client).create(APIService.class);
+        return RetrofitClient.getClient().create(APIService.class);
     }
 
     /**

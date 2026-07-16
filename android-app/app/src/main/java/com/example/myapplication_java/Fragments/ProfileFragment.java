@@ -21,6 +21,7 @@ import com.example.myapplication_java.Adapters.ProfileSemesterAdapter;
 import com.example.myapplication_java.Adapters.SearchService;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.DomainModel.SelectionType;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.ServerCommunication.Database;
 
@@ -30,13 +31,18 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * This fragment is the second step of lecture offering selection. Here a professor or
+ * lecture is already selected. The fragment selects the other one of the lecture or professor
+ * and a semester. Then it finds the offering with these 3 combinations and requests the info from
+ * the server.
+ */
 public class ProfileFragment extends Fragment {
     private FragmentProfileBinding binding;
     private SelectionType selectionType;
     private Professor professor;
     private SearchService service;
     private ExecutorService executor;
-
     private String lectureTitle;
     private ControlFlowInterface flowInterface;
 
@@ -64,11 +70,10 @@ public class ProfileFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         binding = FragmentProfileBinding.inflate(inflater, container, false);
-        binding.averageRatingBackground.setText("5");
-        binding = FragmentProfileBinding.inflate(inflater, container, false);
         binding.averageRatingBackground.setText("5.0");
         binding.lectureList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         binding.semesterList.setLayoutManager(new LinearLayoutManager(requireContext()));
+
         Database database = Room.databaseBuilder(
                 getContext(),
                 Database.class,
@@ -79,6 +84,8 @@ public class ProfileFragment extends Fragment {
 
         RecyclerView lectureList = binding.lectureList;
         executor = Executors.newSingleThreadExecutor();
+        // Get the lectures (if professor is selected, or vica versa) of the professor and then
+        // display them on the upper list.
         executor.execute(() -> {
             if (selectionType == SelectionType.PROFESSORS) {
                 List<String> lectures = service.getLectureTitlesByProfessor(professor.id);
@@ -109,6 +116,9 @@ public class ProfileFragment extends Fragment {
 
     }
 
+    /**
+     * gets the semesters the professor gives the lecture in and lists them.
+     */
     private void onLectureClicked(String lectureTitle) {
         RecyclerView semesterList = binding.semesterList;
         executor.execute(() -> {
@@ -123,6 +133,9 @@ public class ProfileFragment extends Fragment {
     }
 
 
+    /**
+     * gets the semesters the professor gives the lecture in and lists them.
+     */
     private void onProfessorClicked(Professor professor) {
         RecyclerView semesterList = binding.semesterList;
         executor.execute(() -> {
@@ -136,9 +149,12 @@ public class ProfileFragment extends Fragment {
         });
     }
 
+    /**
+     * sends the user to the final rating page.
+     */
     private void openLectureProfile(Semester semester) {
         executor.execute(() -> {
-            List<Lecture> lectures = service.getLecture(professor.id, lectureTitle, semester.semesterYear, semester.semesterSeason);
+            List<Lecture> lectures = service.getLecture(professor.id, lectureTitle, semester.semesterYear(), semester.semesterSeason());
             Lecture selectedLecture = lectures.get(0);
             flowInterface.openLectureProfile(professor, semester, selectedLecture);
         });

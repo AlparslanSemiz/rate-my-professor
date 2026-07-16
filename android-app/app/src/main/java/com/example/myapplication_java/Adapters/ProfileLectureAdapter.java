@@ -9,9 +9,14 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.R;
+import com.example.myapplication_java.databinding.ItemLectureNameSmallBinding;
+import com.example.myapplication_java.databinding.ItemProfessorNameBinding;
 
 import java.util.List;
 
+/**
+ * The adapter for lectures (upper list) in {@link com.example.myapplication_java.Fragments.ProfileFragment}
+ */
 public class ProfileLectureAdapter extends RecyclerView.Adapter<ProfileLectureAdapter.LectureViewHolder> {
 
     private List<String> lectures;
@@ -25,9 +30,9 @@ public class ProfileLectureAdapter extends RecyclerView.Adapter<ProfileLectureAd
     @NonNull
     @Override
     public LectureViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_lecture_name_small, parent, false);
-        return new LectureViewHolder(view);
+        ItemLectureNameSmallBinding binding = ItemLectureNameSmallBinding.inflate(LayoutInflater.from(parent.getContext()),
+                parent,false);
+        return new LectureViewHolder(binding);
     }
 
     @Override
@@ -47,9 +52,9 @@ public class ProfileLectureAdapter extends RecyclerView.Adapter<ProfileLectureAd
 
         TextView textView;
 
-        public LectureViewHolder(@NonNull View itemView) {
-            super(itemView);
-            textView = itemView.findViewById(R.id.lecture_name_for_profile);
+        public LectureViewHolder(@NonNull ItemLectureNameSmallBinding binding) {
+            super(binding.getRoot());
+            textView = binding.lectureNameForProfile;
         }
     }
     public interface OnLectureClickListener {

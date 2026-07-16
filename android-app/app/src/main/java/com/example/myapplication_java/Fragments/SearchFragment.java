@@ -1,6 +1,7 @@
 package com.example.myapplication_java.Fragments;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -48,6 +49,7 @@ public class SearchFragment extends Fragment {
     private SearchViewModel searchViewModel;
 
     private FragmentSearchBinding binding;
+
     private ControlFlowInterface flowInterface;
     @NonNull
     @Override
@@ -82,7 +84,7 @@ public class SearchFragment extends Fragment {
                 closeSearchMode();
             }
 
-            System.out.println("PROF BOTTOM GOT CLICKED");
+            Log.println(Log.DEBUG, "SearchFragment","PROF BOTTOM GOT CLICKED");
             binding.searchViewPager.setCurrentItem(0, true);
         });
 
@@ -91,7 +93,7 @@ public class SearchFragment extends Fragment {
                 closeSearchMode();
             }
 
-            System.out.println("LECTURE BOTTOM GOT CLICKED");
+            Log.println(Log.DEBUG, "SearchFragment","LECTURE BOTTOM GOT CLICKED");
             binding.searchViewPager.setCurrentItem(1, true);
         });
 
@@ -204,7 +206,7 @@ public class SearchFragment extends Fragment {
         if (!searchModeOpen) {
             return;
         }
-        System.out.println("SEARCH_FRAGMENT: closeSearchMode");
+        Log.println(Log.DEBUG, "SearchFragment", "closeSearchMode");
         searchModeOpen = false;
 
         //binding.searchInput.setText("");
@@ -247,7 +249,7 @@ public class SearchFragment extends Fragment {
     // If you click anywhere on the screen the search gets canceled.
     private void setupCloseSearchOnOutsideTouch() {
 
-        System.out.println("SEARCH_FRAGMENT: setupCloseSearchOnOutsideTouch()");
+        Log.println(Log.DEBUG, "SearchFragment", "setupCloseSearchOnOutsideTouch()");
         binding.searchRoot.setOnClickListener(v -> {
             if (searchModeOpen) {
                 closeSearchMode();

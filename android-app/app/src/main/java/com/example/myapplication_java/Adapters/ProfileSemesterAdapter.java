@@ -10,9 +10,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.R;
+import com.example.myapplication_java.databinding.ItemLectureSemesterWithRatingBinding;
+import com.example.myapplication_java.databinding.ItemProfNameSmallBinding;
 
 import java.util.List;
 
+/**
+ * The adapter for semesters (lower list) in {@link com.example.myapplication_java.Fragments.ProfileFragment}
+ */
 public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemesterAdapter.SemesterViewHolder> {
 
     private List<Semester> semesters;
@@ -26,17 +31,17 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
     @NonNull
     @Override
     public SemesterViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_lecture_semester_with_rating, parent, false);
+        ItemLectureSemesterWithRatingBinding binding = ItemLectureSemesterWithRatingBinding.inflate(LayoutInflater.from(parent.getContext()),
+                parent,false);
         // R.layout.item_lecture_semester_with_rating ?
-        return new SemesterViewHolder(view);
+        return new SemesterViewHolder(binding);
     }
 
     @Override
     public void onBindViewHolder(@NonNull SemesterViewHolder holder, int position) {
         Semester semester = semesters.get(position);
 
-        holder.textView.setText(semester.semesterSeason.toString() + " " + semester.semesterYear);
+        holder.textView.setText(semester.semesterSeason().toString() + " " + semester.semesterYear());
         holder.itemView.setOnClickListener(v -> listener.onLectureClick(semester));
     }
 
@@ -49,9 +54,9 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
 
         TextView textView;
 
-        public SemesterViewHolder(@NonNull View itemView) {
-            super(itemView);
-            textView = itemView.findViewById(R.id.lecture_name_for_profile);
+        public SemesterViewHolder(@NonNull ItemLectureSemesterWithRatingBinding binding) {
+            super(binding.getRoot());
+            textView = binding.lectureNameForProfile;
         }
     }
     public interface OnSemesterClickListener {

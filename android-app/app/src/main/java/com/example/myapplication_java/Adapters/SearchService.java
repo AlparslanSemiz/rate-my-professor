@@ -11,6 +11,10 @@ import com.example.myapplication_java.DomainModel.SemesterSeason;
 
 import java.util.List;
 
+/**
+ * This is the interface to the database. The queries are created and sent to database
+ * here.
+ */
 @Dao
 public interface SearchService {
 

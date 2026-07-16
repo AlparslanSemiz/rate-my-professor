@@ -33,7 +33,4 @@ public class Lecture {
         this.ratingCount = ratingCount;
     }
 
-    public List<Professor> getProfessors() {
-        return new ArrayList<>();
-    }
 }

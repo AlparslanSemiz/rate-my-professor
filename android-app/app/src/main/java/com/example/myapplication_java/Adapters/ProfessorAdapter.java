@@ -10,9 +10,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.R;
+import com.example.myapplication_java.databinding.ItemLectureNameBinding;
+import com.example.myapplication_java.databinding.ItemProfessorNameBinding;
 
 import java.util.List;
 
+/**
+ * The adapter for professors in {@link com.example.myapplication_java.Fragments.SelectionFragment}
+ */
 public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.ProfessorViewHolder> {
     private List<Professor> professors;
     private OnProfessorClickListener listener;
@@ -25,9 +30,9 @@ public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.Prof
     @NonNull
     @Override
     public ProfessorViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).
-                inflate(R.layout.item_professor_name, parent, false);
-        return new ProfessorViewHolder(view);
+        ItemProfessorNameBinding binding = ItemProfessorNameBinding.inflate(LayoutInflater.from(parent.getContext()),
+                parent,false);
+        return new ProfessorViewHolder(binding);
     }
 
     @Override
@@ -45,9 +50,9 @@ public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.Prof
     public static class ProfessorViewHolder extends RecyclerView.ViewHolder {
 
         TextView textView;
-        public ProfessorViewHolder(View itemview) {
-            super(itemview);
-            textView = itemview.findViewById(R.id.profName);
+        public ProfessorViewHolder(ItemProfessorNameBinding binding) {
+            super(binding.getRoot());
+            textView = binding.profName;
         }
     }
 

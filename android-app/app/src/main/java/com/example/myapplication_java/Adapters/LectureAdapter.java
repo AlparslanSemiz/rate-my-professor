@@ -10,9 +10,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.R;
+import com.example.myapplication_java.databinding.ItemCommentBinding;
+import com.example.myapplication_java.databinding.ItemLectureNameBinding;
 
 import java.util.List;
 
+/**
+ * The adapter for lectures in {@link com.example.myapplication_java.Fragments.SelectionFragment}
+ */
 public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureViewHolder> {
 
     private List<Lecture> lectures;
@@ -26,9 +31,9 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
     @NonNull
     @Override
     public LectureViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_lecture_name, parent, false);
-        return new LectureViewHolder(view);
+        ItemLectureNameBinding binding = ItemLectureNameBinding.inflate(LayoutInflater.from(parent.getContext()),
+                parent,false);
+        return new LectureViewHolder(binding);
     }
 
     @Override
@@ -46,10 +51,10 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
     public static class LectureViewHolder extends RecyclerView.ViewHolder {
 
         TextView textView;
-
-        public LectureViewHolder(@NonNull View itemView) {
-            super(itemView);
-            textView = itemView.findViewById(R.id.semester_name);
+        ItemLectureNameBinding binding;
+        public LectureViewHolder(@NonNull ItemLectureNameBinding binding) {
+            super(binding.getRoot());
+            textView = binding.semesterName;
         }
     }
     public interface OnLectureClickListener {

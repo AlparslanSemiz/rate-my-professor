@@ -43,14 +43,7 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
         continueButton.setOnClickListener(v -> {
             String token = tokenInput.getText().toString();
 
-            // This is for debugging purposes, observes the requests sent and logs them.
-            HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-            OkHttpClient client = new OkHttpClient.Builder().addInterceptor(loggingInterceptor).build();
-            APIService apiService =
-                    RetrofitClient
-                            .getClient(client)
-                            .create(APIService.class);
+            APIService apiService = RetrofitClient.getClient().create(APIService.class);
 
             /// 'SharedPreferences' is used to save data (currently just the email)
             /// persistently, even when the app is closed
@@ -65,16 +58,16 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
             call.enqueue(new Callback<>() {
                 @Override
                 public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
-                    if(!response.body().success) {
+                    if(!response.body().success()) {
                         Log.println(Log.DEBUG, "login response ___", "failure");
-                        Toast.makeText(EnterAuthTokenActivity.this, response.body().message, Toast.LENGTH_LONG).show();
+                        Toast.makeText(EnterAuthTokenActivity.this, response.body().message(), Toast.LENGTH_LONG).show();
                     } else {
                         Log.println(Log.DEBUG, "login response ___", "success!!");
 
                         // Saving the OneTimePassword for future logins
                         SharedPreferences.Editor editor = loginDataStorage.edit();
                         editor.putString("OTP", token);
-                        editor.putString("authToken", response.body().authToken);
+                        editor.putString("authToken", response.body().authToken());
                         editor.apply();
                         EnterAuthTokenActivity.this.startActivity(mainActivity);
                     }

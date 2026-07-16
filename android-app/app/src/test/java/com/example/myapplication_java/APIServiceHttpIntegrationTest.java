@@ -6,10 +6,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.example.myapplication_java.DomainModel.Comment;
-import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.ServerCommunication.CommentsResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
@@ -74,8 +73,8 @@ public class APIServiceHttpIntegrationTest {
 
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
-        assertEquals("token sent", response.body().message);
-        assertTrue(response.body().success);
+        assertEquals("token sent", response.body().message());
+        assertTrue(response.body().success());
         assertEquals("POST", request.getMethod());
         assertEquals("/auth/request-login", request.getPath());
     }
@@ -92,7 +91,7 @@ public class APIServiceHttpIntegrationTest {
 
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
-        assertFalse(response.body().success);
+        assertFalse(response.body().success());
     }
 
     @Test
@@ -107,8 +106,8 @@ public class APIServiceHttpIntegrationTest {
 
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
-        assertEquals(1, response.body().professors.size());
-        assertEquals("Ada", response.body().professors.get(0).firstName);
+        assertEquals(1, response.body().professors().size());
+        assertEquals("Ada", response.body().professors().get(0).firstName);
     }
 
     @Test
@@ -124,9 +123,9 @@ public class APIServiceHttpIntegrationTest {
 
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
-        assertEquals(1, response.body().lectures.size());
-        assertEquals("Algorithms", response.body().lectures.get(0).name);
-        assertEquals(SemesterSeason.WINTER, response.body().lectures.get(0).semesterSeason);
+        assertEquals(1, response.body().lectures().size());
+        assertEquals("Algorithms", response.body().lectures().get(0).name);
+        assertEquals(SemesterSeason.WINTER, response.body().lectures().get(0).semesterSeason);
     }
 
     @Test
@@ -141,11 +140,11 @@ public class APIServiceHttpIntegrationTest {
 
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
-        assertEquals(1, response.body().comments.size());
-        Comment comment = response.body().comments.get(0);
-        assertEquals("Test content", comment.content);
-        assertNotNull(comment.createdAt);
-        assertEquals(2026, comment.createdAt.getYear());
+        assertEquals(1, response.body().comments().size());
+        Comment comment = response.body().comments().get(0);
+        assertEquals("Test content", comment.content());
+        assertNotNull(comment.createdAt());
+        assertEquals(2026, comment.createdAt().getYear());
     }
 
     @Test

@@ -13,10 +13,8 @@ import retrofit2.Retrofit;
 public class APIServiceContractTest {
     @Test
     public void retrofitClientUsesConfiguredBaseUrlAndCachesInstance() {
-        OkHttpClient client = new OkHttpClient();
-
-        Retrofit first = RetrofitClient.getClient(client);
-        Retrofit second = RetrofitClient.getClient(new OkHttpClient());
+        Retrofit first = RetrofitClient.getClient();
+        Retrofit second = RetrofitClient.getClient();
 
         assertEquals(
                 "https://server.example.org/",

@@ -5,7 +5,7 @@ import androidx.fragment.app.Fragment;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import com.example.myapplication_java.Fragments.SelectionFragment;
-import com.example.myapplication_java.Fragments.SelectionType;
+import com.example.myapplication_java.DomainModel.SelectionType;
 
 /**
  * Bridge between the UI and the Fragment. Is used to manage and create

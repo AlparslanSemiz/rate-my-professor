@@ -1,12 +1,10 @@
 package com.example.myapplication_java.ServerCommunication;
 
+import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
-import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
-
-import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -53,12 +51,23 @@ public interface APIService {
     @GET("/data/lectures")
     Call<LecturesResponse> getLectures();
 
+    /**
+     * posts the comment made to the server.
+     * @param token the auth token for authorization.
+     * @param request the comment.
+     * @return the response
+     */
     @POST("/social/comments")
     Call<ServerResponse> postComment(
             @Header("Authorization") String token,
             @Body PostCommentRequest request
     );
 
+    /**
+     * gets the comments for a specific lecture.
+     * @param lectureId the id of the lecture.
+     * @return The response with comments.
+     */
     @GET("/social/comments/{lecture_id}")
     Call<CommentsResponse> getComments(@Path("lecture_id") String lectureId);
 

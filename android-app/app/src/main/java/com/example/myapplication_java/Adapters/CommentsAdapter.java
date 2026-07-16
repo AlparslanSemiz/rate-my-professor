@@ -11,9 +11,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.R;
+import com.example.myapplication_java.databinding.ItemCommentBinding;
 
 import java.util.List;
 
+/**
+ * The adapter for comments in {@link com.example.myapplication_java.Fragments.OfferingRatingsFragment}
+ */
 public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.CommentViewHolder> {
     private List<Comment> comments;
     private OnCommentClickListener listener;
@@ -26,16 +30,16 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
     @NonNull
     @Override
     public CommentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).
-                inflate(R.layout.item_comment, parent, false);
-        return new CommentViewHolder(view);
+        ItemCommentBinding binding = ItemCommentBinding.inflate(LayoutInflater.from(parent.getContext()),
+                parent,false);
+        return new CommentViewHolder(binding);
     }
 
     @Override
     public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
         Comment comment = comments.get(position);
-        holder.userName.setText(comment.studentUsername);
-        holder.commentContent.setText(comment.content);
+        holder.userName.setText(comment.studentUsername());
+        holder.commentContent.setText(comment.content());
     }
 
     @Override
@@ -47,10 +51,11 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
 
         TextView userName;
         TextView commentContent;
-        public CommentViewHolder(View itemview) {
-            super(itemview);
-            userName = itemview.findViewById(R.id.user_name);
-            commentContent = itemview.findViewById(R.id.content_text);
+        ItemCommentBinding binding;
+        public CommentViewHolder(ItemCommentBinding binding) {
+            super(binding.getRoot());
+            userName = binding.userName;
+            commentContent = binding.contentText;
         }
     }
 

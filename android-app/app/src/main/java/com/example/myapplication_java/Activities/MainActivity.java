@@ -15,7 +15,7 @@ import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.Fragments.HomeFragment;
-import com.example.myapplication_java.Fragments.LectureRatingsFragment;
+import com.example.myapplication_java.Fragments.OfferingRatingsFragment;
 import com.example.myapplication_java.Fragments.ProfileFragment;
 import com.example.myapplication_java.Fragments.SearchFragment;
 import com.example.myapplication_java.Fragments.SettingsFragment;
@@ -25,13 +25,9 @@ import com.example.myapplication_java.ServerCommunication.Database;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.databinding.ActivityMainBinding;
 
-import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
-
 public class MainActivity extends AppCompatActivity implements ControlFlowInterface {
 
     private ActivityMainBinding binding;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,13 +46,7 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
             return insets;
         });
 
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(loggingInterceptor).build();
-        APIService apiService =
-                RetrofitClient
-                        .getClient(client)
-                        .create(APIService.class);
+        APIService apiService = RetrofitClient.getClient().create(APIService.class);
 
         // On recreation (e.g. after a dark mode change) the fragment manager restores
         // the previous fragment, so only load the home screen on a fresh start.
@@ -110,7 +100,7 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
     public void openLectureProfile(Professor professor, Semester semester, Lecture lecture) {
         getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.fragment_container, new LectureRatingsFragment(professor, semester, lecture))
+                .replace(R.id.fragment_container, new OfferingRatingsFragment(professor, semester, lecture))
                 .commit();
     }
 

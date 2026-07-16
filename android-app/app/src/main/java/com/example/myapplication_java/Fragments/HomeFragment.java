@@ -16,12 +16,6 @@ public class HomeFragment extends Fragment {
 
     private FragmentHomeScreenBinding binding;
 
-//    @NonNull
-//    @Override
-//    public CreationExtras getDefaultViewModelCreationExtras() {
-//        return super.getDefaultViewModelCreationExtras();
-//    }
-
     @Override
     public View onCreateView(
             LayoutInflater inflater,

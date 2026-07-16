@@ -7,7 +7,6 @@ import androidx.room.PrimaryKey;
 import java.util.ArrayList;
 import java.util.List;
 
-//changed, update the domain model.
 @Entity(tableName = "professors")
 public class Professor {
     @NonNull

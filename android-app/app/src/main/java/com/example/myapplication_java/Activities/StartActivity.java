@@ -3,6 +3,7 @@ package com.example.myapplication_java.Activities;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -10,6 +11,8 @@ import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
+
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
@@ -34,11 +37,7 @@ public class StartActivity extends AppCompatActivity {
         String otp = userLoginStorage.getString("OTP", "");
 
         //debug
-        System.out.println("mail: " + mail);
-        System.out.println("otp: " + otp);
-        for (int i = 0; i < 10; i++) {
-            System.out.println(".");
-        }
+        Log.println(Log.DEBUG, "login", "mail :" + mail + " otp: " + otp);
 
         if (mail.isEmpty() || otp.isEmpty()) {
             startActivity(loginActivityEntry);
@@ -47,13 +46,7 @@ public class StartActivity extends AppCompatActivity {
         }
 
         LoginRequest request = new LoginRequest(mail, otp);
-
-        // Following 3 lines for debugging purposes, observes the requests sent and logs them.
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(loggingInterceptor).build();
-        APIService apiService = RetrofitClient.getClient(client).create(APIService.class);
-
+        APIService apiService = RetrofitClient.getClient().create(APIService.class);
         Call<ServerResponse> call = apiService.login(request);
 
         call.enqueue(new Callback<>() {
@@ -71,7 +64,7 @@ public class StartActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<ServerResponse> call, Throwable t) {
-                System.out.println("Error: " + t.getMessage());
+                Log.println(Log.ERROR, "Login", "Error: " + t.getMessage());
                 startActivity(loginActivityEntry);
                 finish();
             }

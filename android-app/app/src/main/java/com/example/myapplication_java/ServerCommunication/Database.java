@@ -28,14 +28,16 @@ public abstract class Database extends RoomDatabase {
     public Database() {}
     public abstract SearchService searchService();
 
-    //I probably shouldn't do it like this but I don't know where to put it.
-    //Also we need to do error handling.
+    /**
+     * this updates the database from the server.
+     */
     public void updateDB(APIService apiService) {
         Log.println(Log.DEBUG, "updateDB", "rein");
         SearchService service = searchService();
+
+        //the calls to the server for updating
         Call<ProfessorResponse> professorCall = apiService.getProfessors();
         Call<LecturesResponse> lectureCall = apiService.getLectures();
-        List<Lecture> lectures = new ArrayList<>();
         ExecutorService executor = Executors.newSingleThreadExecutor();
 
         professorCall.enqueue(new retrofit2.Callback<ProfessorResponse>() {
@@ -45,13 +47,14 @@ public abstract class Database extends RoomDatabase {
                     Log.println(Log.DEBUG, "Database update failure", "response not successful");
                     return;
                 }
-                List<Professor> professors = response.body().professors;
+                List<Professor> professors = response.body().professors();
 
                 if (professors == null) {
                     Log.e("Database", "Professor response body is null");
                     return;
                 }
                 System.out.println("THIS IS THE SIZE OF PROFESSOR LIST: " + professors.size());
+                // delete the professors table and add the new ones one by one
                 executor.execute(() -> {
                     service.deleteProfessors();
                     for (Professor professor : professors) {
@@ -73,7 +76,7 @@ public abstract class Database extends RoomDatabase {
                     Log.println(Log.DEBUG, "Database update failure", "response not successful");
                     return;
                 }
-                List<Lecture> lectures = response.body().lectures;
+                List<Lecture> lectures = response.body().lectures();
 
                 if (lectures == null) {
                     Log.e("Database", "Lecture response body is null");
@@ -82,6 +85,7 @@ public abstract class Database extends RoomDatabase {
 
                 System.out.println("THIS IS THE SIZE OF LECTURE LIST " + lectures.size());
 
+                // delete the lectures table and add the new ones one by one
                 executor.execute(() -> {
                     service.deleteLectures();
                     for (Lecture lecture : lectures) {

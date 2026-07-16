@@ -16,6 +16,7 @@ import com.example.myapplication_java.DomainModel.User;
 import com.example.myapplication_java.DomainModel.UserStatistics;
 import com.example.myapplication_java.DomainModel.Vote;
 import com.example.myapplication_java.DomainModel.VoteType;
+import com.example.myapplication_java.ServerCommunication.ContentStatus;
 
 import org.junit.Test;
 
@@ -71,42 +72,26 @@ public class DomainModelTest {
     @Test
     public void semesterConstructorStoresFields() {
         Semester semester = new Semester(2026, SemesterSeason.SUMMER);
-        assertEquals(2026, semester.semesterYear);
-        assertEquals(SemesterSeason.SUMMER, semester.semesterSeason);
+        assertEquals(2026, semester.semesterYear());
+        assertEquals(SemesterSeason.SUMMER, semester.semesterSeason());
     }
 
     @Test
     public void ratingTopicConstructorStoresFields() {
         RatingTopic topic = new RatingTopic("Clarity", 5);
-        assertEquals("Clarity", topic.name);
-        assertEquals(5, topic.value);
+        assertEquals("Clarity", topic.name());
+        assertEquals(5, topic.value());
     }
 
     @Test
     public void ratingConstructorStoresFields() {
         RatingTopic topic = new RatingTopic("Clarity", 5);
         Rating rating = new Rating("lecture-1", Collections.singletonList(topic));
-        assertEquals("lecture-1", rating.lectureId);
-        assertEquals(1, rating.topics.size());
-        assertEquals(topic, rating.topics.get(0));
+        assertEquals("lecture-1", rating.lectureId());
+        assertEquals(1, rating.topics().size());
+        assertEquals(topic, rating.topics().get(0));
     }
 
-    @Test
-    public void commentFieldsAreAccessible() {
-        LocalDateTime now = LocalDateTime.now();
-        Comment comment = new Comment();
-        comment.content = "Great lecture!";
-        comment.studentUsername = "user123";
-        comment.lectureID = "lecture-1";
-        comment.createdAt = now;
-        comment.answers = new ArrayList<>();
-
-        assertEquals("Great lecture!", comment.content);
-        assertEquals("user123", comment.studentUsername);
-        assertEquals("lecture-1", comment.lectureID);
-        assertEquals(now, comment.createdAt);
-        assertNotNull(comment.answers);
-    }
 
     @Test
     public void userConstructorStoresFields() {
@@ -138,13 +123,20 @@ public class DomainModelTest {
     @Test
     public void voteConstructorStoresFields() {
         Date now = new Date();
-        Comment comment = new Comment();
+        Comment comment = new Comment(
+                "Great lecture!",
+                ContentStatus.VISIBLE,
+                "user123",
+                "lecture-1",
+                LocalDateTime.now(),
+                new ArrayList<>()
+        );
         Vote vote = new Vote("vote-1", now, VoteType.UPVOTE, comment);
 
-        assertEquals("vote-1", vote.voteId);
-        assertEquals(now, vote.createdAt);
-        assertEquals(VoteType.UPVOTE, vote.type);
-        assertEquals(comment, vote.comment);
+        assertEquals("vote-1", vote.voteId());
+        assertEquals(now, vote.createdAt());
+        assertEquals(VoteType.UPVOTE, vote.type());
+        assertEquals(comment, vote.comment());
     }
 
     @Test
@@ -155,10 +147,9 @@ public class DomainModelTest {
         
         LectureOffering offering = new LectureOffering("offering-1", lecture, professor, semester);
 
-        assertEquals("offering-1", offering.offeringId);
-        assertEquals(lecture, offering.lecture);
-        assertEquals(professor, offering.professor);
-        assertEquals(semester, offering.semester);
-        assertEquals(5.0, offering.getAverageRating(), 0.001);
+        assertEquals("offering-1", offering.offeringId());
+        assertEquals(lecture, offering.lecture());
+        assertEquals(professor, offering.professor());
+        assertEquals(semester, offering.semester());
     }
 }

@@ -3,9 +3,11 @@ package com.example.myapplication_java.Activities;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,6 +21,8 @@ import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.databinding.ActivityLoginBinding;
 
+
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
@@ -57,18 +61,10 @@ public class LoginActivity extends AppCompatActivity {
             String mailAddress = emailInput.getText().toString();
 
             // This is for debugging purposes, observes the requests sent and logs them.
-            HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-            OkHttpClient client = new OkHttpClient.Builder().addInterceptor(loggingInterceptor).build();
-            APIService apiService =
-                    RetrofitClient
-                            .getClient(client)
-                            .create(APIService.class);
+            APIService apiService = RetrofitClient.getClient().create(APIService.class);
 
             LoginRequest request = new LoginRequest(mailAddress, "");
-
             Call<ServerResponse> call = apiService.requestLogin(request);
-
             Intent enterAuthTokenActivity = new Intent(this, EnterAuthTokenActivity.class);
 
             /// 'call.enqueue' executes the request to the server.
@@ -86,7 +82,7 @@ public class LoginActivity extends AppCompatActivity {
 
                         LoginActivity.this.startActivity(enterAuthTokenActivity);
                     } else {
-                        System.out.println(response.errorBody());
+                        Log.println(Log.ERROR, "login", response.errorBody().toString());
                     }
                 }
 
@@ -94,8 +90,8 @@ public class LoginActivity extends AppCompatActivity {
                 //here. Fix it later.
                 @Override
                 public void onFailure(Call<ServerResponse> call, Throwable t) {
-                    System.out.println("Error: " + t.getMessage());
-                    LoginActivity.this.startActivity(enterAuthTokenActivity);
+                    Log.println(Log.ERROR, "login", t.getMessage());
+                    Toast.makeText(LoginActivity.this, "Connection issue.", Toast.LENGTH_SHORT).show();
                 }
             });
         });

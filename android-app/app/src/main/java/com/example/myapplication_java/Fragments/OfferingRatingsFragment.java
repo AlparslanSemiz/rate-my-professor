@@ -8,7 +8,6 @@ import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.recyclerview.widget.LinearLayoutManager;
 
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -27,53 +26,46 @@ import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
+import com.example.myapplication_java.databinding.FragmentOfferingRatingsBinding;
 import com.example.myapplication_java.logic.RatingColorCalculator;
-import com.example.myapplication_java.R;
-import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.ServerCommunication.CommentsResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.PostCommentRequest;
-import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
-import com.example.myapplication_java.databinding.FragmentLectureRatingsBinding;
 
 import java.util.List;
 import java.util.Locale;
 
-import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Response;
 
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
-import retrofit2.Call;
 import retrofit2.Callback;
-import retrofit2.Response;
 
 /**
  * The rating (and comment) Screen for a lecture Offering.
  */
-public class LectureRatingsFragment extends Fragment {
+public class OfferingRatingsFragment extends Fragment {
 
     private Lecture lecture;
     private Professor professor;
     private Semester semester;
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private APIService apiService;
 
-    FragmentLectureRatingsBinding binding;
+    FragmentOfferingRatingsBinding binding;
 
-    public LectureRatingsFragment() {
+    public OfferingRatingsFragment() {
+        apiService = RetrofitClient.getClient().create(APIService.class);
         // Required empty public constructor
     }
 
-    public LectureRatingsFragment(Professor professor, Semester semester, Lecture lecture) {
+    public OfferingRatingsFragment(Professor professor, Semester semester, Lecture lecture) {
         this.lecture = lecture;
         this.professor = professor;
         this.semester = semester;
+        apiService = RetrofitClient.getClient().create(APIService.class);
     }
 
     @Override
@@ -85,22 +77,23 @@ public class LectureRatingsFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        binding = FragmentLectureRatingsBinding.inflate(inflater, container, false);
+        binding = FragmentOfferingRatingsBinding.inflate(inflater, container, false);
         binding.name.setText(professor.firstName);
         binding.surname.setText(professor.lastName);
-        EditText commentInput = binding.inputComment;
         binding.commentList.setLayoutManager(new LinearLayoutManager(requireContext()));
 
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(loggingInterceptor).build();
-        APIService apiService =
-                RetrofitClient
-                        .getClient(client)
-                        .create(APIService.class);
+        getComments();
+        setSubmitCommentListener();
 
+        insertAverageRatings(lecture);
 
-        List<CommentsResponse> comments;
+        return binding.getRoot();
+    }
+
+    /**
+     * Gets the comments for the offering to display them.
+     */
+    private void getComments() {
         Call<CommentsResponse> commentsResponseCall = apiService.getComments(lecture.id);
         commentsResponseCall.enqueue(new Callback<CommentsResponse>() {
             @Override
@@ -109,7 +102,7 @@ public class LectureRatingsFragment extends Fragment {
                     Log.println(Log.DEBUG, "comments", "couldn't get the comments");
                     return;
                 }
-                List<Comment> comments = response.body().comments;
+                List<Comment> comments = response.body().comments();
                 requireActivity().runOnUiThread(() -> {
                     CommentsAdapter adapter = new CommentsAdapter(comments);
                     binding.commentList.setAdapter(adapter);
@@ -121,7 +114,13 @@ public class LectureRatingsFragment extends Fragment {
                 Log.println(Log.DEBUG, "comments", "couldn't get the comments");
             }
         });
+    }
 
+    /**
+     * sends the command to the server when the button is clicked.
+     */
+    private void setSubmitCommentListener() {
+        EditText commentInput = binding.inputComment;
         binding.submitComment.setOnClickListener(v -> {
             String comment = commentInput.getText().toString();
             Log.println(Log.DEBUG, "submit", comment);
@@ -160,10 +159,6 @@ public class LectureRatingsFragment extends Fragment {
             });
 
         });
-
-        insertAverageRatings(lecture);
-
-        return binding.getRoot();
     }
 
     /**
@@ -172,13 +167,7 @@ public class LectureRatingsFragment extends Fragment {
      * for all lectureOfferings centrally when the app is opened I think (in Database Class I guess) !!!
      */
     public void insertAverageRatings(Lecture lecture) {
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(loggingInterceptor).build();
-        APIService apiService =
-                RetrofitClient
-                        .getClient(client)
-                        .create(APIService.class);
+        APIService apiService = RetrofitClient.getClient().create(APIService.class);
         Call<RatingAverageResponse> ratingCall = apiService.getRatings(lecture.id);
         System.out.println("id: " + lecture.id);
 

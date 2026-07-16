@@ -11,6 +11,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
+import com.example.myapplication_java.databinding.ItemLectureSemesterWithRatingBinding;
+import com.example.myapplication_java.databinding.ItemRatingBinding;
 import com.example.myapplication_java.logic.RatingColorCalculator;
 
 import java.util.List;
@@ -29,10 +31,9 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
     @NonNull
     @Override
     public RatingViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_rating, parent, false);
-
-        return new RatingViewHolder(view);
+        ItemRatingBinding binding = ItemRatingBinding.inflate(LayoutInflater.from(parent.getContext()),
+                parent,false);
+        return new RatingViewHolder(binding);
     }
 
     @Override
@@ -63,14 +64,14 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
         RatingBar userRatingBar;
         TextView userRatingNum;
 
-        public RatingViewHolder(@NonNull View itemView) {
-            super(itemView);
-            name = itemView.findViewById(R.id.category_name);
-            averageRating = itemView.findViewById(R.id.average_rating_num);
-            averageBar = itemView.findViewById(R.id.ratingBar_average);
+        public RatingViewHolder(@NonNull ItemRatingBinding binding) {
+            super(binding.getRoot());
+            name = binding.categoryName;
+            averageRating = binding.averageRatingNum;
+            averageBar = binding.ratingBarAverage;
 
-            userRatingBar = itemView.findViewById(R.id.ratingBar_your_rating);
-            userRatingNum = itemView.findViewById(R.id.your_rating_num);
+            userRatingBar = binding.ratingBarYourRating;
+            userRatingNum = binding.yourRatingNum;
 
             // Changing the number next to the Rating Bar in real time
             userRatingBar.setOnRatingBarChangeListener(
