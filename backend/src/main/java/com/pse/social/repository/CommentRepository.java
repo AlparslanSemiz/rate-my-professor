@@ -3,6 +3,7 @@ package com.pse.social.repository;
 
 
 import com.pse.social.model.Comment;
+import com.pse.user.model.Student;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -13,6 +14,7 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
 
     List<Comment> findAllByLectureId(UUID lectureId);
+    List<Comment> findAllByStudent(Student student);
 }
 
 
