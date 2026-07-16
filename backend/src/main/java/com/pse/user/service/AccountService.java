@@ -11,11 +11,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class AccountService {
 
-    @Autowired
-    private AuthService authService;
+    private final AuthService authService;
 
-    @Autowired
-    private StudentService studentService;
+    private final StudentService studentService;
+
+
+    public AccountService(AuthService authService, StudentService studentService) {
+        this.authService = authService;
+        this.studentService = studentService;
+    }
 
 
     public UserRatingResponse getUserRatings(String authHeader) {

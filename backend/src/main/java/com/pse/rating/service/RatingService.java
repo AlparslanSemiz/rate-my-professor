@@ -26,18 +26,22 @@ import com.pse.rating.dto.response.TopicAverageResponse;
 @Service
 public class RatingService {
 
-    @Autowired
-    private StudentService studentService;
-    @Autowired
-    private AuthService authService;
-    @Autowired
-    private LectureService lectureService;
+    private final StudentService studentService;
+    private final AuthService authService;
+    private final LectureService lectureService;
 
 
-    @Autowired
-    private RatingRepository ratingRepository;
+    private final RatingRepository ratingRepository;
 
-    
+    public RatingService(StudentService studentService, AuthService authService, LectureService lectureService, RatingRepository ratingRepository) {
+        this.studentService = studentService;
+        this.authService = authService;
+        this.lectureService = lectureService;
+        this.ratingRepository = ratingRepository;
+    }
+
+
+
     public BasicResponse submitRating(String authHeader, RatingRequest request) {
 
         Student student = authService.verifyUser(authHeader);

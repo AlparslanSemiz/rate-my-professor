@@ -24,17 +24,20 @@ import java.util.UUID;
 @Service
 public class ModerationUserService {
 
-    @Autowired
-    private StudentService studentService;
-    @Autowired
-    private AuthService authService;
+    private final StudentService studentService;
+    private final AuthService authService;
 
 
-    @Autowired
-    private AdminRepository moderationRepository;
-    @Autowired
-    private WarningRepository warningRepository;
+    private final AdminRepository moderationRepository;
+    private final WarningRepository warningRepository;
 
+
+    public ModerationUserService(StudentService studentService, AuthService authService, AdminRepository moderationRepository, WarningRepository warningRepository) {
+        this.studentService = studentService;
+        this.authService = authService;
+        this.moderationRepository = moderationRepository;
+        this.warningRepository = warningRepository;
+    }
 
 
     public boolean validateAdminToken(String authHeader) {

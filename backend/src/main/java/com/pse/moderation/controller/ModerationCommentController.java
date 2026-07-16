@@ -22,9 +22,12 @@ import java.util.UUID;
 public class ModerationCommentController {
 
 
-    @Autowired
-    private ModerationCommentService moderationCommentService;
+    private final ModerationCommentService moderationCommentService;
 
+
+    public ModerationCommentController(ModerationCommentService moderationCommentService) {
+        this.moderationCommentService = moderationCommentService;
+    }
 
     @GetMapping("/reported")
     public ReportedCommentsResponse getReportedComments(@RequestHeader("Authorization") String authHeader) {

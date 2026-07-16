@@ -22,14 +22,17 @@ import java.util.UUID;
 @Service
 public class ProfessorService {
 
-    @Autowired
-    private ProfessorRepository professorRepository;
-    @Autowired
-    private LectureRepository lectureRepository;
+    private final ProfessorRepository professorRepository;
+    private final LectureRepository lectureRepository;
 
-    @Autowired
-    private ModerationUserService moderationUserService;
+    private final ModerationUserService moderationUserService;
 
+
+    public ProfessorService(ProfessorRepository professorRepository, LectureRepository lectureRepository, ModerationUserService moderationUserService) {
+        this.professorRepository = professorRepository;
+        this.lectureRepository = lectureRepository;
+        this.moderationUserService = moderationUserService;
+    }
 
     public ProfessorsResponse getProfessors() {
 

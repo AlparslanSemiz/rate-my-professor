@@ -7,12 +7,15 @@ import java.util.Base64;
 /**
  * Generates a secure Token.
  */
-public class TokenGenerator {
+public final class TokenGenerator {
 
     private static final SecureRandom secureRandom = new SecureRandom();
 
     //Human friendly alphabet (some fonts make e.g. l and I look the same)
     private static final String CHARACTERS = "23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ";
+
+    private TokenGenerator() {
+    }
 
     /**
      * 32 Byte long Token => ~ 43 Chars (Base64)

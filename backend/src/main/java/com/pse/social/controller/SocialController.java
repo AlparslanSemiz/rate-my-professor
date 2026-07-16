@@ -26,9 +26,11 @@ import java.util.UUID;
 public class SocialController {
 
 
-    @Autowired
-    private SocialService socialService;
+    private final SocialService socialService;
 
+    public SocialController(SocialService socialService) {
+        this.socialService = socialService;
+    }
 
 
     @PostMapping("/comments")

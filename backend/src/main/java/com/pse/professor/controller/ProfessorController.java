@@ -23,8 +23,12 @@ import java.util.UUID;
 public class ProfessorController {
 
 
-    @Autowired
-    private ProfessorService professorService;
+    private final ProfessorService professorService;
+
+
+    public ProfessorController(ProfessorService professorService) {
+        this.professorService = professorService;
+    }
 
     @GetMapping("/professor")
     public ProfessorsResponse getProfessors() {
