@@ -1,6 +1,6 @@
 package com.pse.shared.util;
 
-public class NameGenerator {
+public final class NameGenerator {
 
     private static final String[] ADJECTIVES = {
             "Schneller", "Mutiger", "Schlauer", "Frecher",
@@ -30,13 +30,14 @@ public class NameGenerator {
             "Pelikan", "Albatros", "Pinguin", "Papagei"
     };
 
+    private NameGenerator() {
+    }
+
     public static String generateUsername() {
 
-        String adjective =
-                ADJECTIVES[(int) (Math.random() * ADJECTIVES.length)];
+        String adjective = ADJECTIVES[(int) (Math.random() * ADJECTIVES.length)];
 
-        String animal =
-                ANIMALS[(int) (Math.random() * ANIMALS.length)];
+        String animal = ANIMALS[(int) (Math.random() * ANIMALS.length)];
 
         int number = (int) (Math.random() * 10000);
 

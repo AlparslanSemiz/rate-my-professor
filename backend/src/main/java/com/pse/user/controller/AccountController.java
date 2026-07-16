@@ -24,8 +24,11 @@ import com.pse.user.dto.StudentProfileResponse;
 public class AccountController {
 
 
-    @Autowired
-    private AccountService accountService;
+    private final AccountService accountService;
+
+    public AccountController(AccountService accountService) {
+        this.accountService = accountService;
+    }
 
     /**
      * Returns information about the User

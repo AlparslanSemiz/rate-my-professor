@@ -9,12 +9,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class AdminService {
 
+    private final ModerationUserService moderationUserService;
 
-    @Autowired
-    private AdminRepository adminRepository;
-    @Autowired
-    private ModerationUserService moderationUserService;
+    private final AdminRepository adminRepository;
 
+
+    public AdminService(ModerationUserService moderationUserService, AdminRepository adminRepository) {
+        this.moderationUserService = moderationUserService;
+        this.adminRepository = adminRepository;
+    }
 
     public BasicResponse validateAdmin(String authHeader) {
 

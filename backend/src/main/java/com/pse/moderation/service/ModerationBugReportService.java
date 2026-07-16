@@ -21,14 +21,17 @@ import java.util.UUID;
 public class ModerationBugReportService {
 
 
-    @Autowired
-    private ModerationUserService moderationUserService;
-    @Autowired
-    private BugReportRepository bugReportRepository;
+    private final ModerationUserService moderationUserService;
+    private final BugReportRepository bugReportRepository;
 
-    @Autowired
-    private AuthService authService;
+    private final AuthService authService;
 
+
+    public ModerationBugReportService(ModerationUserService moderationUserService, BugReportRepository bugReportRepository, AuthService authService) {
+        this.moderationUserService = moderationUserService;
+        this.bugReportRepository = bugReportRepository;
+        this.authService = authService;
+    }
 
     public BugReportsResponse getAllReports(String authHeader) {
 

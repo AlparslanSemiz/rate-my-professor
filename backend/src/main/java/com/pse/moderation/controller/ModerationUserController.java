@@ -27,9 +27,13 @@ import com.pse.moderation.service.ModerationUserService;
 public class ModerationUserController {
 
 
-    @Autowired
-    private ModerationUserService moderationUserService;
+    private final ModerationUserService moderationUserService;
 
+
+
+    public ModerationUserController(ModerationUserService moderationUserService) {
+        this.moderationUserService = moderationUserService;
+    }
 
 
     @GetMapping

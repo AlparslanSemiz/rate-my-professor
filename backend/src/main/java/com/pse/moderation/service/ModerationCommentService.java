@@ -23,16 +23,19 @@ import java.util.UUID;
 public class ModerationCommentService {
 
 
-    @Autowired
-    private StudentService studentService;
-    @Autowired
-    private SocialService socialService;
-    @Autowired
-    private ModerationUserService moderationUserService;
+    private final StudentService studentService;
+    private final SocialService socialService;
+    private final ModerationUserService moderationUserService;
 
-    @Autowired
-    private WarningRepository warningRepository;
+    private final WarningRepository warningRepository;
 
+
+    public ModerationCommentService(StudentService studentService, SocialService socialService, ModerationUserService moderationUserService, WarningRepository warningRepository) {
+        this.studentService = studentService;
+        this.socialService = socialService;
+        this.moderationUserService = moderationUserService;
+        this.warningRepository = warningRepository;
+    }
 
 
     //TODO: undefined flied: "postContext"

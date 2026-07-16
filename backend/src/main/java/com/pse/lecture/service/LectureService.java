@@ -24,15 +24,19 @@ import java.util.UUID;
 public class LectureService {
 
 
-    @Autowired
-    private LectureRepository lectureRepository;
-    @Autowired
-    private ProfessorRepository professorRepository;
+    private final ModerationUserService moderationUserService;
+    private final AuthService authService;
 
-    @Autowired
-    private ModerationUserService moderationUserService;
-    @Autowired
-    private AuthService authService;
+    private final LectureRepository lectureRepository;
+    private final ProfessorRepository professorRepository;
+
+    public LectureService(ModerationUserService moderationUserService, AuthService authService, LectureRepository lectureRepository, ProfessorRepository professorRepository ) {
+        this.moderationUserService = moderationUserService;
+        this.authService = authService;
+        this.lectureRepository = lectureRepository;
+        this.professorRepository = professorRepository;
+    }
+
 
 
     public LecturesResponse getLectures() {

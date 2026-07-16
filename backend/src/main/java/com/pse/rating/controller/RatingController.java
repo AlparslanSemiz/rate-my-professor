@@ -23,9 +23,12 @@ import com.pse.rating.service.RatingService;
 @RequestMapping("/ratings")
 public class RatingController {
 
-    @Autowired
-    private RatingService ratingService;
+    private final RatingService ratingService;
 
+
+    public RatingController(RatingService ratingService) {
+        this.ratingService = ratingService;
+    }
 
     @PostMapping("/rate")
     public BasicResponse submitRating(@RequestHeader("Authorization") String authHeader, @RequestBody  RatingRequest request) {

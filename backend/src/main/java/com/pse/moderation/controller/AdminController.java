@@ -16,9 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/admins")
 public class AdminController {
 
-    @Autowired
-    private AdminService adminService;
+    private final AdminService adminService;
 
+
+    public AdminController(AdminService adminService) {
+        this.adminService = adminService;
+    }
 
     @GetMapping("/validate")
     public BasicResponse validateAdmin(@RequestHeader("Authorization") String authHeader) {

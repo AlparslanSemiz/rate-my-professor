@@ -21,23 +21,21 @@ import java.util.UUID;
 public class LectureController {
 
 
-    @Autowired
-    private LectureService lectureService;
+    private final LectureService lectureService;
 
+    public LectureController(LectureService lectureService) {
+        this.lectureService = lectureService;
+    }
 
     @GetMapping("/lectures")
     public LecturesResponse getLectures() {
-
         return lectureService.getLectures();
-        
     }
 
 
     @GetMapping("/professor/{lecture_id}")
     public LectureDetailResponse getLecture(@PathVariable UUID lecture_id) {
-
         return lectureService.getLecture(lecture_id);
-
     }
 
 
@@ -50,9 +48,7 @@ public class LectureController {
      */
     @PostMapping("/lectures")
     public BasicResponse addLecture(@RequestHeader("Authorization") String authHeader, AddLectureRequest request) {
-
         return lectureService.addLecture(authHeader, request);
-
     }
 
 

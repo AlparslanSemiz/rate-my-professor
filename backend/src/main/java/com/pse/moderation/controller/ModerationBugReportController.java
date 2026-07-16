@@ -22,9 +22,12 @@ import java.util.UUID;
 public class ModerationBugReportController {
 
 
-    @Autowired
-    private ModerationBugReportService moderationBugReportService;
+    private final ModerationBugReportService moderationBugReportService;
 
+
+    public ModerationBugReportController(ModerationBugReportService moderationBugReportService) {
+        this.moderationBugReportService = moderationBugReportService;
+    }
 
     @GetMapping
     public BugReportsResponse getAllReports(@RequestHeader("Authorization") String authHeader) {

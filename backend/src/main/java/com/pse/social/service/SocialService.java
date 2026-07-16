@@ -45,25 +45,35 @@ import java.util.UUID;
 @Service
 public class SocialService {
 
-    @Autowired
-    private LectureService lectureService;
-    @Autowired
-    private AuthService authService;
+    private final LectureService lectureService;
+    private final AuthService authService;
 
 
-    @Autowired
-    private CommentRepository commentRepository;
-    @Autowired
-    private AnswerRepository answerRepository;
-    @Autowired
-    private CommentReportRepository commentReportRepository;
-    @Autowired
-    private AnswerReportRepository answerReportRepository;
-    @Autowired
-    private CommentVoteRepository commentVoteRepository;
-    @Autowired
-    private AnswerVoteRepository answerVoteRepository;
+    private final CommentRepository commentRepository;
+    private final AnswerRepository answerRepository;
+    private final CommentReportRepository commentReportRepository;
+    private final AnswerReportRepository answerReportRepository;
+    private final CommentVoteRepository commentVoteRepository;
+    private final AnswerVoteRepository answerVoteRepository;
 
+    public SocialService(LectureService lectureService, AuthService authService,
+                         CommentRepository commentRepository,
+                         AnswerRepository answerRepository,
+                         CommentReportRepository commentReportRepository,
+                         AnswerReportRepository answerReportRepository,
+                         CommentVoteRepository commentVoteRepository,
+                         AnswerVoteRepository answerVoteRepository) {
+
+        this.lectureService = lectureService;
+        this.authService = authService;
+        this.commentRepository = commentRepository;
+        this.answerRepository = answerRepository;
+        this.commentReportRepository = commentReportRepository;
+        this.answerReportRepository = answerReportRepository;
+        this.commentVoteRepository = commentVoteRepository;
+        this.answerVoteRepository = answerVoteRepository;
+
+    }
 
 
 
