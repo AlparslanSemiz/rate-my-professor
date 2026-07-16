@@ -17,18 +17,22 @@ import com.pse.social.dto.response.AnswerResponse;
 import com.pse.social.dto.response.AnswersResponse;
 import com.pse.social.dto.response.CommentResponse;
 import com.pse.social.dto.response.CommentsResponse;
+import com.pse.social.dto.response.NotificationResponse;
+import com.pse.social.dto.response.NotificationsResponse;
 import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerReport;
 import com.pse.social.model.AnswerVote;
 import com.pse.social.model.Comment;
 import com.pse.social.model.CommentReport;
 import com.pse.social.model.CommentVote;
+import com.pse.social.model.Notification;
 import com.pse.social.repository.AnswerReportRepository;
 import com.pse.social.repository.AnswerRepository;
 import com.pse.social.repository.AnswerVoteRepository;
 import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.CommentVoteRepository;
+import com.pse.social.repository.NotificationRepository;
 import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -56,13 +60,16 @@ public class SocialService {
     private final CommentVoteRepository commentVoteRepository;
     private final AnswerVoteRepository answerVoteRepository;
 
+    private final NotificationRepository notificationRepository;
+
     public SocialService(LectureService lectureService, AuthService authService,
                          CommentRepository commentRepository,
                          AnswerRepository answerRepository,
                          CommentReportRepository commentReportRepository,
                          AnswerReportRepository answerReportRepository,
                          CommentVoteRepository commentVoteRepository,
-                         AnswerVoteRepository answerVoteRepository) {
+                         AnswerVoteRepository answerVoteRepository,
+                         NotificationRepository notificationRepository) {
 
         this.lectureService = lectureService;
         this.authService = authService;
@@ -72,6 +79,7 @@ public class SocialService {
         this.answerReportRepository = answerReportRepository;
         this.commentVoteRepository = commentVoteRepository;
         this.answerVoteRepository = answerVoteRepository;
+        this.notificationRepository = notificationRepository;
 
     }
 
@@ -177,6 +185,14 @@ public class SocialService {
         answer.setComment(comment);
 
         answerRepository.save(answer);
+
+
+        //Add to notification Table
+        Notification notification = new Notification();
+        notification.setRecipient(comment.getStudent());
+        notification.setAnswer(answer);
+        notificationRepository.save(notification);
+
         return true;
     }
 
@@ -368,5 +384,47 @@ public class SocialService {
     }
 
 
+    public NotificationsResponse getNotifications(String authHeader) {
 
+        Student student = authService.verifyUser(authHeader);
+
+        if (student == null) {
+            return new NotificationsResponse("Error, cannot authenticate user", false, null);
+        }
+
+
+        List<Notification> notifications = notificationRepository.findAllByRecipientAndSeenFalseOrderByCreatedAtDesc(student);
+
+
+        List<NotificationResponse> notificationResponses = new ArrayList<>();
+
+
+        for(Notification notification : notifications) {
+
+            notificationResponses.add(
+                    new NotificationResponse(
+                            notification.getAnswer().getStudent().getUsername(),
+                            notification.getAnswer().getContent(),
+                            notification.getCreatedAt()
+                    ));
+        }
+
+        return new NotificationsResponse("Found: " + notificationResponses.size() + " Notifications", true, notificationResponses);
+
+    }
+
+    public BasicResponse markAllNotificationsAsSeen(String authHeader) {
+
+        Student student = authService.verifyUser(authHeader);
+
+        if(student == null) {
+            return new BasicResponse("Error, cannot authenticate user", false);
+        }
+
+        notificationRepository.markAllAsSeen(student);
+
+
+        return new BasicResponse("Marked all Notifications as Seen", true);
+
+    }
 }
