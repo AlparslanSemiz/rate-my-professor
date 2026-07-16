@@ -33,9 +33,13 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/auth")
 public class AuthController {
 
-    @Autowired
-    private AuthService authService;
+    private final AuthService authService;
 
+
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
     
     /**
      * Creates and saves OTP, and sends it to user's mail

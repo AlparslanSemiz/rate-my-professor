@@ -32,17 +32,23 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService {
 
-    @Autowired
-    private StudentService studentService;
-    @Autowired
-    private MailService mailService;
+    private final StudentService studentService;
 
 
-    @Autowired
-    private TokenRepository tokenRepository;
-    @Autowired
-    private OneTimePasswordRepository oneTimePasswordRepository;
+    private final MailService mailService;
+    private final TokenRepository tokenRepository;
+    private final OneTimePasswordRepository oneTimePasswordRepository;
 
+
+
+    public AuthService(StudentService studentService, MailService mailService, TokenRepository tokenRepository, OneTimePasswordRepository oneTimePasswordRepository) {
+
+        this.studentService = studentService;
+        this.mailService = mailService;
+        this.tokenRepository = tokenRepository;
+        this.oneTimePasswordRepository = oneTimePasswordRepository;
+
+    }
 
 
     public BasicResponse requestLogin(OTPRequest request) {
