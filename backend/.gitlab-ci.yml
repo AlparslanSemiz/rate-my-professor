@@ -14,6 +14,8 @@ stages:
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
   IMAGE_TAG: "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
+  COVERAGE_THRESHOLD: "30"
+  GIT_DEPTH: "0"
 
 default:
   cache:
@@ -25,10 +27,29 @@ default:
 server:test:
   stage: test
   image: maven:3.9-eclipse-temurin-21
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule"'
+  before_script:
+    - |
+      if [ -n "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" ]; then
+        git fetch --no-tags origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME:refs/remotes/origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+      elif [ -n "$CI_DEFAULT_BRANCH" ]; then
+        git fetch --no-tags origin "$CI_DEFAULT_BRANCH:refs/remotes/origin/$CI_DEFAULT_BRANCH" || true
+      fi
   script:
-    - ./mvnw test
+    - ./mvnw verify
+    - java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"
+  coverage: '/Changed code line coverage:\s*([0-9]+(?:\.[0-9]+)?)%/'
+  artifacts:
+    when: always
+    paths:
+      - target/site/jacoco/
+      - target/surefire-reports/
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+      coverage_report:
+        coverage_format: jacoco
+        path: target/site/jacoco/jacoco.xml
+    expire_in: 1 week
 
 server:build:
   stage: build
