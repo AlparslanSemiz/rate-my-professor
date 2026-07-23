@@ -7,6 +7,8 @@ import java.util.UUID;
 
 import com.pse.professor.model.Professor;
 import com.pse.rating.model.Rating;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.pse.shared.enums.SemesterSeason;
@@ -56,6 +58,16 @@ public class Lecture {
     @ManyToOne(optional = false)
     @JoinColumn(name = "professor_id")
     private Professor professor;
+
+    @ManyToMany
+    @JoinTable(
+            name = "lecture_professors",
+            joinColumns = @JoinColumn(name = "lecture_id"),
+            inverseJoinColumns = @JoinColumn(name = "professor_id")
+    )
+    private List<Professor> professors = new ArrayList<>();
+
+
 
     @OneToMany(mappedBy = "lecture", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();

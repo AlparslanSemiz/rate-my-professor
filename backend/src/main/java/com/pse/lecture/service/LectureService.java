@@ -47,6 +47,12 @@ public class LectureService {
 
         for (Lecture lecture : lectures) {
 
+
+            List<UUID> professorIDs = new ArrayList<>();
+            for (Professor professor : lecture.getProfessors()) {
+                professorIDs.add(professor.getId());
+            }
+
             responses.add(
                     new LectureResponse(
                             lecture.getId(),
@@ -55,7 +61,7 @@ public class LectureService {
                             lecture.getSemesterYear(),
                             lecture.getSemesterSeason(),
                             lecture.isActive(),
-                            lecture.getProfessor().getId(),
+                            professorIDs,
                             lecture.getProfessor().getFirstName(),
                             lecture.getProfessor().getLastName(),
                             lecture.getComments().size(),
@@ -76,6 +82,11 @@ public class LectureService {
             return new LectureDetailResponse("Couldn find lecture with uuid: " + lectureId, false, null);
         }
 
+        List<UUID> professorIDs = new ArrayList<>();
+        for (Professor professor : lecture.getProfessors()) {
+            professorIDs.add(professor.getId());
+        }
+
         LectureResponse lectureResponse = new LectureResponse(
                 lecture.getId(),
                 lecture.getName(),
@@ -83,7 +94,7 @@ public class LectureService {
                 lecture.getSemesterYear(),
                 lecture.getSemesterSeason(),
                 lecture.isActive(),
-                lecture.getProfessor().getId(),
+                professorIDs,
                 lecture.getProfessor().getFirstName(),
                 lecture.getProfessor().getLastName(),
                 lecture.getComments().size(),
@@ -101,11 +112,22 @@ public class LectureService {
             return new BasicResponse("User is not authorized to add Lectures (isnt Admin)", false);
         }
 
-        Professor professor = professorRepository.findById(request.professorId()).orElse(null);
 
-        if(professor == null){
-            return new BasicResponse("Professor not found", false);
+
+        List<UUID> professorsIDs = request.professorIds();
+        List<Professor> professors = new ArrayList<>();
+
+        for (UUID professorID: professorsIDs){
+
+            if(professorRepository.existsById(professorID)){
+                professors.add(professorRepository.findById(professorID).orElse(null));
+            }else{
+                return new BasicResponse("Professor not found: " + professorID, false);
+
+            }
+
         }
+
 
         Lecture lecture = new Lecture();
 
@@ -115,16 +137,15 @@ public class LectureService {
         lecture.setSemesterSeason(request.semesterSeason());
         lecture.setActive(true);
 
-        //Link Prof to lecture
-        if(request.professorId() != null){
+        //Link Profs to lecture
+        lecture.setProfessors(professors);
 
-            lecture.setProfessor(professor);
+        for(Professor professor: professors){
             professor.getLectures().add(lecture);
-
+            professorRepository.save(professor);
         }
 
         lectureRepository.save(lecture);
-        professorRepository.save(professor);
 
         return new BasicResponse("Successfully added Lectures", true);
     }

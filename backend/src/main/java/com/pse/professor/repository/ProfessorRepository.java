@@ -1,6 +1,7 @@
 package com.pse.professor.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,5 +13,5 @@ public interface ProfessorRepository extends JpaRepository<Professor, UUID> {
 
     List<Professor> findByActiveTrueOrderByLastNameAscFirstNameAsc();
 
-    
+    Optional<Professor> findByFirstNameAndLastName(String firstName, String lastName);
 }
