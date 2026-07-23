@@ -1,19 +1,21 @@
 package com.pse.lecture.controller;
 
 
+import java.util.UUID;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.lecture.dto.request.AddLectureRequest;
 import com.pse.lecture.dto.response.LectureDetailResponse;
 import com.pse.lecture.dto.response.LecturesResponse;
 import com.pse.lecture.service.LectureService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/data")
@@ -46,7 +48,7 @@ public class LectureController {
      * @return
      */
     @PostMapping("/lectures")
-    public BasicResponse addLecture(@RequestHeader("Authorization") String authHeader, AddLectureRequest request) {
+    public BasicResponse addLecture(@RequestHeader("Authorization") String authHeader, @RequestBody AddLectureRequest request) {
         return lectureService.addLecture(authHeader, request);
     }
 

@@ -1,10 +1,15 @@
 package com.pse.professor.service;
 
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
-import com.pse.lecture.service.LectureService;
 import com.pse.moderation.service.ModerationUserService;
 import com.pse.professor.dto.request.ProfessorAddRequest;
 import com.pse.professor.dto.response.ProfessorDetailResponse;
@@ -12,12 +17,6 @@ import com.pse.professor.dto.response.ProfessorResponse;
 import com.pse.professor.dto.response.ProfessorsResponse;
 import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 public class ProfessorService {
@@ -78,39 +77,70 @@ public class ProfessorService {
 
     }
 
-    public BasicResponse addProfessor(String authHeader, ProfessorAddRequest request) {
+    public BasicResponse addProfessor(
+        String authHeader,
+        ProfessorAddRequest request
+) {
 
-        if (!moderationUserService.validateAdminToken(authHeader)) {
-            return new BasicResponse("Error, not authorized to add professors (must be admin)", false);
-        }
-
-        Professor professor = new Professor();
-        professor.setFirstName(request.firstName());
-        professor.setLastName(request.lastName());
-
-        if (request.lectureIDs() != null) {
-            for (UUID lectureID : request.lectureIDs()) {
-
-                Lecture lecture = lectureRepository.findById(lectureID).orElse(null);
-
-                if (lecture == null) {
-                    return new BasicResponse(
-                            "Couldnt find lecture with lectureID: " + lectureID,
-                            false
-                    );
-                }
-
-                // link Prof <=> Lecture
-                lecture.setProfessor(professor);
-                professor.getLectures().add(lecture);
-                lectureRepository.save(lecture);
-            }
-        }
-
-        professorRepository.save(professor);
-
-        return new BasicResponse("Professor added successfully", true);
+    if (!moderationUserService.validateAdminToken(authHeader)) {
+        return new BasicResponse(
+                "Error, not authorized to add professors (must be admin)",
+                false
+        );
     }
+
+    if (getProfessorID(request.firstName(), request.lastName()) != null) {
+        return new BasicResponse(
+                "Professor already exists: "
+                        + request.firstName()
+                        + " "
+                        + request.lastName(),
+                false
+        );
+    }
+
+    Professor professor = new Professor();
+    professor.setFirstName(request.firstName().trim());
+    professor.setLastName(request.lastName().trim());
+
+    // Zuerst speichern, damit der Professor eine ID hat
+    professorRepository.save(professor);
+
+    if (request.lectureIDs() != null) {
+
+        for (UUID lectureID : request.lectureIDs()) {
+
+            Lecture lecture = lectureRepository
+                    .findById(lectureID)
+                    .orElse(null);
+
+            if (lecture == null) {
+                return new BasicResponse(
+                        "Couldn't find lecture with lectureID: " + lectureID,
+                        false
+                );
+            }
+
+            // Beide Seiten der Many-to-Many-Beziehung aktualisieren
+            if (!lecture.getProfessors().contains(professor)) {
+                lecture.getProfessors().add(professor);
+            }
+
+            if (!professor.getLectures().contains(lecture)) {
+                professor.getLectures().add(lecture);
+            }
+
+            lectureRepository.save(lecture);
+        }
+    }
+
+    professorRepository.save(professor);
+
+    return new BasicResponse(
+            "Professor added successfully",
+            true
+    );
+}
 
 
     public void linkLectureToProf(Professor professor, Lecture lecture) {
@@ -119,6 +149,7 @@ public class ProfessorService {
     }
 
     public UUID getProfessorID(String firstName, String lastName) {
+
         Professor professor = professorRepository.findByFirstNameAndLastName(firstName, lastName).orElse(null);
 
         if(professor == null) {

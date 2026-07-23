@@ -1,5 +1,11 @@
 package com.pse.lecture.service;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.lecture.dto.request.AddLectureRequest;
@@ -11,14 +17,9 @@ import com.pse.lecture.repository.LectureRepository;
 import com.pse.moderation.service.ModerationUserService;
 import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
-import com.pse.professor.service.ProfessorService;
 import com.pse.user.model.Student;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import com.pse.professor.dto.response.ProfessorShortResponse;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 public class LectureService {
@@ -48,9 +49,16 @@ public class LectureService {
         for (Lecture lecture : lectures) {
 
 
-            List<UUID> professorIDs = new ArrayList<>();
+            List<ProfessorShortResponse> professorResponses = new ArrayList<>();
+
             for (Professor professor : lecture.getProfessors()) {
-                professorIDs.add(professor.getId());
+                professorResponses.add(
+                    new ProfessorShortResponse(
+                        professor.getId(),
+                        professor.getFirstName(),
+                        professor.getLastName()
+                    )
+                );
             }
 
             responses.add(
@@ -61,9 +69,7 @@ public class LectureService {
                             lecture.getSemesterYear(),
                             lecture.getSemesterSeason(),
                             lecture.isActive(),
-                            professorIDs,
-                            lecture.getProfessor().getFirstName(),
-                            lecture.getProfessor().getLastName(),
+                            professorResponses,
                             lecture.getComments().size(),
                             lecture.getRatings().size()
                     )
@@ -82,10 +88,19 @@ public class LectureService {
             return new LectureDetailResponse("Couldn find lecture with uuid: " + lectureId, false, null);
         }
 
-        List<UUID> professorIDs = new ArrayList<>();
-        for (Professor professor : lecture.getProfessors()) {
-            professorIDs.add(professor.getId());
-        }
+        
+        List<ProfessorShortResponse> professorResponses = new ArrayList<>();
+
+            for (Professor professor : lecture.getProfessors()) {
+                professorResponses.add(
+                    new ProfessorShortResponse(
+                        professor.getId(),
+                        professor.getFirstName(),
+                        professor.getLastName()
+                    )
+                );
+            }
+
 
         LectureResponse lectureResponse = new LectureResponse(
                 lecture.getId(),
@@ -94,9 +109,7 @@ public class LectureService {
                 lecture.getSemesterYear(),
                 lecture.getSemesterSeason(),
                 lecture.isActive(),
-                professorIDs,
-                lecture.getProfessor().getFirstName(),
-                lecture.getProfessor().getLastName(),
+                professorResponses,
                 lecture.getComments().size(),
                 lecture.getRatings().size()
         );
@@ -112,6 +125,12 @@ public class LectureService {
             return new BasicResponse("User is not authorized to add Lectures (isnt Admin)", false);
         }
 
+
+
+        if (lectureRepository.findByName(request.name()).isPresent()) {
+            
+                return new BasicResponse("Lecture already exists: " + request.name(),false);
+        }
 
 
         List<UUID> professorsIDs = request.professorIds();

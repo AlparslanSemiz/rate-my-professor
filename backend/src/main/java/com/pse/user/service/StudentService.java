@@ -5,17 +5,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.stereotype.Service;
+
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.UserRatingDto;
 import com.pse.auth.dto.response.UserRatingResponse;
-import com.pse.auth.service.AuthService;
 import com.pse.rating.model.Rating;
 import com.pse.rating.model.RatingTopic;
-import com.pse.user.dto.StudentProfileResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import com.pse.shared.enums.UserStatus;
+import com.pse.user.dto.StudentProfileResponse;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
 
@@ -59,7 +57,6 @@ public class StudentService {
 
             String lectureName = rating.getLecture().getName();
 
-            String professorName = rating.getLecture().getProfessor().getLastName();
 
             String semester = rating.getLecture().getSemesterSeason().toString()
                     + rating.getLecture().getSemesterYear();
@@ -75,7 +72,6 @@ public class StudentService {
 
             ratingDtos.add(new UserRatingDto(
                     lectureName,
-                    professorName,
                     semester,
                     overallRating
             ));

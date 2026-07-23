@@ -1,17 +1,24 @@
 package com.pse.professor.model;
 
-import com.pse.lecture.model.Lecture;
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import org.hibernate.annotations.UpdateTimestamp;
+
+import com.pse.lecture.model.Lecture;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "professors")
@@ -39,8 +46,9 @@ public class Professor {
     @Column(name = "rating_count", nullable = false)
     private int ratingCount = 0;
 
-    @OneToMany(mappedBy = "professor", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ManyToMany(mappedBy = "professors")
     private List<Lecture> lectures = new ArrayList<>();
+
 
     @UpdateTimestamp
     @Column(name = "updated_at")

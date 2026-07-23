@@ -1,22 +1,22 @@
 package com.pse.professor.controller;
 
 
-import com.pse.auth.dto.response.BasicResponse;
-import com.pse.professor.dto.request.ProfessorAddRequest;
-import com.pse.professor.dto.response.ProfessorDetailResponse;
-import com.pse.professor.dto.response.ProfessorsResponse;
-import com.pse.professor.service.ProfessorService;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.UUID;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.UUID;
-
+import com.pse.auth.dto.response.BasicResponse;
+import com.pse.professor.dto.request.ProfessorAddRequest;
+import com.pse.professor.dto.response.ProfessorDetailResponse;
+import com.pse.professor.dto.response.ProfessorsResponse;
+import com.pse.professor.service.ProfessorService;
 
 @RestController
 @RequestMapping("/data")
@@ -55,9 +55,11 @@ public class ProfessorController {
 
 
     @GetMapping("/professor/id")
-    public UUID getProfessorID(@RequestBody String firstName, String lastName) {
+    public UUID getProfessorID( @RequestParam String firstName,
+        @RequestParam String lastName) {
 
         return professorService.getProfessorID(firstName, lastName);
+
 
     }
 
