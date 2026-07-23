@@ -4,6 +4,9 @@
     <string name="nav_home">Home</string>
     <string name="nav_search">Search</string>
     <string name="nav_settings">Settings</string>
+    <string name="notifications">Notifications</string>
+    <string name="no_notifications">You have no notifications yet.</string>
+    <string name="notification_reply_title">%1$s replied to your comment</string>
 
     <string name="back">Back</string>
     <string name="close">Close</string>
