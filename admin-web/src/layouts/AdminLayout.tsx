@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 import Dashboard from '../pages/Dashboard'
 import UsersPage from '../features/users/UsersPage'
 import FeedbackPage from '../features/feedback/FeedbackPage'
-import CommentsPage from '../pages/Comments'
+import CommentsPage from '../features/comments/CommentsPage'
 import AuditLogsPage from '../pages/AuditLogs'
 import { routes } from '../constants/routes'
 

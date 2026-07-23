@@ -2,18 +2,18 @@ import { MantineProvider } from '@mantine/core'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { commentsService, type ReportedComment } from '../api/CommentsService'
-import { AuthProvider } from '../context/AuthContext'
-import CommentsPage from './Comments'
+import { commentsService, type ReportedComment } from '../../api/CommentsService'
+import { AuthProvider } from '../../context/AuthContext'
+import CommentsPage from './CommentsPage'
 
-vi.mock('../api/CommentsService', () => ({
+vi.mock('../../api/CommentsService', () => ({
   commentsService: {
     getReported: vi.fn(),
     updateStatus: vi.fn(),
   },
 }))
 
-vi.mock('../api/UsersService', () => ({
+vi.mock('../../api/UsersService', () => ({
   usersService: {
     getById: vi.fn(),
     getWarnings: vi.fn(),
