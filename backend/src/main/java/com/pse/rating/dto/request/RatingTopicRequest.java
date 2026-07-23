@@ -1,6 +1,8 @@
 package com.pse.rating.dto.request;
 
+import com.pse.rating.model.RatingCategory;
+
 public record RatingTopicRequest(
-        String name,
-        int value
+        RatingCategory category,
+        double value
 ) {}
