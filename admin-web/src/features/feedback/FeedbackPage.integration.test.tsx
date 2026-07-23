@@ -2,10 +2,10 @@ import { MantineProvider } from '@mantine/core'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { feedbackService, type BugReport } from '../api/FeedbackService'
-import FeedbackPage from './Feedback'
+import { feedbackService, type BugReport } from '../../api/FeedbackService'
+import FeedbackPage from './FeedbackPage'
 
-vi.mock('../api/FeedbackService', () => ({
+vi.mock('../../api/FeedbackService', () => ({
   feedbackService: {
     getReports: vi.fn(),
     updateReport: vi.fn(),
