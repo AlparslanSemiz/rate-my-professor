@@ -66,6 +66,7 @@ public record LectureResponse(
 ) {}
 
 
+OLD:
 public record LectureResponse(
         UUID id,
         String name,
@@ -74,13 +75,14 @@ public record LectureResponse(
         SemesterSeason semesterSeason,
         boolean active,
         List<UUID> professorIds,
-++                                              String professorFirstName,
-++                                              String professorLastName,
+--      String professorFirstName,
+--      professorLastName,
+++      List<ProfessorShortResponse> professors,
         int commentCount,
         int ratingCount
 ) {}
 
-
+NEW:
 public record LectureResponse(
         UUID id,
         String name,
@@ -92,6 +94,16 @@ public record LectureResponse(
         int commentCount,
         int ratingCount
 ) {}
+
+
+
+++ New
+public record ProfessorShortResponse(
+        UUID id,
+        String firstName,
+        String lastName
+) {
+}
 
 
 
