@@ -1,12 +1,15 @@
+import { lazy, Suspense } from 'react'
 import { AppShell } from '@mantine/core'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import PageLoader from '../components/PageLoader'
 import Sidebar from './components/Sidebar'
-import DashboardPage from '../features/dashboard/DashboardPage'
-import UsersPage from '../features/users/UsersPage'
-import FeedbackPage from '../features/feedback/FeedbackPage'
-import CommentsPage from '../features/comments/CommentsPage'
-import AuditLogsPage from '../features/audit-logs/AuditLogsPage'
 import { routes } from '../constants/routes'
+
+const AuditLogsPage = lazy(() => import('../features/audit-logs/AuditLogsPage'))
+const CommentsPage = lazy(() => import('../features/comments/CommentsPage'))
+const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'))
+const FeedbackPage = lazy(() => import('../features/feedback/FeedbackPage'))
+const UsersPage = lazy(() => import('../features/users/UsersPage'))
 
 export default function AdminLayout() {
   return (
@@ -30,14 +33,16 @@ export default function AdminLayout() {
       </AppShell.Navbar>
       <AppShell.Main>
         <div style={{ padding: 'clamp(16px, 4vw, 32px)', minHeight: '100vh' }}>
-          <Routes>
-            <Route path={routes.dashboard} element={<DashboardPage />} />
-            <Route path={routes.users} element={<UsersPage />} />
-            <Route path={routes.feedback} element={<FeedbackPage />} />
-            <Route path={routes.comments} element={<CommentsPage />} />
-            <Route path={routes.auditLogs} element={<AuditLogsPage />} />
-            <Route path="*" element={<Navigate to={routes.dashboard} replace />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path={routes.dashboard} element={<DashboardPage />} />
+              <Route path={routes.users} element={<UsersPage />} />
+              <Route path={routes.feedback} element={<FeedbackPage />} />
+              <Route path={routes.comments} element={<CommentsPage />} />
+              <Route path={routes.auditLogs} element={<AuditLogsPage />} />
+              <Route path="*" element={<Navigate to={routes.dashboard} replace />} />
+            </Routes>
+          </Suspense>
         </div>
       </AppShell.Main>
     </AppShell>

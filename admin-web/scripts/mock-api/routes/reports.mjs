@@ -1,7 +1,8 @@
 import { adminActor, insertAuditLog } from '../audit.mjs'
 import { requireAdmin } from '../auth-session.mjs'
 import { query, withTransaction } from '../db.mjs'
-import { iso, isUuid, readBody, sendJson } from '../http.mjs'
+import { isUuid, readBody, sendJson } from '../http.mjs'
+import { toBugReport } from '../mappers.mjs'
 
 const VALID_REPORT_STATUSES = new Set(['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN'])
 const VALID_SEVERITIES = new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])
@@ -29,15 +30,7 @@ async function listReports(res) {
   return sendJson(res, 200, {
     message: 'Successfully found all entries',
     success: true,
-    bugReports: result.rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      description: row.description,
-      severity: row.severity,
-      status: row.status,
-      reporterName: row.reporter_name ?? 'Unknown',
-      reportedAt: iso(row.reported_at),
-    })),
+    bugReports: result.rows.map(toBugReport),
   })
 }
 
@@ -83,6 +76,20 @@ async function updateReport(req, res, reportId, admin) {
   return sendJson(res, 200, { message: 'Updated', success: true })
 }
 
+function buildReportUpdate(report, requested) {
+  const changes = {}
+  const assignments = []
+  const values = []
+
+  for (const [field, nextValue] of Object.entries(requested)) {
+    if (report[field] === nextValue) continue
+    changes[field] = { before: report[field], after: nextValue }
+    values.push(nextValue)
+    assignments.push(`${field} = $${values.length}`)
+  }
+  return { assignments, changes, values }
+}
+
 async function applyReportUpdate(client, reportId, requested, admin) {
   const existing = await client.query('SELECT * FROM mock_bug_reports WHERE id = $1 FOR UPDATE', [
     reportId,
@@ -90,21 +97,13 @@ async function applyReportUpdate(client, reportId, requested, admin) {
   const report = existing.rows[0]
   if (!report) return false
 
-  const changes = {}
-  const updates = []
-  const values = []
-  for (const [field, nextValue] of Object.entries(requested)) {
-    if (report[field] === nextValue) continue
-    changes[field] = { before: report[field], after: nextValue }
-    values.push(nextValue)
-    updates.push(`${field} = $${values.length}`)
-  }
-  if (updates.length === 0) return true
+  const update = buildReportUpdate(report, requested)
+  if (update.assignments.length === 0) return true
 
-  values.push(reportId)
+  update.values.push(reportId)
   await client.query(
-    `UPDATE mock_bug_reports SET ${updates.join(', ')} WHERE id = $${values.length}`,
-    values,
+    `UPDATE mock_bug_reports SET ${update.assignments.join(', ')} WHERE id = $${update.values.length}`,
+    update.values,
   )
   await insertAuditLog(client, {
     actor: adminActor(admin),
@@ -114,7 +113,7 @@ async function applyReportUpdate(client, reportId, requested, admin) {
       id: report.id,
       label: report.title,
     },
-    changes,
+    changes: update.changes,
   })
   return true
 }

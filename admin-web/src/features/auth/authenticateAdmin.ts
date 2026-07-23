@@ -18,6 +18,38 @@ function findUserByEmail(users: User[], email: string) {
   return users.find((user) => normalizeEmail(user.kitEmail) === normalizedEmail)
 }
 
+function toAuthUser(user: User): AuthUser {
+  return {
+    id: user.id,
+    name: user.username,
+    email: user.kitEmail,
+    role: user.role,
+  }
+}
+
+async function resolveAdminUser(email: string): Promise<AuthUser> {
+  const requiredAdminUser = getRequiredAdminUser(email)
+  let users: User[] = []
+
+  try {
+    users = await usersService.getAll()
+  } catch (error: unknown) {
+    if (!requiredAdminUser) throw error
+  }
+
+  const currentUser = findUserByEmail(users, email)
+  if (!currentUser && requiredAdminUser) return requiredAdminUser
+  if (!currentUser) {
+    throw new Error('Logged in, but could not find your admin account')
+  }
+
+  const adminUser = withRequiredAdminRole(currentUser)
+  if (!hasAdminAccess(adminUser)) {
+    throw new Error(ADMIN_ACCESS_ERROR)
+  }
+  return toAuthUser(adminUser)
+}
+
 export function getLoginErrorMessage(error: unknown) {
   if (error instanceof ApiError && error.message === EMPTY_RESPONSE_MESSAGE) {
     return ADMIN_ACCESS_ERROR
@@ -36,35 +68,5 @@ export async function authenticateAdmin(email: string, code: string): Promise<{ 
   const { token } = await authService.login(email, code)
 
   apiClient.setToken(token)
-  const requiredAdminUser = getRequiredAdminUser(email)
-  let users: User[] = []
-
-  try {
-    users = await usersService.getAll()
-  } catch (error: unknown) {
-    if (!requiredAdminUser) throw error
-  }
-
-  const currentUser = findUserByEmail(users, email)
-  if (!currentUser && requiredAdminUser) {
-    return { token, user: requiredAdminUser }
-  }
-  if (!currentUser) {
-    throw new Error('Logged in, but could not find your admin account')
-  }
-
-  const adminUser = withRequiredAdminRole(currentUser)
-  if (!hasAdminAccess(adminUser)) {
-    throw new Error(ADMIN_ACCESS_ERROR)
-  }
-
-  return {
-    token,
-    user: {
-      id: adminUser.id,
-      name: adminUser.username,
-      email: adminUser.kitEmail,
-      role: adminUser.role,
-    },
-  }
+  return { token, user: await resolveAdminUser(email) }
 }

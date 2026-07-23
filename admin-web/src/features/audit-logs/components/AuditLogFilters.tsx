@@ -1,27 +1,27 @@
-import { type Dispatch, type FormEvent, type SetStateAction, type CSSProperties } from 'react'
-import { Button, Group, Select, TextInput } from '@mantine/core'
-import { IconFilter, IconRefresh, IconSearch } from '@tabler/icons-react'
+import { type FormEvent, type CSSProperties } from 'react'
+import { Button, Group } from '@mantine/core'
+import { IconFilter, IconRefresh } from '@tabler/icons-react'
 import type { AuditMeta } from '../../../api/AuditLogsService'
 import Panel from '../../../components/Panel'
-import { darkInputStyles } from '../../../constants/inputStyles'
-import { enumLabel } from '../../../utils/enumLabel'
-import { isAuditAction, isAuditTargetType, type FilterDraft } from '../auditLogModel'
+import type { FilterDraft } from '../auditLogModel'
+import {
+  AuditActionFilter,
+  AuditAdminFilter,
+  AuditTargetFilter,
+} from './AuditSelectFilters'
+import { AuditDateFilter, AuditSearchFilter } from './AuditTextFilters'
+import type { DraftSetter } from './auditFilterTypes'
 
 const panelStyle: CSSProperties = { padding: '16px 20px' }
-const filterFieldStyle: CSSProperties = { flex: '1 1 180px' }
-const searchFieldStyle: CSSProperties = { flex: '2 1 280px' }
-const dateFieldStyle: CSSProperties = { flex: '1 1 150px' }
 
 interface AuditLogFiltersProps {
   draft: FilterDraft
   meta: AuditMeta
   loading: boolean
-  onDraftChange: Dispatch<SetStateAction<FilterDraft>>
+  onDraftChange: DraftSetter
   onApply: (draft: FilterDraft) => Promise<void>
   onClear: () => void
 }
-
-type DraftSetter = Dispatch<SetStateAction<FilterDraft>>
 
 export default function AuditLogFilters({
   draft,
@@ -40,17 +40,17 @@ export default function AuditLogFilters({
     <form onSubmit={handleSubmit}>
       <Panel mb={16} style={panelStyle}>
         <Group gap={12} align="flex-end" wrap="wrap">
-          <SearchFilter value={draft.q} onDraftChange={onDraftChange} />
-          <AdminFilter value={draft.actorId} meta={meta} onDraftChange={onDraftChange} />
-          <ActionFilter value={draft.action} meta={meta} onDraftChange={onDraftChange} />
-          <TargetFilter value={draft.targetType} meta={meta} onDraftChange={onDraftChange} />
-          <DateFilter
+          <AuditSearchFilter value={draft.q} onDraftChange={onDraftChange} />
+          <AuditAdminFilter value={draft.actorId} meta={meta} onDraftChange={onDraftChange} />
+          <AuditActionFilter value={draft.action} meta={meta} onDraftChange={onDraftChange} />
+          <AuditTargetFilter value={draft.targetType} meta={meta} onDraftChange={onDraftChange} />
+          <AuditDateFilter
             label="From"
             ariaLabel="Audit start date"
             value={draft.from}
             onChange={(from) => onDraftChange((current) => ({ ...current, from }))}
           />
-          <DateFilter
+          <AuditDateFilter
             label="To"
             ariaLabel="Audit end date"
             value={draft.to}
@@ -72,132 +72,5 @@ export default function AuditLogFilters({
         </Group>
       </Panel>
     </form>
-  )
-}
-
-function SearchFilter({ value, onDraftChange }: { value: string; onDraftChange: DraftSetter }) {
-  return (
-    <TextInput
-      label="Search"
-      placeholder="Admin, email, or target..."
-      value={value}
-      onChange={(event) => {
-        const q = event.currentTarget.value
-        onDraftChange((current) => ({ ...current, q }))
-      }}
-      leftSection={<IconSearch size={14} color="#6b7280" />}
-      style={searchFieldStyle}
-      styles={darkInputStyles}
-    />
-  )
-}
-
-function AdminFilter({
-  value,
-  meta,
-  onDraftChange,
-}: {
-  value: string | null
-  meta: AuditMeta
-  onDraftChange: DraftSetter
-}) {
-  const options = meta.actors.map((actor) => ({
-    value: actor.id,
-    label: `${actor.name} · ${actor.email}`,
-  }))
-
-  return (
-    <Select
-      label="Admin"
-      placeholder="All admins"
-      data={options}
-      value={value}
-      onChange={(actorId) => onDraftChange((current) => ({ ...current, actorId }))}
-      searchable
-      clearable
-      style={filterFieldStyle}
-      styles={darkInputStyles}
-    />
-  )
-}
-
-function ActionFilter({
-  value,
-  meta,
-  onDraftChange,
-}: {
-  value: FilterDraft['action']
-  meta: AuditMeta
-  onDraftChange: DraftSetter
-}) {
-  const options = meta.actions.map((action) => ({ value: action, label: enumLabel(action) }))
-
-  return (
-    <Select
-      label="Action"
-      placeholder="All actions"
-      data={options}
-      value={value}
-      onChange={(nextValue) => {
-        onDraftChange((current) => ({
-          ...current,
-          action: isAuditAction(nextValue, meta) ? nextValue : null,
-        }))
-      }}
-      clearable
-      style={filterFieldStyle}
-      styles={darkInputStyles}
-    />
-  )
-}
-
-function TargetFilter({
-  value,
-  meta,
-  onDraftChange,
-}: {
-  value: FilterDraft['targetType']
-  meta: AuditMeta
-  onDraftChange: DraftSetter
-}) {
-  const options = meta.targetTypes.map((type) => ({ value: type, label: enumLabel(type) }))
-
-  return (
-    <Select
-      label="Target"
-      placeholder="All targets"
-      data={options}
-      value={value}
-      onChange={(nextValue) => {
-        onDraftChange((current) => ({
-          ...current,
-          targetType: isAuditTargetType(nextValue, meta) ? nextValue : null,
-        }))
-      }}
-      clearable
-      style={filterFieldStyle}
-      styles={darkInputStyles}
-    />
-  )
-}
-
-interface DateFilterProps {
-  label: string
-  ariaLabel: string
-  value: string
-  onChange: (value: string) => void
-}
-
-function DateFilter({ label, ariaLabel, value, onChange }: DateFilterProps) {
-  return (
-    <TextInput
-      label={label}
-      type="date"
-      aria-label={ariaLabel}
-      value={value}
-      onChange={(event) => onChange(event.currentTarget.value)}
-      style={dateFieldStyle}
-      styles={darkInputStyles}
-    />
   )
 }

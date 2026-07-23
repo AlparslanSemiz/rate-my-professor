@@ -69,12 +69,7 @@ export class ApiClient {
   }
 
   private async request<T>(path: string, init: RequestInit): Promise<T> {
-    let response: Response
-    try {
-      response = await fetch(`${this.baseUrl}${path}`, { ...init, headers: this.headers() })
-    } catch {
-      throw new ApiError(0, NETWORK_ERROR_MESSAGE)
-    }
+    const response = await this.fetchResponse(path, init)
 
     if (response.status === 401 && this.token) {
       this.onUnauthorized?.()
@@ -84,6 +79,20 @@ export class ApiClient {
       throw new ApiError(response.status, await this.extractErrorMessage(response, path))
     }
 
+    return this.parseSuccessResponse<T>(response)
+  }
+
+  private async fetchResponse(path: string, init: RequestInit): Promise<Response> {
+    let response: Response
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, { ...init, headers: this.headers() })
+    } catch {
+      throw new ApiError(0, NETWORK_ERROR_MESSAGE)
+    }
+    return response
+  }
+
+  private async parseSuccessResponse<T>(response: Response): Promise<T> {
     if (response.status === 204) return undefined as T
 
     const text = await response.text()

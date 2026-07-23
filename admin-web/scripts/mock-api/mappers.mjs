@@ -34,6 +34,32 @@ export function toCommentUser(row, prefix) {
   }
 }
 
+export function toReportedComment(row) {
+  return {
+    id: row.id,
+    commentContent: row.comment_content,
+    postContext: row.post_context,
+    reportText: row.report_text,
+    reportedUser: toCommentUser(row, 'reported'),
+    reporter: toCommentUser(row, 'reporter'),
+    reason: row.reason,
+    status: row.status,
+    date: iso(row.date),
+  }
+}
+
+export function toBugReport(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    severity: row.severity,
+    status: row.status,
+    reporterName: row.reporter_name ?? 'Unknown',
+    reportedAt: iso(row.reported_at),
+  }
+}
+
 export function toAuditLog(row) {
   return {
     id: row.id,

@@ -1,24 +1,11 @@
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from './audit.mjs'
-import { iso, isUuid } from './http.mjs'
+import { decodeAuditCursor } from './audit-cursor.mjs'
+import { isUuid } from './http.mjs'
+
+export { decodeAuditCursor, encodeAuditCursor } from './audit-cursor.mjs'
 
 const VALID_AUDIT_ACTIONS = new Set(AUDIT_ACTIONS)
 const VALID_AUDIT_TARGET_TYPES = new Set(AUDIT_TARGET_TYPES)
-
-export function encodeAuditCursor(row) {
-  return Buffer.from(JSON.stringify({ createdAt: iso(row.created_at), id: row.id })).toString(
-    'base64url',
-  )
-}
-
-export function decodeAuditCursor(value) {
-  try {
-    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'))
-    if (!isUuid(parsed.id) || Number.isNaN(new Date(parsed.createdAt).getTime())) return null
-    return parsed
-  } catch {
-    return null
-  }
-}
 
 function parseTimestamp(value) {
   if (!value) return null
@@ -26,52 +13,69 @@ function parseTimestamp(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
-export function parseAuditLogQuery(url) {
-  const rawLimit = url.searchParams.get('limit')
+function parseLimit(searchParams) {
+  const rawLimit = searchParams.get('limit')
   const limit = rawLimit === null ? 50 : Number(rawLimit)
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     return { error: 'Limit must be an integer between 1 and 100' }
   }
+  return { value: limit }
+}
 
-  const actorId = url.searchParams.get('actorId')
-  if (actorId && !isUuid(actorId)) {
-    return { error: 'Invalid actor id' }
-  }
-
-  const action = url.searchParams.get('action')
-  if (action && !VALID_AUDIT_ACTIONS.has(action)) {
-    return { error: 'Invalid audit action' }
-  }
-
-  const targetType = url.searchParams.get('targetType')
-  if (targetType && !VALID_AUDIT_TARGET_TYPES.has(targetType)) {
-    return { error: 'Invalid audit target type' }
-  }
-
-  const rawFrom = url.searchParams.get('from')
-  const rawTo = url.searchParams.get('to')
+function parseDateRange(searchParams) {
+  const rawFrom = searchParams.get('from')
+  const rawTo = searchParams.get('to')
   const from = parseTimestamp(rawFrom)
   const to = parseTimestamp(rawTo)
   if ((rawFrom && !from) || (rawTo && !to) || (from && to && from > to)) {
     return { error: 'Invalid audit date range' }
   }
+  return { value: { from, to } }
+}
 
-  const rawCursor = url.searchParams.get('cursor')
+function parseCursor(searchParams) {
+  const rawCursor = searchParams.get('cursor')
   const cursor = rawCursor ? decodeAuditCursor(rawCursor) : null
   if (rawCursor && !cursor) {
     return { error: 'Invalid audit cursor' }
   }
+  return { value: cursor }
+}
+
+export function parseAuditLogQuery(url) {
+  const { searchParams } = url
+  const parsedLimit = parseLimit(searchParams)
+  if (parsedLimit.error) return parsedLimit
+
+  const actorId = searchParams.get('actorId')
+  if (actorId && !isUuid(actorId)) {
+    return { error: 'Invalid actor id' }
+  }
+
+  const action = searchParams.get('action')
+  if (action && !VALID_AUDIT_ACTIONS.has(action)) {
+    return { error: 'Invalid audit action' }
+  }
+
+  const targetType = searchParams.get('targetType')
+  if (targetType && !VALID_AUDIT_TARGET_TYPES.has(targetType)) {
+    return { error: 'Invalid audit target type' }
+  }
+
+  const parsedDateRange = parseDateRange(searchParams)
+  if (parsedDateRange.error) return parsedDateRange
+  const parsedCursor = parseCursor(searchParams)
+  if (parsedCursor.error) return parsedCursor
 
   return {
     value: {
-      limit,
+      limit: parsedLimit.value,
       actorId,
       action,
       targetType,
-      from,
-      to,
-      cursor,
-      search: String(url.searchParams.get('q') ?? '').trim(),
+      ...parsedDateRange.value,
+      cursor: parsedCursor.value,
+      search: String(searchParams.get('q') ?? '').trim(),
     },
   }
 }

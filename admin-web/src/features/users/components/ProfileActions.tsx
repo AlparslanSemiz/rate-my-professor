@@ -6,8 +6,9 @@ import {
   IconTrash,
 } from '@tabler/icons-react'
 import type { User } from '../../../api/UsersService'
+import type { ConfirmAction } from '../userConfirmation'
 
-export type ConfirmAction = 'block' | 'unblock' | 'delete'
+export type { ConfirmAction } from '../userConfirmation'
 
 const deleteButtonStyle: CSSProperties = { marginLeft: 'auto' }
 

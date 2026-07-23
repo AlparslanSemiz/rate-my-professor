@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Center, Loader, Modal, Text, type MantineColor } from '@mantine/core'
-import type { User } from '../../../api/UsersService'
+import { Center, Loader, Modal, Text } from '@mantine/core'
 import ConfirmModal from '../../../components/ConfirmModal'
 import { darkModalStyles } from '../../../constants/modalStyles'
 import { useUserProfile, type UserChange } from '../hooks/useUserProfile'
-import ProfileActions, { type ConfirmAction } from './ProfileActions'
+import { getUserConfirmation, type ConfirmAction } from '../userConfirmation'
+import ProfileActions from './ProfileActions'
 import ProfileSummary from './ProfileSummary'
 import WarnForm from './WarnForm'
 import WarningHistory from './WarningHistory'
@@ -14,44 +14,6 @@ interface UserProfileModalProps {
   opened: boolean
   onClose: () => void
   onUserChanged?: (id: string, change: UserChange) => void
-}
-
-interface ConfirmConfig {
-  title: string
-  description: string
-  confirmLabel: string
-  confirmColor: MantineColor
-  onConfirm: () => Promise<void>
-}
-
-function confirmConfigFor(
-  action: ConfirmAction,
-  user: User,
-  handlers: Record<ConfirmAction, () => Promise<void>>,
-): ConfirmConfig {
-  return {
-    block: {
-      title: 'Block user',
-      description: `Block ${user.username}? They will lose access to the platform. You can unblock them later.`,
-      confirmLabel: 'Block user',
-      confirmColor: 'orange',
-      onConfirm: handlers.block,
-    },
-    unblock: {
-      title: 'Unblock user',
-      description: `Unblock ${user.username}? They will regain access to the platform.`,
-      confirmLabel: 'Unblock user',
-      confirmColor: 'green',
-      onConfirm: handlers.unblock,
-    },
-    delete: {
-      title: 'Delete account',
-      description: `Permanently delete ${user.username}'s account? This action cannot be undone.`,
-      confirmLabel: 'Delete permanently',
-      confirmColor: 'red',
-      onConfirm: handlers.delete,
-    },
-  }[action]
 }
 
 export default function UserProfileModal({
@@ -83,7 +45,7 @@ export default function UserProfileModal({
 
   const confirmConfig =
     profile.user && confirmAction
-      ? confirmConfigFor(confirmAction, profile.user, {
+      ? getUserConfirmation(confirmAction, profile.user, {
           block: profile.block,
           unblock: profile.unblock,
           delete: handleDelete,
