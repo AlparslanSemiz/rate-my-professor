@@ -1,14 +1,14 @@
-import { ApiError, apiClient, EMPTY_RESPONSE_MESSAGE } from '../api/ApiClient'
-import { authService, type AuthUser } from '../api/AuthService'
-import { usersService, type User } from '../api/UsersService'
+import { ApiError, apiClient, EMPTY_RESPONSE_MESSAGE } from '../../api/ApiClient'
+import { authService, type AuthUser } from '../../api/AuthService'
+import { usersService, type User } from '../../api/UsersService'
 import {
   getRequiredAdminUser,
   hasAdminAccess,
   normalizeEmail,
   withRequiredAdminRole,
-} from '../utils/adminAccess'
-import { getDemoAdminTokenForEmail, isDemoLoginCode } from '../utils/demoAuth'
-import { getErrorMessage } from '../utils/getErrorMessage'
+} from '../../utils/adminAccess'
+import { getDemoAdminTokenForEmail, isDemoLoginCode } from '../../utils/demoAuth'
+import { getErrorMessage } from '../../utils/getErrorMessage'
 
 const LOGIN_ERROR_FALLBACK = 'Login failed'
 export const ADMIN_ACCESS_ERROR = 'Login succeeded, but this account is not authorized for the admin panel.'
