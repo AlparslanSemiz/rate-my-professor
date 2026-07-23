@@ -47,3 +47,53 @@ public record AnswerResponse(
 ) {
 }
 
+
+
+
+One Lecture can have multiple Profs
+public record LectureResponse(
+        UUID id,
+        String name,
+        String code,
+        int semesterYear,
+        SemesterSeason semesterSeason,
+        boolean active,
++++     List<UUID> professorIds,        //was: UUID professorId
+        String professorFirstName,
+        String professorLastName,
+        int commentCount,
+        int ratingCount
+) {}
+
+
+public record LectureResponse(
+        UUID id,
+        String name,
+        String code,
+        int semesterYear,
+        SemesterSeason semesterSeason,
+        boolean active,
+        List<UUID> professorIds,
+++                                              String professorFirstName,
+++                                              String professorLastName,
+        int commentCount,
+        int ratingCount
+) {}
+
+
+public record LectureResponse(
+        UUID id,
+        String name,
+        String code,
+        int semesterYear,
+        SemesterSeason semesterSeason,
+        boolean active,
+        List<ProfessorShortResponse> professors,
+        int commentCount,
+        int ratingCount
+) {}
+
+
+
+
+
