@@ -1,6 +1,6 @@
 import { AppShell } from '@mantine/core'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import Sidebar from '../components/Sidebar'
+import Sidebar from './components/Sidebar'
 import DashboardPage from '../features/dashboard/DashboardPage'
 import UsersPage from '../features/users/UsersPage'
 import FeedbackPage from '../features/feedback/FeedbackPage'
