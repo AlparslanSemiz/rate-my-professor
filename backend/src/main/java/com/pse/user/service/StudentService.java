@@ -61,10 +61,17 @@ public class StudentService {
             String semester = rating.getLecture().getSemesterSeason().toString()
                     + rating.getLecture().getSemesterYear();
 
-            int overallRating = 0;
+            double overallRating = 0;
 
             for (RatingTopic topic : rating.getTopics()) {
-                if (topic.getName().equals("overall")) {
+
+                //TODO calculate overall
+
+
+
+
+
+                if (topic.getCategory().equals("overall")) {
                     overallRating = topic.getValue();
                     break;
                 }

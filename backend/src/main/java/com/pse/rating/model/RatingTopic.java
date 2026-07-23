@@ -4,6 +4,8 @@ import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -30,11 +32,12 @@ public class RatingTopic {
     @GeneratedValue
     private UUID id;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String name;
+    private RatingCategory category;
 
     @Column(nullable = false)
-    private short value;
+    private double value;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "rating_id")

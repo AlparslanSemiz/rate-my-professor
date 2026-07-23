@@ -14,7 +14,6 @@ import com.pse.social.dto.request.CommentSubmitRequest;
 import com.pse.social.dto.request.VoteAnswerRequest;
 import com.pse.social.dto.request.VoteCommentRequest;
 import com.pse.social.dto.response.AnswerResponse;
-import com.pse.social.dto.response.AnswersResponse;
 import com.pse.social.dto.response.CommentResponse;
 import com.pse.social.dto.response.CommentsResponse;
 import com.pse.social.dto.response.NotificationResponse;
@@ -34,7 +33,6 @@ import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.CommentVoteRepository;
 import com.pse.social.repository.NotificationRepository;
 import com.pse.user.model.Student;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -361,7 +359,7 @@ public class SocialService {
 
 
 
-        return new CommentsResponse("Found comments", true, commentsResponses);
+        return new CommentsResponse("Found " + commentsResponses.size() + " comments", true, commentsResponses);
     }
 
     private List<AnswerResponse> getAnswerResponses(Comment comment) {
@@ -389,7 +387,7 @@ public class SocialService {
         Student student = authService.verifyUser(authHeader);
 
         if (student == null) {
-            return new NotificationsResponse("Error, cannot authenticate user", false, null);
+            return new NotificationsResponse("Error, cannot authenticate user", false, new ArrayList<>());
         }
 
 

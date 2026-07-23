@@ -2,6 +2,7 @@ package com.pse.rating.controller;
 
 import java.util.UUID;
 
+import com.pse.rating.dto.response.RatingCategoriesResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,9 +40,14 @@ public class RatingController {
 
     @GetMapping("/{lectureId}")
     public RatingsAverageResponse getRatings(@PathVariable UUID lectureId) {
-
         return ratingService.getRatings(lectureId);
 
+    }
+
+
+    @GetMapping("/{lectureId}/categories")
+    public RatingCategoriesResponse getRatingCategories(@PathVariable UUID lectureId) {
+        return ratingService.getRatingCategories(lectureId);
     }
 
 

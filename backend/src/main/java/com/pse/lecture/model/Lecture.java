@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.pse.rating.model.LectureType;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.pse.professor.model.Professor;
@@ -27,6 +28,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import static com.pse.rating.model.LectureType.LECTURE_ONLY;
 
 @Entity
 @Table(name = "lectures")
@@ -54,6 +57,9 @@ public class Lecture {
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lecture_type", nullable = false)
+    private LectureType lectureType = LECTURE_ONLY;
 
     @ManyToMany
     @JoinTable(

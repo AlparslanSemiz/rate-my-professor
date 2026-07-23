@@ -9,7 +9,10 @@ import java.util.UUID;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.lecture.service.LectureService;
+import com.pse.rating.dto.response.RatingCategoriesResponse;
+import com.pse.rating.dto.response.RatingCategoryResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
+import com.pse.rating.model.RatingCategory;
 import com.pse.user.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -71,7 +74,7 @@ public class RatingService {
 
             RatingTopic topic = new RatingTopic();
 
-            topic.setName(topicRequest.name());
+            topic.setCategory(topicRequest.category());
             topic.setValue((short) topicRequest.value());
             topic.setRating(rating);
 
@@ -90,28 +93,28 @@ public class RatingService {
 
         List<Rating> ratings = ratingRepository.findByLectureId(lectureId);
 
-        Map<String, Integer> sums = new HashMap<>();
-        Map<String, Integer> counts = new HashMap<>();
+        Map<RatingCategory, Double> sums = new HashMap<>();
+        Map<RatingCategory, Double> counts = new HashMap<>();
 
         for (Rating rating : ratings) {
 
             for (RatingTopic topic : rating.getTopics()) {
 
-                String name = topic.getName();
+                RatingCategory category = topic.getCategory();
 
-                sums.put(name, sums.getOrDefault(name, 0) + topic.getValue());
+                sums.put(category, sums.getOrDefault(category, 0.0) + topic.getValue());
 
-                counts.put(name, counts.getOrDefault(name, 0) + 1);
+                counts.put(category, counts.getOrDefault(category, 0.0) + 1);
             }
         }
 
         List<TopicAverageResponse> result = new ArrayList<>();
 
-        for (String name : sums.keySet()) {
+        for (RatingCategory category : sums.keySet()) {
 
-            double average = (double) sums.get(name) / counts.get(name);
+            double average = (double) sums.get(category) / counts.get(category);
             
-            result.add(new TopicAverageResponse(name, average));
+            result.add(new TopicAverageResponse(category, average));
         }
 
         return new RatingsAverageResponse("Success, found " + result.size() + " ratings", true, result);
@@ -119,7 +122,23 @@ public class RatingService {
     }
 
 
+    public RatingCategoriesResponse getRatingCategories(UUID lectureId) {
 
+        Lecture lecture = lectureService.findById(lectureId);
 
+        List<RatingCategoryResponse> responses = new ArrayList<>();
 
+        for (RatingCategory category : lecture.getLectureType().getDefaultCategories()) {
+
+            responses.add(
+                    new RatingCategoryResponse(
+                            category,
+                            category.getDisplayName(),
+                            category.getDefaultWeight()
+                    )
+            );
+        }
+
+        return new RatingCategoriesResponse("Found " + responses.size() + " categories", true, responses);
+    }
 }
