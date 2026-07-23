@@ -1,16 +1,9 @@
 import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
 import type { UserRole, UserStatus } from './UsersService'
+import type { ReportReason, ReportStatus } from '../domain/moderation'
 
-export type CommentReportStatus = 'OPEN' | 'REVIEWED' | 'DISMISSED' | 'ACTION_TAKEN'
-export type ReportReason =
-  | 'SPAM'
-  | 'INSULT'
-  | 'HARASSMENT'
-  | 'HATE_SPEECH'
-  | 'PERSONAL_INFORMATION'
-  | 'OFF_TOPIC'
-  | 'INAPPROPRIATE_CONTENT'
-  | 'OTHER'
+export type CommentReportStatus = ReportStatus
+export type { ReportReason }
 
 export interface CommentUserRef {
   id: string

@@ -1,19 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClient } from './ApiClient'
 import { CommentsService } from './CommentsService'
+import { jsonResponse, TEST_API_BASE_URL } from '../test/http'
 
-const API_BASE_URL = 'https://api.test'
 const fetchMock = vi.fn()
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
-
 function createCommentsService() {
-  return new CommentsService(new ApiClient(API_BASE_URL))
+  return new CommentsService(new ApiClient(TEST_API_BASE_URL))
 }
 
 describe('CommentsService', () => {
@@ -61,7 +54,7 @@ describe('CommentsService', () => {
     await service.updateStatus('comment-1', 'ACTION_TAKEN')
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(`${API_BASE_URL}/comments/reported/comment-1`)
+    expect(url).toBe(`${TEST_API_BASE_URL}/comments/reported/comment-1`)
     expect(init.method).toBe('PATCH')
     expect(JSON.parse(init.body as string)).toEqual({ status: 'ACTION_TAKEN' })
   })

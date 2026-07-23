@@ -18,8 +18,8 @@
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "test:unit": "vitest run src/**/*.unit.test.ts src/**/*.unit.test.tsx",
-    "test:integration": "vitest run src/**/*.integration.test.ts src/**/*.integration.test.tsx",
+    "test:unit": "vitest run .unit.test.",
+    "test:integration": "vitest run .integration.test.",
     "preview": "vite preview"
   },
   "dependencies": {

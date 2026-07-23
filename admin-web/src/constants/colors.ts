@@ -1,42 +1,45 @@
-export const roleColor: Record<string, string> = {
+import type { UserRole, UserStatus } from '../api/UsersService'
+import type { ReportReason, ReportStatus, Severity } from '../domain/moderation'
+
+export const roleColor: Record<UserRole, string> = {
   ADMIN: 'blue',
   STUDENT: 'gray',
 }
 
-export const roleAccent: Record<string, string> = {
+export const roleAccent: Record<UserRole, string> = {
   ADMIN: '#3b82f6',
   STUDENT: '#6b7280',
 }
 
-export const userStatusColor: Record<string, string> = {
+export const userStatusColor: Record<UserStatus, string> = {
   ACTIVE: 'green',
   INACTIVE: 'gray',
   BLOCKED: 'red',
   DELETED: 'dark',
 }
 
-export const severityColor: Record<string, string> = {
+export const severityColor: Record<Severity, string> = {
   LOW: 'gray',
   MEDIUM: 'yellow',
   HIGH: 'orange',
   CRITICAL: 'red',
 }
 
-export const severityAccent: Record<string, string> = {
+export const severityAccent: Record<Severity, string> = {
   LOW: '#6b7280',
   MEDIUM: '#eab308',
   HIGH: '#f97316',
   CRITICAL: '#ef4444',
 }
 
-export const reportStatusColor: Record<string, string> = {
+export const reportStatusColor: Record<ReportStatus, string> = {
   OPEN: 'red',
   REVIEWED: 'blue',
   DISMISSED: 'gray',
   ACTION_TAKEN: 'green',
 }
 
-export const reportReasonColor: Record<string, string> = {
+export const reportReasonColor: Record<ReportReason, string> = {
   SPAM: 'yellow',
   INSULT: 'orange',
   HARASSMENT: 'red',

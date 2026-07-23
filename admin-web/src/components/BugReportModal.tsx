@@ -6,9 +6,7 @@ import { severityColor, reportStatusColor } from '../constants/colors'
 import { darkModalStyles } from '../constants/modalStyles'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
-
-const STATUS_OPTIONS: ReportStatus[] = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN']
-const SEVERITY_OPTIONS: Severity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+import { REPORT_STATUSES, SEVERITIES } from '../domain/moderation'
 
 interface BugReportModalProps {
   report: BugReport | null
@@ -101,7 +99,7 @@ export default function BugReportModal({
               label="Status"
               size="sm"
               value={report.status}
-              data={STATUS_OPTIONS.map((s) => ({ value: s, label: enumLabel(s) }))}
+              data={REPORT_STATUSES.map((status) => ({ value: status, label: enumLabel(status) }))}
               styles={statusSelectStyles}
               disabled={statusUpdating}
               onChange={(val) => val && onUpdate(report.id, { status: val as ReportStatus })}
@@ -110,7 +108,7 @@ export default function BugReportModal({
               label="Severity"
               size="sm"
               value={report.severity}
-              data={SEVERITY_OPTIONS.map((s) => ({ value: s, label: enumLabel(s) }))}
+              data={SEVERITIES.map((severity) => ({ value: severity, label: enumLabel(severity) }))}
               styles={statusSelectStyles}
               disabled={statusUpdating}
               onChange={(val) => val && onUpdate(report.id, { severity: val as Severity })}

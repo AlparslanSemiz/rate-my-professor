@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { Text, Badge, Box, SimpleGrid, Group } from '@mantine/core'
 import { IconBug, IconAlertCircle, IconCircleCheck, IconClock } from '@tabler/icons-react'
 import { feedbackService, type BugReport, type BugReportUpdate } from '../api/FeedbackService'
@@ -13,9 +13,17 @@ import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
 import { getErrorMessage } from '../utils/getErrorMessage'
 import { countByValue, updateById } from '../utils/collection'
+import { useAsyncData } from '../hooks/useAsyncData'
 import { statGridCols } from '../constants/layout'
+import { activateOnEnterOrSpace } from '../utils/keyboard'
+import { useSelectedId } from '../hooks/useSelectedId'
 
 const LOAD_ERROR_MESSAGE = 'Failed to load bug reports'
+const EMPTY_REPORTS: BugReport[] = []
+
+function loadReports() {
+  return feedbackService.getReports()
+}
 
 const panelOverflowStyle: CSSProperties = {
   overflow: 'hidden',
@@ -41,37 +49,24 @@ const severityBarStyle: CSSProperties = {
 }
 
 export default function FeedbackPage() {
-  const [reports, setReports] = useState<BugReport[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
-  const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
+  const {
+    data: reports,
+    setData: setReports,
+    loading,
+    error,
+    retry,
+  } = useAsyncData(loadReports, EMPTY_REPORTS, LOAD_ERROR_MESSAGE)
+  const reportDetails = useSelectedId()
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [statusError, setStatusError] = useState('')
 
-  useEffect(() => {
-    feedbackService
-      .getReports()
-      .then(setReports)
-      .catch((err: unknown) => setError(getErrorMessage(err, LOAD_ERROR_MESSAGE)))
-      .finally(() => setLoading(false))
-  }, [reloadKey])
-
-  function retry() {
-    setLoading(true)
-    setError('')
-    setReloadKey((k) => k + 1)
-  }
-
   function openReport(id: string) {
-    setSelectedReportId(id)
-    setDetailOpen(true)
+    reportDetails.open(id)
     setStatusError('')
   }
 
   function closeReport() {
-    setDetailOpen(false)
+    reportDetails.close()
     setStatusError('')
   }
 
@@ -92,7 +87,7 @@ export default function FeedbackPage() {
 
   if (error) return <LoadError message={error} onRetry={retry} />
 
-  const selectedReport = reports.find((report) => report.id === selectedReportId) ?? null
+  const selectedReport = reports.find((report) => report.id === reportDetails.selectedId) ?? null
 
   return (
     <div>
@@ -106,7 +101,7 @@ export default function FeedbackPage() {
 
       <BugReportModal
         report={selectedReport}
-        opened={detailOpen}
+        opened={reportDetails.opened}
         onClose={closeReport}
         onUpdate={handleReportUpdate}
         statusUpdating={statusUpdating}
@@ -188,13 +183,6 @@ function reportRowStyle(isLast: boolean): CSSProperties {
   }
 }
 
-function handleReportKeyDown(event: KeyboardEvent<HTMLDivElement>, onOpen: () => void) {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    onOpen()
-  }
-}
-
 function ReportItem({ report, isLast, onOpenReport }: ReportItemProps) {
   const openReport = () => onOpenReport(report.id)
 
@@ -206,7 +194,7 @@ function ReportItem({ report, isLast, onOpenReport }: ReportItemProps) {
       onMouseEnter={(event) => { event.currentTarget.style.background = '#1c2128' }}
       onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent' }}
       onClick={openReport}
-      onKeyDown={(event) => handleReportKeyDown(event, openReport)}
+      onKeyDown={(event) => activateOnEnterOrSpace(event, openReport)}
       tabIndex={0}
     >
       <Group justify="space-between" mb={8}>

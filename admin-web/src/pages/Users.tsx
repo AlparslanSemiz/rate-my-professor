@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import type { CSSProperties } from 'react'
 import { Badge, TextInput, Group, Text, SimpleGrid, Box } from '@mantine/core'
 import {
   IconSearch,
@@ -19,14 +19,21 @@ import { roleColor, userStatusColor } from '../constants/colors'
 import { darkInputStyles } from '../constants/inputStyles'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
-import { getErrorMessage } from '../utils/getErrorMessage'
 import { countByValue, updateById } from '../utils/collection'
 import { useSearch } from '../hooks/useSearch'
+import { useAsyncData } from '../hooks/useAsyncData'
 import type { UserChange } from '../hooks/useUserProfile'
 import { statGridCols } from '../constants/layout'
+import { activateOnEnterOrSpace } from '../utils/keyboard'
+import { useSelectedId } from '../hooks/useSelectedId'
 
 const TABLE_COLUMNS = ['Name', 'Email', 'Role', 'Status', 'Warnings', 'Reports', 'Last seen', 'Joined'] as const
 const LOAD_ERROR_MESSAGE = 'Failed to load users'
+const EMPTY_USERS: User[] = []
+
+function loadUsers() {
+  return usersService.getAll()
+}
 
 const panelOverflowStyle: CSSProperties = {
   overflow: 'hidden',
@@ -68,38 +75,21 @@ function matchesQuery(user: User, query: string) {
 }
 
 export default function Users() {
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
-  const [profileOpen, setProfileOpen] = useState(false)
+  const {
+    data: users,
+    setData: setUsers,
+    loading,
+    error,
+    retry,
+  } = useAsyncData(loadUsers, EMPTY_USERS, LOAD_ERROR_MESSAGE)
+  const profile = useSelectedId()
   const { search, setSearch, filtered } = useSearch(users, matchesQuery)
-
-  useEffect(() => {
-    usersService
-      .getAll()
-      .then(setUsers)
-      .catch((err: unknown) => setError(getErrorMessage(err, LOAD_ERROR_MESSAGE)))
-      .finally(() => setLoading(false))
-  }, [reloadKey])
-
-  function retry() {
-    setLoading(true)
-    setError('')
-    setReloadKey((k) => k + 1)
-  }
-
-  function openProfile(id: string) {
-    setSelectedUserId(id)
-    setProfileOpen(true)
-  }
 
   function handleUserChanged(id: string, change: UserChange) {
     switch (change) {
       case 'deleted':
         setUsers((prev) => prev.filter((user) => user.id !== id))
-        setProfileOpen(false)
+        profile.close()
         break
       case 'blocked':
         setUsers((prev) => updateById(prev, id, (user) => ({ ...user, status: 'BLOCKED' })))
@@ -131,13 +121,13 @@ export default function Users() {
         filteredUsers={filtered}
         search={search}
         onSearchChange={setSearch}
-        onOpenProfile={openProfile}
+        onOpenProfile={profile.open}
       />
 
       <UserProfileModal
-        userId={selectedUserId}
-        opened={profileOpen}
-        onClose={() => setProfileOpen(false)}
+        userId={profile.selectedId}
+        opened={profile.opened}
+        onClose={profile.close}
         onUserChanged={handleUserChanged}
       />
     </>
@@ -234,13 +224,6 @@ function rowStyle(isLast: boolean): CSSProperties {
   }
 }
 
-function handleRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>, onOpen: () => void) {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    onOpen()
-  }
-}
-
 function UserRow({ user, isLast, onOpenProfile }: { user: User; isLast: boolean; onOpenProfile: (id: string) => void }) {
   const openProfile = () => onOpenProfile(user.id)
 
@@ -250,7 +233,7 @@ function UserRow({ user, isLast, onOpenProfile }: { user: User; isLast: boolean;
       onMouseEnter={(event) => { event.currentTarget.style.background = '#1c2128' }}
       onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent' }}
       onClick={openProfile}
-      onKeyDown={(event) => handleRowKeyDown(event, openProfile)}
+      onKeyDown={(event) => activateOnEnterOrSpace(event, openProfile)}
       tabIndex={0}
     >
       <td style={userCellStyle}>

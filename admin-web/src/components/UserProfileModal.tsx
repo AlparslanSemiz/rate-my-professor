@@ -11,7 +11,7 @@ import {
 import { useUserProfile, type UserChange } from '../hooks/useUserProfile'
 import ConfirmModal from './ConfirmModal'
 import WarnForm from './WarnForm'
-import { roleAccent } from '../constants/colors'
+import { roleAccent, userStatusColor } from '../constants/colors'
 import { darkModalStyles } from '../constants/modalStyles'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
@@ -104,12 +104,6 @@ function roleBadgeStyle(role: User['role']): CSSProperties {
     color: roleAccent[role],
     borderColor: `${roleAccent[role]}30`,
   }
-}
-
-function statusColor(status: User['status']) {
-  if (status === 'ACTIVE') return 'green'
-  if (status === 'BLOCKED') return 'red'
-  return 'gray'
 }
 
 function profileFields(user: User) {
@@ -282,7 +276,7 @@ function ProfileHeader({ user }: { user: User }) {
             <Badge
               size="sm"
               variant="dot"
-              color={statusColor(user.status)}
+              color={userStatusColor[user.status]}
             >
               {enumLabel(user.status)}
             </Badge>

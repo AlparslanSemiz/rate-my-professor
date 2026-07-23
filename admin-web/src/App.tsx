@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './layouts/AdminLayout'
 import Login from './pages/Login'
 import { theme } from './theme'
+import { routes } from './constants/routes'
 
 export default function App() {
   return (
@@ -12,7 +13,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<Login />} />
+            <Route path={routes.login} element={<Login />} />
             <Route
               path="/*"
               element={

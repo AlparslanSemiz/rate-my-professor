@@ -2,6 +2,7 @@ import { Badge, Group, Text } from '@mantine/core'
 import { IconArrowRight } from '@tabler/icons-react'
 import type { CSSProperties } from 'react'
 import Panel from './Panel'
+import { activateOnEnterOrSpace } from '../utils/keyboard'
 
 interface ModuleCardProps {
   label: string
@@ -27,13 +28,6 @@ export default function ModuleCard({ label, title, description, accent, path, on
     onClick(path)
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      openModule()
-    }
-  }
-
   function setHoverState(element: HTMLDivElement, hovered: boolean) {
     element.style.borderColor = hovered ? `${accent}55` : BASE_BORDER
     element.style.background = hovered ? HOVER_BACKGROUND : BASE_BACKGROUND
@@ -49,7 +43,7 @@ export default function ModuleCard({ label, title, description, accent, path, on
       tabIndex={0}
       aria-label={`Open ${title}`}
       onClick={openModule}
-      onKeyDown={handleKeyDown}
+      onKeyDown={(event) => activateOnEnterOrSpace(event, openModule)}
       style={cardStyle}
       onMouseEnter={(event) => setHoverState(event.currentTarget, true)}
       onMouseLeave={(event) => setHoverState(event.currentTarget, false)}

@@ -11,6 +11,7 @@ import {
   IconShield,
   IconCircleFilled,
 } from '@tabler/icons-react'
+import { routes } from '../constants/routes'
 
 const ACTIVE_COLOR = '#22c55e'
 const BORDER_COLOR = '#1e2028'
@@ -21,25 +22,25 @@ const navItems = [
   {
     label: 'Dashboard',
     sublabel: 'The big picture',
-    path: '/dashboard',
+    path: routes.dashboard,
     icon: IconLayoutDashboard,
   },
   {
     label: 'Users',
     sublabel: 'People & profiles',
-    path: '/users',
+    path: routes.users,
     icon: IconUsers,
   },
   {
     label: 'Comments',
     sublabel: 'Flagged comments',
-    path: '/comments',
+    path: routes.comments,
     icon: IconMessageReport,
   },
   {
     label: 'Bug Reports',
     sublabel: 'Bugs & crashes',
-    path: '/feedback',
+    path: routes.feedback,
     icon: IconBug,
   },
 ]
@@ -139,7 +140,7 @@ export default function Sidebar() {
 
   function handleLogout() {
     logout()
-    navigate('/login')
+    navigate(routes.login)
   }
 
   return (

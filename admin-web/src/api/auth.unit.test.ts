@@ -1,19 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClient } from './ApiClient'
 import { AuthService } from './AuthService'
+import { jsonResponse, TEST_API_BASE_URL } from '../test/http'
 
-const API_BASE_URL = 'https://api.test'
 const fetchMock = vi.fn()
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
-
 function createAuthService() {
-  return new AuthService(new ApiClient(API_BASE_URL))
+  return new AuthService(new ApiClient(TEST_API_BASE_URL))
 }
 
 describe('AuthService', () => {
@@ -32,7 +25,7 @@ describe('AuthService', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${API_BASE_URL}/auth/request-login`,
+      `${TEST_API_BASE_URL}/auth/request-login`,
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ email: 'admin@student.kit.edu' }),
@@ -49,7 +42,7 @@ describe('AuthService', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${API_BASE_URL}/auth/login`,
+      `${TEST_API_BASE_URL}/auth/login`,
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ email: 'admin@student.kit.edu', loginToken: '123456' }),

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, type CSSProperties } from 'react'
+import { useState, useMemo, type CSSProperties } from 'react'
 import {
   Badge,
   Text,
@@ -35,31 +35,27 @@ import { reportStatusColor, reportReasonColor } from '../constants/colors'
 import { darkInputStyles } from '../constants/inputStyles'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
-import { getErrorMessage } from '../utils/getErrorMessage'
 import { countByValue, updateById } from '../utils/collection'
 import { useSearch } from '../hooks/useSearch'
+import { useAsyncData } from '../hooks/useAsyncData'
 import { statGridCols } from '../constants/layout'
+import { REPORT_REASONS, REPORT_STATUSES } from '../domain/moderation'
+import { useSelectedId } from '../hooks/useSelectedId'
 
 const ALL = 'All'
-const STATUS_OPTIONS: CommentReportStatus[] = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN']
-const REASON_OPTIONS: ReportReason[] = [
-  'SPAM',
-  'INSULT',
-  'HARASSMENT',
-  'HATE_SPEECH',
-  'PERSONAL_INFORMATION',
-  'OFF_TOPIC',
-  'INAPPROPRIATE_CONTENT',
-  'OTHER',
-]
 const TABLE_COLUMNS = ['Comment & Report', 'Reported user', 'Reported by', 'Reason', 'Date', 'Status'] as const
 const LOAD_ERROR_MESSAGE = 'Failed to load reported comments'
+const EMPTY_REPORTS: ReportedComment[] = []
+
+function loadReportedComments() {
+  return commentsService.getReported()
+}
 
 type StatusFilter = typeof ALL | CommentReportStatus
 type ReasonFilter = typeof ALL | ReportReason
 
-const statusSelectOptions = STATUS_OPTIONS.map((status) => ({ value: status, label: enumLabel(status) }))
-const reasonSelectOptions = REASON_OPTIONS.map((reason) => ({ value: reason, label: enumLabel(reason) }))
+const statusSelectOptions = REPORT_STATUSES.map((status) => ({ value: status, label: enumLabel(status) }))
+const reasonSelectOptions = REPORT_REASONS.map((reason) => ({ value: reason, label: enumLabel(reason) }))
 const statusFilterOptions = [{ value: ALL, label: ALL }, ...statusSelectOptions]
 const reasonFilterOptions = [{ value: ALL, label: ALL }, ...reasonSelectOptions]
 
@@ -167,14 +163,16 @@ function matchesFilters(report: ReportedComment, status: StatusFilter, reason: R
 }
 
 export default function CommentsPage() {
-  const [reports, setReports] = useState<ReportedComment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
+  const {
+    data: reports,
+    setData: setReports,
+    loading,
+    error,
+    retry,
+  } = useAsyncData(loadReportedComments, EMPTY_REPORTS, LOAD_ERROR_MESSAGE)
   const [filterStatus, setFilterStatus] = useState<StatusFilter>(ALL)
   const [filterReason, setFilterReason] = useState<ReasonFilter>(ALL)
-  const [profileUserId, setProfileUserId] = useState<string | null>(null)
-  const [profileOpen, setProfileOpen] = useState(false)
+  const profile = useSelectedId()
 
   const { search, setSearch, filtered: searchFiltered } = useSearch(reports, matchesQuery)
 
@@ -183,28 +181,9 @@ export default function CommentsPage() {
     [searchFiltered, filterStatus, filterReason]
   )
 
-  useEffect(() => {
-    commentsService
-      .getReported()
-      .then(setReports)
-      .catch((err: unknown) => setError(getErrorMessage(err, LOAD_ERROR_MESSAGE)))
-      .finally(() => setLoading(false))
-  }, [reloadKey])
-
-  function retry() {
-    setLoading(true)
-    setError('')
-    setReloadKey((k) => k + 1)
-  }
-
   async function handleStatusChange(id: string, status: CommentReportStatus) {
     await commentsService.updateStatus(id, status)
     setReports((prev) => updateById(prev, id, (report) => ({ ...report, status })))
-  }
-
-  function openProfile(userId: string) {
-    setProfileUserId(userId)
-    setProfileOpen(true)
   }
 
   if (loading) return <PageLoader />
@@ -231,14 +210,14 @@ export default function CommentsPage() {
 
       <CommentsTable
         reports={filtered}
-        onOpenProfile={openProfile}
+        onOpenProfile={profile.open}
         onStatusChange={handleStatusChange}
       />
 
       <UserProfileModal
-        userId={profileUserId}
-        opened={profileOpen}
-        onClose={() => setProfileOpen(false)}
+        userId={profile.selectedId}
+        opened={profile.opened}
+        onClose={profile.close}
       />
     </>
   )
@@ -421,6 +400,7 @@ function ReportRow({ report, isLast, onOpenProfile, onStatusChange }: ReportRowP
           value={report.status}
           data={statusSelectOptions}
           styles={statusSelectStyles(report.status)}
+          aria-label={`Status for report by ${report.reportedUser.name}`}
           onChange={(val) => val && onStatusChange(report.id, val as CommentReportStatus)}
         />
       </td>

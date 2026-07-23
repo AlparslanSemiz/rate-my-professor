@@ -1,7 +1,7 @@
 import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import type { ReportStatus, Severity } from '../domain/moderation'
 
-export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-export type ReportStatus = 'OPEN' | 'REVIEWED' | 'DISMISSED' | 'ACTION_TAKEN'
+export type { ReportStatus, Severity }
 
 export interface BugReport {
   id: string

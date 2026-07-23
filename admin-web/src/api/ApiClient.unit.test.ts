@@ -1,15 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClient } from './ApiClient'
+import { jsonResponse, TEST_API_BASE_URL } from '../test/http'
 
-const API_BASE_URL = 'https://api.test'
 const fetchMock = vi.fn()
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
 
 describe('ApiClient', () => {
   beforeEach(() => {
@@ -19,13 +12,13 @@ describe('ApiClient', () => {
 
   it('sends the stored auth token as a bearer token', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'OK' }))
-    const client = new ApiClient(API_BASE_URL)
+    const client = new ApiClient(TEST_API_BASE_URL)
     client.setToken('auth-token-1')
 
     await client.get('/users')
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${API_BASE_URL}/users`,
+      `${TEST_API_BASE_URL}/users`,
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({
@@ -39,7 +32,7 @@ describe('ApiClient', () => {
   it('calls the unauthorized handler when an authenticated request receives 401', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ success: false, message: 'Unauthorized' }, 401))
     const onUnauthorized = vi.fn()
-    const client = new ApiClient(API_BASE_URL)
+    const client = new ApiClient(TEST_API_BASE_URL)
     client.setToken('expired-token')
     client.setOnUnauthorized(onUnauthorized)
 
@@ -50,7 +43,7 @@ describe('ApiClient', () => {
 
   it('rejects empty successful responses with a readable error', async () => {
     fetchMock.mockResolvedValueOnce(new Response('', { status: 200 }))
-    const client = new ApiClient(API_BASE_URL)
+    const client = new ApiClient(TEST_API_BASE_URL)
 
     await expect(client.get('/users')).rejects.toThrow('The server returned an empty response.')
   })

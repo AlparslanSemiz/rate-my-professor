@@ -5,6 +5,7 @@ import Dashboard from '../pages/Dashboard'
 import Users from '../pages/Users'
 import FeedbackPage from '../pages/Feedback'
 import CommentsPage from '../pages/Comments'
+import { routes } from '../constants/routes'
 
 export default function AdminLayout() {
   return (
@@ -29,11 +30,11 @@ export default function AdminLayout() {
       <AppShell.Main>
         <div style={{ padding: 'clamp(16px, 4vw, 32px)', minHeight: '100vh' }}>
           <Routes>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/feedback" element={<FeedbackPage />} />
-            <Route path="/comments" element={<CommentsPage />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path={routes.dashboard} element={<Dashboard />} />
+            <Route path={routes.users} element={<Users />} />
+            <Route path={routes.feedback} element={<FeedbackPage />} />
+            <Route path={routes.comments} element={<CommentsPage />} />
+            <Route path="*" element={<Navigate to={routes.dashboard} replace />} />
           </Routes>
         </div>
       </AppShell.Main>

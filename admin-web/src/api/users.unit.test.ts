@@ -1,19 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClient } from './ApiClient'
 import { UsersService } from './UsersService'
+import { jsonResponse, TEST_API_BASE_URL } from '../test/http'
 
-const API_BASE_URL = 'https://api.test'
 const fetchMock = vi.fn()
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
-
 function createUsersService() {
-  return new UsersService(new ApiClient(API_BASE_URL))
+  return new UsersService(new ApiClient(TEST_API_BASE_URL))
 }
 
 describe('UsersService', () => {
@@ -117,7 +110,7 @@ describe('UsersService', () => {
     await service.warn('user-1', 'Bad behavior', 'admin-1')
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(`${API_BASE_URL}/users/user-1/warnings`)
+    expect(url).toBe(`${TEST_API_BASE_URL}/users/user-1/warnings`)
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body as string)).toEqual({
       userID: 'user-1',

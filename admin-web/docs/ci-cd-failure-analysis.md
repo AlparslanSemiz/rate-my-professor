@@ -15,7 +15,7 @@ npm run build
 Current result:
 
 - `npm run lint` passes.
-- `npm run test` passes and runs TypeScript project type checking.
+- `npm run test` passes and runs the Vitest unit and integration suites.
 - `npm run build` passes and produces the Vite production output in `dist/`.
 
 ## 1. Unused destructured password alias
@@ -151,7 +151,7 @@ The GitLab CI `web:test` job now runs:
 npm run test
 ```
 
-This is not a replacement for future unit or integration tests, but it makes the current test stage enforce a real quality gate without adding new dependencies.
+The test stage was later upgraded to run the repository's Vitest unit and integration suites. Type checking remains a separate check through `npm run typecheck`.
 
 ## Current pipeline state
 
@@ -172,4 +172,4 @@ The deploy stage syncs the built app to `/var/www/admin-web` and expects these G
 
 ## Remaining recommendation
 
-The project still does not have behavioral tests. The next engineering improvement should be adding Vitest and React Testing Library tests for authentication, protected routing, and the user/report workflows. That would catch UI regressions that linting and type checking cannot detect.
+The frontend now has behavioral coverage for authentication, protected routing, users, bug reports, reported comments, API contracts, and shared data-loading hooks. The local mock API still depends on a running Postgres instance and does not have an automated database-backed integration suite; that remains the largest unverified area.

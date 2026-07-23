@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import type { CSSProperties } from 'react'
 import { Text, Box, SimpleGrid, Group, Badge, Progress } from '@mantine/core'
 import {
   IconUsers,
@@ -6,8 +6,7 @@ import {
   IconShieldCheck,
   IconBug,
 } from '@tabler/icons-react'
-import { usersService, type User } from '../api/UsersService'
-import { feedbackService } from '../api/FeedbackService'
+import type { User } from '../api/UsersService'
 import { useNavigate } from 'react-router-dom'
 import { StatCardDetailed } from '../components/StatCard'
 import ModuleCard from '../components/ModuleCard'
@@ -16,13 +15,8 @@ import { roleColor } from '../constants/colors'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
 import { moduleGridCols, statGridCols, twoColumnGridCols } from '../constants/layout'
-
-interface DashboardStats {
-  total: number
-  active: number
-  admins: number
-  openReports: number
-}
+import { routes } from '../constants/routes'
+import { useDashboardData, type DashboardStats } from '../hooks/useDashboardData'
 
 const MODULES = [
   {
@@ -30,21 +24,21 @@ const MODULES = [
     title: 'People',
     description: "Peek at profiles, sort out roles and tidy up sessions for everyone who's signed up.",
     accent: '#3b82f6',
-    path: '/users',
+    path: routes.users,
   },
   {
     label: 'Bug reports',
     title: 'Bugs & crashes',
     description: "See what's breaking — bug reports and crash logs, straight from your users.",
     accent: '#f97316',
-    path: '/feedback',
+    path: routes.feedback,
   },
   {
     label: 'Comments',
     title: 'Flagged comments',
     description: 'Look over the comments folks flagged and decide what happens next.',
     accent: '#8b5cf6',
-    path: '/comments',
+    path: routes.comments,
   },
 ]
 
@@ -117,74 +111,21 @@ const registrationTextStyle: CSSProperties = {
   minWidth: 0,
 }
 
-function countOpenReports(reports: { status: string }[]) {
-  return reports.filter((report) => report.status === 'OPEN').length
-}
-
-function calculateDashboardStats(users: User[], openReports: number): DashboardStats {
-  return {
-    total: users.length,
-    active: users.filter((user) => user.status === 'ACTIVE').length,
-    admins: users.filter((user) => user.role === 'ADMIN').length,
-    openReports,
-  }
-}
-
-function activeRate({ total, active }: DashboardStats) {
-  return total ? Math.round((active / total) * 100) : 0
-}
-
-const REFRESH_INTERVAL_MS = 15_000
-
-function useDashboardData() {
-  const [users, setUsers] = useState<User[]>([])
-  const [openReports, setOpenReports] = useState(0)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    function refresh() {
-      // The dashboard is an overview; if a request fails we keep the previous
-      // values rather than blocking the whole page.
-      Promise.all([
-        usersService.getAll().catch(() => null),
-        feedbackService.getReports().catch(() => null),
-      ]).then(([fetchedUsers, reports]) => {
-        if (cancelled) return
-        if (fetchedUsers) setUsers(fetchedUsers)
-        if (reports) setOpenReports(countOpenReports(reports))
-        setLastUpdated(new Date())
-      })
-    }
-
-    refresh()
-    const interval = setInterval(refresh, REFRESH_INTERVAL_MS)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
-    }
-  }, [])
-
-  return { users, stats: calculateDashboardStats(users, openReports), lastUpdated }
-}
-
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { users, stats, lastUpdated } = useDashboardData()
-  const activePercentage = activeRate(stats)
+  const { users, stats, activeRate, lastUpdated } = useDashboardData()
 
   return (
     <div>
       <DashboardHeader />
 
-      <OverviewHero stats={stats} activeRate={activePercentage} lastUpdated={lastUpdated} />
+      <OverviewHero stats={stats} activeRate={activeRate} lastUpdated={lastUpdated} />
 
       <DashboardStatGrid stats={stats} />
 
       <SimpleGrid cols={twoColumnGridCols} spacing={16} mb={28}>
-        <SystemPulse stats={stats} activeRate={activePercentage} />
-        <RecentRegistrations users={users} onViewAll={() => navigate('/users')} />
+        <SystemPulse stats={stats} activeRate={activeRate} />
+        <RecentRegistrations users={users} onViewAll={() => navigate(routes.users)} />
       </SimpleGrid>
 
       <ModuleNavigation onNavigate={navigate} />

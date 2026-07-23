@@ -1,19 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClient } from './ApiClient'
 import { FeedbackService } from './FeedbackService'
+import { jsonResponse, TEST_API_BASE_URL } from '../test/http'
 
-const API_BASE_URL = 'https://api.test'
 const fetchMock = vi.fn()
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
-
 function createFeedbackService() {
-  return new FeedbackService(new ApiClient(API_BASE_URL))
+  return new FeedbackService(new ApiClient(TEST_API_BASE_URL))
 }
 
 describe('FeedbackService', () => {
@@ -53,7 +46,7 @@ describe('FeedbackService', () => {
     await service.updateReport('report-1', { status: 'REVIEWED' })
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(`${API_BASE_URL}/reports/report-1`)
+    expect(url).toBe(`${TEST_API_BASE_URL}/reports/report-1`)
     expect(init.method).toBe('PATCH')
     expect(JSON.parse(init.body as string)).toEqual({ status: 'REVIEWED' })
   })
@@ -65,7 +58,7 @@ describe('FeedbackService', () => {
     await service.updateReport('report-1', { severity: 'CRITICAL' })
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(`${API_BASE_URL}/reports/report-1`)
+    expect(url).toBe(`${TEST_API_BASE_URL}/reports/report-1`)
     expect(init.method).toBe('PATCH')
     expect(JSON.parse(init.body as string)).toEqual({ severity: 'CRITICAL' })
   })
