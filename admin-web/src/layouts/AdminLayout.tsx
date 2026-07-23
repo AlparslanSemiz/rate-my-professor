@@ -2,7 +2,7 @@ import { AppShell } from '@mantine/core'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import Dashboard from '../pages/Dashboard'
-import Users from '../pages/Users'
+import UsersPage from '../features/users/UsersPage'
 import FeedbackPage from '../pages/Feedback'
 import CommentsPage from '../pages/Comments'
 import AuditLogsPage from '../pages/AuditLogs'
@@ -32,7 +32,7 @@ export default function AdminLayout() {
         <div style={{ padding: 'clamp(16px, 4vw, 32px)', minHeight: '100vh' }}>
           <Routes>
             <Route path={routes.dashboard} element={<Dashboard />} />
-            <Route path={routes.users} element={<Users />} />
+            <Route path={routes.users} element={<UsersPage />} />
             <Route path={routes.feedback} element={<FeedbackPage />} />
             <Route path={routes.comments} element={<CommentsPage />} />
             <Route path={routes.auditLogs} element={<AuditLogsPage />} />

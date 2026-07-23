@@ -2,11 +2,11 @@ import { MantineProvider } from '@mantine/core'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { usersService, type User } from '../api/UsersService'
-import { AuthProvider } from '../context/AuthContext'
-import Users from './Users'
+import { usersService, type User } from '../../api/UsersService'
+import { AuthProvider } from '../../context/AuthContext'
+import UsersPage from './UsersPage'
 
-vi.mock('../api/UsersService', () => ({
+vi.mock('../../api/UsersService', () => ({
   usersService: {
     getAll: vi.fn(),
     getById: vi.fn(),
@@ -59,7 +59,7 @@ function renderUsers() {
   return render(
     <MantineProvider>
       <AuthProvider>
-        <Users />
+        <UsersPage />
       </AuthProvider>
     </MantineProvider>
   )
