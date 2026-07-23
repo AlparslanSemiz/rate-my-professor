@@ -1,16 +1,16 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { feedbackService } from '../api/FeedbackService'
-import { usersService, type User } from '../api/UsersService'
+import { feedbackService } from '../../../api/FeedbackService'
+import { usersService, type User } from '../../../api/UsersService'
 import { useDashboardData } from './useDashboardData'
 
-vi.mock('../api/FeedbackService', () => ({
+vi.mock('../../../api/FeedbackService', () => ({
   feedbackService: {
     getReports: vi.fn(),
   },
 }))
 
-vi.mock('../api/UsersService', () => ({
+vi.mock('../../../api/UsersService', () => ({
   usersService: {
     getAll: vi.fn(),
   },

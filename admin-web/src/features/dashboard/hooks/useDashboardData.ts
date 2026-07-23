@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { feedbackService } from '../api/FeedbackService'
-import { usersService, type User } from '../api/UsersService'
+import { feedbackService } from '../../../api/FeedbackService'
+import { usersService, type User } from '../../../api/UsersService'
 
 export interface DashboardStats {
   total: number
