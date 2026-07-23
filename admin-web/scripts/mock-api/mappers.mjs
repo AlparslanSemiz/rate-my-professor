@@ -1,0 +1,64 @@
+import { query } from './db.mjs'
+import { iso } from './http.mjs'
+
+export const USER_WITH_STATS_SELECT = `
+  SELECT
+    u.*,
+    (SELECT count(*) FROM mock_warnings w WHERE w.user_id = u.id) AS warnings,
+    (SELECT count(*) FROM mock_comment_reports r WHERE r.reported_user_id = u.id) AS reports
+  FROM mock_users u
+`
+
+export function toUser(row) {
+  return {
+    id: row.id,
+    username: row.username,
+    kitEmail: row.kit_email,
+    role: row.role,
+    status: row.status,
+    joined: iso(row.joined),
+    lastOnline: iso(row.last_online),
+    biography: row.biography ?? '',
+    warnings: Number(row.warnings ?? 0),
+    reports: Number(row.reports ?? 0),
+  }
+}
+
+export function toCommentUser(row, prefix) {
+  return {
+    id: row[`${prefix}_id`],
+    name: row[`${prefix}_name`],
+    role: row[`${prefix}_role`],
+    warnings: Number(row[`${prefix}_warnings`] ?? 0),
+    status: row[`${prefix}_status`],
+  }
+}
+
+export function toAuditLog(row) {
+  return {
+    id: row.id,
+    action: row.action,
+    createdAt: iso(row.created_at),
+    actor: {
+      type: row.actor_type,
+      id: row.actor_id,
+      name: row.actor_name,
+      email: row.actor_email,
+      role: row.actor_role,
+    },
+    target: row.target_type
+      ? {
+          type: row.target_type,
+          id: row.target_id,
+          label: row.target_label,
+        }
+      : null,
+    changes: row.changes ?? {},
+    metadata: row.metadata ?? {},
+  }
+}
+
+export async function findUserWithStatsById(id) {
+  const result = await query(`${USER_WITH_STATS_SELECT} WHERE u.id = $1`, [id])
+  return result.rows[0] ? toUser(result.rows[0]) : null
+}
