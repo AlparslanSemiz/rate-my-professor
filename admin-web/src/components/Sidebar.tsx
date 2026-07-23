@@ -10,6 +10,7 @@ import {
   IconMessageReport,
   IconShield,
   IconCircleFilled,
+  IconHistory,
 } from '@tabler/icons-react'
 import { routes } from '../constants/routes'
 
@@ -42,6 +43,12 @@ const navItems = [
     sublabel: 'Bugs & crashes',
     path: routes.feedback,
     icon: IconBug,
+  },
+  {
+    label: 'Audit Logs',
+    sublabel: 'Admin activity',
+    path: routes.auditLogs,
+    icon: IconHistory,
   },
 ]
 
@@ -138,8 +145,8 @@ export default function Sidebar() {
   const location = useLocation()
   const { user, logout } = useAuth()
 
-  function handleLogout() {
-    logout()
+  async function handleLogout() {
+    await logout()
     navigate(routes.login)
   }
 
@@ -224,7 +231,7 @@ function SidebarNavButton({
   )
 }
 
-function SessionFooter({ user, onLogout }: { user: AuthUser | null; onLogout: () => void }) {
+function SessionFooter({ user, onLogout }: { user: AuthUser | null; onLogout: () => Promise<void> }) {
   return (
     <div>
       <Divider color={BORDER_COLOR} />

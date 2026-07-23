@@ -6,6 +6,7 @@ import { apiClient } from './api/ApiClient'
 import { authService } from './api/AuthService'
 import { feedbackService } from './api/FeedbackService'
 import { usersService } from './api/UsersService'
+import { auditLogsService } from './api/AuditLogsService'
 import App from './App'
 
 vi.mock('./api/AuthService', () => ({
@@ -24,6 +25,13 @@ vi.mock('./api/FeedbackService', () => ({
 vi.mock('./api/UsersService', () => ({
   usersService: {
     getAll: vi.fn(),
+  },
+}))
+
+vi.mock('./api/AuditLogsService', () => ({
+  auditLogsService: {
+    getLogs: vi.fn(),
+    getMeta: vi.fn(),
   },
 }))
 
@@ -76,6 +84,12 @@ describe('App routing and authentication', () => {
     vi.mocked(authService.login).mockResolvedValue({ token: 'mock-token-1' })
     vi.mocked(usersService.getAll).mockResolvedValue([adminAccount])
     vi.mocked(feedbackService.getReports).mockResolvedValue([])
+    vi.mocked(auditLogsService.getLogs).mockResolvedValue({ auditLogs: [], nextCursor: null })
+    vi.mocked(auditLogsService.getMeta).mockResolvedValue({
+      actors: [],
+      actions: [],
+      targetTypes: [],
+    })
   })
 
   it('redirects anonymous users to the login screen', async () => {
@@ -96,6 +110,17 @@ describe('App routing and authentication', () => {
 
     expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
     expect(screen.getAllByText(adminUser.email).length).toBeGreaterThan(0)
+  })
+
+  it('routes authenticated admins to the Audit Logs page', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(adminUser))
+    window.history.pushState({}, '', '/audit-logs')
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Audit Logs' })).toBeInTheDocument()
+    expect(screen.getByText('Admin activity')).toBeInTheDocument()
   })
 
   it('logs in with a valid one-time code and navigates to the dashboard', async () => {

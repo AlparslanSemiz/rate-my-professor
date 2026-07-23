@@ -5,6 +5,7 @@ import Dashboard from '../pages/Dashboard'
 import Users from '../pages/Users'
 import FeedbackPage from '../pages/Feedback'
 import CommentsPage from '../pages/Comments'
+import AuditLogsPage from '../pages/AuditLogs'
 import { routes } from '../constants/routes'
 
 export default function AdminLayout() {
@@ -34,6 +35,7 @@ export default function AdminLayout() {
             <Route path={routes.users} element={<Users />} />
             <Route path={routes.feedback} element={<FeedbackPage />} />
             <Route path={routes.comments} element={<CommentsPage />} />
+            <Route path={routes.auditLogs} element={<AuditLogsPage />} />
             <Route path="*" element={<Navigate to={routes.dashboard} replace />} />
           </Routes>
         </div>

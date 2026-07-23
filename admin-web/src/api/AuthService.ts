@@ -29,6 +29,11 @@ export class AuthService {
     if (!response.success) throw new Error(response.message)
     return { token: response.authToken }
   }
+
+  /** Revokes the current admin session. */
+  logout(): Promise<BasicResponse> {
+    return this.client.post<BasicResponse>('/auth/logout')
+  }
 }
 
 export const authService = new AuthService(apiClient)

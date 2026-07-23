@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthUser } from './AuthContextValue'
 import { apiClient } from '../api/ApiClient'
+import { authService } from '../api/AuthService'
 import { getDemoAdminTokenForEmail } from '../utils/demoAuth'
 
 const TOKEN_STORAGE_KEY = 'token'
@@ -76,16 +77,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuth({ token: newToken, user: newUser })
   }, [])
 
-  const logout = useCallback(() => {
+  const clearSession = useCallback(() => {
     clearStoredSession()
     setAuth(emptyAuthState)
   }, [])
 
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout()
+    } catch {
+      // Signing out locally is still safer when the backend cannot be reached.
+    } finally {
+      clearSession()
+    }
+  }, [clearSession])
+
   useEffect(() => {
     // Drop the session when the backend rejects our token (expired/revoked).
-    apiClient.setOnUnauthorized(() => logout())
+    apiClient.setOnUnauthorized(clearSession)
     return () => apiClient.setOnUnauthorized(null)
-  }, [logout])
+  }, [clearSession])
 
   return (
     <AuthContext.Provider

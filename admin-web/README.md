@@ -74,6 +74,7 @@ Auth:
 
 - `POST /auth/request-login` with `{ "email": "user@student.kit.edu" }`
 - `POST /auth/login` with `{ "email": "user@student.kit.edu", "loginToken": "123456" }`
+- `POST /auth/logout` (revokes the bearer token)
 - `GET /auth/me`
 
 Users:
@@ -95,6 +96,53 @@ Bug reports:
 
 - `GET /reports`
 - `PATCH /reports/:id` with `{ "status": "...", "severity": "..." }`
+
+Audit logs:
+
+- `GET /audit-logs?limit=50&cursor=&actorId=&action=&targetType=&q=&from=&to=`
+- `GET /audit-logs/meta`
+
+Audit list responses use an opaque `nextCursor` and return immutable actor/target
+snapshots so entries remain readable after the source record is deleted:
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "auditLogs": [
+    {
+      "id": "abababab-1111-1111-1111-111111111111",
+      "action": "USER_BLOCKED",
+      "createdAt": "2026-07-23T10:00:00.000Z",
+      "actor": {
+        "type": "ADMIN",
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "Alparslan",
+        "email": "u-kisi4@student.kit.edu",
+        "role": "ADMIN"
+      },
+      "target": {
+        "type": "USER",
+        "id": "33333333-3333-3333-3333-333333333333",
+        "label": "JonasB (jonas@student.kit.edu)"
+      },
+      "changes": {
+        "status": { "before": "ACTIVE", "after": "BLOCKED" }
+      },
+      "metadata": {}
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+Supported actions are `ADMIN_LOGIN`, `ADMIN_LOGOUT`,
+`USER_WARNING_CREATED`, `USER_BLOCKED`, `USER_UNBLOCKED`, `USER_DELETED`,
+`COMMENT_REPORT_STATUS_CHANGED`, and `BUG_REPORT_UPDATED`. The mock API writes
+each successful state change and its audit event in the same database
+transaction. The production backend is not part of this repository and must
+implement the same contract for the deployed web application to receive audit
+data.
 
 Health:
 

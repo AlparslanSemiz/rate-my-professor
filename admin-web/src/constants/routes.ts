@@ -4,4 +4,5 @@ export const routes = {
   users: '/users',
   comments: '/comments',
   feedback: '/feedback',
+  auditLogs: '/audit-logs',
 } as const

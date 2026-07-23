@@ -1,8 +1,17 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from './AuthContext'
 import { useAuth } from './useAuth'
+import { authService } from '../api/AuthService'
+import { apiClient } from '../api/ApiClient'
+import { jsonResponse } from '../test/http'
+
+vi.mock('../api/AuthService', () => ({
+  authService: {
+    logout: vi.fn(),
+  },
+}))
 
 const testUser = {
   id: 'admin-1',
@@ -24,7 +33,7 @@ function AuthHarness() {
       <button type="button" onClick={() => login('test-token', testUser)}>
         Log in
       </button>
-      <button type="button" onClick={logout}>
+      <button type="button" onClick={() => void logout()}>
         Log out
       </button>
     </div>
@@ -40,6 +49,10 @@ function renderAuthHarness() {
 }
 
 describe('AuthProvider', () => {
+  beforeEach(() => {
+    vi.mocked(authService.logout).mockResolvedValue({ success: true, message: 'Logged out' })
+  })
+
   it('hydrates auth state from localStorage', () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(testUser))
@@ -101,10 +114,40 @@ describe('AuthProvider', () => {
 
     await user.click(screen.getByRole('button', { name: 'Log out' }))
 
+    expect(authService.logout).toHaveBeenCalledOnce()
     expect(screen.getByTestId('auth-state')).toHaveTextContent('anonymous')
     expect(screen.getByTestId('token')).toHaveTextContent('no-token')
     expect(screen.getByTestId('user-email')).toHaveTextContent('no-user')
     expect(localStorage.getItem('token')).toBeNull()
     expect(localStorage.getItem('user')).toBeNull()
+  })
+
+  it('still clears local state when the explicit logout request fails', async () => {
+    vi.mocked(authService.logout).mockRejectedValue(new Error('Network unavailable'))
+    const user = userEvent.setup()
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(testUser))
+    renderAuthHarness()
+
+    await user.click(screen.getByRole('button', { name: 'Log out' }))
+
+    expect(screen.getByTestId('auth-state')).toHaveTextContent('anonymous')
+    expect(localStorage.getItem('token')).toBeNull()
+    expect(localStorage.getItem('user')).toBeNull()
+  })
+
+  it('clears an unauthorized session without sending an explicit logout request', async () => {
+    localStorage.setItem('token', 'expired-token')
+    localStorage.setItem('user', JSON.stringify(testUser))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({
+      success: false,
+      message: 'Unauthorized',
+    }, 401)))
+    renderAuthHarness()
+
+    await expect(apiClient.get('/users')).rejects.toThrow('Unauthorized')
+
+    await waitFor(() => expect(screen.getByTestId('auth-state')).toHaveTextContent('anonymous'))
+    expect(authService.logout).not.toHaveBeenCalled()
   })
 })

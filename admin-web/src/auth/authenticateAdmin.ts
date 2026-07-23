@@ -31,9 +31,9 @@ export async function authenticateAdmin(email: string, code: string): Promise<{ 
     throw new Error('Invalid token')
   }
 
-  const { token } = demoToken
-    ? { token: demoToken }
-    : await authService.login(email, code)
+  // Even the local demo completes the backend exchange so successful admin
+  // logins are recorded and the server remains the source of session truth.
+  const { token } = await authService.login(email, code)
 
   apiClient.setToken(token)
   const requiredAdminUser = getRequiredAdminUser(email)

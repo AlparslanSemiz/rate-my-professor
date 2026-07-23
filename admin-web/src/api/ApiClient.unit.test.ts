@@ -41,6 +41,23 @@ describe('ApiClient', () => {
     expect(onUnauthorized).toHaveBeenCalledOnce()
   })
 
+  it('adds defined GET query parameters and omits empty values', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'OK' }))
+    const client = new ApiClient(TEST_API_BASE_URL)
+
+    await client.get('/audit-logs', {
+      limit: 50,
+      action: 'ADMIN_LOGIN',
+      cursor: null,
+      q: '',
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${TEST_API_BASE_URL}/audit-logs?limit=50&action=ADMIN_LOGIN`,
+      expect.objectContaining({ method: 'GET' })
+    )
+  })
+
   it('rejects empty successful responses with a readable error', async () => {
     fetchMock.mockResolvedValueOnce(new Response('', { status: 200 }))
     const client = new ApiClient(TEST_API_BASE_URL)

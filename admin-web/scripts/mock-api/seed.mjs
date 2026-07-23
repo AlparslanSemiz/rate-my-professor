@@ -1,6 +1,7 @@
 import { closePool, withTransaction } from './db.mjs'
 import { demoAdminToken, demoLoginCode } from './config.mjs'
 import { fileURLToPath } from 'node:url'
+import { insertAuditLog } from './audit.mjs'
 
 const users = [
   {
@@ -101,6 +102,55 @@ const bugReports = [
   },
 ]
 
+const auditLogs = [
+  {
+    id: 'abababab-1111-1111-1111-111111111111',
+    action: 'USER_WARNING_CREATED',
+    target: {
+      type: 'USER',
+      id: '33333333-3333-3333-3333-333333333333',
+      label: 'JonasB (jonas@student.kit.edu)',
+    },
+    changes: {
+      warnings: { before: 0, after: 1 },
+    },
+    metadata: {
+      reason: 'Please keep discussion focused on course content.',
+    },
+    createdAt: '2026-07-10T11:10:00.000Z',
+  },
+  {
+    id: 'abababab-2222-2222-2222-222222222222',
+    action: 'COMMENT_REPORT_STATUS_CHANGED',
+    target: {
+      type: 'COMMENT_REPORT',
+      id: '99999999-9999-9999-9999-999999999998',
+      label: 'Report about MiraK in Algorithms II',
+    },
+    changes: {
+      status: { before: 'OPEN', after: 'REVIEWED' },
+    },
+    metadata: {},
+    createdAt: '2026-07-12T10:15:00.000Z',
+  },
+  {
+    id: 'abababab-3333-3333-3333-333333333333',
+    action: 'ADMIN_LOGIN',
+    target: {
+      type: 'ADMIN_SESSION',
+      id: '11111111-1111-1111-1111-111111111111',
+      label: 'Alparslan admin session',
+    },
+    changes: {
+      authenticated: { before: false, after: true },
+    },
+    metadata: {
+      method: 'EMAIL_OTP',
+    },
+    createdAt: '2026-07-14T15:25:00.000Z',
+  },
+]
+
 async function createSchema(client) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS mock_users (
@@ -156,6 +206,42 @@ async function createSchema(client) {
       reporter_id uuid REFERENCES mock_users(id) ON DELETE SET NULL,
       reported_at timestamptz NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS mock_audit_logs (
+      id uuid PRIMARY KEY,
+      actor_type text NOT NULL CHECK (actor_type IN ('ADMIN', 'USER')),
+      actor_id uuid,
+      actor_name text NOT NULL,
+      actor_email text NOT NULL,
+      actor_role text NOT NULL,
+      action text NOT NULL CHECK (
+        action IN (
+          'ADMIN_LOGIN',
+          'ADMIN_LOGOUT',
+          'USER_WARNING_CREATED',
+          'USER_BLOCKED',
+          'USER_UNBLOCKED',
+          'USER_DELETED',
+          'COMMENT_REPORT_STATUS_CHANGED',
+          'BUG_REPORT_UPDATED'
+        )
+      ),
+      target_type text,
+      target_id text,
+      target_label text,
+      changes jsonb NOT NULL DEFAULT '{}'::jsonb,
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS mock_audit_logs_created_at_id_idx
+      ON mock_audit_logs (created_at DESC, id DESC);
+    CREATE INDEX IF NOT EXISTS mock_audit_logs_actor_id_idx
+      ON mock_audit_logs (actor_id);
+    CREATE INDEX IF NOT EXISTS mock_audit_logs_action_idx
+      ON mock_audit_logs (action);
+    CREATE INDEX IF NOT EXISTS mock_audit_logs_target_type_idx
+      ON mock_audit_logs (target_type);
   `)
 }
 
@@ -234,12 +320,27 @@ async function seedBugReports(client) {
   }
 }
 
+async function seedAuditLogs(client) {
+  const actor = {
+    type: 'ADMIN',
+    id: users[0].id,
+    name: users[0].username,
+    email: users[0].kitEmail,
+    role: users[0].role,
+  }
+
+  for (const auditLog of auditLogs) {
+    await insertAuditLog(client, { ...auditLog, actor })
+  }
+}
+
 async function seedAll(client) {
   await seedUsers(client)
   await seedTokens(client)
   await seedWarnings(client)
   await seedCommentReports(client)
   await seedBugReports(client)
+  await seedAuditLogs(client)
 }
 
 export async function resetMockDatabase() {
@@ -247,6 +348,7 @@ export async function resetMockDatabase() {
     await createSchema(client)
     await client.query(`
       TRUNCATE
+        mock_audit_logs,
         mock_bug_reports,
         mock_comment_reports,
         mock_warnings,

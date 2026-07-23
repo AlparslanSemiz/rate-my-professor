@@ -14,6 +14,7 @@ export class ApiError extends Error {
 }
 
 type QueryMethod = 'POST' | 'PATCH'
+type QueryParam = string | number | boolean | null | undefined
 
 const DEFAULT_API_BASE_URL = 'http://localhost:8080'
 const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Check your connection and try again.'
@@ -43,8 +44,8 @@ export class ApiClient {
     this.onUnauthorized = handler
   }
 
-  async get<T>(path: string): Promise<T> {
-    return this.request<T>(path, { method: 'GET' })
+  async get<T>(path: string, params?: Record<string, QueryParam>): Promise<T> {
+    return this.request<T>(params ? this.withQueryString(path, params) : path, { method: 'GET' })
   }
 
   async post<T>(path: string, body?: unknown): Promise<T> {
@@ -103,8 +104,14 @@ export class ApiClient {
     return headers
   }
 
-  private withQueryString(path: string, params: Record<string, string>): string {
-    const query = new URLSearchParams(params).toString()
+  private withQueryString(path: string, params: Record<string, QueryParam>): string {
+    const queryParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.set(key, String(value))
+      }
+    }
+    const query = queryParams.toString()
     return query ? `${path}?${query}` : path
   }
 

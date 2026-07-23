@@ -56,4 +56,26 @@ describe('AuthService', () => {
 
     await expect(service.login('admin@student.kit.edu', 'wrong-code')).rejects.toThrow('Invalid login code')
   })
+
+  it('requests revocation of the current admin session', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'Logged out successfully' }))
+    const client = new ApiClient(TEST_API_BASE_URL)
+    client.setToken('admin-token')
+    const service = new AuthService(client)
+
+    await expect(service.logout()).resolves.toEqual({
+      success: true,
+      message: 'Logged out successfully',
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${TEST_API_BASE_URL}/auth/logout`,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer admin-token',
+        }),
+      })
+    )
+  })
 })
