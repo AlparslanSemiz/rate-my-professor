@@ -117,4 +117,14 @@ public class ProfessorService {
         professor.getLectures().add(lecture);
         professorRepository.save(professor);
     }
+
+    public UUID getProfessorID(String firstName, String lastName) {
+        Professor professor = professorRepository.findByFirstNameAndLastName(firstName, lastName).orElse(null);
+
+        if(professor == null) {
+            return null;
+        }
+
+        return professor.getId();
+    }
 }

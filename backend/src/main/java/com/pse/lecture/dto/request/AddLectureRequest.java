@@ -2,6 +2,7 @@ package com.pse.lecture.dto.request;
 
 import com.pse.shared.enums.SemesterSeason;
 
+import java.util.List;
 import java.util.UUID;
 
 public record AddLectureRequest(
@@ -10,6 +11,6 @@ public record AddLectureRequest(
         int semesterYear,
         SemesterSeason semesterSeason,
         boolean active,
-        UUID professorId
+        List<UUID> professorIds
 ) {
 }

@@ -54,6 +54,12 @@ public class ProfessorController {
     }
 
 
+    @GetMapping("/professor/id")
+    public UUID getProfessorID(@RequestBody String firstName, String lastName) {
+
+        return professorService.getProfessorID(firstName, lastName);
+
+    }
 
 
 
