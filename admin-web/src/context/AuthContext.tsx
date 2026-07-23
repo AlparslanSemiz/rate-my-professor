@@ -5,6 +5,7 @@ import { getDemoAdminTokenForEmail } from '../utils/demoAuth'
 
 const TOKEN_STORAGE_KEY = 'token'
 const USER_STORAGE_KEY = 'user'
+const AUTH_USER_FIELDS = ['id', 'name', 'email', 'role'] as const
 
 function clearStoredSession() {
   localStorage.removeItem(TOKEN_STORAGE_KEY)
@@ -25,6 +26,16 @@ interface AuthState {
 
 const emptyAuthState: AuthState = { token: null, user: null }
 
+function isAuthUser(value: unknown): value is AuthUser {
+  if (!value || typeof value !== 'object') return false
+
+  const candidate = value as Record<string, unknown>
+  return AUTH_USER_FIELDS.every((field) => {
+    const fieldValue = candidate[field]
+    return typeof fieldValue === 'string' && fieldValue.trim().length > 0
+  })
+}
+
 function readStoredSession(): AuthState {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY)
   const stored = localStorage.getItem(USER_STORAGE_KEY)
@@ -38,7 +49,12 @@ function readStoredSession(): AuthState {
   }
 
   try {
-    const user = JSON.parse(stored) as AuthUser
+    const user: unknown = JSON.parse(stored)
+    if (!isAuthUser(user)) {
+      clearStoredSession()
+      return emptyAuthState
+    }
+
     const demoToken = getDemoAdminTokenForEmail(user.email)
     const activeToken = demoToken ?? token
     if (demoToken && demoToken !== token) {

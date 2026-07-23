@@ -35,7 +35,7 @@ export class FeedbackService {
   }
 
   updateReport(id: string, update: BugReportUpdate): Promise<BasicResponse> {
-    return this.client.patch(`/reports/${id}`, update)
+    return this.client.patch<BasicResponse>(`/reports/${id}`, update)
   }
 }
 

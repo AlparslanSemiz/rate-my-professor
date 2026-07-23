@@ -3,6 +3,7 @@ import { usersService, type User, type Warning } from '../api/UsersService'
 import { useAuth } from '../context/useAuth'
 
 export type UserChange = 'warned' | 'blocked' | 'unblocked' | 'deleted'
+type ModerationStatus = Extract<User['status'], 'ACTIVE' | 'BLOCKED'>
 
 interface LoadedProfile {
   userId: string
@@ -31,7 +32,7 @@ export function useUserProfile(
   useEffect(() => {
     if (!opened || userId === null) return
     const requestedUserId = userId
-    let canceled = false
+    let cancelled = false
 
     async function loadProfile() {
       try {
@@ -40,11 +41,11 @@ export function useUserProfile(
           usersService.getWarnings(requestedUserId),
         ])
 
-        if (canceled) return
-        setProfile({ userId: requestedUserId, user: loadedUser ?? null, warnings: loadedWarnings })
+        if (cancelled) return
+        setProfile({ userId: requestedUserId, user: loadedUser, warnings: loadedWarnings })
       } catch {
         // Surface the "User not found" state instead of an endless spinner.
-        if (canceled) return
+        if (cancelled) return
         setProfile(emptyProfile(requestedUserId))
       }
     }
@@ -52,7 +53,7 @@ export function useUserProfile(
     void loadProfile()
 
     return () => {
-      canceled = true
+      cancelled = true
     }
   }, [opened, userId])
 
@@ -80,28 +81,39 @@ export function useUserProfile(
     try {
       await usersService.warn(user.id, trimmedMessage, currentAdmin.id)
       const refreshedWarnings = await usersService.getWarnings(user.id)
-      updateLoadedUser(user.id, (currentUser) => ({
-        ...currentUser,
-        warnings: currentUser.warnings + 1,
-      }), refreshedWarnings)
+      updateLoadedUser(
+        user.id,
+        (currentUser) => ({
+          ...currentUser,
+          warnings: currentUser.warnings + 1,
+        }),
+        refreshedWarnings
+      )
       onUserChanged?.(user.id, 'warned')
     } finally {
       setWarnLoading(false)
     }
   }
 
-  async function block() {
+  async function changeStatus(
+    request: (id: string) => Promise<unknown>,
+    status: ModerationStatus,
+    change: Extract<UserChange, 'blocked' | 'unblocked'>
+  ) {
     if (!user) return
-    await usersService.block(user.id)
-    updateLoadedUser(user.id, (currentUser) => ({ ...currentUser, status: 'BLOCKED' }))
-    onUserChanged?.(user.id, 'blocked')
+
+    const userId = user.id
+    await request(userId)
+    updateLoadedUser(userId, (currentUser) => ({ ...currentUser, status }))
+    onUserChanged?.(userId, change)
+  }
+
+  async function block() {
+    await changeStatus((id) => usersService.block(id), 'BLOCKED', 'blocked')
   }
 
   async function unblock() {
-    if (!user) return
-    await usersService.unblock(user.id)
-    updateLoadedUser(user.id, (currentUser) => ({ ...currentUser, status: 'ACTIVE' }))
-    onUserChanged?.(user.id, 'unblocked')
+    await changeStatus((id) => usersService.unblock(id), 'ACTIVE', 'unblocked')
   }
 
   async function remove() {

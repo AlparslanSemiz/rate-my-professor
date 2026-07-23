@@ -73,6 +73,22 @@ describe('AuthProvider', () => {
     expect(localStorage.getItem('user')).toBeNull()
   })
 
+  it('rejects stored sessions whose user payload is missing required fields', () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify({
+      id: 'admin-1',
+      name: 'Test Admin',
+      email: 'test@example.com',
+    }))
+
+    renderAuthHarness()
+
+    expect(screen.getByTestId('auth-state')).toHaveTextContent('anonymous')
+    expect(screen.getByTestId('token')).toHaveTextContent('no-token')
+    expect(localStorage.getItem('token')).toBeNull()
+    expect(localStorage.getItem('user')).toBeNull()
+  })
+
   it('persists login and clears state on logout', async () => {
     const user = userEvent.setup()
     renderAuthHarness()

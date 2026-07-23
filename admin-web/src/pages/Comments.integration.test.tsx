@@ -108,6 +108,23 @@ describe('Comments page', () => {
     })
   })
 
+  it('keeps the previous status and shows an error when an update fails', async () => {
+    vi.mocked(commentsService.updateStatus).mockRejectedValue(new Error('Update rejected'))
+    const user = userEvent.setup()
+    renderComments()
+
+    await screen.findByText('"Reported text"')
+    const statusSelect = screen.getByRole('combobox', { name: 'Status for report by Alice Smith' })
+    await user.click(statusSelect)
+    const optionsId = statusSelect.getAttribute('aria-controls')
+    const options = optionsId ? document.getElementById(optionsId) : null
+    expect(options).not.toBeNull()
+    fireEvent.click(within(options as HTMLElement).getByRole('option', { name: 'Action Taken', hidden: true }))
+
+    expect(await screen.findByText('Update rejected')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Status for report by Alice Smith' })).toHaveValue('Open')
+  })
+
   it('shows a load error and retries the request', async () => {
     vi.mocked(commentsService.getReported)
       .mockRejectedValueOnce(new Error('Backend unavailable'))

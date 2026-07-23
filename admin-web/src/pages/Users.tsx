@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { Badge, TextInput, Group, Text, SimpleGrid, Box } from '@mantine/core'
+import { Badge, TextInput, Group, Text, SimpleGrid, Box, type MantineColor } from '@mantine/core'
 import {
   IconSearch,
   IconUsers,
@@ -135,13 +135,11 @@ export default function Users() {
 }
 
 function UsersStats({ users }: { users: User[] }) {
-  const adminCount = users.filter((user) => user.role === 'ADMIN').length
-
   return (
     <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
       <StatCard label="Total users" value={users.length} icon={IconUsers} accent="#3b82f6" />
       <StatCard label="Active" value={countByValue(users, 'status', 'ACTIVE')} icon={IconUserCheck} accent="#22c55e" />
-      <StatCard label="Admin accounts" value={adminCount} icon={IconShieldCheck} accent="#f59e0b" />
+      <StatCard label="Admin accounts" value={countByValue(users, 'role', 'ADMIN')} icon={IconShieldCheck} accent="#f59e0b" />
       <StatCard label="Blocked" value={countByValue(users, 'status', 'BLOCKED')} icon={IconShieldOff} accent="#ef4444" />
     </SimpleGrid>
   )
@@ -276,7 +274,7 @@ function UserRow({ user, isLast, onOpenProfile }: { user: User; isLast: boolean;
   )
 }
 
-function CountBadge({ value, color }: { value: number; color: string }) {
+function CountBadge({ value, color }: { value: number; color: MantineColor }) {
   if (value <= 0) {
     return (
       <Text size="xs" c="#374151">

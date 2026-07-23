@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Box, Text, Textarea, Group, Button } from '@mantine/core'
 import type { CSSProperties } from 'react'
 import { darkInputStyles } from '../constants/inputStyles'
+import { getErrorMessage } from '../utils/getErrorMessage'
+import ErrorAlert from './ErrorAlert'
 
 interface WarnFormProps {
   userName: string
@@ -23,14 +25,22 @@ const warningTextareaStyles = {
 
 export default function WarnForm({ userName, loading, onCancel, onSubmit }: WarnFormProps) {
   const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
 
-  async function handleSubmit() {
-    await onSubmit(message.trim())
-    setMessage('')
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+
+    try {
+      await onSubmit(message.trim())
+      setMessage('')
+    } catch (submitError: unknown) {
+      setError(getErrorMessage(submitError, 'Failed to send the warning. No changes were saved.'))
+    }
   }
 
   return (
-    <Box mb={20} style={warnFormStyle}>
+    <Box component="form" mb={20} style={warnFormStyle} onSubmit={handleSubmit}>
       <Text size="xs" fw={600} c="#eab308" mb={8}>
         Issue a warning to {userName}
       </Text>
@@ -42,11 +52,12 @@ export default function WarnForm({ userName, loading, onCancel, onSubmit }: Warn
         mb={10}
         styles={warningTextareaStyles}
       />
+      <ErrorAlert message={error} />
       <Group gap={8} justify="flex-end">
-        <Button size="xs" variant="subtle" color="gray" onClick={onCancel}>
+        <Button type="button" size="xs" variant="subtle" color="gray" onClick={onCancel} disabled={loading}>
           Cancel
         </Button>
-        <Button size="xs" color="yellow" loading={loading} disabled={!message.trim()} onClick={handleSubmit}>
+        <Button type="submit" size="xs" color="yellow" loading={loading} disabled={!message.trim()}>
           Send warning
         </Button>
       </Group>

@@ -1,7 +1,7 @@
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TextInput, Button, Text, Stack, Alert, Box } from '@mantine/core'
-import { IconShield, IconAlertCircle } from '@tabler/icons-react'
+import { TextInput, Button, Text, Stack, Box } from '@mantine/core'
+import { IconShield } from '@tabler/icons-react'
 import { useAuth } from '../context/useAuth'
 import { authService } from '../api/AuthService'
 import { apiClient } from '../api/ApiClient'
@@ -11,6 +11,7 @@ import { getErrorMessage } from '../utils/getErrorMessage'
 import { getDemoAdminTokenForEmail } from '../utils/demoAuth'
 import { authenticateAdmin, getLoginErrorMessage } from '../auth/authenticateAdmin'
 import { routes } from '../constants/routes'
+import ErrorAlert from '../components/ErrorAlert'
 
 type Step = 'email' | 'code'
 
@@ -112,12 +113,18 @@ export default function Login() {
     }
   }
 
+  function handleUseDifferentEmail() {
+    setStep('email')
+    setCode('')
+    setError('')
+  }
+
   return (
     <div style={pageStyle}>
       <Panel style={cardStyle}>
         <LoginBrand />
         <LoginCopy step={step} email={email} />
-        <LoginError message={error} />
+        <ErrorAlert message={error} mb={20} />
 
         {step === 'email' ? (
           <EmailStepForm
@@ -132,7 +139,7 @@ export default function Login() {
             loading={loading}
             onCodeChange={setCode}
             onSubmit={handleVerifyCode}
-            onUseDifferentEmail={() => { setStep('email'); setCode(''); setError('') }}
+            onUseDifferentEmail={handleUseDifferentEmail}
           />
         )}
       </Panel>
@@ -173,33 +180,14 @@ function LoginCopy({ step, email }: { step: Step; email: string }) {
   )
 }
 
-function LoginError({ message }: { message: string }) {
-  if (!message) return null
-
-  return (
-    <Alert
-      icon={<IconAlertCircle size={14} />}
-      color="red"
-      mb={20}
-      radius="md"
-      styles={{ root: { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' } }}
-    >
-      {message}
-    </Alert>
-  )
-}
-
-function EmailStepForm({
-  email,
-  loading,
-  onEmailChange,
-  onSubmit,
-}: {
+interface EmailStepFormProps {
   email: string
   loading: boolean
   onEmailChange: (email: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
-}) {
+}
+
+function EmailStepForm({ email, loading, onEmailChange, onSubmit }: EmailStepFormProps) {
   return (
     <form onSubmit={onSubmit}>
       <Stack gap={14}>
@@ -210,7 +198,7 @@ function EmailStepForm({
           autoComplete="email"
           autoFocus
           value={email}
-          onChange={(event) => onEmailChange(event.target.value)}
+          onChange={(event) => onEmailChange(event.currentTarget.value)}
           required
           styles={loginInputStyles}
         />
@@ -231,19 +219,21 @@ function EmailStepForm({
   )
 }
 
+interface CodeStepFormProps {
+  code: string
+  loading: boolean
+  onCodeChange: (code: string) => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  onUseDifferentEmail: () => void
+}
+
 function CodeStepForm({
   code,
   loading,
   onCodeChange,
   onSubmit,
   onUseDifferentEmail,
-}: {
-  code: string
-  loading: boolean
-  onCodeChange: (code: string) => void
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void
-  onUseDifferentEmail: () => void
-}) {
+}: CodeStepFormProps) {
   return (
     <form onSubmit={onSubmit}>
       <Stack gap={14}>
@@ -253,7 +243,7 @@ function CodeStepForm({
           autoComplete="one-time-code"
           autoFocus
           value={code}
-          onChange={(event) => onCodeChange(event.target.value)}
+          onChange={(event) => onCodeChange(event.currentTarget.value)}
           required
           styles={loginInputStyles}
         />

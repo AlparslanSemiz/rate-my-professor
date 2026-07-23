@@ -39,8 +39,15 @@ import { countByValue, updateById } from '../utils/collection'
 import { useSearch } from '../hooks/useSearch'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { statGridCols } from '../constants/layout'
-import { REPORT_REASONS, REPORT_STATUSES } from '../domain/moderation'
+import {
+  REPORT_REASONS,
+  REPORT_STATUSES,
+  isReportReason,
+  isReportStatus,
+} from '../domain/moderation'
 import { useSelectedId } from '../hooks/useSelectedId'
+import ErrorAlert from '../components/ErrorAlert'
+import { getErrorMessage } from '../utils/getErrorMessage'
 
 const ALL = 'All'
 const TABLE_COLUMNS = ['Comment & Report', 'Reported user', 'Reported by', 'Reason', 'Date', 'Status'] as const
@@ -58,6 +65,14 @@ const statusSelectOptions = REPORT_STATUSES.map((status) => ({ value: status, la
 const reasonSelectOptions = REPORT_REASONS.map((reason) => ({ value: reason, label: enumLabel(reason) }))
 const statusFilterOptions = [{ value: ALL, label: ALL }, ...statusSelectOptions]
 const reasonFilterOptions = [{ value: ALL, label: ALL }, ...reasonSelectOptions]
+
+function toStatusFilter(value: string | null): StatusFilter {
+  return value === ALL || isReportStatus(value) ? value : ALL
+}
+
+function toReasonFilter(value: string | null): ReasonFilter {
+  return value === ALL || isReportReason(value) ? value : ALL
+}
 
 const filtersPanelStyle: CSSProperties = {
   padding: '14px 20px',
@@ -172,6 +187,8 @@ export default function CommentsPage() {
   } = useAsyncData(loadReportedComments, EMPTY_REPORTS, LOAD_ERROR_MESSAGE)
   const [filterStatus, setFilterStatus] = useState<StatusFilter>(ALL)
   const [filterReason, setFilterReason] = useState<ReasonFilter>(ALL)
+  const [statusUpdating, setStatusUpdating] = useState(false)
+  const [statusError, setStatusError] = useState('')
   const profile = useSelectedId()
 
   const { search, setSearch, filtered: searchFiltered } = useSearch(reports, matchesQuery)
@@ -182,8 +199,17 @@ export default function CommentsPage() {
   )
 
   async function handleStatusChange(id: string, status: CommentReportStatus) {
-    await commentsService.updateStatus(id, status)
-    setReports((prev) => updateById(prev, id, (report) => ({ ...report, status })))
+    setStatusUpdating(true)
+    setStatusError('')
+
+    try {
+      await commentsService.updateStatus(id, status)
+      setReports((prev) => updateById(prev, id, (report) => ({ ...report, status })))
+    } catch (updateError: unknown) {
+      setStatusError(getErrorMessage(updateError, 'Failed to update the report. The change was not saved.'))
+    } finally {
+      setStatusUpdating(false)
+    }
   }
 
   if (loading) return <PageLoader />
@@ -208,8 +234,11 @@ export default function CommentsPage() {
         onReasonChange={setFilterReason}
       />
 
+      <ErrorAlert message={statusError} />
+
       <CommentsTable
         reports={filtered}
+        updating={statusUpdating}
         onOpenProfile={profile.open}
         onStatusChange={handleStatusChange}
       />
@@ -268,7 +297,7 @@ function CommentFilters({
           placeholder="All Statuses"
           data={statusFilterOptions}
           value={status}
-          onChange={(value) => onStatusChange((value ?? ALL) as StatusFilter)}
+          onChange={(value) => onStatusChange(toStatusFilter(value))}
           w={150}
           size="sm"
           clearable={false}
@@ -278,7 +307,7 @@ function CommentFilters({
           placeholder="All Reasons"
           data={reasonFilterOptions}
           value={reason}
-          onChange={(value) => onReasonChange((value ?? ALL) as ReasonFilter)}
+          onChange={(value) => onReasonChange(toReasonFilter(value))}
           w={180}
           size="sm"
           clearable={false}
@@ -291,10 +320,12 @@ function CommentFilters({
 
 function CommentsTable({
   reports,
+  updating,
   onOpenProfile,
   onStatusChange,
 }: {
   reports: ReportedComment[]
+  updating: boolean
   onOpenProfile: (userId: string) => void
   onStatusChange: (id: string, status: CommentReportStatus) => void
 }) {
@@ -321,6 +352,7 @@ function CommentsTable({
                   key={report.id}
                   report={report}
                   isLast={index === reports.length - 1}
+                  updating={updating}
                   onOpenProfile={onOpenProfile}
                   onStatusChange={onStatusChange}
                 />
@@ -347,11 +379,12 @@ function EmptyCommentsTable() {
 interface ReportRowProps {
   report: ReportedComment
   isLast: boolean
+  updating: boolean
   onOpenProfile: (userId: string) => void
   onStatusChange: (id: string, status: CommentReportStatus) => void
 }
 
-function ReportRow({ report, isLast, onOpenProfile, onStatusChange }: ReportRowProps) {
+function ReportRow({ report, isLast, updating, onOpenProfile, onStatusChange }: ReportRowProps) {
   return (
     <tr
       style={rowStyle(isLast)}
@@ -401,7 +434,10 @@ function ReportRow({ report, isLast, onOpenProfile, onStatusChange }: ReportRowP
           data={statusSelectOptions}
           styles={statusSelectStyles(report.status)}
           aria-label={`Status for report by ${report.reportedUser.name}`}
-          onChange={(val) => val && onStatusChange(report.id, val as CommentReportStatus)}
+          disabled={updating}
+          onChange={(value) => {
+            if (isReportStatus(value)) onStatusChange(report.id, value)
+          }}
         />
       </td>
     </tr>

@@ -57,29 +57,29 @@ export default function FeedbackPage() {
     retry,
   } = useAsyncData(loadReports, EMPTY_REPORTS, LOAD_ERROR_MESSAGE)
   const reportDetails = useSelectedId()
-  const [statusUpdating, setStatusUpdating] = useState(false)
-  const [statusError, setStatusError] = useState('')
+  const [reportUpdating, setReportUpdating] = useState(false)
+  const [updateError, setUpdateError] = useState('')
 
   function openReport(id: string) {
     reportDetails.open(id)
-    setStatusError('')
+    setUpdateError('')
   }
 
   function closeReport() {
     reportDetails.close()
-    setStatusError('')
+    setUpdateError('')
   }
 
   async function handleReportUpdate(id: string, update: BugReportUpdate) {
-    setStatusUpdating(true)
-    setStatusError('')
+    setReportUpdating(true)
+    setUpdateError('')
     try {
       await feedbackService.updateReport(id, update)
       setReports((prev) => updateById(prev, id, (report) => ({ ...report, ...update })))
     } catch (err: unknown) {
-      setStatusError(getErrorMessage(err, 'Failed to update the report. The change was not saved.'))
+      setUpdateError(getErrorMessage(err, 'Failed to update the report. The change was not saved.'))
     } finally {
-      setStatusUpdating(false)
+      setReportUpdating(false)
     }
   }
 
@@ -104,8 +104,8 @@ export default function FeedbackPage() {
         opened={reportDetails.opened}
         onClose={closeReport}
         onUpdate={handleReportUpdate}
-        statusUpdating={statusUpdating}
-        statusError={statusError}
+        updating={reportUpdating}
+        updateError={updateError}
       />
     </div>
   )
@@ -195,6 +195,8 @@ function ReportItem({ report, isLast, onOpenReport }: ReportItemProps) {
       onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent' }}
       onClick={openReport}
       onKeyDown={(event) => activateOnEnterOrSpace(event, openReport)}
+      role="button"
+      aria-label={`Open bug report: ${report.title}`}
       tabIndex={0}
     >
       <Group justify="space-between" mb={8}>
@@ -202,7 +204,7 @@ function ReportItem({ report, isLast, onOpenReport }: ReportItemProps) {
           <Box
             style={{
               ...severityBarStyle,
-              background: severityAccent[report.severity] ?? '#6b7280',
+              background: severityAccent[report.severity],
             }}
           />
           <div>

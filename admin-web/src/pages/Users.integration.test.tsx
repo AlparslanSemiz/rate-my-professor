@@ -108,4 +108,50 @@ describe('Users page', () => {
     expect(screen.queryByText('Alice Smith')).not.toBeInTheDocument()
     expect(screen.getByText('Bob Johnson')).toBeInTheDocument()
   })
+
+  it('blocks and unblocks a user after each API action succeeds', async () => {
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Alice Smith'))
+    await user.click(await screen.findByRole('button', { name: 'Block' }))
+    await user.click(await screen.findByRole('button', { name: 'Block user' }))
+
+    await waitFor(() => expect(usersService.block).toHaveBeenCalledWith('user-1'))
+    expect(await screen.findByRole('button', { name: 'Unblock' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Unblock' }))
+    await user.click(await screen.findByRole('button', { name: 'Unblock user' }))
+
+    await waitFor(() => expect(usersService.unblock).toHaveBeenCalledWith('user-1'))
+    expect(await screen.findByRole('button', { name: 'Block' })).toBeInTheDocument()
+  })
+
+  it('keeps the user and shows an error when deletion fails', async () => {
+    vi.mocked(usersService.delete).mockRejectedValue(new Error('Deletion rejected'))
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Alice Smith'))
+    await user.click(await screen.findByRole('button', { name: 'Delete account' }))
+    await user.click(await screen.findByRole('button', { name: 'Delete permanently' }))
+
+    expect(await screen.findByText('Deletion rejected')).toBeInTheDocument()
+    expect(screen.getAllByText('Alice Smith')).not.toHaveLength(0)
+    expect(screen.getByRole('button', { name: 'Delete permanently' })).toBeInTheDocument()
+  })
+
+  it('keeps the warning form open and shows an error when warning fails', async () => {
+    vi.mocked(usersService.warn).mockRejectedValue(new Error('Warning rejected'))
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Alice Smith'))
+    await user.click(await screen.findByRole('button', { name: 'Warn' }))
+    await user.type(screen.getByPlaceholderText('Describe the reason for this warning...'), 'Test warning')
+    await user.click(screen.getByRole('button', { name: 'Send warning' }))
+
+    expect(await screen.findByText('Warning rejected')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Describe the reason for this warning...')).toHaveValue('Test warning')
+  })
 })

@@ -1,24 +1,26 @@
 import { type CSSProperties } from 'react'
-import { Modal, Text, Badge, Box, Group, Select, Alert } from '@mantine/core'
-import { IconUser, IconClock, IconAlertCircle } from '@tabler/icons-react'
-import type { BugReport, BugReportUpdate, ReportStatus, Severity } from '../api/FeedbackService'
+import { Modal, Text, Badge, Box, Group, Select } from '@mantine/core'
+import { IconUser, IconClock } from '@tabler/icons-react'
+import type { BugReport, BugReportUpdate } from '../api/FeedbackService'
 import { severityColor, reportStatusColor } from '../constants/colors'
 import { darkModalStyles } from '../constants/modalStyles'
 import { formatDate } from '../utils/formatDate'
 import { enumLabel } from '../utils/enumLabel'
-import { REPORT_STATUSES, SEVERITIES } from '../domain/moderation'
+import {
+  REPORT_STATUSES,
+  SEVERITIES,
+  isReportStatus,
+  isSeverity,
+} from '../domain/moderation'
+import ErrorAlert from './ErrorAlert'
 
 interface BugReportModalProps {
   report: BugReport | null
   opened: boolean
   onClose: () => void
   onUpdate: (id: string, update: BugReportUpdate) => void
-  statusUpdating: boolean
-  statusError: string
-}
-
-const alertStyles = {
-  root: { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' },
+  updating: boolean
+  updateError: string
 }
 
 const titleStyle: CSSProperties = {
@@ -46,8 +48,8 @@ export default function BugReportModal({
   opened,
   onClose,
   onUpdate,
-  statusUpdating,
-  statusError,
+  updating,
+  updateError,
 }: BugReportModalProps) {
   return (
     <Modal opened={opened} onClose={onClose} title="Bug Report" centered size="lg" styles={darkModalStyles}>
@@ -88,11 +90,7 @@ export default function BugReportModal({
             </Text>
           </Box>
 
-          {statusError && (
-            <Alert icon={<IconAlertCircle size={14} />} color="red" mb={12} radius="md" styles={alertStyles}>
-              {statusError}
-            </Alert>
-          )}
+          <ErrorAlert message={updateError} />
 
           <Group grow align="flex-start">
             <Select
@@ -101,8 +99,10 @@ export default function BugReportModal({
               value={report.status}
               data={REPORT_STATUSES.map((status) => ({ value: status, label: enumLabel(status) }))}
               styles={statusSelectStyles}
-              disabled={statusUpdating}
-              onChange={(val) => val && onUpdate(report.id, { status: val as ReportStatus })}
+              disabled={updating}
+              onChange={(value) => {
+                if (isReportStatus(value)) onUpdate(report.id, { status: value })
+              }}
             />
             <Select
               label="Severity"
@@ -110,8 +110,10 @@ export default function BugReportModal({
               value={report.severity}
               data={SEVERITIES.map((severity) => ({ value: severity, label: enumLabel(severity) }))}
               styles={statusSelectStyles}
-              disabled={statusUpdating}
-              onChange={(val) => val && onUpdate(report.id, { severity: val as Severity })}
+              disabled={updating}
+              onChange={(value) => {
+                if (isSeverity(value)) onUpdate(report.id, { severity: value })
+              }}
             />
           </Group>
         </>

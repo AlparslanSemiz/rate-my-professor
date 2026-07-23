@@ -43,7 +43,7 @@ export default function UserChip({ id, name, role, warningCount, status, onClick
         {name}
       </Text>
       <Group gap={4}>
-        <Text size="xs" style={{ color: roleAccent[role] ?? '#6b7280' }}>
+        <Text size="xs" style={{ color: roleAccent[role] }}>
           {enumLabel(role)}
         </Text>
         {warningCount > 0 && (

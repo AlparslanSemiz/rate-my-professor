@@ -47,4 +47,15 @@ describe('ApiClient', () => {
 
     await expect(client.get('/users')).rejects.toThrow('The server returned an empty response.')
   })
+
+  it('wraps malformed successful JSON responses in an ApiError', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('{invalid json', { status: 200 }))
+    const client = new ApiClient(TEST_API_BASE_URL)
+
+    await expect(client.get('/users')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 200,
+      message: 'The server returned an invalid JSON response.',
+    })
+  })
 })

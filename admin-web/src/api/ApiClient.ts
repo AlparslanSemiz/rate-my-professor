@@ -18,6 +18,12 @@ type QueryMethod = 'POST' | 'PATCH'
 const DEFAULT_API_BASE_URL = 'http://localhost:8080'
 const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Check your connection and try again.'
 export const EMPTY_RESPONSE_MESSAGE = 'The server returned an empty response.'
+const INVALID_RESPONSE_MESSAGE = 'The server returned an invalid JSON response.'
+
+function hasErrorMessage(body: unknown): body is { message: string } {
+  if (!body || typeof body !== 'object' || !('message' in body)) return false
+  return typeof body.message === 'string' && body.message.trim().length > 0
+}
 
 export class ApiClient {
   private readonly baseUrl: string
@@ -83,7 +89,12 @@ export class ApiClient {
     if (!text) {
       throw new ApiError(response.status, EMPTY_RESPONSE_MESSAGE)
     }
-    return JSON.parse(text) as T
+
+    try {
+      return JSON.parse(text) as T
+    } catch {
+      throw new ApiError(response.status, INVALID_RESPONSE_MESSAGE)
+    }
   }
 
   private headers(): Record<string, string> {
@@ -100,9 +111,7 @@ export class ApiClient {
   private async extractErrorMessage(response: Response, path: string): Promise<string> {
     try {
       const body: unknown = await response.json()
-      if (body && typeof body === 'object' && 'message' in body && typeof body.message === 'string' && body.message) {
-        return body.message
-      }
+      if (hasErrorMessage(body)) return body.message
     } catch {
       // Body was not JSON; fall through to the generic message.
     }

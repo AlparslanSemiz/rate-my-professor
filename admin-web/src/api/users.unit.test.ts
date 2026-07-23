@@ -78,6 +78,27 @@ describe('UsersService', () => {
     expect(users.every((user) => user.role === 'ADMIN')).toBe(true)
   })
 
+  it('normalizes a required admin role when loading a single user', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      id: 'user-1',
+      username: 'Required Admin',
+      kitEmail: 'u-kisi4@student.kit.edu',
+      role: 'STUDENT',
+      status: 'ACTIVE',
+      joined: '2025-01-10',
+      lastOnline: '2026-06-11T18:30:00Z',
+      biography: 'Required administrator.',
+      warnings: 0,
+      reports: 0,
+    }))
+    const service = createUsersService()
+
+    await expect(service.getById('user-1')).resolves.toMatchObject({
+      id: 'user-1',
+      role: 'ADMIN',
+    })
+  })
+
   it('maps backend warning history to display warnings', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({
       success: true,
@@ -101,6 +122,27 @@ describe('UsersService', () => {
         issuedBy: 'admin-1',
       },
     ])
+  })
+
+  it('blocks and unblocks users with bodyless PATCH requests', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ success: true, message: 'Blocked' }))
+      .mockResolvedValueOnce(jsonResponse({ success: true, message: 'Unblocked' }))
+    const service = createUsersService()
+
+    await service.block('user-1')
+    await service.unblock('user-1')
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      `${TEST_API_BASE_URL}/users/user-1/block`,
+      expect.objectContaining({ method: 'PATCH', body: undefined })
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `${TEST_API_BASE_URL}/users/user-1/unblock`,
+      expect.objectContaining({ method: 'PATCH', body: undefined })
+    )
   })
 
   it('sends warnings with the issuing admin id expected by the backend', async () => {

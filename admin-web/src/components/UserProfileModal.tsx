@@ -1,5 +1,16 @@
 import { useState, type CSSProperties } from 'react'
-import { Modal, Text, Badge, Box, Group, Divider, Button, Loader, Center } from '@mantine/core'
+import {
+  Modal,
+  Text,
+  Badge,
+  Box,
+  Group,
+  Divider,
+  Button,
+  Loader,
+  Center,
+  type MantineColor,
+} from '@mantine/core'
 import {
   IconShieldOff,
   IconShieldCheck,
@@ -30,7 +41,7 @@ interface ConfirmConfig {
   title: string
   description: string
   confirmLabel: string
-  confirmColor: string
+  confirmColor: MantineColor
   onConfirm: () => Promise<void>
 }
 
@@ -166,6 +177,11 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
     handleClose()
   }
 
+  async function handleWarning(message: string) {
+    await warn(message)
+    setShowWarnForm(false)
+  }
+
   const confirmConfig = user && confirmAction
     ? confirmConfigFor(confirmAction, user, { block, unblock, delete: handleDelete })
     : null
@@ -186,58 +202,18 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
             <ProfileHeader user={user} />
             <ProfileDetails user={user} />
 
-            <Group gap={8} mb={20}>
-              <Button
-                size="xs"
-                variant="light"
-                color="yellow"
-                leftSection={<IconAlertTriangle size={13} />}
-                onClick={() => setShowWarnForm((v) => !v)}
-              >
-                Warn
-              </Button>
-              {user.status === 'BLOCKED' ? (
-                <Button
-                  size="xs"
-                  variant="light"
-                  color="green"
-                  leftSection={<IconShieldCheck size={13} />}
-                  onClick={() => setConfirmAction('unblock')}
-                >
-                  Unblock
-                </Button>
-              ) : (
-                <Button
-                  size="xs"
-                  variant="light"
-                  color="orange"
-                  leftSection={<IconShieldOff size={13} />}
-                  onClick={() => setConfirmAction('block')}
-                >
-                  Block
-                </Button>
-              )}
-              <Button
-                size="xs"
-                variant="light"
-                color="red"
-                leftSection={<IconTrash size={13} />}
-                onClick={() => setConfirmAction('delete')}
-                style={deleteButtonStyle}
-              >
-                Delete account
-              </Button>
-            </Group>
+            <ProfileActions
+              user={user}
+              onToggleWarning={() => setShowWarnForm((visible) => !visible)}
+              onConfirm={setConfirmAction}
+            />
 
             {showWarnForm && (
               <WarnForm
                 userName={user.username}
                 loading={warnLoading}
                 onCancel={() => setShowWarnForm(false)}
-                onSubmit={async (message) => {
-                  await warn(message)
-                  setShowWarnForm(false)
-                }}
+                onSubmit={handleWarning}
               />
             )}
 
@@ -254,6 +230,51 @@ export default function UserProfileModal({ userId, opened, onClose, onUserChange
         />
       )}
     </>
+  )
+}
+
+function ProfileActions({
+  user,
+  onToggleWarning,
+  onConfirm,
+}: {
+  user: User
+  onToggleWarning: () => void
+  onConfirm: (action: ConfirmAction) => void
+}) {
+  const isBlocked = user.status === 'BLOCKED'
+
+  return (
+    <Group gap={8} mb={20}>
+      <Button
+        size="xs"
+        variant="light"
+        color="yellow"
+        leftSection={<IconAlertTriangle size={13} />}
+        onClick={onToggleWarning}
+      >
+        Warn
+      </Button>
+      <Button
+        size="xs"
+        variant="light"
+        color={isBlocked ? 'green' : 'orange'}
+        leftSection={isBlocked ? <IconShieldCheck size={13} /> : <IconShieldOff size={13} />}
+        onClick={() => onConfirm(isBlocked ? 'unblock' : 'block')}
+      >
+        {isBlocked ? 'Unblock' : 'Block'}
+      </Button>
+      <Button
+        size="xs"
+        variant="light"
+        color="red"
+        leftSection={<IconTrash size={13} />}
+        onClick={() => onConfirm('delete')}
+        style={deleteButtonStyle}
+      >
+        Delete account
+      </Button>
+    </Group>
   )
 }
 
@@ -342,16 +363,16 @@ function WarningHistory({ warnings }: { warnings: Warning[] }) {
         </Box>
       ) : (
         <div style={warningListStyle}>
-          {warnings.map((w, i) => (
+          {warnings.map((warning) => (
             <Box
-              key={`${w.userID}-${i}`}
+              key={`${warning.userID}-${warning.createdAt}-${warning.issuedBy}-${warning.message}`}
               style={warningItemStyle}
             >
               <Text size="sm" c="#d1d5db" mb={4}>
-                {w.message}
+                {warning.message}
               </Text>
               <Text size="xs" c="#4b5563">
-                {formatDate(w.createdAt, { withTime: true })}
+                {formatDate(warning.createdAt, { withTime: true })}
               </Text>
             </Box>
           ))}

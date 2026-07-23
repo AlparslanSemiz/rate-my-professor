@@ -42,7 +42,7 @@ export class CommentsService {
   }
 
   updateStatus(id: string, status: CommentReportStatus): Promise<BasicResponse> {
-    return this.client.patch(`/comments/reported/${id}`, { status })
+    return this.client.patch<BasicResponse>(`/comments/reported/${id}`, { status })
   }
 }
 

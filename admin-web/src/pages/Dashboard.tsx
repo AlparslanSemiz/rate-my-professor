@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { Text, Box, SimpleGrid, Group, Badge, Progress } from '@mantine/core'
+import { Text, Box, SimpleGrid, Group, Badge, Progress, UnstyledButton } from '@mantine/core'
 import {
   IconUsers,
   IconUserCheck,
@@ -244,9 +244,11 @@ function RecentRegistrations({ users, onViewAll }: { users: User[]; onViewAll: (
         <Text fw={600} c="#e2e8f0" size="sm">
           Newest members
         </Text>
-        <Text size="xs" c="#22c55e" style={viewAllStyle} onClick={onViewAll}>
-          See everyone →
-        </Text>
+        <UnstyledButton style={viewAllStyle} onClick={onViewAll}>
+          <Text size="xs" c="#22c55e">
+            See everyone →
+          </Text>
+        </UnstyledButton>
       </Group>
       <Text size="xs" c="#6b7280" mb={16}>
         The latest folks to join.

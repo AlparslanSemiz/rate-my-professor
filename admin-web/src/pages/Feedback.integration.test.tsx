@@ -63,8 +63,8 @@ describe('Feedback page', () => {
     const user = userEvent.setup()
     renderFeedback()
 
-    await screen.findByText('Crash on login')
-    await user.tab()
+    const report = await screen.findByRole('button', { name: 'Open bug report: Crash on login' })
+    report.focus()
     await user.keyboard('{Enter}')
 
     const dialog = within(await screen.findByRole('dialog'))

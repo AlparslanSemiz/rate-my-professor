@@ -1,5 +1,5 @@
-import type { UserRole, UserStatus } from '../api/UsersService'
 import type { ReportReason, ReportStatus, Severity } from '../domain/moderation'
+import type { UserRole, UserStatus } from '../domain/user'
 
 export const roleColor: Record<UserRole, string> = {
   ADMIN: 'blue',

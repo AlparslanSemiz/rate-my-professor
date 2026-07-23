@@ -1,8 +1,8 @@
 import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
 import { withRequiredAdminRole } from '../utils/adminAccess'
+import type { UserRole, UserStatus } from '../domain/user'
 
-export type UserRole = 'STUDENT' | 'ADMIN'
-export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED' | 'DELETED'
+export type { UserRole, UserStatus }
 
 export interface Warning {
   userID: string
@@ -60,20 +60,21 @@ export class UsersService {
     return response.users.map(withRequiredAdminRole)
   }
 
-  getById(id: string): Promise<User> {
-    return this.client.get<User>(`/users/${id}`)
+  async getById(id: string): Promise<User> {
+    const user = await this.client.get<User>(`/users/${id}`)
+    return withRequiredAdminRole(user)
   }
 
   delete(id: string): Promise<BasicResponse> {
-    return this.client.delete(`/users/${id}`)
+    return this.client.delete<BasicResponse>(`/users/${id}`)
   }
 
   block(id: string): Promise<BasicResponse> {
-    return this.client.withQueryParams('PATCH', `/users/${id}/block`, {})
+    return this.client.patch<BasicResponse>(`/users/${id}/block`)
   }
 
   unblock(id: string): Promise<BasicResponse> {
-    return this.client.withQueryParams('PATCH', `/users/${id}/unblock`, {})
+    return this.client.patch<BasicResponse>(`/users/${id}/unblock`)
   }
 
   /**
@@ -81,7 +82,7 @@ export class UsersService {
    * derive this from the auth token. `adminId` should be the id of the currently logged-in
    * admin. `id`/`createdAt` are omitted: the backend generates both itself.
    */
-  async warn(id: string, message: string, adminId: string): Promise<BasicResponse> {
+  warn(id: string, message: string, adminId: string): Promise<BasicResponse> {
     return this.client.post<BasicResponse>(`/users/${id}/warnings`, {
       userID: id,
       message,
