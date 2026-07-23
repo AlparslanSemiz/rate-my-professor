@@ -1,13 +1,14 @@
 package com.pse.social.dto.response;
 
-import com.pse.shared.enums.ContentStatus;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import com.pse.shared.enums.ContentStatus;
+
 public record CommentResponse(
 
+        UUID commentID,
         String content,
         ContentStatus status,
         String studentUsername,

@@ -1,5 +1,11 @@
 package com.pse.social.service;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.lecture.model.Lecture;
@@ -33,11 +39,6 @@ import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.CommentVoteRepository;
 import com.pse.social.repository.NotificationRepository;
 import com.pse.user.model.Student;
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 
 /**
@@ -345,6 +346,7 @@ public class SocialService {
             List<AnswerResponse> answerResponses = getAnswerResponses(comment);
 
             commentsResponses.add(new CommentResponse(
+                    comment.getId(),
                     comment.getContent(),
                     comment.getStatus(),
                     comment.getStudent().getUsername(),
