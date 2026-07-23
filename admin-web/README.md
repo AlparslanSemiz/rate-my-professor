@@ -2,6 +2,45 @@
 
 React + TypeScript + Vite admin console.
 
+## Project Structure
+
+The frontend is organized by responsibility:
+
+```text
+src/
+├── api/          Shared HTTP client and backend service contracts
+├── components/   Reusable, feature-agnostic UI components
+├── constants/    Shared routes, colors, layout, and component styles
+├── context/      Application-wide authentication state
+├── domain/       Shared domain enums, types, and validation
+├── features/     Feature-owned pages, components, hooks, and tests
+│   ├── audit-logs/
+│   ├── auth/
+│   ├── comments/
+│   ├── dashboard/
+│   ├── feedback/
+│   └── users/
+├── hooks/        Reusable hooks with no feature ownership
+├── layouts/      Application shell and layout-owned components
+├── test/         Shared test setup and helpers
+└── utils/        Small, reusable utility functions
+```
+
+The local backend under `scripts/mock-api` follows the same separation:
+
+```text
+scripts/mock-api/
+├── routes/       Endpoint-specific request handling
+├── router.mjs    Top-level route dispatch and error boundary
+├── http.mjs      HTTP parsing and response helpers
+├── auth-session.mjs
+├── mappers.mjs
+├── audit-query.mjs
+├── schema.mjs
+├── fixtures.mjs
+└── seed.mjs
+```
+
 ## API Configuration
 
 Vite reads `VITE_API_BASE_URL` at build/start time.
