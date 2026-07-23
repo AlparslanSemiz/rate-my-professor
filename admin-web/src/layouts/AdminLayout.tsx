@@ -5,7 +5,7 @@ import Dashboard from '../pages/Dashboard'
 import UsersPage from '../features/users/UsersPage'
 import FeedbackPage from '../features/feedback/FeedbackPage'
 import CommentsPage from '../features/comments/CommentsPage'
-import AuditLogsPage from '../pages/AuditLogs'
+import AuditLogsPage from '../features/audit-logs/AuditLogsPage'
 import { routes } from '../constants/routes'
 
 export default function AdminLayout() {

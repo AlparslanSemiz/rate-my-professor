@@ -6,12 +6,12 @@ import {
   auditLogsService,
   type AuditLog,
   type AuditMeta,
-} from '../api/AuditLogsService'
-import { ApiError } from '../api/ApiClient'
-import AuditLogsPage from './AuditLogs'
+} from '../../api/AuditLogsService'
+import { ApiError } from '../../api/ApiClient'
+import AuditLogsPage from './AuditLogsPage'
 
-vi.mock('../api/AuditLogsService', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../api/AuditLogsService')>()
+vi.mock('../../api/AuditLogsService', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../api/AuditLogsService')>()
   return {
     ...original,
     auditLogsService: {
