@@ -10,7 +10,7 @@ import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
-import com.example.myapplication_java.ServerCommunication.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;

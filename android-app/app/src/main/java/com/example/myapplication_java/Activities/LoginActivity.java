@@ -16,16 +16,12 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.ServerCommunication.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.databinding.ActivityLoginBinding;
 
 
-import java.util.concurrent.TimeUnit;
-
-import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;

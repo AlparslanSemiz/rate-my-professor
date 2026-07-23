@@ -8,14 +8,10 @@ import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.ServerCommunication.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 
-import java.util.concurrent.TimeUnit;
-
-import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;

@@ -1,5 +1,8 @@
 package com.example.myapplication_java.ServerCommunication;
 
+import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.RatingRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
@@ -78,5 +81,11 @@ public interface APIService {
     @GET("/ratings/{lectureId}")
     Call<RatingAverageResponse> getRatings(
             @Path("lectureId") String lectureId
+    );
+
+    @POST("/ratings/rate")
+    Call<ServerResponse> submitRating(
+            @Header("Authorization") String token,
+            @Body RatingRequest request
     );
 }

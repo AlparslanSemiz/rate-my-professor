@@ -13,6 +13,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -23,21 +24,25 @@ import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.Requests.RatingRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.RatingTopicRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.databinding.FragmentOfferingRatingsBinding;
 import com.example.myapplication_java.logic.RatingColorCalculator;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
-import com.example.myapplication_java.ServerCommunication.PostCommentRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 import retrofit2.Call;
 import retrofit2.Response;
 
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -53,6 +58,8 @@ public class OfferingRatingsFragment extends Fragment {
     private Semester semester;
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private APIService apiService;
+
+    private RatingAdapter ratingAdapter;
 
     FragmentOfferingRatingsBinding binding;
 
@@ -86,6 +93,7 @@ public class OfferingRatingsFragment extends Fragment {
         setSubmitCommentListener();
 
         insertAverageRatings(lecture);
+        setSubmitRatingListener();
 
         return binding.getRoot();
     }
@@ -134,7 +142,7 @@ public class OfferingRatingsFragment extends Fragment {
                         requireActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(requireContext(), "Your comment couldn't be sent.", Toast.LENGTH_SHORT);
+                                Toast.makeText(requireContext(), "Your comment couldn't be sent.", Toast.LENGTH_SHORT).show();
                             }
                         });
                         return;
@@ -142,7 +150,7 @@ public class OfferingRatingsFragment extends Fragment {
                     requireActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(requireContext(), "Your comment is sent.", Toast.LENGTH_SHORT);
+                            Toast.makeText(requireContext(), "Your comment is sent.", Toast.LENGTH_SHORT).show();
                         }
                     });
                 }
@@ -152,13 +160,66 @@ public class OfferingRatingsFragment extends Fragment {
                     requireActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(requireContext(), "Your cpmment couldn't be sent.", Toast.LENGTH_SHORT);
+                            Toast.makeText(requireContext(), "Your cpmment couldn't be sent.", Toast.LENGTH_SHORT).show();
                         }
                     });
                 }
             });
 
         });
+    }
+
+    private void setRatingAdapter(RatingAdapter adapter) {
+        this.ratingAdapter = adapter;
+    }
+
+    /**
+     * Sends the updated ratings to the server
+     */
+    public void setSubmitRatingListener() {
+        binding.submitRating.setOnClickListener(v -> {
+
+            // Creating the Request
+            Map<String, Double> changedRatings = ratingAdapter.getChangedRatings();
+            List<RatingTopicRequest> requestList = new ArrayList<>();
+            for (Map.Entry<String, Double> entry : changedRatings.entrySet()) {
+                requestList.add(new RatingTopicRequest(entry.getKey(), entry.getValue()));
+            }
+            RatingRequest request = new RatingRequest(lecture.id, requestList);
+            SharedPreferences loginDataStorage = requireActivity().getSharedPreferences("loginData", MODE_PRIVATE);
+            String token = loginDataStorage.getString("authToken", "");
+
+            // (Trying to) submit the ratings
+            apiService.submitRating("bearer " + token, request).enqueue(new Callback<ServerResponse>() {
+                @Override
+                public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                    if (!response.isSuccessful()) {
+                        Toast.makeText(requireContext(),
+                                "Your rating couldn't be sent.",
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    Toast.makeText(requireContext(),
+                            "Rating submitted successfully.",
+                            Toast.LENGTH_SHORT).show();
+
+                    // update View
+                    insertAverageRatings(lecture);
+                }
+
+                @Override
+                public void onFailure(Call<ServerResponse> call, Throwable throwable) {
+                    requireActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(requireContext(), "Your rating couldn't be sent.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            });
+        }
+        );
     }
 
     /**
@@ -177,11 +238,7 @@ public class OfferingRatingsFragment extends Fragment {
                                    Response<RatingAverageResponse> response) {
                 RecyclerView recyclerView = binding.ratingView;
                 recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-                System.out.println(response.body());
-                System.out.println(response.code());
-                System.out.println(response.isSuccessful());
                 List<TopicAverageResponse> ratings = response.body().ratings();
-                System.out.println(response.body());
 
                 // Temporary calculation of average lecture rating on top of the screen (very dirty code ewww)
                 double sum = 0;
@@ -193,9 +250,14 @@ public class OfferingRatingsFragment extends Fragment {
                 binding.averageLectureRating.setTextColor(RatingColorCalculator.ratingColourCalculator(lectureRating));
 
 
-                RatingAdapter adapter = new RatingAdapter(ratings);
-                recyclerView.setAdapter(adapter);
-
+                // Creates a new Adapter when first called and then just updates the existing adapter when new
+                // ratings are submitted
+                if (ratingAdapter == null) {
+                    ratingAdapter = new RatingAdapter(ratings);
+                    recyclerView.setAdapter(ratingAdapter);
+                } else {
+                    ratingAdapter.updateRatings(ratings);
+                }
 
             }
 

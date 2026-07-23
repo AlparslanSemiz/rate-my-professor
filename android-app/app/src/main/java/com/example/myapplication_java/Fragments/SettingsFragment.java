@@ -24,7 +24,7 @@ import com.example.myapplication_java.Activities.LoginActivity;
 import com.example.myapplication_java.MyApplication;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.ServerCommunication.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.databinding.DialogBugReportBinding;
@@ -32,8 +32,6 @@ import com.example.myapplication_java.databinding.FragmentSettingsBinding;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;

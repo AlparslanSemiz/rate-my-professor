@@ -21,10 +21,11 @@ import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.Fragments.SelectionFragment;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.Requests.RatingRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Database;
-import com.example.myapplication_java.ServerCommunication.LoginRequest;
-import com.example.myapplication_java.ServerCommunication.PostCommentRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
@@ -211,17 +212,22 @@ public class ProfessorFeatureInstrumentedTest {
 
         @Override
         public Call<ProfessorResponse> getProfessors() {
-            ProfessorResponse resp = new ProfessorResponse();
-            resp.success = true;
-            resp.professors = professors;
+            ProfessorResponse resp = new ProfessorResponse(
+                    "Success",
+                    true,
+                    professors
+            );
+
             return new SuccessfulCall<>(resp);
         }
 
         @Override
         public Call<LecturesResponse> getLectures() {
-            LecturesResponse resp = new LecturesResponse();
-            resp.success = true;
-            resp.lectures = lectures;
+            LecturesResponse resp = new LecturesResponse(
+                    "Success",
+                    true,
+                    lectures
+            );
             return new SuccessfulCall<>(resp);
         }
 
@@ -231,6 +237,11 @@ public class ProfessorFeatureInstrumentedTest {
         public Call<CommentsResponse> getComments(String lectureId) { return null; }
         @Override
         public Call<RatingAverageResponse> getRatings(String lectureId) { return null; }
+
+        @Override
+        public Call<ServerResponse> submitRating(String token, RatingRequest request) {
+            return null;
+        }
     }
 
     private static class SuccessfulCall<T> implements Call<T> {
