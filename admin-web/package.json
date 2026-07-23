@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "vite",
     "dev:local": "vite --mode demo-local",
+    "docker:up": "docker compose --env-file .env.docker up -d --build --wait",
+    "docker:down": "docker compose --env-file .env.docker down",
+    "docker:logs": "docker compose --env-file .env.docker logs -f",
     "db:up": "docker compose --env-file .env.docker up -d --wait db",
-    "db:down": "docker compose --env-file .env.docker down",
+    "db:down": "docker compose --env-file .env.docker stop db",
     "db:logs": "docker compose --env-file .env.docker logs -f db",
     "mock:seed": "node scripts/mock-api/seed.mjs",
     "mock:api": "node scripts/mock-api/server.mjs",

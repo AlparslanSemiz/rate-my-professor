@@ -7,6 +7,7 @@ import {
   type AuditLog,
   type AuditMeta,
 } from '../api/AuditLogsService'
+import { ApiError } from '../api/ApiClient'
 import AuditLogsPage from './AuditLogs'
 
 vi.mock('../api/AuditLogsService', async (importOriginal) => {
@@ -155,5 +156,15 @@ describe('Audit Logs page', () => {
     await user.click(screen.getByRole('button', { name: 'Try again' }))
 
     expect(await screen.findByText('Alice (alice@student.kit.edu)')).toBeInTheDocument()
+  })
+
+  it('explains when the configured backend does not expose audit endpoints', async () => {
+    vi.mocked(auditLogsService.getLogs).mockRejectedValue(new ApiError(404, 'Not found'))
+    renderAuditLogs()
+
+    expect(await screen.findByText(
+      'The configured backend does not support audit logs yet. Deploy the audit API endpoints, then try again.'
+    )).toBeInTheDocument()
+    expect(screen.queryByText('Not found')).not.toBeInTheDocument()
   })
 })

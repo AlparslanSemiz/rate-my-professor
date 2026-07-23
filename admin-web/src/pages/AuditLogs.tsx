@@ -26,6 +26,7 @@ import {
   type AuditTargetType,
   type AuditValue,
 } from '../api/AuditLogsService'
+import { ApiError } from '../api/ApiClient'
 import ErrorAlert from '../components/ErrorAlert'
 import LoadError from '../components/LoadError'
 import PageHeader from '../components/PageHeader'
@@ -41,6 +42,8 @@ import { activateOnEnterOrSpace } from '../utils/keyboard'
 
 const TABLE_COLUMNS = ['Time', 'Admin', 'Action', 'Target', 'Changed fields'] as const
 const EMPTY_META: AuditMeta = { actors: [], actions: [], targetTypes: [] }
+const AUDIT_API_UNAVAILABLE_MESSAGE =
+  'The configured backend does not support audit logs yet. Deploy the audit API endpoints, then try again.'
 
 interface FilterDraft {
   q: string
@@ -153,6 +156,11 @@ function formatValue(value: AuditValue): string {
   return String(value)
 }
 
+function getAuditErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError && error.status === 404) return AUDIT_API_UNAVAILABLE_MESSAGE
+  return getErrorMessage(error, fallback)
+}
+
 function actionColor(action: AuditAction) {
   if (action === 'ADMIN_LOGIN') return 'green'
   if (action === 'ADMIN_LOGOUT') return 'gray'
@@ -194,7 +202,7 @@ export default function AuditLogsPage() {
       setNextCursor(page.nextCursor)
       setActiveFilters({})
     } catch (loadError: unknown) {
-      setError(getErrorMessage(loadError, 'Failed to load audit logs'))
+      setError(getAuditErrorMessage(loadError, 'Failed to load audit logs'))
     } finally {
       setLoading(false)
     }
@@ -215,7 +223,7 @@ export default function AuditLogsPage() {
         setActiveFilters({})
       })
       .catch((loadError: unknown) => {
-        if (!cancelled) setError(getErrorMessage(loadError, 'Failed to load audit logs'))
+        if (!cancelled) setError(getAuditErrorMessage(loadError, 'Failed to load audit logs'))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -241,7 +249,7 @@ export default function AuditLogsPage() {
       setNextCursor(page.nextCursor)
       setActiveFilters(filters)
     } catch (loadError: unknown) {
-      setTableError(getErrorMessage(loadError, 'Failed to apply audit log filters'))
+      setTableError(getAuditErrorMessage(loadError, 'Failed to apply audit log filters'))
     } finally {
       setLoading(false)
     }
@@ -267,14 +275,21 @@ export default function AuditLogsPage() {
       setLogs((current) => [...current, ...page.auditLogs])
       setNextCursor(page.nextCursor)
     } catch (loadError: unknown) {
-      setTableError(getErrorMessage(loadError, 'Failed to load more audit logs'))
+      setTableError(getAuditErrorMessage(loadError, 'Failed to load more audit logs'))
     } finally {
       setLoadingMore(false)
     }
   }
 
   if (loading && logs.length === 0 && !tableError) return <PageLoader />
-  if (error) return <LoadError message={error} onRetry={() => void initialize()} />
+  if (error) {
+    return (
+      <>
+        <AuditPageHeader />
+        <LoadError message={error} onRetry={() => void initialize()} />
+      </>
+    )
+  }
 
   const actorOptions = meta.actors.map((actor) => ({
     value: actor.id,
@@ -285,10 +300,7 @@ export default function AuditLogsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Audit Logs"
-        description="A trace of successful admin actions, showing who changed what and when."
-      />
+      <AuditPageHeader />
 
       <form onSubmit={handleSubmit}>
         <Panel mb={16} style={filtersStyle}>
@@ -435,6 +447,15 @@ export default function AuditLogsPage() {
 
       <AuditLogDetails log={selected} onClose={() => setSelected(null)} />
     </>
+  )
+}
+
+function AuditPageHeader() {
+  return (
+    <PageHeader
+      title="Audit Logs"
+      description="A trace of successful admin actions, showing who changed what and when."
+    />
   )
 }
 

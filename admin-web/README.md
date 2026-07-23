@@ -29,16 +29,28 @@ password: admin_web
 
 You can change these defaults in `.env.docker`.
 
-Start the local mock API and DB:
+Start the complete Docker stack:
 
 ```bash
-npm run mock:up
+npm run docker:up
 ```
 
-In a second terminal, start the admin web against the mock API:
+Then open:
 
-```bash
-npm run dev:local
+```text
+http://localhost:5173
+```
+
+The Docker web image is built with `VITE_API_BASE_URL=/api`. Nginx proxies
+`/api/*` to the mock API container, so Audit Logs and the other admin endpoints
+never fall back to the remote production backend.
+
+Container ports:
+
+```text
+web:      http://localhost:5173
+mock API: http://localhost:8080
+Postgres: localhost:5432
 ```
 
 Demo login:
@@ -48,12 +60,22 @@ email: u-kisi4@student.kit.edu
 code: 123456
 ```
 
-Useful DB commands:
+Stop the full stack:
 
 ```bash
-npm run mock:reset
-npm run db:logs
-npm run db:down
+npm run docker:down
+```
+
+For host-based development with Vite hot reload, start the DB and mock API:
+
+```bash
+npm run mock:up
+```
+
+Then run the web app in a second terminal:
+
+```bash
+npm run dev:local
 ```
 
 Production deploy build:
@@ -68,7 +90,9 @@ The login flow stores `/auth/login` response field `authToken` and sends it on a
 Authorization: Bearer <authToken>
 ```
 
-All endpoints except `GET /health` and the two `/auth` POST routes require an `Authorization: Bearer <authToken>` header for an admin user.
+All endpoints except `GET /health`, `POST /auth/request-login`, and
+`POST /auth/login` require an `Authorization: Bearer <authToken>` header for an
+admin user.
 
 Auth:
 
@@ -157,6 +181,11 @@ npm run dev:local        # Vite against the local mock API (demo-local mode)
 npm run build            # Type-check and build for production
 npm run preview          # Preview the production build
 
+# Complete Docker stack
+npm run docker:up        # Build and start web + mock API + Postgres
+npm run docker:down      # Stop and remove the complete stack
+npm run docker:logs      # Follow logs from all stack services
+
 # Quality
 npm run check            # lint + typecheck
 npm run lint             # ESLint
@@ -171,6 +200,6 @@ npm run mock:api         # Start the mock API only
 npm run mock:seed        # Reseed the mock database
 npm run mock:reset       # Start the DB and reseed it
 npm run db:up            # Start the Postgres container
-npm run db:down          # Stop and remove the Postgres container
+npm run db:down          # Stop the Postgres container
 npm run db:logs          # Follow the Postgres container logs
 ```

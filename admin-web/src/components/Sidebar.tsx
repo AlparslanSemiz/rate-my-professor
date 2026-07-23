@@ -44,13 +44,16 @@ const navItems = [
     path: routes.feedback,
     icon: IconBug,
   },
-  {
-    label: 'Audit Logs',
-    sublabel: 'Admin activity',
-    path: routes.auditLogs,
-    icon: IconHistory,
-  },
-]
+] as const
+
+const auditNavItem = {
+  label: 'Audit Logs',
+  sublabel: 'Admin activity',
+  path: routes.auditLogs,
+  icon: IconHistory,
+} as const
+
+type NavigationItem = (typeof navItems)[number] | typeof auditNavItem
 
 const shellStyle: CSSProperties = {
   justifyContent: 'space-between',
@@ -157,7 +160,16 @@ export default function Sidebar() {
         <SidebarNavigation activePath={location.pathname} onNavigate={navigate} />
       </div>
 
-      <SessionFooter user={user} onLogout={handleLogout} />
+      <div>
+        <Box component="nav" aria-label="Account navigation" p={12}>
+          <SidebarNavButton
+            item={auditNavItem}
+            active={location.pathname === auditNavItem.path}
+            onNavigate={navigate}
+          />
+        </Box>
+        <SessionFooter user={user} onLogout={handleLogout} />
+      </div>
     </Stack>
   )
 }
@@ -202,7 +214,7 @@ function SidebarNavButton({
   active,
   onNavigate,
 }: {
-  item: (typeof navItems)[number]
+  item: NavigationItem
   active: boolean
   onNavigate: (path: string) => void
 }) {

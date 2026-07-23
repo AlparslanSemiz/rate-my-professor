@@ -120,7 +120,9 @@ describe('App routing and authentication', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: 'Audit Logs' })).toBeInTheDocument()
-    expect(screen.getByText('Admin activity')).toBeInTheDocument()
+    const accountNavigation = screen.getByRole('navigation', { name: 'Account navigation' })
+    expect(accountNavigation).toHaveTextContent('Audit Logs')
+    expect(accountNavigation).toHaveTextContent('Admin activity')
   })
 
   it('logs in with a valid one-time code and navigates to the dashboard', async () => {
