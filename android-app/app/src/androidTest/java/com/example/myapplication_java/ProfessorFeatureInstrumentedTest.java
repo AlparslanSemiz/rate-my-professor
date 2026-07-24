@@ -30,6 +30,7 @@ import com.example.myapplication_java.ServerCommunication.Responses.LecturesResp
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
+import com.example.myapplication_java.ServerCommunication.SubmitAnswerRequest;
 
 import org.junit.After;
 import org.junit.Before;
@@ -208,22 +209,24 @@ public class ProfessorFeatureInstrumentedTest {
         public Call<ServerResponse> requestLogin(LoginRequest request) { return null; }
         @Override
         public Call<ServerResponse> login(LoginRequest request) { return null; }
+
+        @Override
+        public Call<ServerResponse> validate(String token, LoginRequest request) {
+            return null;
+        }
+
         @Override
         public Call<BasicResponse> deleteAccount(String token) { return null; }
 
         @Override
         public Call<ProfessorResponse> getProfessors() {
-            ProfessorResponse resp = new ProfessorResponse();
-            resp.success = true;
-            resp.professors = professors;
+            ProfessorResponse resp = new ProfessorResponse("its ok", true, professors);
             return new SuccessfulCall<>(resp);
         }
 
         @Override
         public Call<LecturesResponse> getLectures() {
-            LecturesResponse resp = new LecturesResponse();
-            resp.success = true;
-            resp.lectures = lectures;
+            LecturesResponse resp = new LecturesResponse("its ok", true, lectures);
             return new SuccessfulCall<>(resp);
         }
 
@@ -233,6 +236,11 @@ public class ProfessorFeatureInstrumentedTest {
         public Call<CommentsResponse> getComments(String lectureId) { return null; }
         @Override
         public Call<RatingAverageResponse> getRatings(String lectureId) { return null; }
+
+        @Override
+        public Call<BasicResponse> postAnswer(String token, SubmitAnswerRequest request) {
+            return null;
+        }
     }
 
     private static class SuccessfulCall<T> implements Call<T> {

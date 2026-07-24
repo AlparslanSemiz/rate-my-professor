@@ -24,7 +24,7 @@ import retrofit2.Response;
 )
 public abstract class Database extends RoomDatabase {
     public static String DB_NAME = "database.db";
-    private boolean NOUPDATE = true;
+    private boolean NOUPDATE = false;
     public Database() {}
     public abstract SearchService searchService();
 
