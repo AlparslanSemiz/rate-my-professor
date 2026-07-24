@@ -1,5 +1,6 @@
 package com.example.myapplication_java.ServerCommunication;
 
+import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
@@ -10,6 +11,7 @@ import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
+import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
 
@@ -31,12 +33,18 @@ public interface APIService {
             @Body LoginRequest request
     );
 
+    @POST("/auth/validate")
+    Call<ServerResponse> validate(
+            @Header("Authorization") String token,
+            @Body LoginRequest request
+    );
+
     /**
      * Deletes the account for the currently verified email/token pair.
      */
-    @POST("/auth/delete-account")
-    Call<ServerResponse> deleteAccount(
-            @Body LoginRequest request
+    @PATCH("/account/deleteAccount")
+    Call<BasicResponse> deleteAccount(
+            @Header("Authorization") String token
     );
 
     /**
@@ -79,4 +87,12 @@ public interface APIService {
     Call<RatingAverageResponse> getRatings(
             @Path("lectureId") String lectureId
     );
+
+    @POST("/social/answers")
+    Call<BasicResponse> postAnswer(
+            @Header("Authorization") String token,
+            @Body SubmitAnswerRequest request
+    );
+
+
 }

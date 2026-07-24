@@ -26,8 +26,8 @@ public class RetrofitClient {
 
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        OkHttpClient client = new OkHttpClient.Builder().connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS).addInterceptor(loggingInterceptor).build();
+        OkHttpClient client = new OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(1, TimeUnit.SECONDS).addInterceptor(loggingInterceptor).build();
 
         Gson gson = new GsonBuilder()
                 .registerTypeAdapter(LocalDateTime.class,

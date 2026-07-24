@@ -1,5 +1,7 @@
 package com.example.myapplication_java.Fragments;
 
+import static android.content.Context.MODE_PRIVATE;
+
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
@@ -25,6 +27,7 @@ import com.example.myapplication_java.MyApplication;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.databinding.DialogBugReportBinding;
@@ -226,19 +229,21 @@ public class SettingsFragment extends Fragment {
          * The backend expects the same email/token body that login uses.
          */
         APIService apiService = createApiService();
-        Call<ServerResponse> call = apiService.deleteAccount(new LoginRequest(mailAddress, token));
+        SharedPreferences preferences = getActivity().getSharedPreferences("loginData", MODE_PRIVATE);
+        String authToken = preferences.getString("authToken", "");
+        Call<BasicResponse> call = apiService.deleteAccount("Bearer " + authToken);
 
         call.enqueue(new Callback<>() {
             /**
              * Handles the delete-account response from the backend.
              */
             @Override
-            public void onResponse(@NonNull Call<ServerResponse> call, @NonNull Response<ServerResponse> response) {
+            public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
                 if (!isAdded()) {
                     return;
                 }
 
-                ServerResponse responseBody = response.body();
+                BasicResponse responseBody = response.body();
                 if (!response.isSuccessful() || responseBody == null || !responseBody.success()) {
                     Toast.makeText(requireContext(), R.string.delete_account_failed, Toast.LENGTH_LONG).show();
                     return;
@@ -253,7 +258,7 @@ public class SettingsFragment extends Fragment {
              * Handles network failures during account deletion.
              */
             @Override
-            public void onFailure(@NonNull Call<ServerResponse> call, @NonNull Throwable throwable) {
+            public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {
                 if (!isAdded()) {
                     return;
                 }

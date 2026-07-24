@@ -24,7 +24,7 @@ import retrofit2.Response;
 )
 public abstract class Database extends RoomDatabase {
     public static String DB_NAME = "database.db";
-
+    private boolean NOUPDATE = true;
     public Database() {}
     public abstract SearchService searchService();
 
@@ -32,6 +32,8 @@ public abstract class Database extends RoomDatabase {
      * this updates the database from the server.
      */
     public void updateDB(APIService apiService) {
+        //Temporary I need to fix something.
+        if (NOUPDATE) return;
         Log.println(Log.DEBUG, "updateDB", "rein");
         SearchService service = searchService();
 

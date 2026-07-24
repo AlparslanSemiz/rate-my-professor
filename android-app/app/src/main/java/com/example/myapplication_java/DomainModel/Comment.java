@@ -7,10 +7,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record Comment (
-    String content,
-    ContentStatus status,
-    String studentUsername,
-    String lectureID,
-    LocalDateTime createdAt,
-    List<AnswerResponse> answers
+        String commentID,
+        String content,
+        ContentStatus status,
+        String studentUsername,
+        String lectureID,
+        LocalDateTime createdAt,
+        List<Comment> answers
 ) {}

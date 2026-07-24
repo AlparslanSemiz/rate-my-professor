@@ -23,9 +23,12 @@ import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.Responses.AnswerResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
+import com.example.myapplication_java.ServerCommunication.SubmitAnswerRequest;
 import com.example.myapplication_java.databinding.FragmentOfferingRatingsBinding;
 import com.example.myapplication_java.logic.RatingColorCalculator;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
@@ -46,15 +49,16 @@ import retrofit2.Callback;
 /**
  * The rating (and comment) Screen for a lecture Offering.
  */
-public class OfferingRatingsFragment extends Fragment {
+public class OfferingRatingsFragment extends Fragment implements CommentsAdapter.OnCommentClickListener {
 
     private Lecture lecture;
     private Professor professor;
     private Semester semester;
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private APIService apiService;
-
     FragmentOfferingRatingsBinding binding;
+    List<Comment> comments;
+    CommentsAdapter adapter;
 
     public OfferingRatingsFragment() {
         apiService = RetrofitClient.getClient().create(APIService.class);
@@ -102,9 +106,9 @@ public class OfferingRatingsFragment extends Fragment {
                     Log.println(Log.DEBUG, "comments", "couldn't get the comments");
                     return;
                 }
-                List<Comment> comments = response.body().comments();
+                comments = response.body().comments();
                 requireActivity().runOnUiThread(() -> {
-                    CommentsAdapter adapter = new CommentsAdapter(comments);
+                    adapter = new CommentsAdapter(comments, OfferingRatingsFragment.this);
                     binding.commentList.setAdapter(adapter);
                 });
             }
@@ -184,6 +188,7 @@ public class OfferingRatingsFragment extends Fragment {
                 System.out.println(response.body());
 
                 // Temporary calculation of average lecture rating on top of the screen (very dirty code ewww)
+                // I think it looks cool <3.
                 double sum = 0;
                 for (TopicAverageResponse rating : ratings) {
                     sum += rating.value();
@@ -206,5 +211,44 @@ public class OfferingRatingsFragment extends Fragment {
                 Log.println(Log.DEBUG, "Database update failure", throwable.getMessage());
             }
         });
+    }
+
+    @Override
+    public void onReplySend(String commentId, String reply) {
+        SharedPreferences preferences = getActivity().getSharedPreferences("loginData", MODE_PRIVATE);
+        String token = preferences.getString("authToken", "");
+        Log.println(Log.DEBUG, "reply send", commentId + ":" + reply);
+        Call<BasicResponse> call = apiService.postAnswer("Bearer " + token, new SubmitAnswerRequest(commentId, reply));
+        call.enqueue(new Callback<BasicResponse>() {
+            @Override
+            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                if (!response.isSuccessful()) {
+                    Toast.makeText(getContext(), "Error while replying.", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(getContext(), "Reply sent.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                Toast.makeText(getContext(), "Couldn't connect the server.", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    @Override
+    public void onOpenReplies(int position, Comment comment) {
+        Log.println(Log.DEBUG, "adapter add reply", "" + position);
+        comments.addAll(position, comment.answers());
+        adapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onCloseReplies(int position, Comment comment) {
+        Log.println(Log.DEBUG, "adapter remove reply", position + " " + comment.answers().size());
+        for (int i = 0; i < comment.answers().size(); i++) {
+            comments.remove(i + position);
+        }
+        adapter.notifyDataSetChanged();
     }
 }

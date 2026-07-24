@@ -74,6 +74,7 @@ public class ProfileFragment extends Fragment {
         binding.lectureList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         binding.semesterList.setLayoutManager(new LinearLayoutManager(requireContext()));
 
+        Log.println(Log.DEBUG, "ProfFrag", professor.id);
         Database database = Room.databaseBuilder(
                 getContext(),
                 Database.class,
@@ -90,10 +91,10 @@ public class ProfileFragment extends Fragment {
             if (selectionType == SelectionType.PROFESSORS) {
                 List<String> lectures = service.getLectureTitlesByProfessor(professor.id);
                 ProfileLectureAdapter adapter = new ProfileLectureAdapter(lectures, this::onLectureClicked);
-                requireActivity().runOnUiThread(()-> {
-                    lectureList.setAdapter(adapter);
-                });
+                requireActivity().runOnUiThread(()-> lectureList.setAdapter(adapter));
+                Log.println(Log.DEBUG, "profFrag", "1");
                 lectureTitle = lectures.get(0);
+                Log.println(Log.DEBUG, "profFrag", "2");
             } else {
                 List<Professor> professors = service.getProfessorsByLectureTitle(lectureTitle);
                 ProfileProfessorAdapter adapter = new ProfileProfessorAdapter(professors, this::onProfessorClicked);

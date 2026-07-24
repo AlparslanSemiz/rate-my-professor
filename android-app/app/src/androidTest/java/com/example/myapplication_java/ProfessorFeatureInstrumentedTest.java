@@ -21,6 +21,7 @@ import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.Fragments.SelectionFragment;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Database;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
@@ -38,6 +39,7 @@ import org.junit.runner.RunWith;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -207,7 +209,7 @@ public class ProfessorFeatureInstrumentedTest {
         @Override
         public Call<ServerResponse> login(LoginRequest request) { return null; }
         @Override
-        public Call<ServerResponse> deleteAccount(LoginRequest request) { return null; }
+        public Call<BasicResponse> deleteAccount(String token) { return null; }
 
         @Override
         public Call<ProfessorResponse> getProfessors() {

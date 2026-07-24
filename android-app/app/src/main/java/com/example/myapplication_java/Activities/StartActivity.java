@@ -35,6 +35,7 @@ public class StartActivity extends AppCompatActivity {
         SharedPreferences userLoginStorage = getSharedPreferences("loginData", MODE_PRIVATE);
         String mail = userLoginStorage.getString("mailAddress", "");
         String otp = userLoginStorage.getString("OTP", "");
+        String authToken = userLoginStorage.getString("authToken", "");
 
         //debug
         Log.println(Log.DEBUG, "login", "mail :" + mail + " otp: " + otp);
@@ -47,7 +48,7 @@ public class StartActivity extends AppCompatActivity {
 
         LoginRequest request = new LoginRequest(mail, otp);
         APIService apiService = RetrofitClient.getClient().create(APIService.class);
-        Call<ServerResponse> call = apiService.login(request);
+        Call<ServerResponse> call = apiService.validate("Bearer "+ authToken, request);
 
         call.enqueue(new Callback<>() {
             @Override
