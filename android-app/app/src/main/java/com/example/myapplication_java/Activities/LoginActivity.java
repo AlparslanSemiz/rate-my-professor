@@ -53,8 +53,8 @@ public class LoginActivity extends AppCompatActivity {
         enterButton = binding.verifyButton;
         emailInput = binding.mailInput;
         //If you are reading this and didn't write this comment remove the following 2 lines its just there for debugging purposes.
-        //Intent mainActivity = new Intent(this, MainActivity.class);
-        //startActivity(mainActivity);
+        Intent mainActivity = new Intent(this, MainActivity.class);
+        startActivity(mainActivity);
         //end of test-code
 
         enterButton.setOnClickListener(v -> {

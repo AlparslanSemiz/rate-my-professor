@@ -7,9 +7,8 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.viewmodel.CreationExtras;
 
-import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.R;
 import com.example.myapplication_java.databinding.FragmentHomeScreenBinding;
 
 public class HomeFragment extends Fragment {
@@ -23,6 +22,20 @@ public class HomeFragment extends Fragment {
             Bundle savedInstanceState
     ) {
         binding = FragmentHomeScreenBinding.inflate(inflater, container, false);
+
+        binding.notifications.setOnClickListener(v ->
+                requireActivity().getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, new NotificationFragment())
+                        .addToBackStack(null)
+                        .commit()
+        );
         return binding.getRoot();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 }
