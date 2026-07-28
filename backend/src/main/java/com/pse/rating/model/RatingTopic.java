@@ -20,7 +20,7 @@ import lombok.Setter;
 @Table(
     name = "rating_topics",
     uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"rating_id", "name"})
+        @UniqueConstraint(columnNames = {"rating_id", "category"})
     }
 )
 @Getter
@@ -33,7 +33,7 @@ public class RatingTopic {
     private UUID id;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "category", nullable = false)
     private RatingCategory category;
 
     @Column(nullable = false)

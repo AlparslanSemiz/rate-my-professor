@@ -46,8 +46,6 @@ public enum RatingCategory {
 
 
 
-
-
     private final String displayName;
     private final double defaultWeight;
 

@@ -50,47 +50,48 @@ public class StudentService {
 
     public UserRatingResponse getUserRatings(Student student) {
 
-
         List<UserRatingDto> ratingDtos = new ArrayList<>();
 
         for (Rating rating : student.getRatings()) {
 
             String lectureName = rating.getLecture().getName();
 
-
-            String semester = rating.getLecture().getSemesterSeason().toString()
+            String semester = rating.getLecture().getSemesterSeason()
+                    + " "
                     + rating.getLecture().getSemesterYear();
 
-            double overallRating = 0;
+            double weightedSum = 0;
+            double totalWeight = 0;
 
             for (RatingTopic topic : rating.getTopics()) {
 
-                //TODO calculate overall
+                double weight = topic.getCategory().getDefaultWeight();
 
-
-
-
-
-                if (topic.getCategory().equals("overall")) {
-                    overallRating = topic.getValue();
-                    break;
-                }
+                weightedSum += topic.getValue() * weight;
+                totalWeight += weight;
             }
 
-            ratingDtos.add(new UserRatingDto(
-                    lectureName,
-                    semester,
-                    overallRating
-            ));
+            double overallRating = totalWeight == 0? 0: weightedSum / totalWeight;
+
+            overallRating = Math.round(overallRating * 100.0) / 100.0;
+
+            ratingDtos.add(
+                    new UserRatingDto(
+                            lectureName,
+                            semester,
+                            overallRating
+                    )
+            );
         }
 
         return new UserRatingResponse(
-                "Success",
+                "Success, found " + ratingDtos.size() + " ratings.",
                 true,
                 ratingDtos
         );
-
     }
+
+
 
     public BasicResponse requestLogout(Student student) {
 
@@ -166,7 +167,25 @@ public class StudentService {
 
 
 
+    private double calculateOverallRating(Rating rating) {
 
+        double weightedSum = 0;
+        double totalWeight = 0;
+
+        for (RatingTopic topic : rating.getTopics()) {
+
+            double weight = topic.getCategory().getDefaultWeight();
+
+            weightedSum += topic.getValue() * weight;
+            totalWeight += weight;
+        }
+
+        if (totalWeight == 0) {
+            return 0;
+        }
+
+        return weightedSum / totalWeight;
+    }
 
 
     //Repository Methods
@@ -181,7 +200,17 @@ public class StudentService {
     }
 
     public double getAverageRating(Student student) {
-        return studentRepository.getAverageOverallRating(student);
+        if (student.getRatings().isEmpty()) {
+        return 0;
+        }
+
+        double sum = 0;
+
+        for (Rating rating : student.getRatings()) {
+            sum += calculateOverallRating(rating);
+        }
+
+        return sum / student.getRatings().size();
     }
 
     public List<Student> getAllUsers() {

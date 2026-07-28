@@ -4,8 +4,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import com.pse.user.model.Student;
 
@@ -21,19 +19,6 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
      */
     Optional<Student> findByKitEmail(String kitEmail);
 
-
-    /**
-     * Returns the Average of all Ratings of the User (only average of "overall" field).
-     * @param student references the User
-     * @return average of overall fields
-     */
-    @Query("""
-        SELECT AVG(rt.value)
-        FROM RatingTopic rt
-        WHERE rt.rating.student = :student
-          AND rt.name = 'Overall'
-    """)
-    Double getAverageOverallRating(@Param("student") Student student);
 
 
 }
