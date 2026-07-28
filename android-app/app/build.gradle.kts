@@ -22,7 +22,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Skips the login screen and opens the app directly, so the rest of the app can be
+            // worked on while the backend is unavailable. Set this to false to test the real
+            // login flow. It is hardwired to false for release below, so it cannot ship.
+            buildConfigField("boolean", "SKIP_LOGIN", "true")
+        }
         release {
+            buildConfigField("boolean", "SKIP_LOGIN", "false")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -36,6 +43,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 

@@ -11,6 +11,7 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
@@ -80,9 +81,16 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
 
                 // A rejected login comes back without a body, so it has to be checked before
                 // reading the success flag out of it.
-                if (body == null || !body.success()) {
-                    Log.d(TAG, "failure");
-                    String message = body == null ? "Login failed. Please try again." : body.message();
+                if (!response.isSuccessful() || body == null || !body.success()) {
+                    Log.d(TAG, "failure: " + response.code());
+
+                    // Without a body the server did not judge the token at all, which is a
+                    // problem on its side rather than a wrong code the user could correct.
+                    String message = body == null || body.message() == null || body.message().isEmpty()
+                            ? getString(response.isSuccessful()
+                                    ? R.string.login_failed
+                                    : R.string.login_server_unreachable)
+                            : body.message();
                     Toast.makeText(EnterAuthTokenActivity.this, message, Toast.LENGTH_LONG).show();
                     return;
                 }
@@ -96,11 +104,11 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<ServerResponse> call, Throwable t) {
-                Log.e(TAG, "failed! " + t.getMessage());
+                Log.e(TAG, "login failed: " + t);
                 Toast.makeText(
                         EnterAuthTokenActivity.this,
-                        "Connection issue.",
-                        Toast.LENGTH_SHORT
+                        R.string.login_server_unreachable,
+                        Toast.LENGTH_LONG
                 ).show();
             }
         });

@@ -14,6 +14,12 @@
     <string name="delete">Delete</string>
     <string name="submit">Submit</string>
 
+    <string name="login_missing_mail">Please enter your KIT email address.</string>
+    <string name="login_token_sent">We sent a code to %1$s. Check your inbox.</string>
+    <string name="login_request_failed">Could not send the code. Please try again.</string>
+    <string name="login_failed">Login failed. Please try again.</string>
+    <string name="login_server_unreachable">Cannot reach the server. Check your connection and try again.</string>
+
     <string name="settings_dark_mode">Dark Mode</string>
     <string name="settings_bug_report">Bug Report</string>
     <string name="settings_delete_account">Delete Account</string>
