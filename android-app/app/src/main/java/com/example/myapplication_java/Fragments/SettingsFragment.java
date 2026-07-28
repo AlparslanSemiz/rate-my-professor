@@ -90,6 +90,7 @@ public class SettingsFragment extends Fragment {
         // The whole row is the target users aim at, not just the switch at its far end.
         binding.darkModeRow.setOnClickListener(v -> binding.darkModeSwitch.toggle());
         binding.bugReport.setOnClickListener(v -> showBugReportDialog());
+        binding.logoutAllDevicesButton.setOnClickListener(v -> confirmLogoutOnAllDevices());
         binding.deleteAccountButton.setOnClickListener(v -> confirmAccountDeletion());
     }
 
@@ -216,6 +217,75 @@ public class SettingsFragment extends Fragment {
         dialogBinding.bugReportInputLayout.setError(null);
         Toast.makeText(requireContext(), R.string.bug_report_submitted, Toast.LENGTH_SHORT).show();
         dialog.dismiss();
+    }
+
+    /**
+     * Shows a confirmation dialog before logging out on all devices.
+     */
+    private void confirmLogoutOnAllDevices() {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.logout_all_devices_title)
+                .setMessage(R.string.logout_all_devices_message)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.logout_all_devices_confirm, (dialog, which) -> logoutOnAllDevices())
+                .show();
+    }
+
+    /**
+     * Asks the backend to revoke every auth token of the account and returns to the login screen.
+     *
+     * <p>Only the server can log the other devices out, because their tokens live on those
+     * devices. That is why the local login data is kept until the server confirms the revocation:
+     * clearing it after a failed call would log this device out while the other devices stay
+     * logged in, and the user would believe the opposite.</p>
+     */
+    private void logoutOnAllDevices() {
+        LoginSession session = LoginSession.from(requireContext());
+
+        if (!session.isLoggedIn()) {
+            Toast.makeText(requireContext(), R.string.logout_all_devices_missing_login, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // The backend identifies the account through the auth token in the header.
+        APIService apiService = createApiService();
+        Call<BasicResponse> call = apiService.logoutAllDevices(session.bearerToken());
+
+        call.enqueue(new Callback<>() {
+            /**
+             * Handles the logout response from the backend.
+             */
+            @Override
+            public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
+                // The answer can arrive after the user left the settings screen, in which case
+                // there is no context left to show a toast with.
+                if (!isAdded()) {
+                    return;
+                }
+
+                BasicResponse responseBody = response.body();
+                if (!response.isSuccessful() || responseBody == null || !responseBody.success()) {
+                    Toast.makeText(requireContext(), R.string.logout_all_devices_failed, Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                session.clear();
+                Toast.makeText(requireContext(), R.string.logout_all_devices_success, Toast.LENGTH_LONG).show();
+                openLoginScreen();
+            }
+
+            /**
+             * Handles network failures while logging out on all devices.
+             */
+            @Override
+            public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {
+                if (!isAdded()) {
+                    return;
+                }
+
+                Toast.makeText(requireContext(), R.string.logout_all_devices_failed, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     /**

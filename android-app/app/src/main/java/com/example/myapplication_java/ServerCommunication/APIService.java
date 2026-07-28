@@ -63,6 +63,22 @@ public interface APIService {
     );
 
     /**
+     * Revokes every auth token of the account, so all devices it is logged in on are logged
+     * out, not only the one sending this request.
+     *
+     * <p>This is the route behind the "log out on all devices" action: a token that leaked, or
+     * a device the user no longer has, cannot be taken away from the device itself, so the
+     * server has to invalidate the tokens centrally.</p>
+     *
+     * @param token the auth token for authorization; it is revoked along with all others
+     * @return the response telling whether the tokens were revoked
+     */
+    @POST("/auth/logout-all")
+    Call<BasicResponse> logoutAllDevices(
+            @Header("Authorization") String token
+    );
+
+    /**
      * Deletes the account for the currently verified email/token pair.
      *
      * @param token the auth token for authorization

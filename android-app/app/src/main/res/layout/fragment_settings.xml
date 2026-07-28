@@ -91,6 +91,29 @@
         app:layout_constraintTop_toBottomOf="@+id/dark_mode_row" />
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/logout_all_devices_button"
+        style="@style/text_style"
+        android:layout_width="0dp"
+        android:layout_height="62dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="24dp"
+        android:backgroundTint="@color/surface_container"
+        android:gravity="center_vertical|start"
+        android:insetBottom="0dp"
+        android:insetTop="0dp"
+        android:letterSpacing="0"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:text="@string/settings_logout_all_devices"
+        android:textColor="@color/text_primary"
+        android:textSize="21sp"
+        app:cornerRadius="31dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/bug_report" />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/delete_account_button"
         style="@style/text_style"
         android:layout_width="0dp"
