@@ -31,30 +31,32 @@ enum SemesterSeason {
   @@map("semester_season")
 }
 
-/// Current Spring Boot login table used by TokenService.
 model OneTimePassword {
-  id      Int    @id @default(autoincrement())
-  email   String
-  value   String @db.Text
-  tokenId String? @unique @map("token_id") @db.Uuid
-  token   Token?  @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  id          Int      @id @default(autoincrement())
+  email       String
+  hash        String?  @db.Text
+  legacyValue String?  @map("value") @db.Text
+  used        Boolean  @default(false)
+  expiresAt   DateTime @map("expires_at") @db.Timestamp(6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
   @@index([email])
-  @@index([value])
+  @@index([email, used, expiresAt])
   @@map("one_time_passwords")
 }
 
 model Token {
-  id        String   @id @default(uuid()) @db.Uuid
-  email     String
-  value     String   @db.Text
-  expiresAt DateTime @map("expires_at") @db.Timestamp(6)
-  revoked   Boolean  @default(false)
-
-  oneTimePassword OneTimePassword?
+  id          String   @id @default(uuid()) @db.Uuid
+  email       String
+  hash        String?  @db.Text
+  legacyValue String?  @map("value") @db.Text
+  expiresAt   DateTime @map("expires_at") @db.Timestamp(6)
+  revoked     Boolean  @default(false)
+  studentId   String?  @map("student_id") @db.Uuid
+  student     Student? @relation(fields: [studentId], references: [id])
 
   @@index([email])
-  @@index([value])
+  @@index([hash])
   @@index([expiresAt])
   @@index([revoked])
   @@map("tokens")
@@ -118,6 +120,7 @@ model Student {
   answers        Answer[]
   commentReports CommentReport[]
   answerReports  AnswerReport[]
+  tokens         Token[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -242,4 +245,39 @@ model AnswerReport {
   @@index([status, createdAt])
   @@index([answerId])
   @@map("answer_reports")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  action      String
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  actorType   String   @map("actor_type")
+  actorId     String   @map("actor_id") @db.Uuid
+  actorName   String   @map("actor_name")
+  actorEmail  String   @map("actor_email")
+  actorRole   String   @map("actor_role")
+  targetType  String?  @map("target_type")
+  targetId    String?  @map("target_id") @db.Uuid
+  targetLabel String?  @map("target_label") @db.Text
+  changes     Json     @default("{}")
+  metadata    Json     @default("{}")
+
+  @@index([createdAt(sort: Desc), id(sort: Desc)])
+  @@index([actorId])
+  @@index([action])
+  @@index([targetType])
+  @@map("audit_logs")
+}
+
+model AuthRateLimitBucket {
+  id              String   @id @default(uuid()) @db.Uuid
+  operation       String
+  subjectHash     String   @map("subject_hash")
+  windowStartedAt DateTime @map("window_started_at") @db.Timestamp(6)
+  attempts        Int
+  version         BigInt   @default(0)
+
+  @@unique([operation, subjectHash])
+  @@index([windowStartedAt])
+  @@map("auth_rate_limit_buckets")
 }

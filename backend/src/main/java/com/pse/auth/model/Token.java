@@ -34,8 +34,16 @@ public class Token {
     @JoinColumn(name = "student_id")
     private Student student;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT")
     private String hash;
+
+    /**
+     * Temporary compatibility column for sessions created by deployments that
+     * stored the raw token in {@code tokens.value}. New sessions never populate
+     * this field; a successful legacy authentication upgrades it to {@link #hash}.
+     */
+    @Column(name = "value", columnDefinition = "TEXT")
+    private String legacyValue;
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;

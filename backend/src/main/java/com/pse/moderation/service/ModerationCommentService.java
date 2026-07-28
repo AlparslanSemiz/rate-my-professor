@@ -1,106 +1,130 @@
 package com.pse.moderation.service;
 
-
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.service.AuditWriter;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.moderation.dto.response.ReportedCommentResponse;
 import com.pse.moderation.dto.response.ReportedCommentsResponse;
 import com.pse.moderation.dto.response.UserReferenceResponse;
+import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.WarningRepository;
+import com.pse.security.AuthenticatedUser;
 import com.pse.shared.enums.ReportStatus;
 import com.pse.shared.enums.UserRole;
+import com.pse.shared.error.ApiException;
+import com.pse.shared.util.UtcDates;
 import com.pse.social.model.CommentReport;
-import com.pse.social.service.SocialService;
+import com.pse.social.repository.CommentReportRepository;
 import com.pse.user.model.Student;
-import com.pse.user.service.StudentService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class ModerationCommentService {
 
-
-    private final StudentService studentService;
-    private final SocialService socialService;
-    private final ModerationUserService moderationUserService;
-
+    private final CommentReportRepository reportRepository;
     private final WarningRepository warningRepository;
+    private final AdminRepository adminRepository;
+    private final AuditWriter auditWriter;
+    private final Clock clock;
 
-
-    public ModerationCommentService(StudentService studentService, SocialService socialService, ModerationUserService moderationUserService, WarningRepository warningRepository) {
-        this.studentService = studentService;
-        this.socialService = socialService;
-        this.moderationUserService = moderationUserService;
+    public ModerationCommentService(
+            CommentReportRepository reportRepository,
+            WarningRepository warningRepository,
+            AdminRepository adminRepository,
+            AuditWriter auditWriter,
+            Clock clock
+    ) {
+        this.reportRepository = reportRepository;
         this.warningRepository = warningRepository;
+        this.adminRepository = adminRepository;
+        this.auditWriter = auditWriter;
+        this.clock = clock;
     }
 
-
-    //TODO: undefined flied: "postContext"
-    public ReportedCommentsResponse getReportedComments(String authHeader) {
-
-        if(!moderationUserService.validateAdminToken(authHeader)) {
-            return null;
-        }
-
-        List<CommentReport> reports = socialService.getReportedComments();
-        List<ReportedCommentResponse> responses = new ArrayList<>();
-
-        for (CommentReport report : reports) {
-
-            responses.add(new ReportedCommentResponse(
-                    report.getId(),
-                    report.getComment().getContent(),
-                    "Idk what this should be",
-                    report.getExplanation(),
-                    new UserReferenceResponse(
-                            report.getComment().getStudent().getId(),
-                            report.getComment().getStudent().getUsername(),
-                            UserRole.STUDENT,
-                            getWarningsCount(report.getComment().getStudent().getId()),
-                            report.getComment().getStudent().getStatus()
-                            ),
-                    new UserReferenceResponse(
-                            report.getReporter().getId(),
-                            report.getReporter().getUsername(),
-                            UserRole.STUDENT,
-                            getWarningsCount(report.getReporter().getId()),
-                            report.getReporter().getStatus()
-                    ),
-
-                    report.getReason(),
-                    report.getStatus(),
-                    report.getCreatedAt()
-            ));
-
-        }
-
-        return new ReportedCommentsResponse("Successfully found all reported Comments", true, responses);
+    @Transactional(readOnly = true)
+    public ReportedCommentsResponse getReportedComments() {
+        List<ReportedCommentResponse> comments = reportRepository
+                .findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+        return new ReportedCommentsResponse(
+                "Successfully found all reported comments",
+                true,
+                comments
+        );
     }
 
-    public BasicResponse updateReportStatus(String authHeader, UUID reportId, ReportStatus status) {
-
-
-        if(!moderationUserService.validateAdminToken(authHeader)) {
-            return new BasicResponse("Couldnt authenticate Admin", false);
+    @Transactional
+    public BasicResponse updateReportStatus(
+            AuthenticatedUser principal,
+            UUID reportId,
+            ReportStatus status
+    ) {
+        if (status == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid report status");
+        }
+        CommentReport report = reportRepository.findByIdForUpdate(reportId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Report not found"));
+        if (report.getStatus() == status) {
+            return new BasicResponse("Updated", true);
         }
 
-        if(socialService.updateReportStatus(reportId, status)){
-            return new BasicResponse("Successfully updated Status", true);
-        }
-        return new BasicResponse("Couldnt updated Status", false);
+        ReportStatus before = report.getStatus();
+        report.setStatus(status);
+        report.setReviewedBy(principal.admin());
+        report.setReviewedAt(LocalDateTime.now(clock));
+        reportRepository.save(report);
+
+        auditWriter.write(
+                principal.admin(),
+                AuditAction.COMMENT_REPORT_STATUS_CHANGED,
+                AuditTargetType.COMMENT_REPORT,
+                report.getId(),
+                "Report about " + report.getComment().getStudent().getUsername()
+                        + " in " + postContext(report),
+                AuditWriter.change("status", before.name(), status.name()),
+                Map.of()
+        );
+        return new BasicResponse("Updated", true);
     }
 
-
-    private int getWarningsCount(UUID studentId) {
-        Student student = studentService.getUser(studentId);
-        if(student == null){
-            return 0;
-        }
-        return warningRepository.findByStudent(student).size();
+    private ReportedCommentResponse toResponse(CommentReport report) {
+        return new ReportedCommentResponse(
+                report.getId(),
+                report.getComment().getContent(),
+                postContext(report),
+                report.getExplanation() == null ? "" : report.getExplanation(),
+                toUserReference(report.getComment().getStudent()),
+                toUserReference(report.getReporter()),
+                report.getReason(),
+                report.getStatus(),
+                UtcDates.format(report.getCreatedAt())
+        );
     }
 
+    private UserReferenceResponse toUserReference(Student student) {
+        return new UserReferenceResponse(
+                student.getId(),
+                student.getUsername(),
+                adminRepository.existsByStudent(student) ? UserRole.ADMIN : UserRole.STUDENT,
+                Math.toIntExact(warningRepository.countByStudent(student)),
+                student.getStatus()
+        );
+    }
 
+    private String postContext(CommentReport report) {
+        String code = report.getComment().getLecture().getCode();
+        String name = report.getComment().getLecture().getName();
+        return code == null || code.isBlank() ? name : code + " — " + name;
+    }
 }
