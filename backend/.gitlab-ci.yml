@@ -1,5 +1,7 @@
 workflow:
   rules:
+    # Scheduled pipelines only run health:check; every other job opts out of them below.
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
@@ -23,12 +25,16 @@ default:
 server:test:
   stage: test
   image: maven:3.9-eclipse-temurin-21
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule"'
   script:
     - ./mvnw test
 
 server:build:
   stage: build
   image: maven:3.9-eclipse-temurin-21
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule"'
   script:
     - ./mvnw package -DskipTests
   artifacts:
@@ -54,7 +60,7 @@ server:package:
   script:
     - /kaniko/executor --context "$CI_PROJECT_DIR" --dockerfile "$CI_PROJECT_DIR/src/Dockerfile" --destination "$IMAGE_TAG" --skip-push-permission-check
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"'
 
 server:deploy:staging:
   stage: deploy
@@ -101,7 +107,7 @@ server:deploy:staging:
       -e GEOAPIFY_API_KEY=\"${GEOAPIFY_API_KEY}\"
       $IMAGE_TAG"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"'
       when: manual
 
 server:deploy:staging:jar:
@@ -161,5 +167,31 @@ server:deploy:staging:jar:
       docker inspect -f '{{.State.Running}}' $DEPLOY_CONTAINER_NAME | grep true;
       docker logs --tail 100 $DEPLOY_CONTAINER_NAME"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"'
       when: manual
+
+# Runs only from a pipeline schedule. A failing job mails the schedule owner, which is the
+# whole point: the server was down for twelve days in July 2026 without anyone noticing.
+# It has to run here rather than in a cron on the server itself, because a cron dies together
+# with the machine it is supposed to watch.
+health:check:
+  stage: test
+  image: alpine:3.20
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  cache: []
+  variables:
+    HEALTH_URL: "https://server.example.org/health"
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - |
+      STATUS=$(curl -s -o response.txt -w '%{http_code}' --max-time 20 "$HEALTH_URL" || echo 000)
+      echo "GET $HEALTH_URL -> HTTP $STATUS"
+      cat response.txt 2>/dev/null || true
+      echo
+      if [ "$STATUS" != "200" ]; then
+        echo "API is not healthy (expected 200, got $STATUS)."
+        exit 1
+      fi
+      echo "API is healthy."
