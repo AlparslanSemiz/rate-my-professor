@@ -29,3 +29,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local GitLab Wiki draft (publish when the project is final)
+docs/gitlab-wiki/
+docs/gitlab-wiki-publishing.md
