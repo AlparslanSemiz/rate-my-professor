@@ -72,6 +72,21 @@ Admin authentication; no body. Revokes the current token and writes
 {"message":"Logged out successfully","success":true}
 ```
 
+### `POST /auth/logout-all`
+
+Any authenticated user; no body. Revokes every token of the calling account — including
+the token used to make the request — so no session of that account passes authentication
+afterwards. The account itself is untouched: the user can sign in again with the normal
+email + OTP flow. For an admin caller an `ADMIN_LOGOUT` entry is written with
+`metadata.scope = "ALL_DEVICES"`.
+
+```json
+{"message":"Logged out from all devices (3 sessions)","success":true}
+```
+
+A missing or invalid `Authorization` header returns
+`401 {"message":"Not logged in","success":false}`.
+
 ### `GET /auth/me`
 
 Any authenticated user.

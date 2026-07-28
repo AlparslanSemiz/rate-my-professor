@@ -544,6 +544,69 @@ class AdminApiIntegrationTests {
     }
 
     @Test
+    void logoutAllRevokesEverySessionOfTheAccount() throws Exception {
+        Session first = createSession("multi-device@student.kit.edu", false);
+        String secondToken = issueToken(first.student());
+        String validateBody = """
+                {"email":"multi-device@student.kit.edu"}
+                """;
+
+        mockMvc.perform(post("/auth/logout-all")
+                        .header("Authorization", bearer(first.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(post("/auth/validate")
+                        .header("Authorization", bearer(first.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validateBody))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/auth/validate")
+                        .header("Authorization", bearer(secondToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validateBody))
+                .andExpect(status().isUnauthorized());
+
+        org.junit.jupiter.api.Assertions.assertEquals(2, tokenRepository.findAll().size());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                tokenRepository.findAll().stream().allMatch(Token::isRevoked)
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(
+                UserStatus.ACTIVE,
+                studentRepository.findById(first.student().getId()).orElseThrow().getStatus()
+        );
+
+        requestCode("multi-device@student.kit.edu");
+        String freshToken = com.jayway.jsonpath.JsonPath.read(
+                mockMvc.perform(post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {"email":"multi-device@student.kit.edu","loginToken":"%s"}
+                                        """.formatted(
+                                        codeDelivery.codeFor("multi-device@student.kit.edu"))))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(),
+                "$.authToken"
+        );
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(freshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.kitEmail").value("multi-device@student.kit.edu"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void logoutAllRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/auth/logout-all"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Not logged in"))
+                .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(post("/auth/logout-all").header("Authorization", bearer("bogus-token")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Not logged in"));
+    }
+
+    @Test
     @WithAnonymousUser
     void healthChecksDatabaseReadiness() throws Exception {
         mockMvc.perform(get("/health"))
@@ -576,6 +639,17 @@ class AdminApiIntegrationTests {
         token.setExpiresAt(LocalDateTime.now().plusHours(12));
         token = tokenRepository.saveAndFlush(token);
         return new Session(student, admin, token, raw);
+    }
+
+    private String issueToken(Student student) {
+        String raw = TokenGenerator.generateToken();
+        Token token = new Token();
+        token.setEmail(student.getKitEmail());
+        token.setStudent(student);
+        token.setHash(HashGenerator.hashToken(raw));
+        token.setExpiresAt(LocalDateTime.now().plusHours(12));
+        tokenRepository.saveAndFlush(token);
+        return raw;
     }
 
     private Student createStudent(String email) {

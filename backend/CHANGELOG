@@ -108,4 +108,18 @@ public record ProfessorShortResponse(
 
 
 
+28.07
+
+Added "log out from all devices" endpoint
+
+++ POST /auth/logout-all
+   - requires "Authorization: Bearer <authToken>" header (missing/invalid => 401)
+   - no request body
+   - revokes every auth token of the calling account, including the caller's own device
+   - the account is not deleted; email + OTP login still works afterwards
+   - returns BasicResponse: {"message": string, "success": boolean}
+
+
+
+
 

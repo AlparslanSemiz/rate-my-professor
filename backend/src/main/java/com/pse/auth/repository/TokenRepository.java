@@ -28,4 +28,6 @@ public interface TokenRepository extends JpaRepository<Token, UUID> {
     List<Token> findByEmail(String email);
 
     List<Token> findByStudent(Student student);
+
+    List<Token> findByStudentOrEmail(Student student, String email);
 }

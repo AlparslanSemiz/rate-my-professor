@@ -49,6 +49,11 @@ public class AuthController {
         return authService.logout(principal);
     }
 
+    @PostMapping("/logout-all")
+    public BasicResponse logoutAll(@AuthenticationPrincipal AuthenticatedUser principal) {
+        return authService.logoutAll(principal);
+    }
+
     @GetMapping("/me")
     public AuthMeResponse me(@AuthenticationPrincipal AuthenticatedUser principal) {
         return authService.me(principal);

@@ -195,6 +195,33 @@ public class AuthService {
         return new BasicResponse("Logged out successfully", true);
     }
 
+    @Transactional
+    public BasicResponse logoutAll(AuthenticatedUser principal) {
+        Student student = principal.student();
+        List<Token> tokens = tokenRepository.findByStudentOrEmail(student, student.getKitEmail());
+        int revoked = 0;
+        for (Token token : tokens) {
+            if (!token.isRevoked()) {
+                token.setRevoked(true);
+                revoked++;
+            }
+        }
+        tokenRepository.saveAll(tokens);
+
+        if (principal.isAdmin()) {
+            auditWriter.write(
+                    principal.admin(),
+                    AuditAction.ADMIN_LOGOUT,
+                    AuditTargetType.ADMIN_SESSION,
+                    principal.token().getId(),
+                    student.getUsername() + " all sessions",
+                    AuditWriter.change("authenticated", true, false),
+                    Map.of("scope", "ALL_DEVICES", "revokedSessions", revoked)
+            );
+        }
+        return new BasicResponse("Logged out from all devices (" + revoked + " sessions)", true);
+    }
+
     public AuthMeResponse me(AuthenticatedUser principal) {
         Student student = principal.student();
         return new AuthMeResponse(
