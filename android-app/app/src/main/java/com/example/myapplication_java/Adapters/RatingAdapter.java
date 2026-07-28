@@ -1,7 +1,6 @@
 package com.example.myapplication_java.Adapters;
 
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RatingBar;
 import android.widget.TextView;
@@ -9,9 +8,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
-import com.example.myapplication_java.databinding.ItemLectureSemesterWithRatingBinding;
 import com.example.myapplication_java.databinding.ItemRatingBinding;
 import com.example.myapplication_java.logic.RatingColorCalculator;
 
@@ -20,9 +17,18 @@ import java.util.Locale;
 
 /**
  * This adapter is used to display a rating category of a lectures rating.
+ *
+ * <p>Each row shows two bars: the average everybody gave, which is read only, and the bar the
+ * user can drag to give their own rating.</p>
  */
 public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingViewHolder> {
-    private List<TopicAverageResponse> ratings;
+
+    /**
+     * Format of the numbers next to the bars, always with one decimal.
+     */
+    private static final String RATING_FORMAT = "%.1f";
+
+    private final List<TopicAverageResponse> ratings;
 
     public RatingAdapter(List<TopicAverageResponse> ratings) {
         this.ratings = ratings;
@@ -41,12 +47,9 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
         TopicAverageResponse rating = ratings.get(position);
 
         holder.name.setText(rating.name());
-        holder.averageRating.setText(String.format(Locale.ROOT, "%.1f", rating.value()));
+        holder.averageRating.setText(String.format(Locale.ROOT, RATING_FORMAT, rating.value()));
         holder.averageRating.setTextColor(RatingColorCalculator.ratingColourCalculator(rating.value()));
         holder.averageBar.setRating((float) rating.value());
-
-        System.out.println(rating.name() + " " + rating.value());
-
     }
 
     @Override
@@ -54,15 +57,17 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
         return ratings.size();
     }
 
+    /**
+     * Holds the views of a single rating topic.
+     */
     public static class RatingViewHolder extends RecyclerView.ViewHolder {
 
-        TextView name;
-        TextView averageRating;
+        final TextView name;
+        final TextView averageRating;
+        final RatingBar averageBar;
 
-        RatingBar averageBar;
-
-        RatingBar userRatingBar;
-        TextView userRatingNum;
+        final RatingBar userRatingBar;
+        final TextView userRatingNum;
 
         public RatingViewHolder(@NonNull ItemRatingBinding binding) {
             super(binding.getRoot());
@@ -76,7 +81,7 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
             // Changing the number next to the Rating Bar in real time
             userRatingBar.setOnRatingBarChangeListener(
                     (bar, rating, fromUser) -> {
-                        userRatingNum.setText(String.valueOf((double) rating));
+                        userRatingNum.setText(String.format(Locale.ROOT, RATING_FORMAT, rating));
                         userRatingNum.setTextColor(RatingColorCalculator.ratingColourCalculator(rating));
                     }
             );

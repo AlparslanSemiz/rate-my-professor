@@ -2,6 +2,7 @@ package com.example.myapplication_java.Adapters;
 
 import android.graphics.Typeface;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -16,12 +17,19 @@ import java.util.List;
 
 /**
  * Binds comment-reply notifications and forwards item clicks to the hosting fragment.
+ *
+ * <p>Unread entries are marked twice, with a dot and with a bold title, so the state is also
+ * recognisable without relying on colour alone.</p>
  */
 public class NotificationAdapter
         extends RecyclerView.Adapter<NotificationAdapter.NotificationViewHolder> {
 
     private final List<Notification> notifications;
     private final OnNotificationClickListener listener;
+
+    /**
+     * Shared by all rows: creating a DateFormat is expensive and it is only read while binding.
+     */
     private final DateFormat dateFormat = DateFormat.getDateTimeInstance(
             DateFormat.SHORT,
             DateFormat.SHORT
@@ -60,6 +68,9 @@ public class NotificationAdapter
         return notifications.size();
     }
 
+    /**
+     * Holds the views of a single notification row.
+     */
     public static class NotificationViewHolder extends RecyclerView.ViewHolder {
 
         private final ItemNotificationBinding binding;
@@ -69,6 +80,13 @@ public class NotificationAdapter
             this.binding = binding;
         }
 
+        /**
+         * Fills the row with one notification and wires up its click.
+         *
+         * @param notification the notification to display
+         * @param dateFormat   the format the creation date is shown in
+         * @param listener     receives the click on this row
+         */
         private void bind(
                 Notification notification,
                 DateFormat dateFormat,
@@ -85,8 +103,10 @@ public class NotificationAdapter
             binding.notificationDate.setText(
                     notification.createdAt == null ? "" : dateFormat.format(notification.createdAt)
             );
+
+            // INVISIBLE rather than GONE, so read and unread rows keep the same layout.
             binding.unreadIndicator.setVisibility(
-                    notification.isRead ? android.view.View.INVISIBLE : android.view.View.VISIBLE
+                    notification.isRead ? View.INVISIBLE : View.VISIBLE
             );
             binding.notificationTitle.setTypeface(
                     null,
@@ -98,7 +118,14 @@ public class NotificationAdapter
         }
     }
 
+    /**
+     * Reports which notification the user clicked.
+     */
     public interface OnNotificationClickListener {
+
+        /**
+         * @param notification the clicked notification
+         */
         void onNotificationClick(Notification notification);
     }
 }

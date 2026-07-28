@@ -1,7 +1,7 @@
 package com.example.myapplication_java.Adapters;
 
+import android.annotation.SuppressLint;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
@@ -9,18 +9,21 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.DomainModel.Professor;
-import com.example.myapplication_java.R;
-import com.example.myapplication_java.databinding.ItemLectureNameBinding;
 import com.example.myapplication_java.databinding.ItemProfessorNameBinding;
 
 import java.util.List;
 
 /**
  * The adapter for professors in {@link com.example.myapplication_java.Fragments.SelectionFragment}
+ *
+ * <p>Clicks are reported through {@link OnProfessorClickListener} instead of being handled here,
+ * so the adapter stays independent of what happens after a professor was picked.</p>
  */
 public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.ProfessorViewHolder> {
+
+    private final OnProfessorClickListener listener;
+
     private List<Professor> professors;
-    private OnProfessorClickListener listener;
 
     public ProfessorAdapter(List<Professor> professors, OnProfessorClickListener listener) {
         this.professors = professors;
@@ -47,9 +50,13 @@ public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.Prof
         return professors.size();
     }
 
+    /**
+     * Holds the views of a single professor row.
+     */
     public static class ProfessorViewHolder extends RecyclerView.ViewHolder {
 
-        TextView textView;
+        final TextView textView;
+
         public ProfessorViewHolder(ItemProfessorNameBinding binding) {
             super(binding.getRoot());
             textView = binding.profName;
@@ -58,14 +65,26 @@ public class ProfessorAdapter extends RecyclerView.Adapter<ProfessorAdapter.Prof
 
     /**
      * This method is used to update list of profs on runtime
-     * @param professors
+     *
+     * <p>Every search replaces the whole result list, so there is nothing to animate between
+     * the old and the new content and the list is simply redrawn.</p>
+     *
+     * @param professors the professors to display from now on
      */
+    @SuppressLint("NotifyDataSetChanged")
     public void setData(List<Professor> professors) {
         this.professors = professors;
         notifyDataSetChanged();
     }
 
+    /**
+     * Reports which professor the user clicked.
+     */
     public interface OnProfessorClickListener {
+
+        /**
+         * @param professor the clicked professor
+         */
         void onProfessorClick(Professor professor);
     }
 }
