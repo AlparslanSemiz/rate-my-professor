@@ -1,29 +1,23 @@
 package com.example.myapplication_java.Fragments;
 
+import android.content.Context;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-import androidx.lifecycle.viewmodel.CreationExtras;
-import androidx.viewpager2.widget.ViewPager2;
-import android.text.Editable;
-import android.text.TextWatcher;
-
-
-import android.content.Context;
-import android.view.inputmethod.InputMethodManager;
-
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-
-
+import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.Adapters.SearchPagerAdapter;
@@ -45,17 +39,25 @@ import com.example.myapplication_java.logic.SearchViewModel;
  */
 public class SearchFragment extends Fragment {
 
+    private static final String TAG = "SearchFragment";
+
+    /**
+     * Page index of the professor tab, matching the order of
+     * {@link com.example.myapplication_java.DomainModel.SelectionType}.
+     */
+    private static final int PROFESSOR_TAB = 0;
+
+    /**
+     * Page index of the lecture tab.
+     */
+    private static final int LECTURE_TAB = 1;
+
     private boolean searchModeOpen = false;
     private SearchViewModel searchViewModel;
 
     private FragmentSearchBinding binding;
 
     private ControlFlowInterface flowInterface;
-    @NonNull
-    @Override
-    public CreationExtras getDefaultViewModelCreationExtras() {
-        return super.getDefaultViewModelCreationExtras();
-    }
 
     @Nullable
     @Override
@@ -65,44 +67,64 @@ public class SearchFragment extends Fragment {
 
         binding = FragmentSearchBinding.inflate(inflater, container, false);
 
-        SearchPagerAdapter adapter = new SearchPagerAdapter(this, () -> {
-            if (searchModeOpen) {
-                closeSearchMode();
-            }
-        });
+        // Touching a result list means the user is done typing, so the search bar closes.
+        SearchPagerAdapter adapter = new SearchPagerAdapter(this, this::closeSearchMode);
 
         binding.searchViewPager.setAdapter(adapter);
 
+        // Owned by this fragment, observed by both tabs, which is how they stay in sync.
         searchViewModel = new ViewModelProvider(this).get(SearchViewModel.class);
 
         setupSearchBarKeyboardMovement();
         setupSearchModeButtons();
         setupCloseSearchOnOutsideTouch();
+        setupTabButtons();
+        setupSearchInput();
 
+        return binding.getRoot();
+    }
+
+    /**
+     * Connects the two tab buttons to their page and keeps them in sync when the user swipes.
+     */
+    private void setupTabButtons() {
         binding.profsButton.setOnClickListener(v -> {
-            if (searchModeOpen) {
-                closeSearchMode();
-            }
+            closeSearchMode();
 
-            Log.println(Log.DEBUG, "SearchFragment","PROF BOTTOM GOT CLICKED");
-            binding.searchViewPager.setCurrentItem(0, true);
+            Log.d(TAG, "PROF BOTTOM GOT CLICKED");
+            binding.searchViewPager.setCurrentItem(PROFESSOR_TAB, true);
         });
 
         binding.lecturesButton.setOnClickListener(v -> {
-            if (searchModeOpen) {
-                closeSearchMode();
-            }
+            closeSearchMode();
 
-            Log.println(Log.DEBUG, "SearchFragment","LECTURE BOTTOM GOT CLICKED");
-            binding.searchViewPager.setCurrentItem(1, true);
+            Log.d(TAG, "LECTURE BOTTOM GOT CLICKED");
+            binding.searchViewPager.setCurrentItem(LECTURE_TAB, true);
         });
 
+        binding.searchViewPager.registerOnPageChangeCallback(
+                new ViewPager2.OnPageChangeCallback() {
+                    @Override
+                    public void onPageSelected(int position) {
+                        super.onPageSelected(position);
 
-        binding.clearSearchButton.setOnClickListener(v -> {
-            binding.searchInput.setText("");
-            searchViewModel.clearQuery();
-        });
+                        if (position == PROFESSOR_TAB) {
+                            Log.d(TAG, "SWIPE TO PROF TAB");
+                            selectProfessorTab();
+                        } else {
+                            Log.d(TAG, "SWIPE TO LECTURE TAB");
+                            selectLectureTab();
+                        }
+                    }
+                }
+        );
+    }
 
+    /**
+     * Publishes every keystroke to the {@link SearchViewModel}, which is what makes the result
+     * lists filter while typing.
+     */
+    private void setupSearchInput() {
         binding.searchInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -115,26 +137,6 @@ public class SearchFragment extends Fragment {
             @Override
             public void afterTextChanged(Editable s) {}
         });
-
-
-        binding.searchViewPager.registerOnPageChangeCallback(
-                new ViewPager2.OnPageChangeCallback() {
-                    @Override
-                    public void onPageSelected(int position) {
-                        super.onPageSelected(position);
-
-                        if (position == 0) {
-                            System.out.println("SWIPE TO PROF TAB");
-                            selectProfessorTab();
-                        } else {
-                            System.out.println("SWIPE TO LECTURE TAB");
-                            selectLectureTab();
-                        }
-                    }
-                }
-        );
-
-        return binding.getRoot();
     }
 
     private void selectProfessorTab() {
@@ -162,6 +164,10 @@ public class SearchFragment extends Fragment {
         binding = null;
     }
 
+    /**
+     * Keeps the search bar directly above the soft keyboard by shifting it up by the height
+     * the keyboard covers.
+     */
     private void setupSearchBarKeyboardMovement() {
         ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
             Insets imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime());
@@ -177,16 +183,26 @@ public class SearchFragment extends Fragment {
         });
     }
 
+    /**
+     * Connects the button that opens the search bar and the one that closes it again.
+     */
     private void setupSearchModeButtons() {
-        binding.searchButton.setOnClickListener(v -> {
-            openSearchMode();
-        });
+        binding.searchButton.setOnClickListener(v -> openSearchMode());
 
+        // Clearing the text and closing the bar both belong to this one button. They used to
+        // be registered as two separate listeners, so the later one silently replaced the
+        // earlier one and only half of the work happened.
         binding.clearSearchButton.setOnClickListener(v -> {
+            binding.searchInput.setText("");
+            searchViewModel.clearQuery();
             closeSearchMode();
         });
     }
 
+    /**
+     * Shows the search bar and gives it the keyboard. The bottom navigation is hidden while
+     * searching, so the bar can sit right above the keyboard.
+     */
     private void openSearchMode() {
         searchModeOpen = true;
 
@@ -202,11 +218,17 @@ public class SearchFragment extends Fragment {
         showKeyboard();
     }
 
+    /**
+     * Hides the search bar and brings the bottom navigation back.
+     *
+     * <p>Callers do not have to check whether the search bar is open, this returns right away
+     * when there is nothing to close.</p>
+     */
     private void closeSearchMode() {
         if (!searchModeOpen) {
             return;
         }
-        Log.println(Log.DEBUG, "SearchFragment", "closeSearchMode");
+        Log.d(TAG, "closeSearchMode");
         searchModeOpen = false;
 
         //binding.searchInput.setText("");
@@ -224,11 +246,15 @@ public class SearchFragment extends Fragment {
         }
     }
 
+    /**
+     * Opens the keyboard for the search input.
+     *
+     * <p>Posted rather than called directly, because the input only accepts focus once it is
+     * actually laid out.</p>
+     */
     private void showKeyboard() {
         binding.searchInput.post(() -> {
-            InputMethodManager imm =
-                    (InputMethodManager) requireContext()
-                            .getSystemService(Context.INPUT_METHOD_SERVICE);
+            InputMethodManager imm = inputMethodManager();
 
             if (imm != null) {
                 imm.showSoftInput(binding.searchInput, InputMethodManager.SHOW_IMPLICIT);
@@ -236,31 +262,32 @@ public class SearchFragment extends Fragment {
         });
     }
 
+    /**
+     * Closes the keyboard again.
+     */
     private void hideKeyboard() {
-        InputMethodManager imm =
-                (InputMethodManager) requireContext()
-                        .getSystemService(Context.INPUT_METHOD_SERVICE);
+        InputMethodManager imm = inputMethodManager();
 
         if (imm != null) {
             imm.hideSoftInputFromWindow(binding.searchInput.getWindowToken(), 0);
         }
     }
 
+    /**
+     * @return the system service controlling the soft keyboard, or null when it is unavailable
+     */
+    private InputMethodManager inputMethodManager() {
+        return (InputMethodManager) requireContext()
+                .getSystemService(Context.INPUT_METHOD_SERVICE);
+    }
+
     // If you click anywhere on the screen the search gets canceled.
     private void setupCloseSearchOnOutsideTouch() {
 
-        Log.println(Log.DEBUG, "SearchFragment", "setupCloseSearchOnOutsideTouch()");
-        binding.searchRoot.setOnClickListener(v -> {
-            if (searchModeOpen) {
-                closeSearchMode();
-            }
-        });
+        Log.d(TAG, "setupCloseSearchOnOutsideTouch()");
+        binding.searchRoot.setOnClickListener(v -> closeSearchMode());
 
-        binding.searchViewPager.setOnClickListener(v -> {
-            if (searchModeOpen) {
-                closeSearchMode();
-            }
-        });
+        binding.searchViewPager.setOnClickListener(v -> closeSearchMode());
 
         binding.searchBar.setOnClickListener(v -> {
             // Should not do anything since clicking on the search bar should not close the search lol

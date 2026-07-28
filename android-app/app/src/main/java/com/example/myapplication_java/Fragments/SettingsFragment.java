@@ -1,11 +1,8 @@
 package com.example.myapplication_java.Fragments;
 
-import static android.content.Context.MODE_PRIVATE;
-
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -26,41 +23,23 @@ import com.example.myapplication_java.Activities.LoginActivity;
 import com.example.myapplication_java.MyApplication;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.ServerCommunication.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
-import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.databinding.DialogBugReportBinding;
 import com.example.myapplication_java.databinding.FragmentSettingsBinding;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-/** 
+/**
  * A fragment that provides settings options for the user, including dark mode toggle,
  * bug reporting, and account deletion.
  */
 public class SettingsFragment extends Fragment {
-
-    /**
-     * SharedPreferences file used by the login flow.
-     */
-    private static final String LOGIN_DATA_STORAGE = "loginData";
-
-    /**
-     * Key for the saved email address.
-     */
-    private static final String MAIL_ADDRESS_KEY = "mailAddress";
-
-    /**
-     * Key for the saved login token.
-     */
-    private static final String OTP_KEY = "OTP";
 
     private FragmentSettingsBinding binding;
 
@@ -95,6 +74,9 @@ public class SettingsFragment extends Fragment {
 
     /**
      * Returns true when the app is currently displayed in dark mode.
+     *
+     * <p>The app-wide choice wins. Only when the user never made one, and the app therefore
+     * follows the system, the current configuration decides.</p>
      */
     private boolean isNightModeEnabled() {
         int defaultNightMode = AppCompatDelegate.getDefaultNightMode();
@@ -112,6 +94,11 @@ public class SettingsFragment extends Fragment {
 
     /**
      * Applies the selected theme mode to the app and saves it for the next start.
+     *
+     * <p>Saving is what {@link MyApplication} reads on startup, applying is what changes the
+     * currently visible screens.</p>
+     *
+     * @param isEnabled whether dark mode should be on
      */
     private void setNightMode(boolean isEnabled) {
         requireActivity()
@@ -128,6 +115,9 @@ public class SettingsFragment extends Fragment {
 
     /**
      * Navigates back to the home tab from settings.
+     *
+     * <p>Going through the bottom navigation keeps the selected tab in sync. Only when this
+     * fragment is shown without that bar, the normal back navigation is used instead.</p>
      */
     private void navigateToHome() {
         BottomNavigationView bottomNavigationView = requireActivity().findViewById(R.id.custom_bottom_nav);
@@ -180,15 +170,16 @@ public class SettingsFragment extends Fragment {
 
     /**
      * Validates the bug report text before closing the dialog.
+     *
+     * @param dialogBinding the views of the bug report dialog
+     * @param dialog        the dialog to close once the report is accepted
      */
     private void submitBugReport(DialogBugReportBinding dialogBinding, Dialog dialog) {
         String report = dialogBinding.bugReportInput.getText() == null
                 ? ""
                 : dialogBinding.bugReportInput.getText().toString().trim();
 
-        /**
-         * There is no bug-report endpoint yet, so this only validates local input.
-         */
+        // There is no bug-report endpoint yet, so this only validates local input.
         if (report.isEmpty()) {
             dialogBinding.bugReportInputLayout.setError(getString(R.string.bug_report_empty_error));
             return;
@@ -215,23 +206,16 @@ public class SettingsFragment extends Fragment {
      * Calls the backend to delete the current user account.
      */
     private void deleteAccount() {
-        SharedPreferences loginDataStorage = requireActivity()
-                .getSharedPreferences(LOGIN_DATA_STORAGE, Context.MODE_PRIVATE);
-        String mailAddress = loginDataStorage.getString(MAIL_ADDRESS_KEY, "");
-        String token = loginDataStorage.getString(OTP_KEY, "");
+        LoginSession session = LoginSession.from(requireContext());
 
-        if (mailAddress.isEmpty() || token.isEmpty()) {
+        if (!session.isLoggedIn()) {
             Toast.makeText(requireContext(), R.string.delete_account_missing_login, Toast.LENGTH_LONG).show();
             return;
         }
 
-        /**
-         * The backend expects the same email/token body that login uses.
-         */
+        // The backend identifies the account through the auth token in the header.
         APIService apiService = createApiService();
-        SharedPreferences preferences = getActivity().getSharedPreferences("loginData", MODE_PRIVATE);
-        String authToken = preferences.getString("authToken", "");
-        Call<BasicResponse> call = apiService.deleteAccount("Bearer " + authToken);
+        Call<BasicResponse> call = apiService.deleteAccount(session.bearerToken());
 
         call.enqueue(new Callback<>() {
             /**
@@ -239,6 +223,8 @@ public class SettingsFragment extends Fragment {
              */
             @Override
             public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
+                // The answer can arrive after the user left the settings screen, in which case
+                // there is no context left to show a toast with.
                 if (!isAdded()) {
                     return;
                 }
@@ -249,7 +235,7 @@ public class SettingsFragment extends Fragment {
                     return;
                 }
 
-                clearLoginData(loginDataStorage);
+                session.clear();
                 Toast.makeText(requireContext(), R.string.delete_account_success, Toast.LENGTH_LONG).show();
                 openLoginScreen();
             }
@@ -270,22 +256,14 @@ public class SettingsFragment extends Fragment {
 
     /**
      * Builds the API service used by settings actions.
+     *
+     * <p>Kept as its own method so the settings actions have a single place to get the service
+     * from.</p>
+     *
+     * @return the service talking to the backend
      */
     private APIService createApiService() {
-        /**
-         * Keep request logging consistent with the existing login flow.
-         */
         return RetrofitClient.getClient().create(APIService.class);
-    }
-
-    /**
-     * Removes saved login data after account deletion.
-     */
-    private void clearLoginData(SharedPreferences loginDataStorage) {
-        loginDataStorage.edit()
-                .remove(MAIL_ADDRESS_KEY)
-                .remove(OTP_KEY)
-                .apply();
     }
 
     /**

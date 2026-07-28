@@ -1,5 +1,6 @@
 package com.example.myapplication_java.Fragments;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -44,6 +45,9 @@ public class NotificationFragment extends Fragment {
         return binding.getRoot();
     }
 
+    /**
+     * Fills the list and shows the empty state when there is nothing to display.
+     */
     private void setUpNotificationList() {
         List<Notification> notifications = createTemporaryNotifications();
 
@@ -52,6 +56,7 @@ public class NotificationFragment extends Fragment {
                 new NotificationAdapter(notifications, this::onNotificationClicked)
         );
 
+        // The list and the empty text swap places, only one of them is ever visible.
         boolean isEmpty = notifications.isEmpty();
         binding.notificationList.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
         binding.emptyNotifications.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
@@ -59,15 +64,25 @@ public class NotificationFragment extends Fragment {
 
     /**
      * Keeps the click contract in place for the future CommentThreadFragment navigation.
+     *
+     * @param notification the notification the user tapped
      */
+    @SuppressLint("NotifyDataSetChanged")
     private void onNotificationClicked(Notification notification) {
         notification.markAsRead();
         if (binding.notificationList.getAdapter() != null) {
+            // The unread marker of the tapped row has to disappear, and redrawing the whole
+            // short list is cheaper than tracking its position.
             binding.notificationList.getAdapter().notifyDataSetChanged();
         }
         // TODO: Open CommentThreadFragment with offering, parent comment and reply IDs.
     }
 
+    /**
+     * Builds the stand-in notifications shown until the backend route exists.
+     *
+     * @return two example notifications, one unread and one already read
+     */
     private List<Notification> createTemporaryNotifications() {
         List<Notification> notifications = new ArrayList<>();
         notifications.add(new Notification(
@@ -97,6 +112,10 @@ public class NotificationFragment extends Fragment {
         return notifications;
     }
 
+    /**
+     * @param hours how far in the past the returned date should lie
+     * @return the point in time that many hours before now
+     */
     private Date hoursAgo(int hours) {
         Calendar calendar = Calendar.getInstance();
         calendar.add(Calendar.HOUR, -hours);
