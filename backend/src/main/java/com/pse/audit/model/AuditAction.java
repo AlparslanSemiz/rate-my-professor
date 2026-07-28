@@ -1,0 +1,12 @@
+package com.pse.audit.model;
+
+public enum AuditAction {
+    ADMIN_LOGIN,
+    ADMIN_LOGOUT,
+    USER_WARNING_CREATED,
+    USER_BLOCKED,
+    USER_UNBLOCKED,
+    USER_DELETED,
+    COMMENT_REPORT_STATUS_CHANGED,
+    BUG_REPORT_UPDATED
+}

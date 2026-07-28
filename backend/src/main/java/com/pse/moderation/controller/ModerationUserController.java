@@ -1,91 +1,79 @@
 package com.pse.moderation.controller;
 
-
-
-import java.util.UUID;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.moderation.dto.request.WarningRequest;
 import com.pse.moderation.dto.response.UserListResponse;
 import com.pse.moderation.dto.response.UserResponse;
 import com.pse.moderation.dto.response.WarningHistoryResponse;
 import com.pse.moderation.service.ModerationUserService;
+import com.pse.security.AuthenticatedUser;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/users")
 public class ModerationUserController {
 
+    private final ModerationUserService service;
 
-    private final ModerationUserService moderationUserService;
-
-
-
-    public ModerationUserController(ModerationUserService moderationUserService) {
-        this.moderationUserService = moderationUserService;
+    public ModerationUserController(ModerationUserService service) {
+        this.service = service;
     }
-
 
     @GetMapping
-    public UserListResponse getStudents(@RequestHeader("Authorization") String authHeader) {
-
-        return moderationUserService.getStudents(authHeader);
-
+    public UserListResponse getStudents() {
+        return service.getStudents();
     }
 
-
-    @GetMapping("/{student_id}")
-    public UserResponse getStudent(@RequestHeader("Authorization") String authHeader, @PathVariable UUID student_id) {
-
-        return moderationUserService.getStudent(authHeader, student_id);
-
+    @GetMapping("/{id}")
+    public UserResponse getStudent(@PathVariable UUID id) {
+        return service.getStudent(id);
     }
 
-    @DeleteMapping("/{student_id}")
-    public BasicResponse deleteStudent(@RequestHeader("Authorization") String authHeader, @PathVariable UUID student_id) {
-
-        return moderationUserService.deleteStudent(authHeader, student_id);
-
+    @DeleteMapping("/{id}")
+    public BasicResponse deleteStudent(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @PathVariable UUID id
+    ) {
+        return service.deleteStudent(principal, id);
     }
 
-    @PatchMapping("/{student_id}/block")
-    public BasicResponse blockStudent(@RequestHeader("Authorization") String authHeader, @PathVariable UUID student_id) {
-
-        return moderationUserService.blockStudent(authHeader, student_id);
-
+    @PatchMapping("/{id}/block")
+    public BasicResponse blockStudent(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @PathVariable UUID id
+    ) {
+        return service.blockStudent(principal, id);
     }
 
-    @PatchMapping("/{student_id}/unblock")
-    public BasicResponse unblockStudent(@RequestHeader("Authorization") String authHeader, @PathVariable UUID student_id) {
-
-        return moderationUserService.unblockStudent(authHeader, student_id);
-
+    @PatchMapping("/{id}/unblock")
+    public BasicResponse unblockStudent(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @PathVariable UUID id
+    ) {
+        return service.unblockStudent(principal, id);
     }
 
-
-    @PostMapping("/{student_id}/warnings")
-    public BasicResponse warnStudent(@RequestHeader("Authorization") String authHeader, @PathVariable UUID student_id, @RequestBody WarningRequest warningRequest) {
-
-        return moderationUserService.warnStudent(authHeader, student_id, warningRequest);
-
+    @PostMapping("/{id}/warnings")
+    public BasicResponse warnStudent(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @PathVariable UUID id,
+            @RequestBody WarningRequest request
+    ) {
+        return service.warnStudent(principal, id, request);
     }
 
-    @GetMapping("/{student_id}/warnings")
-    public WarningHistoryResponse getWarningsForStudent(@RequestHeader("Authorization") String authHeader, @PathVariable UUID student_id) {
-
-        return moderationUserService.getWarningsForStudent(authHeader, student_id);
-
+    @GetMapping("/{id}/warnings")
+    public WarningHistoryResponse getWarningsForStudent(@PathVariable UUID id) {
+        return service.getWarningsForStudent(id);
     }
-
-
 }

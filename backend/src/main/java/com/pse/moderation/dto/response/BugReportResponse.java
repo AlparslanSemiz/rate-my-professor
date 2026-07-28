@@ -4,7 +4,6 @@ import com.pse.shared.enums.BugSeverity;
 import com.pse.shared.enums.ReportStatus;
 
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record BugReportResponse(
@@ -15,6 +14,6 @@ public record BugReportResponse(
         BugSeverity severity,
         ReportStatus status,
         String reporterName,
-        LocalDateTime reportedAt
+        String reportedAt
 ) {
 }

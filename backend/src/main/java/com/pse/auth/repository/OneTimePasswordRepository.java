@@ -4,17 +4,31 @@ package com.pse.auth.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.pse.auth.model.OneTimePassword;
+
+import jakarta.persistence.LockModeType;
 
 public interface OneTimePasswordRepository extends JpaRepository<OneTimePassword, Integer> {
 
    
-    List<OneTimePassword> findByEmailAndUsedFalseAndExpiresAtAfter(
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<OneTimePassword> findByEmailAndUsedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
             String email,
             LocalDateTime expiresAt
     );
+
+    @Modifying
+    @Query("""
+            update OneTimePassword otp
+            set otp.used = true
+            where otp.email = :email and otp.used = false
+            """)
+    int consumeOutstandingForEmail(@Param("email") String email);
 }

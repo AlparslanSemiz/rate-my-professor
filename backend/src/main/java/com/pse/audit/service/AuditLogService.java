@@ -1,0 +1,238 @@
+package com.pse.audit.service;
+
+import com.pse.audit.dto.AuditActorMetaResponse;
+import com.pse.audit.dto.AuditActorResponse;
+import com.pse.audit.dto.AuditLogPageResponse;
+import com.pse.audit.dto.AuditLogResponse;
+import com.pse.audit.dto.AuditMetaResponse;
+import com.pse.audit.dto.AuditTargetResponse;
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditActorType;
+import com.pse.audit.model.AuditLog;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.repository.AuditLogRepository;
+import com.pse.shared.error.ApiException;
+import com.pse.shared.util.UtcDates;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+
+@Service
+public class AuditLogService {
+
+    private final AuditLogRepository repository;
+    private final AuditCursorCodec cursorCodec;
+
+    public AuditLogService(AuditLogRepository repository, AuditCursorCodec cursorCodec) {
+        this.repository = repository;
+        this.cursorCodec = cursorCodec;
+    }
+
+    @Transactional(readOnly = true)
+    public AuditLogPageResponse getLogs(
+            String rawLimit,
+            String rawCursor,
+            String q,
+            String rawActorId,
+            String rawAction,
+            String rawTargetType,
+            String rawFrom,
+            String rawTo
+    ) {
+        int limit = parseLimit(rawLimit);
+        UUID actorId = parseUuid(rawActorId, "Invalid actor id");
+        AuditAction action = parseEnum(rawAction, AuditAction.class, "Invalid audit action");
+        AuditTargetType targetType =
+                parseEnum(rawTargetType, AuditTargetType.class, "Invalid audit target type");
+        Instant from = parseDate(rawFrom);
+        Instant to = parseDate(rawTo);
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid audit date range");
+        }
+        AuditCursorCodec.Cursor cursor =
+                rawCursor == null || rawCursor.isBlank() ? null : cursorCodec.decode(rawCursor);
+        String search = q == null ? "" : q.trim();
+        if (search.length() > 200) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Audit search is too long");
+        }
+
+        Specification<AuditLog> specification = (root, query, builder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (actorId != null) {
+                predicates.add(builder.equal(root.get("actorId"), actorId));
+            }
+            if (action != null) {
+                predicates.add(builder.equal(root.get("action"), action));
+            }
+            if (targetType != null) {
+                predicates.add(builder.equal(root.get("targetType"), targetType));
+            }
+            if (from != null) {
+                predicates.add(builder.greaterThanOrEqualTo(root.get("createdAt"), from));
+            }
+            if (to != null) {
+                predicates.add(builder.lessThanOrEqualTo(root.get("createdAt"), to));
+            }
+            if (!search.isEmpty()) {
+                String pattern = "%" + escapeLike(search.toLowerCase(Locale.ROOT)) + "%";
+                predicates.add(builder.or(
+                        builder.like(builder.lower(root.get("actorName")), pattern, '\\'),
+                        builder.like(builder.lower(root.get("actorEmail")), pattern, '\\'),
+                        builder.like(builder.lower(root.get("targetLabel")), pattern, '\\')
+                ));
+            }
+            if (cursor != null) {
+                predicates.add(builder.or(
+                        builder.lessThan(root.get("createdAt"), cursor.createdAt()),
+                        builder.and(
+                                builder.equal(root.get("createdAt"), cursor.createdAt()),
+                                builder.lessThan(root.get("id"), cursor.id())
+                        )
+                ));
+            }
+            return builder.and(predicates.toArray(Predicate[]::new));
+        };
+
+        List<AuditLog> fetched = repository.findAll(
+                specification,
+                PageRequest.of(
+                        0,
+                        limit + 1,
+                        Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
+                )
+        ).getContent();
+        boolean hasNext = fetched.size() > limit;
+        List<AuditLog> page = hasNext ? fetched.subList(0, limit) : fetched;
+        String nextCursor = hasNext && !page.isEmpty()
+                ? cursorCodec.encode(page.getLast().getCreatedAt(), page.getLast().getId())
+                : null;
+
+        return new AuditLogPageResponse(
+                "Success",
+                true,
+                page.stream().map(this::toResponse).toList(),
+                nextCursor
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public AuditMetaResponse getMeta() {
+        Map<UUID, AuditActorMetaResponse> actors = new LinkedHashMap<>();
+        repository.findAllByActorTypeOrderByCreatedAtDesc(AuditActorType.ADMIN)
+                .forEach(log -> actors.putIfAbsent(
+                        log.getActorId(),
+                        new AuditActorMetaResponse(
+                                log.getActorId(),
+                                log.getActorName(),
+                                log.getActorEmail(),
+                                log.getActorRole()
+                        )
+                ));
+        return new AuditMetaResponse(
+                "Success",
+                true,
+                List.copyOf(actors.values()),
+                Arrays.asList(AuditAction.values()),
+                Arrays.asList(AuditTargetType.values())
+        );
+    }
+
+    private AuditLogResponse toResponse(AuditLog log) {
+        AuditTargetResponse target = log.getTargetType() == null
+                ? null
+                : new AuditTargetResponse(
+                        log.getTargetType(),
+                        log.getTargetId(),
+                        log.getTargetLabel()
+                );
+        return new AuditLogResponse(
+                log.getId(),
+                log.getAction(),
+                UtcDates.format(log.getCreatedAt()),
+                new AuditActorResponse(
+                        log.getActorType().name(),
+                        log.getActorId(),
+                        log.getActorName(),
+                        log.getActorEmail(),
+                        log.getActorRole()
+                ),
+                target,
+                log.getChanges(),
+                log.getMetadata()
+        );
+    }
+
+    private int parseLimit(String rawLimit) {
+        if (rawLimit == null || rawLimit.isBlank()) {
+            return 50;
+        }
+        try {
+            int limit = Integer.parseInt(rawLimit);
+            if (limit < 1 || limit > 100) {
+                throw new NumberFormatException();
+            }
+            return limit;
+        } catch (NumberFormatException exception) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "Limit must be an integer between 1 and 100"
+            );
+        }
+    }
+
+    private UUID parseUuid(String value, String message) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException exception) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, message);
+        }
+    }
+
+    private Instant parseDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return OffsetDateTime.parse(value).toInstant();
+        } catch (DateTimeParseException exception) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid audit date range");
+        }
+    }
+
+    private <T extends Enum<T>> T parseEnum(
+            String value,
+            Class<T> type,
+            String errorMessage
+    ) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Enum.valueOf(type, value);
+        } catch (IllegalArgumentException exception) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, errorMessage);
+        }
+    }
+
+    private String escapeLike(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+}

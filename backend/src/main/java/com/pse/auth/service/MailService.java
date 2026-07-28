@@ -9,6 +9,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 
 import com.pse.shared.enums.LoginLocation;
 
@@ -22,11 +24,8 @@ import jakarta.mail.internet.MimeMessage;
  * src/main/resources/templates/mail/
  */
 @Service
-public class MailService {
-
-    private static final String LOGIN_SENDER_MAIL = "ratemyprof@gmx.de";
-
-    private static final String LOGIN_SENDER_NAME = "RateMyProfApp";
+@Profile("!test")
+public class MailService implements LoginCodeDelivery, LoginSuccessDelivery {
 
     private static final String LOGIN_EMAIL_SUBJECT = "Your Login Code for RateMyProfApp";
 
@@ -39,21 +38,28 @@ public class MailService {
     private final JavaMailSender mailSender;
     private final MailTemplateService mailTemplateService;
     private final LoginLocationService loginLocationService;
+    private final String senderMail;
+    private final String senderName;
 
     public MailService(
             JavaMailSender mailSender,
             MailTemplateService mailTemplateService,
-            LoginLocationService loginLocationService
+            LoginLocationService loginLocationService,
+            @Value("${app.mail.from-address}") String senderMail,
+            @Value("${app.mail.from-name:RateMyProfApp}") String senderName
     ) {
         this.mailSender = mailSender;
         this.mailTemplateService = mailTemplateService;
         this.loginLocationService = loginLocationService;
+        this.senderMail = senderMail;
+        this.senderName = senderName;
     }
 
     /**
      * Sends the login mail containing the one-time password.
      */
-    public void sendLoginMail(String to, String otp) {
+    @Override
+    public void send(String to, String otp) {
 
 
         String body = mailTemplateService.create(
@@ -63,8 +69,8 @@ public class MailService {
 
         sendMail(
                 to,
-                LOGIN_SENDER_MAIL,
-                LOGIN_SENDER_NAME,
+                senderMail,
+                senderName,
                 LOGIN_EMAIL_SUBJECT,
                 body
         );
@@ -73,7 +79,8 @@ public class MailService {
     /**
      * Sends a notification after a successful login.
      */
-    public void sendSuccessfulLogin(String email, String ip, String userAgent) {
+    @Override
+    public void send(String email, String ip, String userAgent) {
 
         LoginLocation loginLocation = loginLocationService.getLoginLocation(ip);
 
@@ -102,8 +109,8 @@ public class MailService {
 
         sendMail(
                 email,
-                LOGIN_SENDER_MAIL,
-                LOGIN_SENDER_NAME,
+                senderMail,
+                senderName,
                 SUCCESSFUL_LOGIN_EMAIL_SUBJECT,
                 body
         );
@@ -140,8 +147,6 @@ public class MailService {
             addLogo(helper);
 
             mailSender.send(message);
-
-            System.out.println("Email sent to: " + to);
 
         } catch (
                 MessagingException | UnsupportedEncodingException exception

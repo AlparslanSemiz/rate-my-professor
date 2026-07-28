@@ -15,4 +15,8 @@ public interface WarningRepository extends JpaRepository<Warning, UUID> {
 
     List<Warning> findByStudent(Student student);
 
+    List<Warning> findByStudentOrderByCreatedAtDesc(Student student);
+
+    long countByStudent(Student student);
+
 }

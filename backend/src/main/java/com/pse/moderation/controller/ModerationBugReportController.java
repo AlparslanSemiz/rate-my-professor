@@ -2,10 +2,11 @@ package com.pse.moderation.controller;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.moderation.dto.request.BugReportRequest;
-import com.pse.moderation.dto.request.UpdateStatusRequest;
+import com.pse.moderation.dto.request.BugReportUpdateRequest;
 import com.pse.moderation.dto.response.BugReportsResponse;
 import com.pse.moderation.service.ModerationBugReportService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.pse.security.AuthenticatedUser;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,33 +22,31 @@ import java.util.UUID;
 @RequestMapping("/reports")
 public class ModerationBugReportController {
 
+    private final ModerationBugReportService service;
 
-    private final ModerationBugReportService moderationBugReportService;
-
-
-    public ModerationBugReportController(ModerationBugReportService moderationBugReportService) {
-        this.moderationBugReportService = moderationBugReportService;
+    public ModerationBugReportController(ModerationBugReportService service) {
+        this.service = service;
     }
 
     @GetMapping
-    public BugReportsResponse getAllReports(@RequestHeader("Authorization") String authHeader) {
-
-        return moderationBugReportService.getAllReports(authHeader);
-
+    public BugReportsResponse getAllReports() {
+        return service.getAllReports();
     }
 
-    //TODO: path Variable
-    @PatchMapping("/{report_id}")
-    public BasicResponse updateBugReportStatus(@RequestHeader("Authorization") String authHeader, @RequestBody UpdateStatusRequest request, @PathVariable UUID report_id) {
-        return moderationBugReportService.updateBugReportStatus(authHeader, report_id, request.status());
+    @PatchMapping("/{id}")
+    public BasicResponse updateBugReport(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @PathVariable UUID id,
+            @RequestBody BugReportUpdateRequest request
+    ) {
+        return service.updateBugReport(principal, id, request);
     }
-
 
     @PostMapping
-    public BasicResponse sendBugReport(@RequestHeader("Authorization") String authHeader, @RequestBody BugReportRequest request){
-        return moderationBugReportService.sendBugReport(authHeader, request);
+    public BasicResponse sendBugReport(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody BugReportRequest request
+    ) {
+        return service.sendBugReport(authHeader, request);
     }
-
-
-
 }
