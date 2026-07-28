@@ -93,6 +93,11 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
     }
 
     @Override
+    public void openHome() {
+        loadFragment(new HomeFragment());
+    }
+
+    @Override
     public void onProfessorSelected(Professor professor) {
         loadFragment(new ProfileFragment(professor));
     }

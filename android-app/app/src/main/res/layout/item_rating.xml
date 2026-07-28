@@ -18,7 +18,7 @@
         android:layout_marginTop="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Category"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary"
         android:textSize="24sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -31,7 +31,7 @@
         android:layout_marginTop="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Average"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/category_name" />
@@ -44,7 +44,7 @@
         android:layout_marginTop="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Your Rating"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/ratingBar_average" />
@@ -53,7 +53,7 @@
         android:id="@+id/ratingBar_average"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:progressTint="#E6B400"
+        android:progressTint="@color/rating_bar"
         android:isIndicator="true"
         android:layout_marginStart="8dp"
         app:layout_constraintStart_toStartOf="parent"
@@ -65,7 +65,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:progressTint="#E6B400"
+        android:progressTint="@color/rating_bar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/your_rating_text" />
 
@@ -76,7 +76,7 @@
         android:layout_marginEnd="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="4,0"
-        android:textColor="#228B22"
+        android:textColor="@color/rating_good"
         android:textSize="24sp"
         app:layout_constraintBottom_toBottomOf="@id/ratingBar_average"
         app:layout_constraintEnd_toEndOf="parent"
@@ -89,7 +89,7 @@
         android:layout_marginEnd="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="tbd"
-        android:textColor="#228B22"
+        android:textColor="@color/rating_good"
         android:textSize="24sp"
         app:layout_constraintBottom_toBottomOf="@id/ratingBar_your_rating"
         app:layout_constraintEnd_toEndOf="parent"

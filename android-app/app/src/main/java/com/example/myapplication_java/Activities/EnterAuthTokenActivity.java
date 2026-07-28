@@ -67,7 +67,11 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
 
         Call<ServerResponse> call = apiService.login(request);
 
+        // Both login screens are done once the token is accepted. Clearing the task drops them,
+        // so a back press from the main screen leaves the app instead of returning to the login,
+        // and no finished login screen is left behind to be restored on a configuration change.
         Intent mainActivity = new Intent(this, MainActivity.class);
+        mainActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
         call.enqueue(new Callback<>() {
             @Override

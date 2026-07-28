@@ -10,7 +10,7 @@
     android:background="@drawable/rounded_box"
     android:fontFamily="@font/inter_bold"
     android:text="Lecture Name"
-    android:textColor="#FFFFFF"
+    android:textColor="@color/text_primary"
     android:textSize="24sp"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"

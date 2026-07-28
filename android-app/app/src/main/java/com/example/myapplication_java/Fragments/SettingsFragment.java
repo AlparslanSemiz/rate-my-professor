@@ -17,9 +17,13 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.myapplication_java.Activities.LoginActivity;
+import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.MyApplication;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
@@ -28,7 +32,6 @@ import com.example.myapplication_java.ServerCommunication.Responses.BasicRespons
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.databinding.DialogBugReportBinding;
 import com.example.myapplication_java.databinding.FragmentSettingsBinding;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import retrofit2.Call;
@@ -54,8 +57,24 @@ public class SettingsFragment extends Fragment {
             @Nullable Bundle savedInstanceState
     ) {
         binding = FragmentSettingsBinding.inflate(inflater, container, false);
+        applyStatusBarInset();
         setUpClickListeners();
         return binding.getRoot();
+    }
+
+    /**
+     * Keeps the top of the screen out from under the status bar.
+     *
+     * <p>The app draws edge to edge, so the height of the status bar is only known at runtime
+     * and a fixed margin in the layout would either waste space or hide the back button,
+     * depending on the device.</p>
+     */
+    private void applyStatusBarInset() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.settingsRoot, (view, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            view.setPadding(view.getPaddingLeft(), systemBars.top, view.getPaddingRight(), 0);
+            return windowInsets;
+        });
     }
 
     /**
@@ -68,6 +87,8 @@ public class SettingsFragment extends Fragment {
         binding.darkModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) ->
                 setNightMode(isChecked)
         );
+        // The whole row is the target users aim at, not just the switch at its far end.
+        binding.darkModeRow.setOnClickListener(v -> binding.darkModeSwitch.toggle());
         binding.bugReport.setOnClickListener(v -> showBugReportDialog());
         binding.deleteAccountButton.setOnClickListener(v -> confirmAccountDeletion());
     }
@@ -101,6 +122,13 @@ public class SettingsFragment extends Fragment {
      * @param isEnabled whether dark mode should be on
      */
     private void setNightMode(boolean isEnabled) {
+        // Restoring the saved view state re-applies the checked state after the listener is
+        // attached, so this can be called with the mode that is already active. Applying it
+        // again would recreate every activity for nothing.
+        if (isEnabled == isNightModeEnabled()) {
+            return;
+        }
+
         requireActivity()
                 .getSharedPreferences(MyApplication.SETTINGS_STORAGE, Context.MODE_PRIVATE)
                 .edit()
@@ -114,15 +142,15 @@ public class SettingsFragment extends Fragment {
     }
 
     /**
-     * Navigates back to the home tab from settings.
+     * Navigates back to the home screen from settings.
      *
-     * <p>Going through the bottom navigation keeps the selected tab in sync. Only when this
-     * fragment is shown without that bar, the normal back navigation is used instead.</p>
+     * <p>Which screen follows this one is the hosting activity's decision, so it is asked to
+     * open the home screen. Only when this fragment is shown outside of that host, the normal
+     * back navigation is used instead.</p>
      */
     private void navigateToHome() {
-        BottomNavigationView bottomNavigationView = requireActivity().findViewById(R.id.custom_bottom_nav);
-        if (bottomNavigationView != null) {
-            bottomNavigationView.setSelectedItemId(R.id.nav_home);
+        if (requireActivity() instanceof ControlFlowInterface host) {
+            host.openHome();
             return;
         }
 

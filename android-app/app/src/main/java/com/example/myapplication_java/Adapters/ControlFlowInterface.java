@@ -19,6 +19,12 @@ import com.example.myapplication_java.DomainModel.Semester;
 public interface ControlFlowInterface {
 
     /**
+     * Called when a screen wants to hand the user back to the home screen, for example when
+     * the settings screen is closed.
+     */
+    void openHome();
+
+    /**
      * Called when the user picked a professor in the search screen.
      *
      * @param professor the selected professor

@@ -22,7 +22,7 @@
             android:layout_weight="1"
             android:fontFamily="@font/inter_bold"
             android:text="@string/settings_bug_report"
-            android:textColor="#E9E9E9"
+            android:textColor="@color/text_primary"
             android:textSize="22sp" />
 
         <ImageButton
@@ -33,7 +33,7 @@
             android:contentDescription="@string/close"
             android:padding="12dp"
             android:src="@drawable/close_icon"
-            app:tint="#E9E9E9" />
+            app:tint="@color/icon_tint" />
     </LinearLayout>
 
     <TextView
@@ -42,7 +42,7 @@
         android:layout_marginTop="6dp"
         android:fontFamily="@font/inter"
         android:text="@string/bug_report_prompt"
-        android:textColor="#9D9D9D"
+        android:textColor="@color/text_muted"
         android:textSize="15sp" />
 
     <com.google.android.material.textfield.TextInputLayout
@@ -51,15 +51,15 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:hint="@string/bug_report_hint"
-        app:boxBackgroundColor="#1C1C1C"
+        app:boxBackgroundColor="@color/surface_container_low"
         app:boxBackgroundMode="filled"
         app:boxCornerRadiusBottomEnd="20dp"
         app:boxCornerRadiusBottomStart="20dp"
         app:boxCornerRadiusTopEnd="20dp"
         app:boxCornerRadiusTopStart="20dp"
-        app:boxStrokeColor="#575757"
-        app:errorTextColor="#921800"
-        app:hintTextColor="#9D9D9D">
+        app:boxStrokeColor="@color/outline"
+        app:errorTextColor="@color/danger"
+        app:hintTextColor="@color/text_muted">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/bug_report_input"
@@ -73,8 +73,8 @@
             android:paddingTop="18dp"
             android:paddingEnd="18dp"
             android:paddingBottom="18dp"
-            android:textColor="#E9E9E9"
-            android:textColorHint="#9D9D9D"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_muted"
             android:textSize="16sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -91,12 +91,12 @@
             android:layout_height="match_parent"
             android:layout_marginEnd="10dp"
             android:layout_weight="1"
-            android:backgroundTint="#1C1C1C"
+            android:backgroundTint="@color/surface_container_low"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:letterSpacing="0"
             android:text="@string/cancel"
-            android:textColor="#E9E9E9"
+            android:textColor="@color/text_primary"
             android:textSize="16sp"
             app:cornerRadius="26dp" />
 
@@ -107,12 +107,12 @@
             android:layout_height="match_parent"
             android:layout_marginStart="10dp"
             android:layout_weight="1"
-            android:backgroundTint="#E9E9E9"
+            android:backgroundTint="@color/surface_inverse"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:letterSpacing="0"
             android:text="@string/submit"
-            android:textColor="#000000"
+            android:textColor="@color/text_on_inverse"
             android:textSize="16sp"
             app:cornerRadius="26dp" />
     </LinearLayout>

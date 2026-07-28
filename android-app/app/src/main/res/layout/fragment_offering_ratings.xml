@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:background="#000000">
+    android:background="@color/surface">
 
     <TextView
         android:id="@+id/header_background"
@@ -31,7 +31,7 @@
         android:background="@drawable/rounded_box_light"
         android:fontFamily="@font/inter_bold"
         android:text="0,0"
-        android:textColor="#4CAF50"
+        android:textColor="@color/accent_positive"
         android:textSize="60sp"
         app:layout_constraintEnd_toEndOf="@+id/header_background"
         app:layout_constraintTop_toTopOf="parent" />
@@ -43,7 +43,7 @@
         android:layout_marginStart="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Firstname"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary"
         android:textSize="30sp"
         app:layout_constraintStart_toStartOf="@+id/header_background"
         app:layout_constraintTop_toTopOf="@+id/average_lecture_rating" />
@@ -55,7 +55,7 @@
         android:layout_marginStart="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Surname"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary"
         android:textSize="30sp"
         app:layout_constraintBottom_toBottomOf="@+id/average_lecture_rating"
         app:layout_constraintStart_toStartOf="@+id/header_background" />
@@ -105,7 +105,7 @@
                     android:layout_marginTop="8dp"
                     android:fontFamily="@font/inter_bold"
                     android:text="Ratings"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/text_primary"
                     android:textSize="30sp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -144,7 +144,7 @@
                     android:paddingStart="8dp"
                     android:paddingTop="8dp"
                     android:paddingEnd="8dp"
-                    android:textColorHint="#575757"
+                    android:textColorHint="@color/text_hint"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
@@ -156,7 +156,7 @@
                     android:id="@+id/submit_comment"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:backgroundTint="#313131"
+                    android:backgroundTint="@color/surface_container"
                     android:text="Submit"
                     android:textAllCaps="false"
                     app:layout_constraintEnd_toEndOf="parent"

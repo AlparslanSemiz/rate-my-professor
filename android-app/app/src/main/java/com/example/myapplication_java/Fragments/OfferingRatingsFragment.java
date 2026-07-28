@@ -229,7 +229,8 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         }
         double lectureRating = sum / ratings.size();
         binding.averageLectureRating.setText(String.format(Locale.ROOT, RATING_FORMAT, lectureRating));
-        binding.averageLectureRating.setTextColor(RatingColorCalculator.ratingColourCalculator(lectureRating));
+        binding.averageLectureRating.setTextColor(RatingColorCalculator.ratingColourCalculator(
+                binding.averageLectureRating.getContext(), lectureRating));
     }
 
     @Override

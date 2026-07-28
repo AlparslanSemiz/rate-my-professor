@@ -48,7 +48,8 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
 
         holder.name.setText(rating.name());
         holder.averageRating.setText(String.format(Locale.ROOT, RATING_FORMAT, rating.value()));
-        holder.averageRating.setTextColor(RatingColorCalculator.ratingColourCalculator(rating.value()));
+        holder.averageRating.setTextColor(RatingColorCalculator.ratingColourCalculator(
+                holder.averageRating.getContext(), rating.value()));
         holder.averageBar.setRating((float) rating.value());
     }
 
@@ -82,7 +83,8 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
             userRatingBar.setOnRatingBarChangeListener(
                     (bar, rating, fromUser) -> {
                         userRatingNum.setText(String.format(Locale.ROOT, RATING_FORMAT, rating));
-                        userRatingNum.setTextColor(RatingColorCalculator.ratingColourCalculator(rating));
+                        userRatingNum.setTextColor(RatingColorCalculator.ratingColourCalculator(
+                                userRatingNum.getContext(), rating));
                     }
             );
         }
