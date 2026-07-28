@@ -41,12 +41,20 @@ public class StudentService {
                 "Success",
                 true,
                 student.getUsername(),
+                getProfilePicture(student),
                 getAverageRating(student),
                 student.getRatings().size(),
                 student.getComments().size(),
                 student.getCredibilityScore()
         );
     }
+
+
+
+    private String getProfilePicture(Student student) {
+        return "https://api.dicebear.com/10.x/thumbs/svg?eyesProbability=100&eyesVariant=variant02,variant03,variant04,variant05,variant06,variant07,variant08&seed=" + student.getId();
+    }
+
 
     public UserRatingResponse getUserRatings(Student student) {
 

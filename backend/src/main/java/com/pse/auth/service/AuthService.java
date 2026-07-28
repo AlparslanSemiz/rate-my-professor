@@ -104,7 +104,6 @@ public class AuthService {
             student.setKitEmail(userEmail);
 
             String userName = NameGenerator.generateUsername();
-
             student.setUsername(userName);
 
             student.setEmailVerifiedAt(LocalDateTime.now());
