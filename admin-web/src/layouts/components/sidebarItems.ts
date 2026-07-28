@@ -1,5 +1,7 @@
 import {
+  IconActivity,
   IconBug,
+  IconHeartRateMonitor,
   IconHistory,
   IconLayoutDashboard,
   IconMessageReport,
@@ -34,11 +36,28 @@ export const MAIN_NAV_ITEMS = [
   },
 ] as const
 
-export const AUDIT_NAV_ITEM = {
-  label: 'Audit Logs',
-  sublabel: 'Admin activity',
-  path: routes.auditLogs,
-  icon: IconHistory,
-} as const
+/** Oversight views: what happened, who did it, and whether the backend is keeping up. */
+export const OVERSIGHT_NAV_ITEMS = [
+  {
+    label: 'Audit Logs',
+    sublabel: 'Admin activity',
+    path: routes.auditLogs,
+    icon: IconHistory,
+  },
+  {
+    label: 'Activity Log',
+    sublabel: 'Everyone else',
+    path: routes.activityLogs,
+    icon: IconActivity,
+  },
+  {
+    label: 'System Status',
+    sublabel: 'Backend health',
+    path: routes.systemStatus,
+    icon: IconHeartRateMonitor,
+  },
+] as const
 
-export type NavigationItem = (typeof MAIN_NAV_ITEMS)[number] | typeof AUDIT_NAV_ITEM
+export type NavigationItem =
+  | (typeof MAIN_NAV_ITEMS)[number]
+  | (typeof OVERSIGHT_NAV_ITEMS)[number]

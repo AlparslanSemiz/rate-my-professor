@@ -1,27 +1,24 @@
 import { TextInput, type CSSProperties } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
-import { darkInputStyles } from '../../../constants/inputStyles'
-import type { DraftSetter } from './auditFilterTypes'
+import { darkInputStyles } from '../constants/inputStyles'
 
 const searchFieldStyle: CSSProperties = { flex: '2 1 280px' }
 const dateFieldStyle: CSSProperties = { flex: '1 1 150px' }
 
-export function AuditSearchFilter({
-  value,
-  onDraftChange,
-}: {
+interface SearchFilterInputProps {
   value: string
-  onDraftChange: DraftSetter
-}) {
+  placeholder: string
+  onChange: (value: string) => void
+}
+
+/** Free-text search box shared by the audit and activity log filter forms. */
+export function SearchFilterInput({ value, placeholder, onChange }: SearchFilterInputProps) {
   return (
     <TextInput
       label="Search"
-      placeholder="Admin, email, or target..."
+      placeholder={placeholder}
       value={value}
-      onChange={(event) => {
-        const q = event.currentTarget.value
-        onDraftChange((current) => ({ ...current, q }))
-      }}
+      onChange={(event) => onChange(event.currentTarget.value)}
       leftSection={<IconSearch size={14} color="#6b7280" />}
       style={searchFieldStyle}
       styles={darkInputStyles}
@@ -29,19 +26,14 @@ export function AuditSearchFilter({
   )
 }
 
-interface AuditDateFilterProps {
+interface DateFilterInputProps {
   label: string
   ariaLabel: string
   value: string
   onChange: (value: string) => void
 }
 
-export function AuditDateFilter({
-  label,
-  ariaLabel,
-  value,
-  onChange,
-}: AuditDateFilterProps) {
+export function DateFilterInput({ label, ariaLabel, value, onChange }: DateFilterInputProps) {
   return (
     <TextInput
       label={label}

@@ -6,6 +6,7 @@ import type {
   AuditTargetType,
   AuditValue,
 } from '../../api/AuditLogsService'
+import { validateDateRange } from '../../utils/dateRange'
 import { getErrorMessage } from '../../utils/getErrorMessage'
 
 const AUDIT_API_UNAVAILABLE_MESSAGE =
@@ -53,8 +54,8 @@ export function toAuditFilters(draft: FilterDraft): AuditLogFilters {
   }
 }
 
-export function isValidDateRange({ from, to }: FilterDraft) {
-  return !from || !to || from <= to
+export function validateAuditDraft(draft: FilterDraft) {
+  return validateDateRange(draft)
 }
 
 export function formatAuditValue(value: AuditValue): string {

@@ -8,6 +8,7 @@ export async function resetMockDatabase() {
     await createSchema(client)
     await client.query(`
       TRUNCATE
+        mock_activity_logs,
         mock_audit_logs,
         mock_bug_reports,
         mock_comment_reports,

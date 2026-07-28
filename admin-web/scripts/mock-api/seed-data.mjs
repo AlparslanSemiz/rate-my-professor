@@ -1,6 +1,14 @@
+import { insertActivityLog } from './activity.mjs'
 import { insertAuditLog } from './audit.mjs'
 import { demoAdminToken, demoLoginCode } from './config.mjs'
-import { auditLogs, bugReports, commentReports, users, warnings } from './fixtures.mjs'
+import {
+  activityLogs,
+  auditLogs,
+  bugReports,
+  commentReports,
+  users,
+  warnings,
+} from './fixtures.mjs'
 
 async function seedUsers(client) {
   for (const user of users) {
@@ -107,6 +115,24 @@ async function seedAuditLogs(client) {
   }
 }
 
+function fixtureActor(actorId) {
+  const user = users.find((candidate) => candidate.id === actorId)
+  if (!user) return null
+  return {
+    type: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+    id: user.id,
+    name: user.username,
+    email: user.kitEmail,
+    role: user.role,
+  }
+}
+
+async function seedActivityLogs(client) {
+  for (const { actorId, ...activity } of activityLogs) {
+    await insertActivityLog(client, { ...activity, actor: fixtureActor(actorId) })
+  }
+}
+
 export async function seedAll(client) {
   await seedUsers(client)
   await seedTokens(client)
@@ -114,4 +140,5 @@ export async function seedAll(client) {
   await seedCommentReports(client)
   await seedBugReports(client)
   await seedAuditLogs(client)
+  await seedActivityLogs(client)
 }

@@ -1,8 +1,11 @@
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from './audit.mjs'
-import { decodeAuditCursor } from './audit-cursor.mjs'
+import { decodeLogCursor } from './log-cursor.mjs'
 import { isUuid } from './http.mjs'
 
-export { decodeAuditCursor, encodeAuditCursor } from './audit-cursor.mjs'
+export {
+  decodeLogCursor as decodeAuditCursor,
+  encodeLogCursor as encodeAuditCursor,
+} from './log-cursor.mjs'
 
 const VALID_AUDIT_ACTIONS = new Set(AUDIT_ACTIONS)
 const VALID_AUDIT_TARGET_TYPES = new Set(AUDIT_TARGET_TYPES)
@@ -35,7 +38,7 @@ function parseDateRange(searchParams) {
 
 function parseCursor(searchParams) {
   const rawCursor = searchParams.get('cursor')
-  const cursor = rawCursor ? decodeAuditCursor(rawCursor) : null
+  const cursor = rawCursor ? decodeLogCursor(rawCursor) : null
   if (rawCursor && !cursor) {
     return { error: 'Invalid audit cursor' }
   }

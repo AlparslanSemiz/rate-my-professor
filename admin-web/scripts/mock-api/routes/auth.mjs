@@ -1,3 +1,4 @@
+import { activityActor, recordActivity, requestContext } from '../activity.mjs'
 import { adminActor, insertAuditLog } from '../audit.mjs'
 import {
   authenticatedUser,
@@ -51,6 +52,11 @@ async function requestLoginCode(req, res) {
     `,
     [email, demoLoginCode],
   )
+  await recordActivity({
+    type: 'LOGIN_CODE_REQUESTED',
+    context: requestContext(req),
+    metadata: { email },
+  })
   return sendJson(res, 200, {
     message: `Demo login code is ${demoLoginCode}`,
     success: true,
@@ -81,16 +87,29 @@ async function login(req, res) {
     [email, loginToken],
   )
   if (!code.rows[0] && loginToken !== demoLoginCode) {
+    await recordActivity({
+      type: 'USER_LOGIN_FAILED',
+      context: requestContext(req),
+      metadata: { email },
+      outcome: 'FAILURE',
+    })
     return sendJson(res, 200, { message: 'Invalid token', success: false, authToken: null })
   }
 
-  const authToken = await withTransaction(async (client) => {
+  const { authToken, user } = await withTransaction(async (client) => {
     const authenticated = await ensureUserForEmail(email, client)
     const issuedToken = await issueTokenForUser(authenticated, client)
     if (authenticated.role === 'ADMIN') {
       await recordAdminLogin(authenticated, client)
     }
-    return issuedToken
+    return { authToken: issuedToken, user: authenticated }
+  })
+  await recordActivity({
+    type: 'USER_LOGIN',
+    actor: activityActor(user),
+    target: { type: 'SESSION', id: user.id, label: `${user.username} session` },
+    context: requestContext(req),
+    metadata: { method: 'EMAIL_OTP' },
   })
   return sendJson(res, 200, { message: 'Login successful', success: true, authToken })
 }
@@ -119,6 +138,12 @@ async function logout(req, res) {
 
   const token = req.headers.authorization.slice('Bearer '.length)
   await withTransaction((client) => revokeAdminToken(token, admin, client))
+  await recordActivity({
+    type: 'USER_LOGOUT',
+    actor: activityActor(admin),
+    target: { type: 'SESSION', id: admin.id, label: `${admin.username} session` },
+    context: requestContext(req),
+  })
   return sendJson(res, 200, { message: 'Logged out successfully', success: true })
 }
 

@@ -4,7 +4,7 @@ import { routes } from '../../constants/routes'
 import { useAuth } from '../../context/useAuth'
 import SessionFooter from './SessionFooter'
 import SidebarHeader from './SidebarHeader'
-import { AUDIT_NAV_ITEM } from './sidebarItems'
+import { OVERSIGHT_NAV_ITEMS } from './sidebarItems'
 import SidebarNavigation, { SidebarNavButton } from './SidebarNavigation'
 
 const shellStyle: CSSProperties = { justifyContent: 'space-between' }
@@ -26,12 +26,17 @@ export default function Sidebar() {
         <SidebarNavigation activePath={location.pathname} onNavigate={navigate} />
       </div>
       <div>
-        <Box component="nav" aria-label="Account navigation" p={12}>
-          <SidebarNavButton
-            item={AUDIT_NAV_ITEM}
-            active={location.pathname === AUDIT_NAV_ITEM.path}
-            onNavigate={navigate}
-          />
+        <Box component="nav" aria-label="Oversight navigation" p={12}>
+          <Stack gap={2}>
+            {OVERSIGHT_NAV_ITEMS.map((item) => (
+              <SidebarNavButton
+                key={item.path}
+                item={item}
+                active={location.pathname === item.path}
+                onNavigate={navigate}
+              />
+            ))}
+          </Stack>
         </Box>
         <SessionFooter user={user} onLogout={handleLogout} />
       </div>

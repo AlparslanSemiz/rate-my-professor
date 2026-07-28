@@ -120,9 +120,11 @@ describe('App routing and authentication', () => {
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: 'Audit Logs' })).toBeInTheDocument()
-    const accountNavigation = screen.getByRole('navigation', { name: 'Account navigation' })
-    expect(accountNavigation).toHaveTextContent('Audit Logs')
-    expect(accountNavigation).toHaveTextContent('Admin activity')
+    const oversightNavigation = screen.getByRole('navigation', { name: 'Oversight navigation' })
+    expect(oversightNavigation).toHaveTextContent('Audit Logs')
+    expect(oversightNavigation).toHaveTextContent('Admin activity')
+    expect(oversightNavigation).toHaveTextContent('Activity Log')
+    expect(oversightNavigation).toHaveTextContent('System Status')
   })
 
   it('logs in with a valid one-time code and navigates to the dashboard', async () => {

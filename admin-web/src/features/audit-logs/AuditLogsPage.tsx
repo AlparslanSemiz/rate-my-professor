@@ -13,7 +13,7 @@ export default function AuditLogsPage() {
   const auditLogs = useAuditLogs()
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
 
-  if (auditLogs.loading && auditLogs.logs.length === 0 && !auditLogs.tableError) {
+  if (auditLogs.loading && auditLogs.items.length === 0 && !auditLogs.tableError) {
     return <PageLoader />
   }
 
@@ -42,7 +42,7 @@ export default function AuditLogsPage() {
       />
       <ErrorAlert message={auditLogs.tableError} />
       <AuditLogsTable
-        logs={auditLogs.logs}
+        logs={auditLogs.items}
         nextCursor={auditLogs.nextCursor}
         loading={auditLogs.loading}
         loadingMore={auditLogs.loadingMore}

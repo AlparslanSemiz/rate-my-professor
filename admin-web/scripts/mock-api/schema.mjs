@@ -92,6 +92,26 @@ export async function createSchema(client) {
       created_at timestamptz NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS mock_activity_logs (
+      id uuid PRIMARY KEY,
+      type text NOT NULL,
+      actor_type text CHECK (actor_type IN ('ADMIN', 'USER')),
+      actor_id uuid,
+      actor_name text,
+      actor_email text,
+      actor_role text,
+      target_type text,
+      target_id text,
+      target_label text,
+      route text,
+      method text,
+      ip text,
+      user_agent text,
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      outcome text NOT NULL CHECK (outcome IN ('SUCCESS', 'FAILURE', 'DENIED')),
+      created_at timestamptz NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS mock_audit_logs_created_at_id_idx
       ON mock_audit_logs (created_at DESC, id DESC);
     CREATE INDEX IF NOT EXISTS mock_audit_logs_actor_id_idx
@@ -100,5 +120,14 @@ export async function createSchema(client) {
       ON mock_audit_logs (action);
     CREATE INDEX IF NOT EXISTS mock_audit_logs_target_type_idx
       ON mock_audit_logs (target_type);
+
+    CREATE INDEX IF NOT EXISTS mock_activity_logs_created_at_id_idx
+      ON mock_activity_logs (created_at DESC, id DESC);
+    CREATE INDEX IF NOT EXISTS mock_activity_logs_actor_id_idx
+      ON mock_activity_logs (actor_id);
+    CREATE INDEX IF NOT EXISTS mock_activity_logs_type_idx
+      ON mock_activity_logs (type);
+    CREATE INDEX IF NOT EXISTS mock_activity_logs_outcome_idx
+      ON mock_activity_logs (outcome);
   `)
 }

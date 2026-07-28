@@ -9,7 +9,7 @@ import {
   AuditAdminFilter,
   AuditTargetFilter,
 } from './AuditSelectFilters'
-import { AuditDateFilter, AuditSearchFilter } from './AuditTextFilters'
+import { DateFilterInput, SearchFilterInput } from '../../../components/LogFilterInputs'
 import type { DraftSetter } from './auditFilterTypes'
 
 const panelStyle: CSSProperties = { padding: '16px 20px' }
@@ -40,17 +40,21 @@ export default function AuditLogFilters({
     <form onSubmit={handleSubmit}>
       <Panel mb={16} style={panelStyle}>
         <Group gap={12} align="flex-end" wrap="wrap">
-          <AuditSearchFilter value={draft.q} onDraftChange={onDraftChange} />
+          <SearchFilterInput
+            value={draft.q}
+            placeholder="Admin, email, or target..."
+            onChange={(q) => onDraftChange((current) => ({ ...current, q }))}
+          />
           <AuditAdminFilter value={draft.actorId} meta={meta} onDraftChange={onDraftChange} />
           <AuditActionFilter value={draft.action} meta={meta} onDraftChange={onDraftChange} />
           <AuditTargetFilter value={draft.targetType} meta={meta} onDraftChange={onDraftChange} />
-          <AuditDateFilter
+          <DateFilterInput
             label="From"
             ariaLabel="Audit start date"
             value={draft.from}
             onChange={(from) => onDraftChange((current) => ({ ...current, from }))}
           />
-          <AuditDateFilter
+          <DateFilterInput
             label="To"
             ariaLabel="Audit end date"
             value={draft.to}

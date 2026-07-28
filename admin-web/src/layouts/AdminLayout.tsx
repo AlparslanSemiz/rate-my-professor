@@ -5,10 +5,12 @@ import PageLoader from '../components/PageLoader'
 import Sidebar from './components/Sidebar'
 import { routes } from '../constants/routes'
 
+const ActivityLogsPage = lazy(() => import('../features/activity-logs/ActivityLogsPage'))
 const AuditLogsPage = lazy(() => import('../features/audit-logs/AuditLogsPage'))
 const CommentsPage = lazy(() => import('../features/comments/CommentsPage'))
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'))
 const FeedbackPage = lazy(() => import('../features/feedback/FeedbackPage'))
+const SystemStatusPage = lazy(() => import('../features/system-status/SystemStatusPage'))
 const UsersPage = lazy(() => import('../features/users/UsersPage'))
 
 export default function AdminLayout() {
@@ -40,6 +42,8 @@ export default function AdminLayout() {
               <Route path={routes.feedback} element={<FeedbackPage />} />
               <Route path={routes.comments} element={<CommentsPage />} />
               <Route path={routes.auditLogs} element={<AuditLogsPage />} />
+              <Route path={routes.activityLogs} element={<ActivityLogsPage />} />
+              <Route path={routes.systemStatus} element={<SystemStatusPage />} />
               <Route path="*" element={<Navigate to={routes.dashboard} replace />} />
             </Routes>
           </Suspense>

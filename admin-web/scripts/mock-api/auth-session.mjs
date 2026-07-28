@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { activityActor, recordActivity, requestContext } from './activity.mjs'
 import { adminActor, insertAuditLog } from './audit.mjs'
 import { demoAdminToken } from './config.mjs'
 import { query } from './db.mjs'
@@ -46,6 +47,19 @@ export async function requireAdmin(req, res) {
     return null
   }
   if (user.role !== 'ADMIN') {
+    const context = requestContext(req)
+    await recordActivity({
+      type: 'ADMIN_ACCESS_DENIED',
+      actor: activityActor(user),
+      target: {
+        type: 'ADMIN_ENDPOINT',
+        id: context.route,
+        label: `${context.method} ${context.route}`,
+      },
+      context,
+      metadata: { requiredRole: 'ADMIN' },
+      outcome: 'DENIED',
+    })
     sendJson(res, 403, { message: 'Could not authenticate Admin', success: false })
     return null
   }

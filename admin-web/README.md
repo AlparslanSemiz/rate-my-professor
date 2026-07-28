@@ -38,6 +38,8 @@ PostgreSQL, seeded sample data, and a production-style Nginx web container.
 | Reported Comments | Search and filter community reports, inspect involved users, and update moderation status |
 | Bug Reports | Review submitted problems and update their status or severity |
 | Audit Logs | Filter and inspect successful administrative actions, including before/after values |
+| Activity Log | Filter and inspect what everyone does in the application, including failed and denied attempts |
+| System Status | Watch backend health, live record counts, and when each admin action last reached the database |
 
 Additional engineering features include:
 
@@ -75,14 +77,14 @@ build.
                              ▼
 ┌──────────────────────────────────────────────────────────┐
 │ API                                                      │
-│ auth · users · comments · reports · audit logs           │
+│ auth · users · comments · reports · logs · system status │
 └────────────────────────────┬─────────────────────────────┘
                              │ parameterized SQL
                              │ transactional writes
                              ▼
 ┌──────────────────────────────────────────────────────────┐
 │ PostgreSQL                                               │
-│ users · sessions · warnings · reports · audit history    │
+│ users · sessions · warnings · reports · audit · activity │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -244,11 +246,13 @@ src/
 ├── context/      Application-wide authentication state
 ├── domain/       Shared domain types and moderation rules
 ├── features/     Feature-owned pages, components, hooks, and tests
+│   ├── activity-logs/
 │   ├── audit-logs/
 │   ├── auth/
 │   ├── comments/
 │   ├── dashboard/
 │   ├── feedback/
+│   ├── system-status/
 │   └── users/
 ├── hooks/        Reusable hooks without feature ownership
 ├── layouts/      Authenticated application shell and navigation
@@ -375,6 +379,30 @@ statuses use the same values as reported comments.
 | `from` | Inclusive ISO date/time lower bound |
 | `to` | Inclusive ISO date/time upper bound |
 
+### Activity log
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/activity-logs` | Get a filtered, cursor-paginated history of what everyone did |
+| `GET` | `/activity-logs/meta` | Get available actors, activity types, target types, and outcomes |
+
+`GET /activity-logs` takes the same parameters as the audit history, except
+that `action` becomes `type` and an `outcome` filter is added
+(`SUCCESS`, `FAILURE`, or `DENIED`). Unlike audit actions, activity types are an
+open set: the filter dropdown is built from the metadata endpoint so a new
+backend type appears without a frontend release.
+
+### System status
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/system/status` | Get backend health, live record counts, and last write timestamps |
+
+The response reports `status` (`OK`, `DEGRADED`, or `DOWN`), a measured
+database round trip, live counters, and the last successful write time per
+administrative action. The counters are what confirm an action reached the
+database: block a user, refresh, and watch `blockedUsers` increase.
+
 ## Audit Log Design
 
 The audit history answers four questions: **who** performed an action, **what**
@@ -436,8 +464,8 @@ This project uses `React.lazy`, dynamic `import()`, and `Suspense` at route
 boundaries:
 
 - The login and authenticated application layout are separate chunks.
-- Dashboard, Users, Reported Comments, Bug Reports, and Audit Logs are separate
-  page chunks.
+- Dashboard, Users, Reported Comments, Bug Reports, Audit Logs, Activity Log,
+  and System Status are separate page chunks.
 - `PageLoader` provides feedback while a requested chunk is loading.
 
 As a result, the initial production bundle contains only the application shell

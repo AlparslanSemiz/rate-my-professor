@@ -84,6 +84,38 @@ export function toAuditLog(row) {
   }
 }
 
+export function toActivityLog(row) {
+  return {
+    id: row.id,
+    type: row.type,
+    createdAt: iso(row.created_at),
+    actor: row.actor_id
+      ? {
+          type: row.actor_type,
+          id: row.actor_id,
+          name: row.actor_name,
+          email: row.actor_email,
+          role: row.actor_role,
+        }
+      : null,
+    target: row.target_type
+      ? {
+          type: row.target_type,
+          id: row.target_id,
+          label: row.target_label,
+        }
+      : null,
+    context: {
+      route: row.route,
+      method: row.method,
+      ip: row.ip,
+      userAgent: row.user_agent,
+    },
+    metadata: row.metadata ?? {},
+    outcome: row.outcome,
+  }
+}
+
 export async function findUserWithStatsById(id) {
   const result = await query(`${USER_WITH_STATS_SELECT} WHERE u.id = $1`, [id])
   return result.rows[0] ? toUser(result.rows[0]) : null

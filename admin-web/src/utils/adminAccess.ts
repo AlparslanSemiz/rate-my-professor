@@ -4,6 +4,7 @@ const REQUIRED_ADMINS = {
   'u-kisi6@student.kit.edu': { name: 'Luis' },
   'u-kisi7@student.kit.edu': { name: 'Yavuz' },
   'u-kisi8@student.kit.edu': { name: 'Philipp' },
+  'u-kisi9@student.kit.edu': { name: 'Enno' },
 } as const
 
 const REQUIRED_ADMIN_EMAILS = new Set(Object.keys(REQUIRED_ADMINS))
