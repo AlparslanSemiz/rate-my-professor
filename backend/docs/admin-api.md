@@ -287,6 +287,20 @@ port included. A browser call from an origin outside the list is answered with
 fails and the panel cannot be logged into. An empty value falls back to the local
 development origins and logs a warning at startup; it does not disable the check.
 
+The origin has to be listed **even when the panel and the API share it**. The deployed
+setup serves the panel under `/admin/` on the same host that proxies this backend, and a
+browser still sends `Origin` on every non-`GET` request, same-origin included. The check
+looks at that header alone, so a same-origin `POST` is rejected exactly like a
+cross-origin one when the list does not contain the host. Confirm a deployment with:
+
+```bash
+curl -i -X POST -H "Origin: <panel origin>" -H "Content-Type: application/json" \
+  -d '{"email":"nobody@example.invalid"}' <api base>/auth/request-login
+```
+
+`400 Invalid KIT email` means the origin is accepted and the request reached the
+controller. `403 Invalid CORS request` means it did not.
+
 The Admin Web setting is:
 
 ```dotenv

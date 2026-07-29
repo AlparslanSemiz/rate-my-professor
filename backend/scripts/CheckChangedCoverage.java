@@ -446,10 +446,18 @@ public final class CheckChangedCoverage {
             return new Counter(0, 0);
         }
 
+        /**
+         * Every JaCoCo report starts with {@code <!DOCTYPE report PUBLIC "-//JACOCO//DTD
+         * Report 1.1//EN" "report.dtd">}, so banning doctype declarations outright made
+         * this check abort with a parser error before it could read a single counter.
+         * Refusing to load the external DTD and refusing to resolve entities closes the
+         * XXE hole that the ban was there for, and tolerates the declaration itself.
+         */
         private static void configureSecureXmlParsing(DocumentBuilderFactory factory) throws ParserConfigurationException {
-            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
             factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
             factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setValidating(false);
             factory.setXIncludeAware(false);
             factory.setExpandEntityReferences(false);
         }

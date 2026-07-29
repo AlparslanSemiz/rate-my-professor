@@ -75,6 +75,14 @@ server:deploy:staging:
   variables:
     DEPLOY_CONTAINER_NAME: app-server
     DEPLOY_DOCKER_ARGS: "-p 8080:8080 --restart unless-stopped --add-host=host.docker.internal:host-gateway"
+    # An undefined CI/CD variable expands to an empty string here, and "-e VAR=" sets the
+    # variable in the container to empty rather than leaving it unset. Spring's
+    # ${VAR:default} placeholders only fall back when a variable is absent, so an empty
+    # value silently wins over the defaults in application.properties. That is how the
+    # panel ended up with an empty CORS allow-list and answered every browser call with
+    # 403 "Invalid CORS request". Both values below therefore carry an explicit default.
+    DEFAULT_FRONTEND_ORIGINS: "https://server.example.org"
+    DEFAULT_BOOTSTRAP_EMAILS: "u-kisi4@student.kit.edu:Alparslan,u-kisi5@student.kit.edu:Bob,u-kisi6@student.kit.edu:Cem,u-kisi7@student.kit.edu:Dan,u-kisi8@student.kit.edu:Eva,u-kisi9@student.kit.edu:Fin"
   before_script:
     - apk add --no-cache openssh-client
     - chmod 400 "$SSH_PRIVATE_KEY"
@@ -97,8 +105,8 @@ server:deploy:staging:
       -e SPRING_DATASOURCE_URL=\"${SPRING_DATASOURCE_URL:-jdbc:postgresql://host.docker.internal:5432/postgres}\"
       -e SPRING_DATASOURCE_USERNAME=\"${SPRING_DATASOURCE_USERNAME:-postgres}\"
       -e SPRING_DATASOURCE_PASSWORD=\"${SPRING_DATASOURCE_PASSWORD}\"
-      -e ADMIN_FRONTEND_ORIGINS=\"${ADMIN_FRONTEND_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}\"
-      -e ADMIN_BOOTSTRAP_EMAILS=\"${ADMIN_BOOTSTRAP_EMAILS}\"
+      -e ADMIN_FRONTEND_ORIGINS=\"${ADMIN_FRONTEND_ORIGINS:-$DEFAULT_FRONTEND_ORIGINS}\"
+      -e ADMIN_BOOTSTRAP_EMAILS=\"${ADMIN_BOOTSTRAP_EMAILS:-$DEFAULT_BOOTSTRAP_EMAILS}\"
       -e AUTH_RATE_LIMIT_HMAC_KEY=\"${AUTH_RATE_LIMIT_HMAC_KEY}\"
       -e SPRING_MAIL_HOST=\"${SPRING_MAIL_HOST}\"
       -e SPRING_MAIL_PORT=\"${SPRING_MAIL_PORT:-587}\"
