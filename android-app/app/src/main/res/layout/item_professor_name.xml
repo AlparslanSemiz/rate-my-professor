@@ -8,7 +8,7 @@
     android:fontFamily="@font/inter_bold"
     android:padding="8dp"
     android:text="Professor Name"
-    android:textColor="#FFFFFF"
+    android:textColor="@color/text_primary"
     android:textSize="24sp"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"

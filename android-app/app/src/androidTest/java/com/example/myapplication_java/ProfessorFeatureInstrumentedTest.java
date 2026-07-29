@@ -21,15 +21,16 @@ import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.Fragments.SelectionFragment;
 import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.ServerCommunication.Requests.RatingRequest;
+import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Database;
-import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
-import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRequest;
+import com.example.myapplication_java.ServerCommunication.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.PostCommentRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
+import com.example.myapplication_java.ServerCommunication.SubmitAnswerRequest;
 
 import org.junit.After;
 import org.junit.Before;
@@ -39,6 +40,7 @@ import org.junit.runner.RunWith;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -207,27 +209,24 @@ public class ProfessorFeatureInstrumentedTest {
         public Call<ServerResponse> requestLogin(LoginRequest request) { return null; }
         @Override
         public Call<ServerResponse> login(LoginRequest request) { return null; }
+
         @Override
-        public Call<ServerResponse> deleteAccount(LoginRequest request) { return null; }
+        public Call<ServerResponse> validate(String token, LoginRequest request) {
+            return null;
+        }
+
+        @Override
+        public Call<BasicResponse> deleteAccount(String token) { return null; }
 
         @Override
         public Call<ProfessorResponse> getProfessors() {
-            ProfessorResponse resp = new ProfessorResponse(
-                    "Success",
-                    true,
-                    professors
-            );
-
+            ProfessorResponse resp = new ProfessorResponse("its ok", true, professors);
             return new SuccessfulCall<>(resp);
         }
 
         @Override
         public Call<LecturesResponse> getLectures() {
-            LecturesResponse resp = new LecturesResponse(
-                    "Success",
-                    true,
-                    lectures
-            );
+            LecturesResponse resp = new LecturesResponse("its ok", true, lectures);
             return new SuccessfulCall<>(resp);
         }
 
@@ -239,7 +238,7 @@ public class ProfessorFeatureInstrumentedTest {
         public Call<RatingAverageResponse> getRatings(String lectureId) { return null; }
 
         @Override
-        public Call<ServerResponse> submitRating(String token, RatingRequest request) {
+        public Call<BasicResponse> postAnswer(String token, SubmitAnswerRequest request) {
             return null;
         }
     }

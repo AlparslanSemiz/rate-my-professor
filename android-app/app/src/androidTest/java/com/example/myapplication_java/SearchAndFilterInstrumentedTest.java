@@ -142,7 +142,9 @@ public class SearchAndFilterInstrumentedTest {
         LectureAdapter.LectureViewHolder holder = adapter.onCreateViewHolder(parent, 0);
         adapter.onBindViewHolder(holder, 1);
 
-        TextView nameView = holder.itemView.findViewById(R.id.profName);
+        // item_lecture_name.xml names its TextView semester_name, not profName like the
+        // professor row does.
+        TextView nameView = holder.itemView.findViewById(R.id.semester_name);
         assertEquals(2, adapter.getItemCount());
         assertEquals("Softwaretechnik", nameView.getText().toString());
     }

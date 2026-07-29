@@ -10,9 +10,21 @@ import com.example.myapplication_java.DomainModel.SelectionType;
 /**
  * Bridge between the UI and the Fragment. Is used to manage and create
  * the fragments according to the interaction with the ViewPager2
+ *
+ * <p>There is one page per {@link SelectionType}, in the order the constants are declared.
+ * Adding a constant therefore adds a tab without any change in here.</p>
  */
 public class SearchPagerAdapter extends FragmentStateAdapter {
+
+    /**
+     * The pages of the ViewPager2, one per selection type.
+     * Position 0 = Professors
+     * Position 1 = Lectures
+     */
+    private static final SelectionType[] PAGES = SelectionType.values();
+
     private final SelectionFragment.UserInteractionListener userInteractionListener;
+
     public SearchPagerAdapter(@NonNull Fragment fragment, SelectionFragment.UserInteractionListener userInteractionListener) {
         super(fragment);
         this.userInteractionListener = userInteractionListener;
@@ -20,33 +32,41 @@ public class SearchPagerAdapter extends FragmentStateAdapter {
 
     /**
      * Manages the creation of fragments and its position.
-     * Position 0 = Professors
-     * Position 1 = Lectures
-     * @param position
-     * @return
+     *
+     * @param position the page index the ViewPager2 asks for
+     * @return the selection fragment showing the content of that page
      */
     @NonNull
     @Override
     public Fragment createFragment(int position) {
-
-        SelectionFragment fragment;
-
-        if (position == 0) {
-            fragment = SelectionFragment.newInstance(SelectionType.PROFESSORS);
-        } else {
-            fragment = SelectionFragment.newInstance(SelectionType.LECTURES);
-        }
-
+        SelectionFragment fragment = SelectionFragment.newInstance(pageTypeAt(position));
         fragment.setUserInteractionListener(userInteractionListener);
         return fragment;
     }
 
     /**
      * Is used to get the total number of items set by this adapter
-     * @return
+     *
+     * @return the number of pages, which is the number of selection types
      */
     @Override
     public int getItemCount() {
-        return 2;
+        return PAGES.length;
+    }
+
+    /**
+     * Maps a page index to the content that page shows.
+     *
+     * <p>The ViewPager2 only ever asks for valid positions. Anything else falls back to the
+     * last page instead of throwing, so an unexpected index cannot crash the search screen.</p>
+     *
+     * @param position the page index
+     * @return what the page at that index lists
+     */
+    private static SelectionType pageTypeAt(int position) {
+        if (position < 0 || position >= PAGES.length) {
+            return PAGES[PAGES.length - 1];
+        }
+        return PAGES[position];
     }
 }

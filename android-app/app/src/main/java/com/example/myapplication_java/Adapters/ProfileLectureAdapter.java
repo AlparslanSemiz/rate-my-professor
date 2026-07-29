@@ -1,26 +1,27 @@
 package com.example.myapplication_java.Adapters;
 
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.myapplication_java.R;
 import com.example.myapplication_java.databinding.ItemLectureNameSmallBinding;
-import com.example.myapplication_java.databinding.ItemProfessorNameBinding;
 
 import java.util.List;
 
 /**
  * The adapter for lectures (upper list) in {@link com.example.myapplication_java.Fragments.ProfileFragment}
+ *
+ * <p>Works on lecture titles rather than on {@link com.example.myapplication_java.DomainModel.Lecture}
+ * objects: the same lecture is stored once per semester, and this list shows every title only
+ * once. The concrete offering is picked afterwards in the semester list.</p>
  */
 public class ProfileLectureAdapter extends RecyclerView.Adapter<ProfileLectureAdapter.LectureViewHolder> {
 
-    private List<String> lectures;
-    private OnLectureClickListener listener;
+    private final List<String> lectures;
+    private final OnLectureClickListener listener;
 
     public ProfileLectureAdapter(List<String> lectures, OnLectureClickListener listener) {
         this.lectures = lectures;
@@ -48,16 +49,27 @@ public class ProfileLectureAdapter extends RecyclerView.Adapter<ProfileLectureAd
         return lectures.size();
     }
 
+    /**
+     * Holds the views of a single lecture title.
+     */
     public static class LectureViewHolder extends RecyclerView.ViewHolder {
 
-        TextView textView;
+        final TextView textView;
 
         public LectureViewHolder(@NonNull ItemLectureNameSmallBinding binding) {
             super(binding.getRoot());
             textView = binding.lectureNameForProfile;
         }
     }
+
+    /**
+     * Reports which lecture title the user clicked.
+     */
     public interface OnLectureClickListener {
+
+        /**
+         * @param lectureTitle the name of the clicked lecture
+         */
         void onLectureClick(String lectureTitle);
     }
 }

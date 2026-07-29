@@ -1,7 +1,7 @@
 package com.example.myapplication_java.Adapters;
 
+import android.annotation.SuppressLint;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
@@ -9,19 +9,21 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.DomainModel.Lecture;
-import com.example.myapplication_java.R;
-import com.example.myapplication_java.databinding.ItemCommentBinding;
 import com.example.myapplication_java.databinding.ItemLectureNameBinding;
 
 import java.util.List;
 
 /**
  * The adapter for lectures in {@link com.example.myapplication_java.Fragments.SelectionFragment}
+ *
+ * <p>Clicks are reported through {@link OnLectureClickListener} instead of being handled here,
+ * so the adapter stays independent of what happens after a lecture was picked.</p>
  */
 public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureViewHolder> {
 
+    private final OnLectureClickListener listener;
+
     private List<Lecture> lectures;
-    private OnLectureClickListener listener;
 
     public LectureAdapter(List<Lecture> lectures, OnLectureClickListener listener) {
         this.lectures = lectures;
@@ -48,23 +50,39 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
         return lectures.size();
     }
 
+    /**
+     * Holds the views of a single lecture row.
+     */
     public static class LectureViewHolder extends RecyclerView.ViewHolder {
 
-        TextView textView;
-        ItemLectureNameBinding binding;
+        final TextView textView;
+
         public LectureViewHolder(@NonNull ItemLectureNameBinding binding) {
             super(binding.getRoot());
             textView = binding.semesterName;
         }
     }
+
+    /**
+     * Reports which lecture the user clicked.
+     */
     public interface OnLectureClickListener {
+
+        /**
+         * @param lectureTitle the name of the clicked lecture
+         */
         void onLectureClick(String lectureTitle);
     }
 
     /**
      * This method is used to update the list of lectures on runtime.
-     * @param lectures
+     *
+     * <p>Every search replaces the whole result list, so there is nothing to animate between
+     * the old and the new content and the list is simply redrawn.</p>
+     *
+     * @param lectures the lectures to display from now on
      */
+    @SuppressLint("NotifyDataSetChanged")
     public void setData(List<Lecture> lectures) {
         this.lectures = lectures;
         notifyDataSetChanged();

@@ -1,5 +1,6 @@
 package com.example.myapplication_java.ServerCommunication;
 
+import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRequest;
 import com.example.myapplication_java.ServerCommunication.Requests.RatingRequest;
@@ -13,13 +14,26 @@ import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
+import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
 
+/**
+ * Describes every route of the backend this app talks to.
+ *
+ * <p>Retrofit generates the implementation from these annotations. Every method returns a
+ * {@link Call}, which is only executed once {@code enqueue(...)} is invoked on it.</p>
+ *
+ * <p>Routes that require a logged in user take the auth token as an {@code Authorization}
+ * header. Use {@link LoginSession#bearerToken()} to build that value.</p>
+ */
 public interface APIService {
 
     /**
      * Requests a one-time login token for the given email address.
+     *
+     * @param request the request holding the email address; the token field stays empty here
+     * @return the response telling whether the token could be sent
      */
     @POST("/auth/request-login")
     Call<ServerResponse> requestLogin(
@@ -28,6 +42,9 @@ public interface APIService {
 
     /**
      * Verifies the email and token pair with the backend.
+     *
+     * @param request the email address together with the one-time token the user entered
+     * @return the response holding the auth token on success
      */
     @POST("/auth/login")
     Call<ServerResponse> login(
@@ -35,21 +52,58 @@ public interface APIService {
     );
 
     /**
-     * Deletes the account for the currently verified email/token pair.
+     * Checks whether a previously saved login is still valid, so a returning user can skip
+     * the login screen.
+     *
+     * @param token   the auth token for authorization
+     * @param request the saved email and token pair
+     * @return the response telling whether the saved login is still accepted
      */
-    @POST("/auth/delete-account")
-    Call<ServerResponse> deleteAccount(
+    @POST("/auth/validate")
+    Call<ServerResponse> validate(
+            @Header("Authorization") String token,
             @Body LoginRequest request
     );
 
     /**
+     * Revokes every auth token of the account, so all devices it is logged in on are logged
+     * out, not only the one sending this request.
+     *
+     * <p>This is the route behind the "log out on all devices" action: a token that leaked, or
+     * a device the user no longer has, cannot be taken away from the device itself, so the
+     * server has to invalidate the tokens centrally.</p>
+     *
+     * @param token the auth token for authorization; it is revoked along with all others
+     * @return the response telling whether the tokens were revoked
+     */
+    @POST("/auth/logout-all")
+    Call<BasicResponse> logoutAllDevices(
+            @Header("Authorization") String token
+    );
+
+    /**
+     * Deletes the account for the currently verified email/token pair.
+     *
+     * @param token the auth token for authorization
+     * @return the response telling whether the account was deleted
+     */
+    @PATCH("/account/deleteAccount")
+    Call<BasicResponse> deleteAccount(
+            @Header("Authorization") String token
+    );
+
+    /**
      * Loads all professors from the backend.
+     *
+     * @return the response with all professors
      */
     @GET("/data/professor")
     Call<ProfessorResponse> getProfessors();
 
     /**
      * Loads all lectures from the backend.
+     *
+     * @return the response with all lectures
      */
     @GET("/data/lectures")
     Call<LecturesResponse> getLectures();
@@ -77,6 +131,9 @@ public interface APIService {
     /**
      *
      * Loads the average ratings for a lecture Offering
+     *
+     * @param lectureId the id of the lecture offering the averages are wanted for
+     * @return the response with one average value per rating topic
      */
     @GET("/ratings/{lectureId}")
     Call<RatingAverageResponse> getRatings(
@@ -88,4 +145,18 @@ public interface APIService {
             @Header("Authorization") String token,
             @Body RatingRequest request
     );
+
+    /**
+     * Posts an answer to an existing comment.
+     *
+     * @param token   the auth token for authorization
+     * @param request the id of the answered comment together with the answer text
+     * @return the response telling whether the answer was stored
+     */
+    @POST("/social/answers")
+    Call<BasicResponse> postAnswer(
+            @Header("Authorization") String token,
+            @Body SubmitAnswerRequest request
+    );
+
 }

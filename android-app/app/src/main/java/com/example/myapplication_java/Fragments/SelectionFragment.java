@@ -13,7 +13,6 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.room.Room;
 
 import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.Adapters.LectureAdapter;
@@ -44,10 +43,17 @@ import java.util.concurrent.Executors;
  */
 public class SelectionFragment extends Fragment {
 
+    /**
+     * Reports that the user touched the result list, which the search screen uses to close
+     * the search bar again.
+     */
     public interface UserInteractionListener {
         void onUserInteractedWithList();
     }
 
+    /**
+     * Key of the fragment argument holding the {@link SelectionType}.
+     */
     private static final String ARG_SELECTION_TYPE = "selection_type";
 
     private FragmentSelectionBinding binding;
@@ -63,6 +69,15 @@ public class SelectionFragment extends Fragment {
 
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
+    /**
+     * Creates a fragment listing the given kind of content.
+     *
+     * <p>The type travels as a fragment argument rather than as a constructor parameter, so
+     * Android can restore it after the fragment was recreated.</p>
+     *
+     * @param type what the fragment should list
+     * @return the configured fragment
+     */
     public static SelectionFragment newInstance(SelectionType type) {
         SelectionFragment fragment = new SelectionFragment();
 
@@ -97,13 +112,7 @@ public class SelectionFragment extends Fragment {
 
         setupUserInteractionListener();
 
-        Database database = Room.databaseBuilder(
-                requireContext(),
-                Database.class,
-                Database.DB_NAME
-        ).fallbackToDestructiveMigration(true).build();
-
-        service = database.searchService();
+        service = Database.getInstance(requireContext()).searchService();
 
         String type = requireArguments().getString(ARG_SELECTION_TYPE);
         selectionType = SelectionType.valueOf(type);
@@ -116,6 +125,12 @@ public class SelectionFragment extends Fragment {
         return binding.getRoot();
     }
 
+    /**
+     * Watches the list for touches and forwards them to the search screen.
+     *
+     * <p>An item touch listener is used rather than item clicks, because scrolling should
+     * close the search bar as well.</p>
+     */
     private void setupUserInteractionListener() {
         binding.list.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
             @Override
@@ -133,6 +148,7 @@ public class SelectionFragment extends Fragment {
     }
 
     ///Sets the adapter according to the selection type.
+    /// The list starts out empty and is filled by the first search query.
     private void setupAdapter() {
         switch (selectionType) {
             case PROFESSORS:
@@ -150,13 +166,28 @@ public class SelectionFragment extends Fragment {
                 );
                 binding.list.setAdapter(lectureAdapter);
                 break;
+
+            default:
+                throw new IllegalStateException("No adapter defined for " + selectionType);
         }
     }
 
+    /**
+     * Re-runs the search whenever the parent screen reports a new query.
+     */
     private void observeSearchQuery() {
         searchViewModel.getQuery().observe(getViewLifecycleOwner(), this::search);
     }
 
+    /**
+     * Looks the query up in the local database and hands the result to the adapter.
+     *
+     * <p>Room queries block, so they run on the executor. The result is published back on the
+     * UI thread, where the null checks catch the case that the view was destroyed while the
+     * query was still running.</p>
+     *
+     * @param query the text the user typed; an empty string lists everything
+     */
     private void search(String query) {
         executorService.execute(() -> {
             switch (selectionType) {
@@ -185,6 +216,11 @@ public class SelectionFragment extends Fragment {
         });
     }
 
+    /**
+     * Registers who should be told when the user touches the list.
+     *
+     * @param listener the listener, set by {@link com.example.myapplication_java.Adapters.SearchPagerAdapter}
+     */
     public void setUserInteractionListener(UserInteractionListener listener) {
         this.userInteractionListener = listener;
     }

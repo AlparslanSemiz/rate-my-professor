@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="@color/surface">
 
     <TextView
         android:id="@+id/header_background"
@@ -30,7 +30,7 @@
         android:background="@drawable/rounded_box_light"
         android:fontFamily="@font/inter_bold"
         android:text="4,4"
-        android:textColor="#4CAF50"
+        android:textColor="@color/accent_positive"
         android:textSize="60sp"
         app:layout_constraintStart_toStartOf="@+id/header_background"
         app:layout_constraintTop_toTopOf="parent" />
@@ -43,7 +43,7 @@
         android:layout_marginTop="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Firstname"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary"
         app:layout_constraintStart_toEndOf="@+id/averageRatingBackground"
         app:layout_constraintTop_toTopOf="@+id/averageRatingBackground" />
 
@@ -55,7 +55,7 @@
         android:layout_marginTop="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Surname"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary"
         android:textSize="34sp"
         app:layout_constraintStart_toEndOf="@+id/averageRatingBackground"
         app:layout_constraintTop_toBottomOf="@+id/name" />

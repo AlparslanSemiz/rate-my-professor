@@ -124,6 +124,7 @@ public class DomainModelTest {
     public void voteConstructorStoresFields() {
         Date now = new Date();
         Comment comment = new Comment(
+                "001",
                 "Great lecture!",
                 ContentStatus.VISIBLE,
                 "user123",

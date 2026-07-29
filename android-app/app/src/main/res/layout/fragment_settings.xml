@@ -1,21 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/settings_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="@color/surface">
 
+    <!--
+        The screen is drawn edge to edge, so the top padding that keeps the back button clear
+        of the status bar is applied from the fragment, where the actual bar height is known.
+    -->
     <ImageButton
         android:id="@+id/back_button"
         android:layout_width="62dp"
         android:layout_height="62dp"
         android:layout_marginStart="26dp"
-        android:layout_marginTop="52dp"
+        android:layout_marginTop="16dp"
         android:background="@drawable/settings_circle_button"
         android:contentDescription="@string/back"
         android:padding="16dp"
         android:src="@drawable/back_icon"
-        app:tint="#E9E9E9"
+        app:tint="@color/icon_tint"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -27,6 +32,8 @@
         android:layout_marginTop="15dp"
         android:layout_marginEnd="24dp"
         android:background="@drawable/settings_button_background"
+        android:clickable="true"
+        android:focusable="true"
         android:paddingStart="28dp"
         android:paddingEnd="16dp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -38,8 +45,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="@font/inter_bold"
+            android:labelFor="@id/dark_mode_switch"
             android:text="@string/settings_dark_mode"
-            android:textColor="#E9E9E9"
+            android:textColor="@color/text_primary"
             android:textSize="21sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -49,7 +57,6 @@
             android:id="@+id/dark_mode_switch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:labelFor="@id/dark_mode_label"
             android:minWidth="64dp"
             android:minHeight="48dp"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -68,7 +75,7 @@
         android:layout_marginStart="24dp"
         android:layout_marginTop="15dp"
         android:layout_marginEnd="24dp"
-        android:backgroundTint="#282828"
+        android:backgroundTint="@color/surface_container"
         android:gravity="center_vertical|start"
         android:insetBottom="0dp"
         android:insetTop="0dp"
@@ -76,12 +83,35 @@
         android:paddingStart="28dp"
         android:paddingEnd="28dp"
         android:text="@string/settings_bug_report"
-        android:textColor="#E9E9E9"
+        android:textColor="@color/text_primary"
         android:textSize="21sp"
         app:cornerRadius="31dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/dark_mode_row" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/logout_all_devices_button"
+        style="@style/text_style"
+        android:layout_width="0dp"
+        android:layout_height="62dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="24dp"
+        android:backgroundTint="@color/surface_container"
+        android:gravity="center_vertical|start"
+        android:insetBottom="0dp"
+        android:insetTop="0dp"
+        android:letterSpacing="0"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:text="@string/settings_logout_all_devices"
+        android:textColor="@color/text_primary"
+        android:textSize="21sp"
+        app:cornerRadius="31dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/bug_report" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/delete_account_button"
@@ -91,7 +121,7 @@
         android:layout_marginStart="24dp"
         android:layout_marginEnd="24dp"
         android:layout_marginBottom="136dp"
-        android:backgroundTint="#282828"
+        android:backgroundTint="@color/surface_container"
         android:gravity="center_vertical|start"
         android:insetBottom="0dp"
         android:insetTop="0dp"
@@ -99,7 +129,7 @@
         android:paddingStart="28dp"
         android:paddingEnd="28dp"
         android:text="@string/settings_delete_account"
-        android:textColor="#921800"
+        android:textColor="@color/danger"
         android:textSize="21sp"
         app:cornerRadius="31dp"
         app:layout_constraintBottom_toBottomOf="parent"

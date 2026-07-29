@@ -12,7 +12,10 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
@@ -22,7 +25,17 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * Second step of the login: the user enters the one-time token that
+ * {@link LoginActivity} had sent to their email address.
+ *
+ * <p>On success both the token and the auth token returned by the server are saved, which
+ * lets {@link StartActivity} skip the login on the next app start.</p>
+ */
 public class EnterAuthTokenActivity extends AppCompatActivity {
+
+    private static final String TAG = "login response ___";
+
     private Button continueButton;
     private EditText tokenInput;
     private ActivityEnterAuthTokenBinding binding;
@@ -38,46 +51,68 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
         continueButton = binding.enterButton;
         tokenInput = binding.codeInput;
 
-        continueButton.setOnClickListener(v -> {
-            String token = tokenInput.getText().toString();
+        continueButton.setOnClickListener(v -> submitToken(tokenInput.getText().toString()));
+    }
 
-            APIService apiService = RetrofitClient.getClient().create(APIService.class);
+    /**
+     * Verifies the entered token together with the saved email address and, on success,
+     * continues to the main screen.
+     *
+     * @param token the one-time token the user typed
+     */
+    private void submitToken(String token) {
+        APIService apiService = RetrofitClient.getClient().create(APIService.class);
 
-            /// 'SharedPreferences' is used to save data (currently just the email)
-            /// persistently, even when the app is closed
-            SharedPreferences loginDataStorage = getSharedPreferences("loginData", MODE_PRIVATE);
-            String mailAddress = loginDataStorage.getString("mailAddress", "");
-            LoginRequest request = new LoginRequest(mailAddress, token);
+        /// 'SharedPreferences' is used to save data (currently just the email)
+        /// persistently, even when the app is closed
+        LoginSession session = LoginSession.from(this);
+        LoginRequest request = new LoginRequest(session.mailAddress(), token);
 
-            Call<ServerResponse> call = apiService.login(request);
+        Call<ServerResponse> call = apiService.login(request);
 
-            Intent mainActivity = new Intent(this, MainActivity.class);
+        // Both login screens are done once the token is accepted. Clearing the task drops them,
+        // so a back press from the main screen leaves the app instead of returning to the login,
+        // and no finished login screen is left behind to be restored on a configuration change.
+        Intent mainActivity = new Intent(this, MainActivity.class);
+        mainActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
-            call.enqueue(new Callback<>() {
-                @Override
-                public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
-                    if(!response.body().success()) {
-                        Log.println(Log.DEBUG, "login response ___", "failure");
-                        Toast.makeText(EnterAuthTokenActivity.this, response.body().message(), Toast.LENGTH_LONG).show();
-                    } else {
-                        Log.println(Log.DEBUG, "login response ___", "success!!");
+        call.enqueue(new Callback<>() {
+            @Override
+            public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                ServerResponse body = response.body();
 
-                        // Saving the OneTimePassword for future logins
-                        SharedPreferences.Editor editor = loginDataStorage.edit();
-                        editor.putString("OTP", token);
-                        editor.putString("authToken", response.body().authToken());
-                        editor.apply();
-                        EnterAuthTokenActivity.this.startActivity(mainActivity);
-                    }
+                // A rejected login comes back without a body, so it has to be checked before
+                // reading the success flag out of it.
+                if (!response.isSuccessful() || body == null || !body.success()) {
+                    Log.d(TAG, "failure: " + response.code());
 
+                    // Without a body the server did not judge the token at all, which is a
+                    // problem on its side rather than a wrong code the user could correct.
+                    String message = body == null || body.message() == null || body.message().isEmpty()
+                            ? getString(response.isSuccessful()
+                                    ? R.string.login_failed
+                                    : R.string.login_server_unreachable)
+                            : body.message();
+                    Toast.makeText(EnterAuthTokenActivity.this, message, Toast.LENGTH_LONG).show();
+                    return;
                 }
 
-                @Override
-                public void onFailure(Call<ServerResponse> call, Throwable t) {
-                    Log.println(Log.DEBUG, "FAILURE", "failed!");
+                Log.d(TAG, "success!!");
 
-                }
-            });
+                // Saving the OneTimePassword for future logins
+                session.saveTokens(token, body.authToken());
+                EnterAuthTokenActivity.this.startActivity(mainActivity);
+            }
+
+            @Override
+            public void onFailure(Call<ServerResponse> call, Throwable t) {
+                Log.e(TAG, "login failed: " + t);
+                Toast.makeText(
+                        EnterAuthTokenActivity.this,
+                        R.string.login_server_unreachable,
+                        Toast.LENGTH_LONG
+                ).show();
+            }
         });
 
     }

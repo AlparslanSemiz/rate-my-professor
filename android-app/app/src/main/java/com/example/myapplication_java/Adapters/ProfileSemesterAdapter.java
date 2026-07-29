@@ -1,7 +1,6 @@
 package com.example.myapplication_java.Adapters;
 
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
@@ -9,19 +8,20 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.DomainModel.Semester;
-import com.example.myapplication_java.R;
 import com.example.myapplication_java.databinding.ItemLectureSemesterWithRatingBinding;
-import com.example.myapplication_java.databinding.ItemProfNameSmallBinding;
 
 import java.util.List;
 
 /**
  * The adapter for semesters (lower list) in {@link com.example.myapplication_java.Fragments.ProfileFragment}
+ *
+ * <p>This is the last step of the selection: professor and lecture are already known, so
+ * picking a semester identifies exactly one lecture offering and opens its rating screen.</p>
  */
 public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemesterAdapter.SemesterViewHolder> {
 
-    private List<Semester> semesters;
-    private OnSemesterClickListener listener;
+    private final List<Semester> semesters;
+    private final OnSemesterClickListener listener;
 
     public ProfileSemesterAdapter(List<Semester> semesters, OnSemesterClickListener listener) {
         this.semesters = semesters;
@@ -42,7 +42,7 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
         Semester semester = semesters.get(position);
 
         holder.textView.setText(semester.semesterSeason().toString() + " " + semester.semesterYear());
-        holder.itemView.setOnClickListener(v -> listener.onLectureClick(semester));
+        holder.itemView.setOnClickListener(v -> listener.onSemesterClick(semester));
     }
 
     @Override
@@ -50,16 +50,27 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
         return semesters.size();
     }
 
+    /**
+     * Holds the views of a single semester row.
+     */
     public static class SemesterViewHolder extends RecyclerView.ViewHolder {
 
-        TextView textView;
+        final TextView textView;
 
         public SemesterViewHolder(@NonNull ItemLectureSemesterWithRatingBinding binding) {
             super(binding.getRoot());
             textView = binding.lectureNameForProfile;
         }
     }
+
+    /**
+     * Reports which semester the user clicked.
+     */
     public interface OnSemesterClickListener {
-        void onLectureClick(Semester semester);
+
+        /**
+         * @param semester the clicked semester
+         */
+        void onSemesterClick(Semester semester);
     }
 }

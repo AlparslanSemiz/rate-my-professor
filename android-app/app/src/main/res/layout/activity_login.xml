@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"
+    android:background="@color/surface"
     tools:context=".Activities.LoginActivity" >
 
     <TextView
@@ -18,7 +18,7 @@
         android:fontFamily="@font/inter_bold"
         android:text="Verify your KIT E-Mail"
         android:textAlignment="center"
-        android:textColor="#FAF9F9"
+        android:textColor="@color/text_primary"
         android:textSize="30sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -42,7 +42,7 @@
         android:lineSpacingExtra="8sp"
         android:paddingStart="8dp"
         android:textAlignment="textStart"
-        android:textColor="#5F5D5D"
+        android:textColor="@color/text_on_input_field"
         android:textSize="34dp"
         app:layout_constraintBottom_toBottomOf="@+id/input_background"
         app:layout_constraintEnd_toEndOf="@+id/input_background"
@@ -54,7 +54,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:backgroundTint="#282828"
+        android:backgroundTint="@color/surface_container"
         android:letterSpacing="0"
         android:text="Verify"
         android:textSize="24sp"

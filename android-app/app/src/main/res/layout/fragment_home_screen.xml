@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="@color/surface">
 
 
     <TextView
@@ -17,7 +17,7 @@
         android:layout_marginBottom="-8dp"
         android:background="@drawable/rounded_box"
         android:textAlignment="textEnd"
-        android:textColor="#FDFDFD"
+        android:textColor="@color/text_primary"
         app:layout_constraintBottom_toBottomOf="@id/imageView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
@@ -34,7 +34,7 @@
         android:layout_marginBottom="-8dp"
         android:background="@drawable/rounded_box"
         android:fontFamily="@font/inter_bold"
-        android:textColor="#FDFDFD"
+        android:textColor="@color/text_primary"
         android:textSize="200sp"
         app:layout_constraintBottom_toBottomOf="@+id/up_downvotes_num"
         app:layout_constraintEnd_toEndOf="parent"
@@ -50,7 +50,7 @@
         android:layout_marginTop="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Your Stats"
-        android:textColor="#FBFBFB"
+        android:textColor="@color/text_primary"
         android:textSize="24sp"
         app:layout_constraintBottom_toTopOf="@+id/average_rating_given"
         app:layout_constraintStart_toStartOf="@+id/your_stats_background"
@@ -64,7 +64,7 @@
         android:layout_marginTop="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Average Rating Given"
-        android:textColor="#FBFBFB"
+        android:textColor="@color/text_primary"
         app:layout_constraintStart_toStartOf="@+id/your_stats_background"
         app:layout_constraintTop_toBottomOf="@+id/your_stats" />
 
@@ -74,7 +74,7 @@
         android:layout_height="wrap_content"
         android:fontFamily="@font/inter_bold"
         android:text="3,0"
-        android:textColor="#FBFBFB"
+        android:textColor="@color/text_primary"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="@+id/average_rating_given"
         app:layout_constraintTop_toBottomOf="@+id/average_rating_given" />
@@ -86,7 +86,7 @@
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
-        android:backgroundTint="#282828"
+        android:backgroundTint="@color/surface_container"
         android:clickable="true"
         android:focusable="true"
         style="@style/text_style"
@@ -96,7 +96,7 @@
         android:text="List of my ratings"
         android:textAlignment="textStart"
         android:textAllCaps="false"
-        android:textColor="#FDFDFD"
+        android:textColor="@color/text_primary"
         android:textSize="24sp"
         android:typeface="normal"
         app:cornerRadius="24dp"
@@ -114,7 +114,7 @@
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
-        android:backgroundTint="#282828"
+        android:backgroundTint="@color/surface_container"
         android:clickable="true"
         android:focusable="true"
         android:letterSpacing="0"
@@ -123,7 +123,7 @@
         android:text="Notifications"
         android:textAlignment="textStart"
         android:textAllCaps="false"
-        android:textColor="#FDFDFD"
+        android:textColor="@color/text_primary"
         android:textSize="24sp"
         android:textStyle="bold"
         android:typeface="normal"
@@ -140,7 +140,7 @@
         android:layout_marginTop="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Professors Rated"
-        android:textColor="#FBFBFB"
+        android:textColor="@color/text_primary"
         app:layout_constraintStart_toStartOf="@+id/your_stats_background"
         app:layout_constraintTop_toBottomOf="@+id/average_rating_given_num" />
 
@@ -150,7 +150,7 @@
         android:layout_height="wrap_content"
         android:fontFamily="@font/inter_bold"
         android:text="5"
-        android:textColor="#FBFBFB"
+        android:textColor="@color/text_primary"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="@+id/average_rating_given"
         app:layout_constraintTop_toBottomOf="@+id/professors_rated" />
@@ -163,7 +163,7 @@
         android:layout_marginTop="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Comments Written"
-        android:textColor="#FBFBFB"
+        android:textColor="@color/text_primary"
         app:layout_constraintStart_toStartOf="@+id/your_stats_background"
         app:layout_constraintTop_toBottomOf="@+id/average_rating_given_num2" />
 
@@ -173,7 +173,7 @@
         android:layout_height="wrap_content"
         android:fontFamily="@font/inter_bold"
         android:text="39"
-        android:textColor="#FBFBFB"
+        android:textColor="@color/text_primary"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="@+id/average_rating_given"
         app:layout_constraintTop_toBottomOf="@+id/comments_written" />
@@ -186,7 +186,7 @@
         android:layout_marginTop="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Up-/Downvotes"
-        android:textColor="#FBFBFB"
+        android:textColor="@color/text_primary"
         app:layout_constraintStart_toStartOf="@+id/your_stats_background"
         app:layout_constraintTop_toBottomOf="@+id/comments_written_num" />
 
@@ -196,7 +196,7 @@
         android:layout_height="wrap_content"
         android:fontFamily="@font/inter_bold"
         android:text="-7"
-        android:textColor="#FBFBFB"
+        android:textColor="@color/text_primary"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="@+id/average_rating_given"
         app:layout_constraintTop_toBottomOf="@+id/up_downvotes" />
@@ -208,7 +208,7 @@
         android:layout_marginEnd="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Username"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary"
         android:textSize="40sp"
         app:layout_constraintBottom_toBottomOf="@+id/profile"
         app:layout_constraintEnd_toEndOf="@+id/profile"

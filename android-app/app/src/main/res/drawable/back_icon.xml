@@ -13,7 +13,7 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:autoMirrored="true" android:height="30dp" android:tint="#FFFFFF" android:viewportHeight="960" android:viewportWidth="960" android:width="30dp">
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:autoMirrored="true" android:height="30dp" android:tint="@color/icon_tint" android:viewportHeight="960" android:viewportWidth="960" android:width="30dp">
       
     <path android:fillColor="@android:color/white" android:pathData="M640,880L240,480L640,80L711,151L382,480L711,809L640,880Z"/>
     
