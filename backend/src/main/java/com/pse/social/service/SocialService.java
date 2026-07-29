@@ -5,11 +5,14 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.service.LectureService;
+import com.pse.shared.enums.ContentStatus;
+import com.pse.shared.enums.NotificationType;
 import com.pse.shared.enums.ReportReason;
 import com.pse.shared.enums.ReportStatus;
 import com.pse.shared.enums.VoteType;
@@ -335,9 +338,16 @@ public class SocialService {
     }
 
 
+    // Needs a transaction: open-in-view is disabled and the response walks the
+    // lazy answers collection of every comment. Without it this endpoint fails
+    // with LazyInitializationException for any lecture that has comments.
+    @Transactional(readOnly = true)
     public CommentsResponse getComments(UUID lecture_id) {
 
-        List<Comment> comments = commentRepository.findAllByLectureId(lecture_id);
+        // Only VISIBLE comments reach the student app. A comment is set to HIDDEN
+        // when an admin resolves a report against it as ACTION_TAKEN.
+        List<Comment> comments = commentRepository
+                .findAllByLectureIdAndStatus(lecture_id, ContentStatus.VISIBLE);
 
         List<CommentResponse> commentsResponses = new ArrayList<>();
 
@@ -384,6 +394,7 @@ public class SocialService {
     }
 
 
+    @Transactional(readOnly = true)
     public NotificationsResponse getNotifications(String authHeader) {
 
         Student student = authService.verifyUser(authHeader);
@@ -401,10 +412,29 @@ public class SocialService {
 
         for(Notification notification : notifications) {
 
+            // Rows written before the type column existed are answer notifications.
+            NotificationType type = notification.getType() == null
+                    ? NotificationType.ANSWER
+                    : notification.getType();
+
+            if (type == NotificationType.WARNING) {
+                notificationResponses.add(
+                        new NotificationResponse(
+                                type,
+                                null,
+                                null,
+                                notification.getMessage(),
+                                notification.getCreatedAt()
+                        ));
+                continue;
+            }
+
             notificationResponses.add(
                     new NotificationResponse(
+                            type,
                             notification.getAnswer().getStudent().getUsername(),
                             notification.getAnswer().getContent(),
+                            null,
                             notification.getCreatedAt()
                     ));
         }

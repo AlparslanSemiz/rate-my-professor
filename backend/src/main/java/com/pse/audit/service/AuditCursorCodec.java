@@ -37,7 +37,11 @@ public class AuditCursorCodec {
                 throw invalidCursor();
             }
             return new Cursor(Instant.parse(parts[1]), UUID.fromString(parts[2]));
-        } catch (IllegalArgumentException exception) {
+        } catch (ApiException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            // Instant.parse throws DateTimeParseException, which is not an
+            // IllegalArgumentException, so a narrower catch here leaks a 500.
             throw invalidCursor();
         }
     }

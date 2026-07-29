@@ -10,12 +10,15 @@ import com.pse.moderation.dto.response.UserReferenceResponse;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.WarningRepository;
 import com.pse.security.AuthenticatedUser;
+import com.pse.shared.enums.ContentStatus;
 import com.pse.shared.enums.ReportStatus;
 import com.pse.shared.enums.UserRole;
 import com.pse.shared.error.ApiException;
 import com.pse.shared.util.UtcDates;
+import com.pse.social.model.Comment;
 import com.pse.social.model.CommentReport;
 import com.pse.social.repository.CommentReportRepository;
+import com.pse.social.repository.CommentRepository;
 import com.pse.user.model.Student;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,6 +35,7 @@ import java.util.UUID;
 public class ModerationCommentService {
 
     private final CommentReportRepository reportRepository;
+    private final CommentRepository commentRepository;
     private final WarningRepository warningRepository;
     private final AdminRepository adminRepository;
     private final AuditWriter auditWriter;
@@ -38,12 +43,14 @@ public class ModerationCommentService {
 
     public ModerationCommentService(
             CommentReportRepository reportRepository,
+            CommentRepository commentRepository,
             WarningRepository warningRepository,
             AdminRepository adminRepository,
             AuditWriter auditWriter,
             Clock clock
     ) {
         this.reportRepository = reportRepository;
+        this.commentRepository = commentRepository;
         this.warningRepository = warningRepository;
         this.adminRepository = adminRepository;
         this.auditWriter = auditWriter;
@@ -58,7 +65,7 @@ public class ModerationCommentService {
                 .map(this::toResponse)
                 .toList();
         return new ReportedCommentsResponse(
-                "Successfully found all reported comments",
+                "Success",
                 true,
                 comments
         );
@@ -85,6 +92,27 @@ public class ModerationCommentService {
         report.setReviewedAt(LocalDateTime.now(clock));
         reportRepository.save(report);
 
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("status", Map.of("before", before.name(), "after", status.name()));
+
+        // ACTION_TAKEN is the only status that means "this content was moderated",
+        // so it is the only one that hides the comment. Moving the report to any
+        // other status puts the comment back. Answers are nested under the comment
+        // in the student read path, so they disappear and return with it.
+        Comment comment = report.getComment();
+        ContentStatus commentBefore = comment.getStatus();
+        ContentStatus commentAfter = status == ReportStatus.ACTION_TAKEN
+                ? ContentStatus.HIDDEN
+                : ContentStatus.VISIBLE;
+        if (commentBefore != commentAfter) {
+            comment.setStatus(commentAfter);
+            commentRepository.save(comment);
+            changes.put(
+                    "commentStatus",
+                    Map.of("before", commentBefore.name(), "after", commentAfter.name())
+            );
+        }
+
         auditWriter.write(
                 principal.admin(),
                 AuditAction.COMMENT_REPORT_STATUS_CHANGED,
@@ -92,7 +120,7 @@ public class ModerationCommentService {
                 report.getId(),
                 "Report about " + report.getComment().getStudent().getUsername()
                         + " in " + postContext(report),
-                AuditWriter.change("status", before.name(), status.name()),
+                changes,
                 Map.of()
         );
         return new BasicResponse("Updated", true);

@@ -107,6 +107,15 @@ public class AuthService {
         rateLimitService.consume(RateLimitService.REQUEST_CODE, emailSubject, requestEmailLimit);
         rateLimitService.consume(RateLimitService.REQUEST_CODE, ipSubject, requestIpLimit);
 
+        // A blocked or deleted account cannot complete a login, so do not mail it a
+        // code. The response stays identical to the success case on purpose: a
+        // distinguishable answer here would turn this endpoint into an account
+        // enumeration oracle.
+        Student existing = studentRepository.findByKitEmail(email).orElse(null);
+        if (existing != null && !isLoginAllowed(existing.getStatus())) {
+            return new BasicResponse("Login code sent", true);
+        }
+
         String code = otpService.issue(email);
         try {
             loginCodeDelivery.send(email, code);
@@ -127,16 +136,20 @@ public class AuthService {
         rateLimitService.ensureAllowed(RateLimitService.LOGIN_FAILURE, emailSubject, loginEmailLimit);
         rateLimitService.ensureAllowed(RateLimitService.LOGIN_FAILURE, ipSubject, loginIpLimit);
 
+        // Check the account status before consuming the code. Consuming first burns
+        // a valid code on a request that can only ever end in 403.
+        Student existing = studentRepository.findByKitEmail(email).orElse(null);
+        if (existing != null && !isLoginAllowed(existing.getStatus())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Account is not active");
+        }
+
         if (!otpService.consume(email, submittedCode)) {
             rateLimitService.consume(RateLimitService.LOGIN_FAILURE, emailSubject, loginEmailLimit);
             rateLimitService.consume(RateLimitService.LOGIN_FAILURE, ipSubject, loginIpLimit);
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid or expired login code");
         }
 
-        Student student = studentRepository.findByKitEmail(email).orElseGet(() -> createStudent(email));
-        if (student.getStatus() == UserStatus.BLOCKED || student.getStatus() == UserStatus.DELETED) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Account is not active");
-        }
+        Student student = existing == null ? createStudent(email) : existing;
         student.setLastSeenAt(LocalDateTime.now(clock));
         studentRepository.save(student);
 
@@ -182,15 +195,20 @@ public class AuthService {
         if (!token.isRevoked()) {
             token.setRevoked(true);
             tokenRepository.save(token);
-            auditWriter.write(
-                    principal.admin(),
-                    AuditAction.ADMIN_LOGOUT,
-                    AuditTargetType.ADMIN_SESSION,
-                    token.getId(),
-                    principal.student().getUsername() + " admin session",
-                    AuditWriter.change("authenticated", true, false),
-                    Map.of()
-            );
+            // The route is open to students too, and ADMIN_LOGOUT belongs to the
+            // administrative record only. AuditWriter dereferences the Admin, so
+            // this guard is also what keeps a student logout from throwing.
+            if (principal.isAdmin()) {
+                auditWriter.write(
+                        principal.admin(),
+                        AuditAction.ADMIN_LOGOUT,
+                        AuditTargetType.ADMIN_SESSION,
+                        token.getId(),
+                        principal.student().getUsername() + " admin session",
+                        AuditWriter.change("authenticated", true, false),
+                        Map.of()
+                );
+            }
         }
         return new BasicResponse("Logged out successfully", true);
     }
@@ -282,6 +300,10 @@ public class AuthService {
         student.setCredibilityScore(0);
         student.setStatus(UserStatus.ACTIVE);
         return studentRepository.save(student);
+    }
+
+    private static boolean isLoginAllowed(UserStatus status) {
+        return status != UserStatus.BLOCKED && status != UserStatus.DELETED;
     }
 
     private String normalizeAndValidateEmail(String rawEmail) {

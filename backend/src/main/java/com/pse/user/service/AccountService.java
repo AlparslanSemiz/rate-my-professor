@@ -57,7 +57,15 @@ public class AccountService {
 
         Student student = authService.verifyUser(authHeader);
 
-        return studentService.deleteAccount(student);
+        BasicResponse response = studentService.deleteAccount(student);
+
+        if (response.success()) {
+            // Without this the account is DELETED but every issued token stays
+            // valid until it expires, which for a student is a full year.
+            authService.invalidateAllAuthTokensForEmail(student.getKitEmail());
+        }
+
+        return response;
     }
 
     public BasicResponse requestLogout(String authHeader) {

@@ -25,6 +25,8 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
      */
     Optional<Student> findByKitEmail(String kitEmail);
 
+    boolean existsByUsername(String username);
+
     List<Student> findAllByStatusNotOrderByCreatedAtDesc(UserStatus status);
 
     Optional<Student> findByIdAndStatusNot(UUID id, UserStatus status);

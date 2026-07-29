@@ -31,6 +31,24 @@ enum SemesterSeason {
   @@map("semester_season")
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+  DELETED
+
+  @@map("user_status")
+}
+
+/// An ANSWER notification carries an answer and no message; a WARNING
+/// notification carries a message and no answer.
+enum NotificationType {
+  ANSWER
+  WARNING
+
+  @@map("notification_type")
+}
+
 model OneTimePassword {
   id          Int      @id @default(autoincrement())
   email       String
@@ -115,16 +133,30 @@ model Student {
   /// Optional feature from the user stories.
   credibilityScore Int @default(0) @map("credibility_score")
 
+  status    UserStatus @default(ACTIVE)
+  biography String?    @db.Text
+
+  lastSeenAt    DateTime? @map("last_seen_at")
+  blockedAt     DateTime? @map("blocked_at")
+  blockedReason String?   @map("blocked_reason")
+
+  /// Set when the account is deleted. Deletion anonymizes the row rather than
+  /// removing it, so that authored content keeps a valid foreign key.
+  deletedAt DateTime? @map("deleted_at")
+
   ratings        Rating[]
   comments       Comment[]
   answers        Answer[]
   commentReports CommentReport[]
   answerReports  AnswerReport[]
   tokens         Token[]
+  notifications  Notification[]
+  warnings       Warning[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([status, createdAt(sort: Desc)])
   @@map("students")
 }
 
@@ -179,6 +211,7 @@ model Comment {
 
   @@index([moduleId, createdAt])
   @@index([studentId])
+  @@index([moduleId, status])
   @@map("comments")
 }
 
@@ -195,7 +228,8 @@ model Answer {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
-  reports AnswerReport[]
+  reports       AnswerReport[]
+  notifications Notification[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -203,6 +237,52 @@ model Answer {
   @@index([commentId, createdAt])
   @@index([studentId])
   @@map("answers")
+}
+
+/// Delivered to a student in their own feed. Either a reply to something they
+/// wrote (ANSWER) or a disciplinary warning issued by an administrator
+/// (WARNING). A warning notification is informational only — it never restricts
+/// the account, which is what distinguishes it from a block.
+model Notification {
+  id   String           @id @default(uuid()) @db.Uuid
+  type NotificationType @default(ANSWER)
+
+  recipientId String  @map("recipient_id") @db.Uuid
+  recipient   Student @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  /// Null for WARNING rows.
+  answerId String? @map("answer_id") @db.Uuid
+  answer   Answer? @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  /// Only populated for WARNING rows.
+  message String? @db.Text
+
+  seen Boolean @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([recipientId, seen, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+/// A disciplinary record against a student, issued by an administrator. Warnings
+/// accumulate and are never reversed; they do not restrict access. Revoking
+/// access is a separate action recorded on Student.status.
+model Warning {
+  id      String @id @default(uuid()) @db.Uuid
+  message String @db.Text
+
+  studentId String  @map("student_id") @db.Uuid
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  /// The issuing administrator. Not modelled as a relation here because the
+  /// admins table is still Hibernate-owned.
+  adminId String @map("admin_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([studentId])
+  @@map("warnings")
 }
 
 /// A student may report the same comment only once.

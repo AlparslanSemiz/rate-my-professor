@@ -20,6 +20,17 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, UU
 
     long countByCommentStudent(Student student);
 
+    /**
+     * Reports received per comment author, as {@code [studentId, count]} rows.
+     * The per-row equivalent of {@link #countByCommentStudent(Student)}.
+     */
+    @Query("""
+        SELECT report.comment.student.id, COUNT(report)
+        FROM CommentReport report
+        GROUP BY report.comment.student.id
+    """)
+    List<Object[]> countGroupedByCommentStudent();
+
     @EntityGraph(attributePaths = {"comment", "comment.student", "comment.lecture", "reporter"})
     List<CommentReport> findAllByOrderByCreatedAtDesc();
 

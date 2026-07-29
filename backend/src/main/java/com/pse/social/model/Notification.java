@@ -1,9 +1,12 @@
 package com.pse.social.model;
 
 
+import com.pse.shared.enums.NotificationType;
 import com.pse.user.model.Student;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -34,9 +37,18 @@ public class Notification {
     @JoinColumn(name = "recipient_id")
     private Student recipient;
 
-    @ManyToOne(optional = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type")
+    private NotificationType type = NotificationType.ANSWER;
+
+    /** Null for {@link NotificationType#WARNING} rows, which have no answer. */
+    @ManyToOne
     @JoinColumn(name = "answer_id")
     private Answer answer;
+
+    /** Only populated for {@link NotificationType#WARNING} rows. */
+    @Column(name = "message", columnDefinition = "TEXT")
+    private String message;
 
     @Column(nullable = false)
     private boolean seen;

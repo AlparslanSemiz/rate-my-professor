@@ -4,6 +4,7 @@ import com.pse.auth.model.Token;
 import com.pse.auth.repository.TokenRepository;
 import com.pse.moderation.model.Admin;
 import com.pse.moderation.repository.AdminRepository;
+import com.pse.shared.enums.UserStatus;
 import com.pse.shared.util.HashGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,15 @@ public class TokenAuthenticationService {
                 .orElseGet(() -> upgradeLegacyToken(rawToken, hash, now).orElse(null));
 
         if (token == null || token.getStudent() == null) {
+            return Optional.empty();
+        }
+
+        // Enforce the account status on every request rather than relying on the
+        // blocking admin having revoked the sessions. Any path that changes the
+        // status without revoking (self-service delete, a manual database update)
+        // would otherwise leave a student session alive for the full token TTL.
+        UserStatus status = token.getStudent().getStatus();
+        if (status == UserStatus.BLOCKED || status == UserStatus.DELETED) {
             return Optional.empty();
         }
 

@@ -4,23 +4,52 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
+/**
+ * The accounts that are administrators.
+ *
+ * <p>Entries are comma separated and take the form {@code email} or
+ * {@code email:Display Name}. The name is optional and is only used when the
+ * account has to be created; it never affects whether an email is an admin.
+ */
 @Component
 public class AdminBootstrapPolicy {
 
-    private final Set<String> bootstrapEmails;
+    private final Map<String, String> bootstrapAccounts;
 
     public AdminBootstrapPolicy(@Value("${app.auth.admin-bootstrap-emails:}") String configuredEmails) {
-        this.bootstrapEmails = Arrays.stream(configuredEmails.split(","))
+        Map<String, String> accounts = new LinkedHashMap<>();
+        Arrays.stream(configuredEmails.split(","))
                 .map(String::trim)
-                .map(String::toLowerCase)
                 .filter(value -> !value.isBlank())
-                .collect(Collectors.toUnmodifiableSet());
+                .forEach(entry -> {
+                    int separator = entry.indexOf(':');
+                    String email = (separator < 0 ? entry : entry.substring(0, separator))
+                            .trim()
+                            .toLowerCase(Locale.ROOT);
+                    String name = separator < 0 ? "" : entry.substring(separator + 1).trim();
+                    if (!email.isBlank()) {
+                        accounts.put(email, name);
+                    }
+                });
+        this.bootstrapAccounts = Map.copyOf(accounts);
     }
 
     public boolean shouldBootstrap(String normalizedEmail) {
-        return bootstrapEmails.contains(normalizedEmail);
+        return bootstrapAccounts.containsKey(normalizedEmail);
+    }
+
+    public Set<String> bootstrapEmails() {
+        return bootstrapAccounts.keySet();
+    }
+
+    /** The configured display name for an email, or empty when none was given. */
+    public String displayName(String normalizedEmail) {
+        String name = bootstrapAccounts.get(normalizedEmail);
+        return name == null ? "" : name;
     }
 }
