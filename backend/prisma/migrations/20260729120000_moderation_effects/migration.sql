@@ -11,7 +11,13 @@
 -- Warnings are delivered to the student through the existing notification feed.
 -- A warning notification has no answer, so answer_id must become nullable, and a
 -- discriminator plus a message column are needed to tell the two kinds apart.
-ALTER TABLE "notifications" ADD COLUMN IF NOT EXISTS "type" VARCHAR(20);
+-- The DEFAULT matters: this migration is applied while the previous build is
+-- still serving traffic, and that build inserts notifications without knowing
+-- about the type column. Without a default those inserts would violate the NOT
+-- NULL set below and every reply notification would fail until the new build
+-- rolled out.
+ALTER TABLE "notifications" ADD COLUMN IF NOT EXISTS "type" VARCHAR(20) DEFAULT 'ANSWER';
+ALTER TABLE "notifications" ALTER COLUMN "type" SET DEFAULT 'ANSWER';
 ALTER TABLE "notifications" ADD COLUMN IF NOT EXISTS "message" TEXT;
 ALTER TABLE "notifications" ALTER COLUMN "answer_id" DROP NOT NULL;
 
