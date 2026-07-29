@@ -25,6 +25,9 @@ public class SecurityConfig {
     ) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                // Picks up the CorsConfigurationSource from CorsConfig. Handling CORS in
+                // the chain is what keeps preflight requests out of the role matchers
+                // below, which would otherwise answer an unauthenticated OPTIONS with 401.
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

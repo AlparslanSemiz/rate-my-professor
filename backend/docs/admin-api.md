@@ -281,6 +281,12 @@ Copy `.env.example` and supply deployment-specific values. In production,
 only exact comma-separated origins. Wildcards are rejected. SMTP and third-party API
 credentials are read only from environment variables.
 
+`ADMIN_FRONTEND_ORIGINS` must list every origin the panel is served from, scheme and
+port included. A browser call from an origin outside the list is answered with
+`403 Invalid CORS request` before it reaches a controller, so `POST /auth/request-login`
+fails and the panel cannot be logged into. An empty value falls back to the local
+development origins and logs a warning at startup; it does not disable the check.
+
 The Admin Web setting is:
 
 ```dotenv
