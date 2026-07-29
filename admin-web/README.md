@@ -7,15 +7,14 @@ immutable history of administrative actions.
 
 The repository contains both the React frontend and a complete local demo
 environment. The demo environment consists of a small Node.js mock API,
-PostgreSQL, seeded sample data, and a production-style Nginx web container.
+PostgreSQL, and seeded sample data.
 
 ## Table of Contents
 
 - [Main Features](#main-features)
 - [Technology Stack](#technology-stack)
 - [System Architecture](#system-architecture)
-- [Quick Start with Docker](#quick-start-with-docker)
-- [Development with Hot Reload](#development-with-hot-reload)
+- [Quick Start](#quick-start)
 - [Demo Walkthrough](#demo-walkthrough)
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
@@ -60,7 +59,7 @@ Additional engineering features include:
 | Code quality | ESLint, TypeScript strict checks |
 | Local API | Node.js HTTP server |
 | Database | PostgreSQL 16 |
-| Containers | Docker Compose, multi-stage Docker build, Nginx |
+| Containers | Docker Compose (local Postgres), multi-stage Docker build + Nginx (production image, built in CI/CD) |
 
 Node.js 24 is recommended because it matches the version used by the Docker
 build.
@@ -88,63 +87,23 @@ build.
 └──────────────────────────────────────────────────────────┘
 ```
 
-In the Docker setup, Nginx serves the compiled frontend and forwards `/api/*`
-requests to the API container. During frontend development, Vite serves the
-application directly and calls the API at `http://localhost:8080`.
+Locally, Vite serves the frontend directly and calls the mock API at
+`http://localhost:8080`. In production, Nginx serves the static build under
+`VITE_BASE_PATH` with no API proxy — the browser calls the real backend
+directly (same-origin; see "Deploying the production image").
 
 The local API is intentionally lightweight. It implements the contract needed
 by this admin application; it is not intended to replace the production
 backend.
 
-## Quick Start with Docker
-
-This is the easiest and most reproducible way to run the complete project.
+## Quick Start
 
 ### Prerequisites
 
-- Docker Desktop or Docker Engine with Docker Compose
+- Docker Engine (runs local PostgreSQL only — see `docker-compose.yml`)
 - Node.js 24 and npm
 
 ### Start the application
-
-From the repository root:
-
-```bash
-npm run docker:up
-```
-
-The command builds the containers, waits for their health checks, initializes
-the database, and starts all three services:
-
-| Service | Address |
-| --- | --- |
-| Web application | [http://localhost:5173](http://localhost:5173) |
-| Mock API | [http://localhost:8080](http://localhost:8080) |
-| PostgreSQL | `localhost:5432` |
-
-Use the following demo administrator:
-
-```text
-Email: u-kisi4@student.kit.edu
-Code:  123456
-```
-
-The login-code endpoint does not send a real email in local demo mode. It
-returns the configured demo code so the entire workflow can be evaluated
-without an email provider.
-
-### Stop the application
-
-```bash
-npm run docker:down
-```
-
-The PostgreSQL data is stored in the `admin_web_pgdata` Docker volume and
-therefore remains available after the containers are stopped.
-
-## Development with Hot Reload
-
-Use this setup when changing frontend code and you want Vite's fast refresh.
 
 Install the dependencies once:
 
@@ -164,8 +123,26 @@ Start the frontend in a second terminal:
 npm run dev:local
 ```
 
-Then open [http://localhost:5173](http://localhost:5173) and sign in with the
-demo account shown above.
+Open [http://localhost:5173](http://localhost:5173) and sign in with the
+demo administrator:
+
+```text
+Email: u-kisi4@student.kit.edu
+Code:  123456
+```
+
+The login-code endpoint does not send a real email in local demo mode. It
+returns the configured demo code so the entire workflow can be evaluated
+without an email provider.
+
+### Stop the application
+
+```bash
+npm run db:down
+```
+
+The PostgreSQL data is stored in the `admin_web_pgdata` Docker volume and
+therefore remains available after the container is stopped.
 
 To restore the seeded demo records:
 
@@ -205,24 +182,19 @@ The repository provides these environment files:
 
 | File | Usage |
 | --- | --- |
-| `.env.example` | Example frontend configuration |
-| `.env.demo-local` | Local Vite mode used by `npm run dev:local` |
-| `.env.docker` | Ports, database credentials, and demo-only values for Docker Compose |
+| `.env` | Default Vite config, used by `npm run dev` (points at the production backend) |
+| `.env.demo-local` | Local Vite mode used by `npm run dev:local` (points at the mock API) |
+| `.env.docker` | Local PostgreSQL credentials and mock API demo values |
 
-The Docker web image uses `VITE_API_BASE_URL=/api`. Nginx then proxies the
-request to the API container, which keeps the browser on a single origin.
+Environment values are read at startup/build time. Restart the Vite server
+after changing them.
 
-Environment values are read at startup/build time. Restart the Vite server or
-rebuild the web image after changing them.
-
-### Local Docker settings
+### Local PostgreSQL and mock API settings
 
 The defaults in `.env.docker` are:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `LOCAL_WEB_PORT` | `5173` | Web port exposed on the host |
-| `LOCAL_API_PORT` | `8080` | API port exposed on the host |
 | `LOCAL_DB_PORT` | `5432` | PostgreSQL port exposed on the host |
 | `LOCAL_DB_NAME` | `admin_web` | Local database name |
 | `LOCAL_DB_USER` | `admin_web` | Local database user |
@@ -509,13 +481,17 @@ the test explicitly exercises the live local API.
 | `npm run build` | Type-check and create the production bundle |
 | `npm run preview` | Preview the built `dist/` directory |
 
-### Docker stack
+### Local database and mock API
 
 | Command | Description |
 | --- | --- |
-| `npm run docker:up` | Build and start web, API, and PostgreSQL |
-| `npm run docker:down` | Stop and remove the stack containers |
-| `npm run docker:logs` | Follow logs from every stack service |
+| `npm run db:up` | Start the local PostgreSQL container |
+| `npm run db:down` | Stop the local PostgreSQL container |
+| `npm run db:logs` | Follow PostgreSQL logs |
+| `npm run mock:api` | Run the mock API directly with Node |
+| `npm run mock:up` | Start PostgreSQL, then the mock API |
+| `npm run mock:seed` | Seed the local database with demo data |
+| `npm run mock:reset` | Start PostgreSQL and reseed demo data |
 
 ### Quality
 
@@ -622,8 +598,10 @@ contract documented above.
 
 ### A port is already in use
 
-Change `LOCAL_WEB_PORT`, `LOCAL_API_PORT`, or `LOCAL_DB_PORT` in `.env.docker`,
-then restart the Docker stack.
+Change `LOCAL_DB_PORT` in `.env.docker`, then restart PostgreSQL with
+`npm run db:down && npm run db:up`. The mock API's port is `MOCK_API_PORT`
+(defaults to `8080`, set as an environment variable when running
+`npm run mock:api`).
 
 ### The frontend cannot reach the API
 
@@ -650,13 +628,13 @@ Restore the fixtures:
 npm run mock:reset
 ```
 
-### A Docker service is unhealthy
+### PostgreSQL is unhealthy
 
-Inspect all service logs:
+Inspect its logs:
 
 ```bash
-npm run docker:logs
+npm run db:logs
 ```
 
-The API waits for PostgreSQL to become healthy, and the web container waits for
-the API. The logs therefore usually show which dependency failed first.
+The mock API waits for PostgreSQL to become healthy before serving requests,
+so a failing `mock:up` usually traces back to the database container.

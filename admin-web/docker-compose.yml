@@ -1,3 +1,5 @@
+# Local PostgreSQL only. The mock API and frontend run directly with Node/Vite
+# (npm run mock:up / npm run dev:local) — see README's "Quick Start" section.
 services:
   db:
     image: postgres:16-alpine
@@ -13,58 +15,6 @@ services:
       - admin_web_pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${LOCAL_DB_USER:-admin_web} -d ${LOCAL_DB_NAME:-admin_web}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  api:
-    build:
-      context: .
-      target: api
-    container_name: admin-web-api
-    restart: unless-stopped
-    environment:
-      LOCAL_DB_HOST: db
-      LOCAL_DB_PORT: 5432
-      LOCAL_DB_NAME: ${LOCAL_DB_NAME:-admin_web}
-      LOCAL_DB_USER: ${LOCAL_DB_USER:-admin_web}
-      LOCAL_DB_PASSWORD: ${LOCAL_DB_PASSWORD:-admin_web}
-      MOCK_API_PORT: 8080
-      VITE_DEMO_LOGIN_CODE: ${VITE_DEMO_LOGIN_CODE:-123456}
-      VITE_DEMO_ADMIN_TOKEN: ${VITE_DEMO_ADMIN_TOKEN:-dev-admin-token}
-    ports:
-      - "${LOCAL_API_PORT:-8080}:8080"
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:8080/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))",
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  web:
-    build:
-      context: .
-      target: web
-      args:
-        VITE_API_BASE_URL: /api
-        VITE_BASE_PATH: /
-    container_name: admin-web
-    restart: unless-stopped
-    ports:
-      - "${LOCAL_WEB_PORT:-5173}:80"
-    depends_on:
-      api:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10

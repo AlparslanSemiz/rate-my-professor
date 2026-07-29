@@ -6,18 +6,11 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline
 
-FROM dependencies AS api
-
-ENV NODE_ENV=production
-WORKDIR /app
-COPY scripts ./scripts
-CMD ["node", "scripts/mock-api/server.mjs"]
-
 FROM dependencies AS build
 
 # Both values are baked into the static output and cannot be changed afterwards:
 # VITE_API_BASE_URL is the backend the panel calls, VITE_BASE_PATH is the URL path it is
-# served from. The local demo stack serves from the root; production serves from /admin/.
+# served from.
 ARG VITE_API_BASE_URL=/api
 ARG VITE_BASE_PATH=/
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
@@ -25,13 +18,6 @@ ENV VITE_BASE_PATH=${VITE_BASE_PATH}
 WORKDIR /app
 COPY . .
 RUN npm run build
-
-# Local demo image: serves the panel at the root and proxies /api/ to the mock API service.
-FROM nginx:1.29-alpine AS web
-
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
 
 # Production image: static files only, served under the same path they were built for, with
 # no upstream dependency. The real backend is reached directly from the browser.
