@@ -6,11 +6,12 @@ stages:
   - check
   - test
   - build
-  - package
+  - image
   - deploy
 
 variables:
   VITE_API_BASE_URL: "https://server.example.org"
+  VITE_BASE_PATH: "/admin/"
 
 .node-npm:
   image: node:24-alpine
@@ -45,44 +46,71 @@ web:build:
     paths:
       - dist/
 
-web:package:
-  extends: .node-npm
-  stage: package
+# Builds the same web-prod image scripts/deploy-prod.ps1 builds locally, and pushes it to
+# this project's GitLab Container Registry so the deploy stage never has to move a 60MB+
+# tar over the pipeline.
+web:image:
+  stage: image
+  image: docker:27-cli
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
-    - npm run build
-    - tar -czf admin-web-dist.tar.gz dist/
-  artifacts:
-    expire_in: 1 month
-    paths:
-      - admin-web-dist.tar.gz
+    - >
+      docker build --target web-prod
+      --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL"
+      --build-arg VITE_BASE_PATH="$VITE_BASE_PATH"
+      -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+      -t "$CI_REGISTRY_IMAGE:latest"
+      .
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE:latest"
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
 
+# SSHes into the production host, pulls the image the job above just pushed, and swaps the
+# running container for it. Mirrors the remote script in scripts/deploy-prod.ps1, just
+# pulling from the registry instead of `docker load`-ing a copied tar.
 web:deploy:
   image: alpine:3.22
   stage: deploy
   variables:
-    DEPLOY_PATH: /var/www/admin-web
+    IMAGE: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
   needs:
-    - job: web:package
-      artifacts: true
+    - job: web:image
   before_script:
-    - apk add --no-cache openssh-client rsync
+    - apk add --no-cache openssh-client curl
     - test -n "$DEPLOY_HOST"
     - test -n "$DEPLOY_USER"
-    - test -n "$DEPLOY_SSH_PRIVATE_KEY"
+    - test -n "$SSH_PRIVATE_KEY"
+    - test -n "$CI_DEPLOY_USER"
+    - test -n "$CI_DEPLOY_PASSWORD"
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+    - cp "$SSH_PRIVATE_KEY" ~/.ssh/id_ed25519
     - chmod 600 ~/.ssh/id_ed25519
     - ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
   script:
-    - mkdir -p deploy
-    - tar -xzf admin-web-dist.tar.gz -C deploy
-    - ssh -p "${DEPLOY_PORT:-22}" "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p '$DEPLOY_PATH'"
-    - rsync -az -e "ssh -p ${DEPLOY_PORT:-22}" deploy/dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+    - |
+      ssh -p "${DEPLOY_PORT:-22}" "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<EOF
+      set -e
+      echo "$CI_DEPLOY_PASSWORD" | docker login -u "$CI_DEPLOY_USER" --password-stdin "$CI_REGISTRY"
+      docker pull "$IMAGE"
+      docker rm -f admin-web-prod >/dev/null 2>&1 || true
+      docker run -d --name admin-web-prod --restart unless-stopped -p 127.0.0.1:${WEB_PORT:-8081}:80 "$IMAGE"
+      sleep 2
+      code=\$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:${WEB_PORT:-8081}${VITE_BASE_PATH})
+      echo "container ${VITE_BASE_PATH} -> \$code"
+      test "\$code" = "200"
+      docker image prune -f >/dev/null
+      docker logout "$CI_REGISTRY" >/dev/null 2>&1 || true
+      EOF
   environment:
     name: production
+    url: "$PUBLIC_URL"
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
