@@ -7,7 +7,6 @@ workflow:
 
 stages:
   - test
-  - build
   - package
   - deploy
 
@@ -49,18 +48,6 @@ server:test:
       coverage_report:
         coverage_format: jacoco
         path: target/site/jacoco/jacoco.xml
-    expire_in: 1 week
-
-server:build:
-  stage: build
-  image: maven:3.9-eclipse-temurin-21
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule"'
-  script:
-    - ./mvnw package -DskipTests
-  artifacts:
-    paths:
-      - target/*.jar
     expire_in: 1 week
 
 server:package:
