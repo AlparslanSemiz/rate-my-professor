@@ -380,6 +380,12 @@ public class SocialService {
         List<AnswerResponse> answerResponses = new ArrayList<>();
         for(Answer answer : answers) {
 
+            // Hidden answers must not reach students once an admin has resolved a
+            // report against them as ACTION_TAKEN, mirroring the comment filter above.
+            if (answer.getStatus() != ContentStatus.VISIBLE) {
+                continue;
+            }
+
             answerResponses.add(new AnswerResponse(
                     answer.getComment().getId(),
                     answer.getContent(),
