@@ -12,12 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Saved Docker images produced for a deployment
+*.tar
+*.tar.gz
+
 # Local env files (keep .env.example versioned)
 .env
 .env.*
 !.env.example
 !.env.demo-local
 !.env.docker
+!.env.prod.example
 
 # Editor directories and files
 .vscode/*

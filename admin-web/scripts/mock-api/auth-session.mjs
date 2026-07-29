@@ -11,6 +11,7 @@ const REQUIRED_ADMINS = {
   'u-kisi6@student.kit.edu': 'Luis',
   'u-kisi7@student.kit.edu': 'Yavuz',
   'u-kisi8@student.kit.edu': 'Philipp',
+  'u-kisi9@student.kit.edu': 'Enno',
 }
 
 export function normalizeEmail(email) {

@@ -555,13 +555,54 @@ The deployable files are written to `dist/`. To inspect them locally:
 npm run preview
 ```
 
-`VITE_API_BASE_URL` is embedded into the frontend during the build, so set it
-to the production API before running the command.
+Two values are embedded into the frontend during the build and cannot be
+changed afterwards without rebuilding:
 
-The repository's multi-stage `Dockerfile` provides two runtime targets:
+| Variable | Meaning | Default |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | Backend the panel calls | `http://localhost:8080` |
+| `VITE_BASE_PATH` | URL path the panel is served from | `/admin/` for builds, `/` for the dev server |
+
+The repository's multi-stage `Dockerfile` provides three runtime targets:
 
 - `api` runs the local mock API.
-- `web` serves the compiled frontend through Nginx.
+- `web` serves the compiled frontend at the root and proxies `/api/` to the
+  mock API. It is part of the local demo stack and expects that service.
+- `web-prod` serves the compiled frontend under `VITE_BASE_PATH` with no
+  upstream dependency. This is the deployable image.
+
+### Deploying the production image
+
+The panel is served from `/admin/` on the same host as the backend, so browser
+requests to the API are same-origin and need no CORS handling.
+
+On the deployment host:
+
+```bash
+cp .env.prod.example .env.prod          # then edit the values
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build --wait
+curl -I http://127.0.0.1:8081/admin/    # expect 200
+```
+
+The container publishes on the loopback interface only. The host's Nginx
+terminates TLS and forwards the public path to it, keeping the `/admin/`
+prefix:
+
+```nginx
+location /admin/ {
+    proxy_pass http://127.0.0.1:8081;   # no trailing slash: keep the prefix
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Hashed assets are served with a one-year immutable cache; `index.html` is sent
+with `no-store` so a released build is picked up on the next page load. To
+release a new version, pull and repeat the `up -d --build` command; to roll
+back, check out the previous commit and do the same.
 
 The production backend is outside this repository and must implement the API
 contract documented above.

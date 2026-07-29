@@ -1,0 +1,31 @@
+# Production panel only. The backend and its database run separately on the host; this
+# service serves static files and nothing else.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# The container is published on the loopback interface only: the host's Nginx terminates TLS
+# and proxies the public path to it.
+services:
+  web:
+    build:
+      context: .
+      target: web-prod
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?set the backend URL in .env.prod}
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/admin/}
+    image: admin-web-prod:latest
+    container_name: admin-web-prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8081}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
