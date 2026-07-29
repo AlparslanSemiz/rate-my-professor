@@ -7,13 +7,14 @@ workflow:
 
 stages:
   - test
-  - build
   - package
   - deploy
 
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
   IMAGE_TAG: "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
+  COVERAGE_THRESHOLD: "30"
+  GIT_DEPTH: "0"
 
 default:
   cache:
@@ -25,21 +26,28 @@ default:
 server:test:
   stage: test
   image: maven:3.9-eclipse-temurin-21
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule"'
+  before_script:
+    - |
+      if [ -n "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" ]; then
+        git fetch --no-tags origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME:refs/remotes/origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+      elif [ -n "$CI_DEFAULT_BRANCH" ]; then
+        git fetch --no-tags origin "$CI_DEFAULT_BRANCH:refs/remotes/origin/$CI_DEFAULT_BRANCH" || true
+      fi
   script:
-    - ./mvnw test
-
-server:build:
-  stage: build
-  image: maven:3.9-eclipse-temurin-21
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule"'
-  script:
-    - ./mvnw package -DskipTests
+    - ./mvnw verify
+    - java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"
+  coverage: '/Changed code line coverage:\s*([0-9]+(?:\.[0-9]+)?)%/'
   artifacts:
+    when: always
     paths:
-      - target/*.jar
+      - target/site/jacoco/
+      - target/surefire-reports/
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+      coverage_report:
+        coverage_format: jacoco
+        path: target/site/jacoco/jacoco.xml
     expire_in: 1 week
 
 server:package:
@@ -51,9 +59,6 @@ server:package:
     max: 2
     when:
       - script_failure
-  needs:
-    - job: server:build
-      artifacts: true
   before_script:
     - mkdir -p /kaniko/.docker
     - printf '{"auths":{"%s":{"username":"%s","password":"%s"}}}' "$CI_REGISTRY" "$CI_REGISTRY_USER" "$CI_REGISTRY_PASSWORD" > /kaniko/.docker/config.json
@@ -105,67 +110,16 @@ server:deploy:staging:
       -e MAIL_FROM_NAME=\"${MAIL_FROM_NAME:-RateMyProfApp}\"
       -e IPINFO_TOKEN=\"${IPINFO_TOKEN}\"
       -e GEOAPIFY_API_KEY=\"${GEOAPIFY_API_KEY}\"
-      $IMAGE_TAG"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"'
-      when: manual
-
-server:deploy:staging:jar:
-  stage: deploy
-  image: alpine:3.20
-  needs:
-    - job: server:build
-      artifacts: true
-  variables:
-    DEPLOY_CONTAINER_NAME: app-server
-    DEPLOY_DOCKER_ARGS: "-p 8080:8080 --restart unless-stopped --add-host=host.docker.internal:host-gateway"
-  before_script:
-    - apk add --no-cache openssh-client
-    - chmod 400 "$SSH_PRIVATE_KEY"
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
-  script:
-    - >
-      ssh -i "$SSH_PRIVATE_KEY" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST"
-      "set -e;
-      mkdir -p \"$DEPLOY_PATH\""
-    - >
-      scp -i "$SSH_PRIVATE_KEY" -P "$DEPLOY_PORT"
-      target/*.jar
-      "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/app.jar"
-    - >
-      ssh -i "$SSH_PRIVATE_KEY" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST"
-      "set -e;
-      cd \"$DEPLOY_PATH\";
-      docker pull eclipse-temurin:21-jre;
-      docker stop $DEPLOY_CONTAINER_NAME || true;
-      docker rm $DEPLOY_CONTAINER_NAME || true;
-      docker run -d --name $DEPLOY_CONTAINER_NAME
-      $DEPLOY_DOCKER_ARGS
-      -v \"\$(pwd)/app.jar:/app/app.jar:ro\"
-      -e SERVER_PORT=8080
-      -e SPRING_DATASOURCE_URL=\"${SPRING_DATASOURCE_URL:-jdbc:postgresql://host.docker.internal:5432/postgres}\"
-      -e SPRING_DATASOURCE_USERNAME=\"${SPRING_DATASOURCE_USERNAME:-postgres}\"
-      -e SPRING_DATASOURCE_PASSWORD=\"${SPRING_DATASOURCE_PASSWORD}\"
-      -e ADMIN_FRONTEND_ORIGINS=\"${ADMIN_FRONTEND_ORIGINS}\"
-      -e ADMIN_BOOTSTRAP_EMAILS=\"${ADMIN_BOOTSTRAP_EMAILS}\"
-      -e AUTH_RATE_LIMIT_HMAC_KEY=\"${AUTH_RATE_LIMIT_HMAC_KEY}\"
-      -e SPRING_MAIL_HOST=\"${SPRING_MAIL_HOST}\"
-      -e SPRING_MAIL_PORT=\"${SPRING_MAIL_PORT:-587}\"
-      -e SPRING_MAIL_USERNAME=\"${SPRING_MAIL_USERNAME}\"
-      -e SPRING_MAIL_PASSWORD=\"${SPRING_MAIL_PASSWORD}\"
-      -e SPRING_MAIL_SMTP_AUTH=\"${SPRING_MAIL_SMTP_AUTH:-true}\"
-      -e SPRING_MAIL_STARTTLS=\"${SPRING_MAIL_STARTTLS:-true}\"
-      -e MAIL_FROM_ADDRESS=\"${MAIL_FROM_ADDRESS}\"
-      -e MAIL_FROM_NAME=\"${MAIL_FROM_NAME:-RateMyProfApp}\"
-      -e IPINFO_TOKEN=\"${IPINFO_TOKEN}\"
-      -e GEOAPIFY_API_KEY=\"${GEOAPIFY_API_KEY}\"
-      eclipse-temurin:21-jre
-      java -jar /app/app.jar;
-      sleep 10;
-      docker inspect -f '{{.State.Running}}' $DEPLOY_CONTAINER_NAME | grep true;
-      docker logs --tail 100 $DEPLOY_CONTAINER_NAME"
+      $IMAGE_TAG;
+      for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+        if docker exec $DEPLOY_CONTAINER_NAME curl -fsS http://localhost:8080/health; then
+          docker logs --tail 100 $DEPLOY_CONTAINER_NAME;
+          exit 0;
+        fi;
+        sleep 2;
+      done;
+      docker logs --tail 200 $DEPLOY_CONTAINER_NAME;
+      exit 1"
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule"'
       when: manual

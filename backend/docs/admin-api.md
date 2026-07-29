@@ -290,28 +290,13 @@ VITE_API_BASE_URL=http://localhost:8080
 For a reverse proxy that exposes this backend under `/api`, use
 `VITE_API_BASE_URL=/api`; `/api` is a proxy prefix, not a backend route prefix.
 
-## Prisma migration deployment
+## Schema management
 
-The runtime continues to use `spring.jpa.hibernate.ddl-auto=update` for compatibility
-with the historical schema. Prisma migrations are additive and do not delete domain or
-frontend mock data.
+The backend schema is managed by Spring/JPA. The runtime uses
+`spring.jpa.hibernate.ddl-auto=update`, so deployments should point the backend at the
+target PostgreSQL database with `SPRING_DATASOURCE_URL`,
+`SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD`.
 
-For a new database:
-
-```shell
-npm ci
-npm run prisma:validate
-npm run prisma:migrate:deploy
-```
-
-For an existing Hibernate-managed database, back it up, mark only the empty historical
-baseline, and then deploy the additive migration:
-
-```shell
-npx prisma migrate resolve --applied 20260723000000_existing_schema_baseline
-npm run prisma:migrate:deploy
-```
-
-The admin migration adds audit/rate-limit storage and indexes, adds hashed OTP/token
-transition columns, marks legacy raw OTPs used, and safely backfills nullable legacy
-timestamps. Existing raw tokens remain readable once and are lazily upgraded to a hash.
+Before deploying against an existing database, take a database backup. Hibernate then
+applies the additive schema updates required by the current JPA entities when the
+backend starts.
