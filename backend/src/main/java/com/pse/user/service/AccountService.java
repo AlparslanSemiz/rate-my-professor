@@ -29,7 +29,7 @@ public class AccountService {
             return new UserRatingResponse("Error, couldnt verify User", false,null);
         }
 
-        return studentService.getUserRatings(student);
+        return studentService.getUserRatings(student.getId());
 
 
     }
@@ -50,7 +50,7 @@ public class AccountService {
             );
         }
 
-        return studentService.getUserInformation(student);
+        return studentService.getUserInformation(student.getId());
     }
 
     public BasicResponse deleteAccount(String authHeader) {

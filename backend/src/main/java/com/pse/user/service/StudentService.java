@@ -37,12 +37,19 @@ public class StudentService {
 
     //Methods used by AccountController
 
-    // Needs a transaction: open-in-view is disabled and this walks the lazy
-    // ratings/comments collections of the student. Without it this endpoint
-    // fails with LazyInitializationException for any student with ratings or
-    // comments.
+    // Takes the id rather than the Student handed back by AuthService, and
+    // re-fetches it here. That earlier Student was loaded in
+    // TokenAuthenticationService's own (by now committed and closed)
+    // transaction, so its lazy collections are bound to a session that no
+    // longer exists; wrapping this method in @Transactional does not reattach
+    // it. Re-fetching inside this transaction is what actually makes
+    // student.getRatings()/getComments() below initializable.
     @Transactional(readOnly = true)
-    public StudentProfileResponse getUserInformation(Student student) {
+    public StudentProfileResponse getUserInformation(UUID studentId) {
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null) {
+            return new StudentProfileResponse("Error, cannot authenticate user", false, null, 0, 0, 0, 0);
+        }
         return new StudentProfileResponse(
                 "Success",
                 true,
@@ -54,10 +61,14 @@ public class StudentService {
         );
     }
 
-    // Needs a transaction: walks the lazy ratings collection and each rating's
-    // lazy topics/lecture, same reason as getUserInformation above.
+    // Same reattachment reason as getUserInformation above.
     @Transactional(readOnly = true)
-    public UserRatingResponse getUserRatings(Student student) {
+    public UserRatingResponse getUserRatings(UUID studentId) {
+
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null) {
+            return new UserRatingResponse("Error, cannot authenticate user", false, new ArrayList<>());
+        }
 
         List<UserRatingDto> ratingDtos = new ArrayList<>();
 
