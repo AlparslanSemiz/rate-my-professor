@@ -1,6 +1,0 @@
--- Baseline marker for the schema historically managed by Hibernate ddl-auto=update.
---
--- Existing installations must mark this migration as applied once:
---   npx prisma migrate resolve --applied 20260723000000_existing_schema_baseline
---
--- New databases may run it normally before the additive admin API migration.

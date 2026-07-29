@@ -19,7 +19,7 @@ class DockerConfigurationTests {
 				"jdbc:postgresql://localhost:5432/postgres",
 				environment.getProperty("spring.datasource.url"));
 		assertEquals("postgres", environment.getProperty("spring.datasource.username"));
-		assertEquals("REDACTED", environment.getProperty("spring.datasource.password"));
+		assertEquals("", environment.getProperty("spring.datasource.password"));
 	}
 
 	@Test

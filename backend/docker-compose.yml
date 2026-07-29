@@ -28,6 +28,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: REDACTED
+      AUTH_RATE_LIMIT_HMAC_KEY: local-development-rate-limit-key-32chars
     ports:
       - "8080:8080"
 

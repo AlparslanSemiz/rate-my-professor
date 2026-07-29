@@ -15,9 +15,6 @@ npm-debug.log
 .env.*
 !.env.example
 
-src/generated/prisma
-ERD.md
-
 *.iml
 *.iws
 *.ipr

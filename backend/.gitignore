@@ -33,8 +33,6 @@ build/
 ### VS Code ###
 .vscode/
 
-### Node / Prisma ###
+### Node / local env ###
 node_modules/
 .env
-src/generated/prisma/
-ERD.md
