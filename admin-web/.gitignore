@@ -22,7 +22,6 @@ dist-ssr
 !.env.example
 !.env.demo-local
 !.env.docker
-!.env.prod.example
 
 # Editor directories and files
 .vscode/*

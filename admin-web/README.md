@@ -576,12 +576,22 @@ The repository's multi-stage `Dockerfile` provides three runtime targets:
 The panel is served from `/admin/` on the same host as the backend, so browser
 requests to the API are same-origin and need no CORS handling.
 
-On the deployment host:
+Deployment is driven by CI/CD (`.gitlab-ci.yml`):
 
-```bash
-cp .env.prod.example .env.prod          # then edit the values
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build --wait
-curl -I http://127.0.0.1:8081/admin/    # expect 200
+1. `web:image` builds the `web-prod` target with Kaniko and pushes it to this
+   project's GitLab Container Registry (`$CI_REGISTRY_IMAGE:latest` and
+   `:$CI_COMMIT_SHORT_SHA`) whenever `main` gets a new commit.
+2. `web:deploy` is a manual job on `main` that SSHes into the deployment host,
+   pulls the image the previous job pushed, and restarts the
+   `admin-web-prod` container. Trigger it from the pipeline view in GitLab
+   when you want the change live.
+
+If the registry or CI is unreachable, `scripts/deploy-prod.ps1` is a fallback
+that builds and runs the image directly on the deployment host's Docker
+daemon over SSH — no local Docker daemon or registry needed:
+
+```powershell
+pwsh scripts/deploy-prod.ps1
 ```
 
 The container publishes on the loopback interface only. The host's Nginx
@@ -601,8 +611,9 @@ location /admin/ {
 
 Hashed assets are served with a one-year immutable cache; `index.html` is sent
 with `no-store` so a released build is picked up on the next page load. To
-release a new version, pull and repeat the `up -d --build` command; to roll
-back, check out the previous commit and do the same.
+release a new version, push to `main` and trigger the manual `web:deploy`
+job; to roll back, run `web:deploy` again against an older commit's pipeline
+(or re-run `scripts/deploy-prod.ps1` from that commit).
 
 The production backend is outside this repository and must implement the API
 contract documented above.

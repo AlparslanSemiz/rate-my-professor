@@ -1,8 +1,8 @@
 # One-command production deploy.
 #
-# Builds the panel image locally, ships it to the server as a saved image, and restarts the
-# container there. The server never needs the source code, a Node toolchain, or a git pull:
-# everything it runs is inside the image built here.
+# Builds and runs the panel image directly on the server's Docker daemon over SSH — nothing
+# is built or stored locally, no image tar is shipped. Requires only the docker CLI and an
+# ssh client locally; the server needs nothing but its existing Docker install.
 #
 #   pwsh scripts/deploy-prod.ps1
 #
@@ -23,7 +23,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $image = 'admin-web-prod:latest'
-$archive = 'admin-web-prod.tar'
+$env:DOCKER_HOST = "ssh://$SshHost"
 
 function Invoke-Step {
     param([string]$Name, [scriptblock]$Action)
@@ -33,43 +33,28 @@ function Invoke-Step {
     if ($LASTEXITCODE -ne 0) { throw "$Name failed with exit code $LASTEXITCODE" }
 }
 
-Invoke-Step "Building $image" {
+Invoke-Step "Building $image on $SshHost" {
     docker build --target web-prod `
         --build-arg VITE_API_BASE_URL=$ApiBaseUrl `
         --build-arg VITE_BASE_PATH=$BasePath `
         -t $image .
 }
 
-Invoke-Step "Saving the image to $archive" {
-    docker save -o $archive $image
-}
-
-Invoke-Step "Copying the image to $SshHost" {
-    scp $archive "${SshHost}:~/"
-}
-
-# Recreating the container is the only server-side change; Nginx is left untouched.
-$remote = @"
-set -e
-docker load -i ~/$archive
-docker rm -f admin-web-prod >/dev/null 2>&1 || true
-docker run -d --name admin-web-prod --restart unless-stopped -p 127.0.0.1:${Port}:80 $image
-rm -f ~/$archive
-sleep 2
-code=`$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:${Port}${BasePath})
-echo "container ${BasePath} -> `$code"
-test "`$code" = "200"
-docker image prune -f >/dev/null
-df -h / | tail -1
-"@
-
-Invoke-Step "Loading and restarting the container on $SshHost" {
-    $remote | ssh $SshHost 'bash -s'
+Invoke-Step "Restarting the container on $SshHost" {
+    docker rm -f admin-web-prod 2>$null
+    docker run -d --name admin-web-prod --restart unless-stopped -p "127.0.0.1:${Port}:80" $image
 }
 
 Write-Host ""
-Write-Host "==> Removing the local archive" -ForegroundColor Cyan
-Remove-Item $archive -Force
+Write-Host "==> Internal smoke test on $SshHost" -ForegroundColor Cyan
+Start-Sleep -Seconds 2
+$code = ssh $SshHost "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$Port$BasePath"
+Write-Host "container $BasePath -> $code"
+if ($code -ne '200') { throw "Container smoke test failed with status $code" }
+
+Invoke-Step "Pruning old images on $SshHost" {
+    docker image prune -f
+}
 
 Write-Host ""
 Write-Host "==> Public smoke test" -ForegroundColor Cyan
