@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
@@ -40,6 +41,11 @@ public class LectureService {
 
 
 
+    // Needs a transaction: open-in-view is disabled and the response walks the
+    // lazy professors/comments/ratings collections of every lecture. Without it
+    // this endpoint fails with LazyInitializationException for any lecture with
+    // professors, comments, or ratings.
+    @Transactional(readOnly = true)
     public LecturesResponse getLectures() {
 
         List<Lecture> lectures = lectureRepository.findByActiveTrueOrderByNameAsc();
@@ -80,6 +86,7 @@ public class LectureService {
     }
 
 
+    @Transactional(readOnly = true)
     public LectureDetailResponse getLecture(UUID lectureId) {
 
         Lecture lecture = lectureRepository.findById(lectureId).orElse(null);
