@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.UserRatingDto;
@@ -36,6 +37,11 @@ public class StudentService {
 
     //Methods used by AccountController
 
+    // Needs a transaction: open-in-view is disabled and this walks the lazy
+    // ratings/comments collections of the student. Without it this endpoint
+    // fails with LazyInitializationException for any student with ratings or
+    // comments.
+    @Transactional(readOnly = true)
     public StudentProfileResponse getUserInformation(Student student) {
         return new StudentProfileResponse(
                 "Success",
@@ -48,6 +54,9 @@ public class StudentService {
         );
     }
 
+    // Needs a transaction: walks the lazy ratings collection and each rating's
+    // lazy topics/lecture, same reason as getUserInformation above.
+    @Transactional(readOnly = true)
     public UserRatingResponse getUserRatings(Student student) {
 
         List<UserRatingDto> ratingDtos = new ArrayList<>();

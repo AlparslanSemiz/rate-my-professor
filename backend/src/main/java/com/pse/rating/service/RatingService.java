@@ -16,6 +16,7 @@ import com.pse.rating.model.RatingCategory;
 import com.pse.user.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pse.lecture.model.Lecture;
 import com.pse.rating.model.Rating;
@@ -89,6 +90,10 @@ public class RatingService {
     }
 
 
+    // Needs a transaction: open-in-view is disabled and this walks the lazy
+    // topics collection of every rating. Without it this endpoint fails with
+    // LazyInitializationException for any lecture that has ratings.
+    @Transactional(readOnly = true)
     public RatingsAverageResponse getRatings(UUID lectureId) {
 
         List<Rating> ratings = ratingRepository.findByLectureId(lectureId);
