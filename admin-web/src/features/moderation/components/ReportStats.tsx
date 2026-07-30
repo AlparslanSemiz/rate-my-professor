@@ -1,11 +1,11 @@
 import { SimpleGrid } from '@mantine/core'
 import { IconCheck, IconClock, IconEye, IconX } from '@tabler/icons-react'
-import type { ReportedComment } from '../../../api/CommentsService'
 import StatCard from '../../../components/StatCard'
 import { statGridCols } from '../../../constants/layout'
 import { countByValue } from '../../../utils/collection'
+import type { ReportItem } from '../moderationModel'
 
-export default function CommentsStats({ reports }: { reports: ReportedComment[] }) {
+export default function ReportStats({ reports }: { reports: ReportItem[] }) {
   return (
     <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
       <StatCard

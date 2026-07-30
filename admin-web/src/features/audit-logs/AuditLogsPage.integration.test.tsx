@@ -30,6 +30,7 @@ const meta: AuditMeta = {
   }],
   actions: ['ADMIN_LOGIN', 'USER_BLOCKED'],
   targetTypes: ['ADMIN_SESSION', 'USER'],
+  actorTypes: ['ADMIN'],
 }
 
 const firstLog: AuditLog = {

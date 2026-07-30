@@ -1,22 +1,128 @@
-import { adminActor, insertAuditLog } from '../audit.mjs'
 import { requireAdmin } from '../auth-session.mjs'
-import { query, withTransaction } from '../db.mjs'
-import { isUuid, readBody, sendJson } from '../http.mjs'
-import { toReportedComment } from '../mappers.mjs'
+import { query } from '../db.mjs'
+import { isUuid, sendJson } from '../http.mjs'
+import { toManagedComment, toReportedComment } from '../mappers.mjs'
+import { deleteContent, updateContent } from './content.mjs'
+import { deleteReport, updateReportStatus } from './reports-shared.mjs'
 
-const VALID_REPORT_STATUSES = new Set(['OPEN', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN'])
+const LECTURE_LABEL = "l.code || ' — ' || l.name"
 
 export async function handleComments(req, res, parts) {
   const admin = await requireAdmin(req, res)
   if (!admin) return
 
+  if (req.method === 'GET' && parts.length === 1) {
+    return listComments(res)
+  }
   if (req.method === 'GET' && parts[1] === 'reported' && parts.length === 2) {
     return listReportedComments(res)
   }
-  if (req.method === 'PATCH' && parts[1] === 'reported' && parts[2]) {
-    return updateReportedComment(req, res, parts[2], admin)
+
+  if (parts[1] === 'reported' && parts[2]) {
+    if (!isUuid(parts[2])) {
+      return sendJson(res, 404, { message: 'Report not found', success: false })
+    }
+    if (req.method === 'PATCH') {
+      return updateReportStatus(req, res, {
+        id: parts[2],
+        table: 'mock_comment_reports',
+        contentTable: 'mock_comments',
+        contentColumn: 'comment_id',
+        action: 'COMMENT_REPORT_STATUS_CHANGED',
+        targetType: 'COMMENT_REPORT',
+        label: (report) => `Report in ${report.post_context}`,
+        admin,
+        notFound: 'Report not found',
+      })
+    }
+    if (req.method === 'DELETE') {
+      return deleteReport(res, {
+        id: parts[2],
+        table: 'mock_comment_reports',
+        action: 'COMMENT_REPORT_DELETED',
+        targetType: 'COMMENT_REPORT',
+        label: (report) => `Report in ${report.post_context}`,
+        admin,
+        notFound: 'Report not found',
+      })
+    }
   }
+
+  if (parts.length === 2 && isUuid(parts[1])) {
+    if (req.method === 'PATCH') {
+      return updateContent(req, res, {
+        id: parts[1],
+        table: 'mock_comments',
+        action: 'COMMENT_UPDATED',
+        targetType: 'COMMENT',
+        label: commentLabel,
+        admin,
+        notFound: 'Comment not found',
+      })
+    }
+    if (req.method === 'DELETE') {
+      return deleteContent(res, {
+        id: parts[1],
+        table: 'mock_comments',
+        action: 'COMMENT_DELETED',
+        targetType: 'COMMENT',
+        label: commentLabel,
+        admin,
+        notFound: 'Comment not found',
+        metadata: countAnswers,
+      })
+    }
+  }
+
   return sendJson(res, 404, { message: 'Not found', success: false })
+}
+
+async function commentLabel(client, comment) {
+  const result = await client.query(
+    `
+      SELECT u.username, ${LECTURE_LABEL} AS context
+      FROM mock_comments c
+      JOIN mock_users u ON u.id = c.student_id
+      JOIN mock_lectures l ON l.id = c.lecture_id
+      WHERE c.id = $1
+    `,
+    [comment.id],
+  )
+  const row = result.rows[0]
+  return row ? `Comment by ${row.username} in ${row.context}` : 'Comment'
+}
+
+async function countAnswers(client, comment) {
+  const result = await client.query(
+    'SELECT count(*)::int AS count FROM mock_answers WHERE comment_id = $1',
+    [comment.id],
+  )
+  return { deletedAnswers: result.rows[0].count }
+}
+
+async function listComments(res) {
+  const result = await query(`
+    SELECT
+      c.*,
+      ${LECTURE_LABEL} AS post_context,
+      author.id AS author_id,
+      author.username AS author_name,
+      author.role AS author_role,
+      author.status AS author_status,
+      (SELECT count(*) FROM mock_warnings w WHERE w.user_id = author.id) AS author_warnings,
+      (SELECT count(*) FROM mock_answers a WHERE a.comment_id = c.id) AS answer_count,
+      (SELECT count(*) FROM mock_comment_reports r WHERE r.comment_id = c.id) AS report_count
+    FROM mock_comments c
+    JOIN mock_users author ON author.id = c.student_id
+    JOIN mock_lectures l ON l.id = c.lecture_id
+    ORDER BY c.created_at DESC
+  `)
+
+  return sendJson(res, 200, {
+    message: 'Successfully found all comments',
+    success: true,
+    comments: result.rows.map(toManagedComment),
+  })
 }
 
 async function listReportedComments(res) {
@@ -40,71 +146,8 @@ async function listReportedComments(res) {
   `)
 
   return sendJson(res, 200, {
-    message: 'Successfully found all reported Comments',
+    message: 'Successfully found all reported comments',
     success: true,
     comments: result.rows.map(toReportedComment),
   })
-}
-
-async function findReportedCommentForUpdate(client, reportId) {
-  const existing = await client.query(
-    `
-      SELECT r.*, reported.username AS reported_name
-      FROM mock_comment_reports r
-      JOIN mock_users reported ON reported.id = r.reported_user_id
-      WHERE r.id = $1
-      FOR UPDATE OF r
-    `,
-    [reportId],
-  )
-  return existing.rows[0] ?? null
-}
-
-async function recordCommentStatusChange(client, report, status, admin) {
-  await client.query('UPDATE mock_comment_reports SET status = $1 WHERE id = $2', [
-    status,
-    report.id,
-  ])
-  await insertAuditLog(client, {
-    actor: adminActor(admin),
-    action: 'COMMENT_REPORT_STATUS_CHANGED',
-    target: {
-      type: 'COMMENT_REPORT',
-      id: report.id,
-      label: `Report about ${report.reported_name} in ${report.post_context}`,
-    },
-    changes: {
-      status: { before: report.status, after: status },
-    },
-  })
-}
-
-async function applyReportedCommentStatus(client, reportId, status, admin) {
-  const report = await findReportedCommentForUpdate(client, reportId)
-  if (!report) return false
-  if (report.status === status) return true
-
-  await recordCommentStatusChange(client, report, status, admin)
-  return true
-}
-
-async function updateReportedComment(req, res, reportId, admin) {
-  if (!isUuid(reportId)) {
-    return sendJson(res, 404, { message: 'Report not found', success: false })
-  }
-
-  const body = await readBody(req)
-  const status = String(body.status ?? '')
-  if (!VALID_REPORT_STATUSES.has(status)) {
-    return sendJson(res, 400, { message: 'Invalid report status', success: false })
-  }
-
-  const found = await withTransaction((client) =>
-    applyReportedCommentStatus(client, reportId, status, admin),
-  )
-
-  if (!found) {
-    return sendJson(res, 404, { message: 'Report not found', success: false })
-  }
-  return sendJson(res, 200, { message: 'Updated', success: true })
 }

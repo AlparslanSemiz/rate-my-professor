@@ -1,4 +1,4 @@
-import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from './audit.mjs'
+import { LOG_ACTOR_TYPES, LOG_TARGET_TYPES } from './audit.mjs'
 import { decodeLogCursor } from './log-cursor.mjs'
 import { isUuid } from './http.mjs'
 
@@ -7,8 +7,8 @@ export {
   encodeLogCursor as encodeAuditCursor,
 } from './log-cursor.mjs'
 
-const VALID_AUDIT_ACTIONS = new Set(AUDIT_ACTIONS)
-const VALID_AUDIT_TARGET_TYPES = new Set(AUDIT_TARGET_TYPES)
+const VALID_TARGET_TYPES = new Set(LOG_TARGET_TYPES)
+const VALID_ACTOR_TYPES = new Set(LOG_ACTOR_TYPES)
 
 function parseTimestamp(value) {
   if (!value) return null
@@ -45,7 +45,12 @@ function parseCursor(searchParams) {
   return { value: cursor }
 }
 
-export function parseAuditLogQuery(url) {
+/**
+ * Both log endpoints take the same parameters; `scopeActions` is the vocabulary the answering
+ * endpoint serves, so asking `/audit-logs` for a student action is a validation error rather
+ * than an empty page.
+ */
+export function parseAuditLogQuery(url, scopeActions) {
   const { searchParams } = url
   const parsedLimit = parseLimit(searchParams)
   if (parsedLimit.error) return parsedLimit
@@ -55,13 +60,18 @@ export function parseAuditLogQuery(url) {
     return { error: 'Invalid actor id' }
   }
 
+  const actorType = searchParams.get('actorType')
+  if (actorType && !VALID_ACTOR_TYPES.has(actorType)) {
+    return { error: 'Invalid actor type' }
+  }
+
   const action = searchParams.get('action')
-  if (action && !VALID_AUDIT_ACTIONS.has(action)) {
+  if (action && !scopeActions.includes(action)) {
     return { error: 'Invalid audit action' }
   }
 
   const targetType = searchParams.get('targetType')
-  if (targetType && !VALID_AUDIT_TARGET_TYPES.has(targetType)) {
+  if (targetType && !VALID_TARGET_TYPES.has(targetType)) {
     return { error: 'Invalid audit target type' }
   }
 
@@ -74,8 +84,10 @@ export function parseAuditLogQuery(url) {
     value: {
       limit: parsedLimit.value,
       actorId,
+      actorType,
       action,
       targetType,
+      scopeActions,
       ...parsedDateRange.value,
       cursor: parsedCursor.value,
       search: String(searchParams.get('q') ?? '').trim(),
@@ -91,8 +103,11 @@ export function buildAuditLogQuery(filters) {
     clauses.push(sql.replace('?', `$${values.length}`))
   }
 
+  // The scope is what separates the two endpoints reading one table.
+  addClause('action = ANY(?)', filters.action ? [filters.action] : filters.scopeActions)
+
   if (filters.actorId) addClause('actor_id = ?', filters.actorId)
-  if (filters.action) addClause('action = ?', filters.action)
+  if (filters.actorType) addClause('actor_type = ?', filters.actorType)
   if (filters.targetType) addClause('target_type = ?', filters.targetType)
   if (filters.from) addClause('created_at >= ?', filters.from)
   if (filters.to) addClause('created_at <= ?', filters.to)
@@ -114,7 +129,7 @@ export function buildAuditLogQuery(filters) {
     text: `
       SELECT *
       FROM mock_audit_logs
-      ${clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''}
+      WHERE ${clauses.join(' AND ')}
       ORDER BY created_at DESC, id DESC
       LIMIT $${values.length}
     `,

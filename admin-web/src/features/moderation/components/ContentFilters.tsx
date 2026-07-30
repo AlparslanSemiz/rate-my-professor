@@ -3,63 +3,49 @@ import { IconSearch } from '@tabler/icons-react'
 import Panel from '../../../components/Panel'
 import { darkInputStyles } from '../../../constants/inputStyles'
 import {
-  reasonFilterOptions,
-  statusFilterOptions,
-  toReasonFilter,
-  toStatusFilter,
-  type ReasonFilter,
-  type StatusFilter,
-} from '../commentFilters'
+  contentStatusFilterOptions,
+  toContentStatusFilter,
+  type ContentStatusFilter,
+} from '../moderationModel'
 
 const panelStyle: CSSProperties = { padding: '14px 20px' }
 const searchInputStyle: CSSProperties = { flex: 1, minWidth: 200 }
 
-interface CommentFiltersProps {
+interface ContentFiltersProps {
   search: string
-  status: StatusFilter
-  reason: ReasonFilter
+  status: ContentStatusFilter
+  searchLabel: string
   onSearchChange: (value: string) => void
-  onStatusChange: (value: StatusFilter) => void
-  onReasonChange: (value: ReasonFilter) => void
+  onStatusChange: (value: ContentStatusFilter) => void
 }
 
-export default function CommentFilters({
+export default function ContentFilters({
   search,
   status,
-  reason,
+  searchLabel,
   onSearchChange,
   onStatusChange,
-  onReasonChange,
-}: CommentFiltersProps) {
+}: ContentFiltersProps) {
   return (
     <Panel mb={16} style={panelStyle}>
       <Group gap={12} wrap="wrap">
         <TextInput
-          placeholder="Search by comment, user, or report message..."
+          placeholder="Search by text, author, or lecture..."
           value={search}
           onChange={(event) => onSearchChange(event.currentTarget.value)}
           leftSection={<IconSearch size={14} color="#6b7280" />}
           style={searchInputStyle}
           size="sm"
-          aria-label="Search reported comments"
+          aria-label={searchLabel}
           styles={darkInputStyles}
         />
         <Select
           placeholder="All Statuses"
-          data={statusFilterOptions}
+          aria-label="Filter by visibility"
+          data={contentStatusFilterOptions}
           value={status}
-          onChange={(value) => onStatusChange(toStatusFilter(value))}
-          w={150}
-          size="sm"
-          clearable={false}
-          styles={darkInputStyles}
-        />
-        <Select
-          placeholder="All Reasons"
-          data={reasonFilterOptions}
-          value={reason}
-          onChange={(value) => onReasonChange(toReasonFilter(value))}
-          w={180}
+          onChange={(value) => onStatusChange(toContentStatusFilter(value))}
+          w={160}
           size="sm"
           clearable={false}
           styles={darkInputStyles}

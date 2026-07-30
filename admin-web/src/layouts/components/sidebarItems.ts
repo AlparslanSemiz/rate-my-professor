@@ -4,7 +4,9 @@ import {
   IconHeartRateMonitor,
   IconHistory,
   IconLayoutDashboard,
-  IconMessageReport,
+  IconMessage,
+  IconMessageReply,
+  IconSchool,
   IconUsers,
 } from '@tabler/icons-react'
 import { routes } from '../../constants/routes'
@@ -24,9 +26,21 @@ export const MAIN_NAV_ITEMS = [
   },
   {
     label: 'Comments',
-    sublabel: 'Flagged comments',
+    sublabel: 'Posts & reports',
     path: routes.comments,
-    icon: IconMessageReport,
+    icon: IconMessage,
+  },
+  {
+    label: 'Answers',
+    sublabel: 'Replies & reports',
+    path: routes.answers,
+    icon: IconMessageReply,
+  },
+  {
+    label: 'Catalogue',
+    sublabel: 'Lectures & staff',
+    path: routes.catalog,
+    icon: IconSchool,
   },
   {
     label: 'Bug Reports',

@@ -1,5 +1,5 @@
 import { ApiError } from '../../api/ApiClient'
-import type { DependencyHealth, SystemHealth } from '../../api/SystemStatusService'
+import type { SystemHealth } from '../../api/SystemStatusService'
 import { getErrorMessage } from '../../utils/getErrorMessage'
 
 const STATUS_API_UNAVAILABLE_MESSAGE =
@@ -25,14 +25,9 @@ export const healthAccent: Record<SystemHealth, string> = {
 }
 
 export const healthDescription: Record<SystemHealth, string> = {
-  OK: 'The backend is serving requests normally.',
-  DEGRADED: 'The backend is answering, but something needs attention.',
-  DOWN: 'The backend reports it cannot serve requests.',
-}
-
-export const dependencyColor: Record<DependencyHealth, string> = {
-  UP: 'green',
-  DOWN: 'red',
+  OK: 'The database answered and the counters were read.',
+  DEGRADED: 'The database answered, but a count query failed — counters are unavailable.',
+  DOWN: 'The database is unreachable, so counters and the last write cannot be read.',
 }
 
 const SECONDS_PER_MINUTE = 60
@@ -53,6 +48,13 @@ export function formatUptime(seconds: number | null): string {
   if (hours > 0) parts.push(`${hours}h`)
   if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`)
   return parts.join(' ')
+}
+
+/** Renders how long ago the last write happened, e.g. "12s ago". */
+export function formatAge(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return 'Unknown'
+  if (seconds < SECONDS_PER_MINUTE) return `${Math.floor(seconds)}s ago`
+  return `${formatUptime(seconds)} ago`
 }
 
 export function formatCount(value: number): string {

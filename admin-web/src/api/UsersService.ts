@@ -5,6 +5,12 @@ import type { UserRole, UserStatus } from '../domain/user'
 export type { UserRole, UserStatus }
 
 export interface Warning {
+  /**
+   * Address of the warning, needed to correct or withdraw it. The backend's warning history
+   * does not carry it yet, so it is absent on every warning served today and the panel hides
+   * the edit and withdraw controls when it is missing.
+   */
+  id: string | null
   userID: string
   message: string
   createdAt: string
@@ -33,6 +39,7 @@ interface WarningHistoryResponse extends BasicResponse {
 }
 
 interface BackendWarning {
+  id?: string
   userID: string
   message: string
   createdAt: string
@@ -41,11 +48,29 @@ interface BackendWarning {
 
 function toWarning(w: BackendWarning): Warning {
   return {
+    id: w.id ?? null,
     userID: w.userID,
     message: w.message,
     createdAt: w.createdAt,
     issuedBy: w.createdFrom?.id ?? 'Unknown',
   }
+}
+
+/**
+ * Partial edit of a user. An omitted field is left alone and an empty body is rejected, so
+ * only the fields that actually changed are sent.
+ *
+ * `status` takes `ACTIVE` and `BLOCKED` only — deleting anonymizes the account, which is
+ * `DELETE /users/{id}` and not a field edit. Changing `kitEmail` revokes the account's
+ * sessions, and demoting an admin revokes them too.
+ */
+export interface UserUpdate {
+  username?: string
+  kitEmail?: string
+  biography?: string
+  status?: Extract<UserStatus, 'ACTIVE' | 'BLOCKED'>
+  role?: UserRole
+  credibilityScore?: number
 }
 
 export class UsersService {
@@ -63,6 +88,10 @@ export class UsersService {
   async getById(id: string): Promise<User> {
     const user = await this.client.get<User>(`/users/${id}`)
     return withRequiredAdminRole(user)
+  }
+
+  update(id: string, update: UserUpdate): Promise<BasicResponse> {
+    return this.client.patch<BasicResponse>(`/users/${id}`, update)
   }
 
   delete(id: string): Promise<BasicResponse> {
@@ -93,6 +122,20 @@ export class UsersService {
   async getWarnings(id: string): Promise<Warning[]> {
     const response = await this.client.get<WarningHistoryResponse>(`/users/${id}/warnings`)
     return response.warnings.map(toWarning)
+  }
+
+  /**
+   * Corrects the text of a warning that was already issued. The student is not re-notified:
+   * the notification went out when the warning was created, so rewording it corrects the
+   * record rather than warning again.
+   */
+  updateWarning(id: string, warningId: string, message: string): Promise<BasicResponse> {
+    return this.client.patch<BasicResponse>(`/users/${id}/warnings/${warningId}`, { message })
+  }
+
+  /** Withdraws a warning that should not have been issued. */
+  deleteWarning(id: string, warningId: string): Promise<BasicResponse> {
+    return this.client.delete<BasicResponse>(`/users/${id}/warnings/${warningId}`)
   }
 }
 

@@ -1,4 +1,4 @@
-import type { ReportReason, ReportStatus, Severity } from '../domain/moderation'
+import type { ContentStatus, ReportReason, ReportStatus, Severity } from '../domain/moderation'
 import type { UserRole, UserStatus } from '../domain/user'
 
 export const roleColor: Record<UserRole, string> = {
@@ -37,6 +37,12 @@ export const reportStatusColor: Record<ReportStatus, string> = {
   REVIEWED: 'blue',
   DISMISSED: 'gray',
   ACTION_TAKEN: 'green',
+}
+
+export const contentStatusColor: Record<ContentStatus, string> = {
+  VISIBLE: 'green',
+  HIDDEN: 'orange',
+  DELETED: 'dark',
 }
 
 export const reportReasonColor: Record<ReportReason, string> = {

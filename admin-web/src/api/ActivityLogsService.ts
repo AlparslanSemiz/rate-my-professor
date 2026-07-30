@@ -1,74 +1,37 @@
 import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import {
+  ACTIVITY_ACTIONS,
+  LOG_TARGET_TYPES,
+  endOfUtcDay,
+  startOfUtcDay,
+  type LogActor,
+  type LogActorType,
+  type LogChange,
+  type LogEntry,
+  type LogFilters,
+  type LogMeta,
+  type LogTarget,
+  type LogTargetType,
+  type LogValue,
+} from '../domain/auditLog'
 
-export const ACTIVITY_OUTCOMES = ['SUCCESS', 'FAILURE', 'DENIED'] as const
+export { ACTIVITY_ACTIONS }
+export const ACTIVITY_TARGET_TYPES = LOG_TARGET_TYPES
 
-export type ActivityOutcome = (typeof ACTIVITY_OUTCOMES)[number]
-export type ActivityActorType = 'ADMIN' | 'USER'
-export type ActivityValue = string | number | boolean | null
-
-/**
- * Activity types and target types are deliberately plain strings: unlike the fixed set of
- * admin audit actions, the student app keeps gaining new tracked actions. The filter
- * dropdowns are driven by `/activity-logs/meta` so a new backend type shows up without a
- * frontend release.
- */
-export type ActivityType = string
-export type ActivityTargetType = string
-
-export interface ActivityActor {
-  type: ActivityActorType
-  id: string
-  name: string
-  email: string
-  role: string
-}
-
-export interface ActivityTarget {
-  type: ActivityTargetType
-  id: string
-  label: string
-}
-
-/** Where the action happened. Every field is optional: anonymous events carry very little. */
-export interface ActivityContext {
-  route?: string | null
-  method?: string | null
-  ip?: string | null
-  userAgent?: string | null
-}
-
-export interface ActivityLog {
-  id: string
-  type: ActivityType
-  createdAt: string
-  /** Null for unauthenticated events, e.g. a failed login for an unknown email. */
-  actor: ActivityActor | null
-  target: ActivityTarget | null
-  context: ActivityContext | null
-  metadata: Record<string, ActivityValue>
-  outcome: ActivityOutcome
-}
-
-export interface ActivityLogFilters {
-  q?: string
-  actorId?: string
-  type?: ActivityType
-  targetType?: ActivityTargetType
-  outcome?: ActivityOutcome
-  from?: string
-  to?: string
-}
+export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number]
+export type ActivityTargetType = LogTargetType
+export type ActivityActorType = LogActorType
+export type ActivityValue = LogValue
+export type ActivityActor = LogActor
+export type ActivityTarget = LogTarget
+export type ActivityChange = LogChange
+export type ActivityLog = LogEntry
+export type ActivityLogFilters = LogFilters
+export type ActivityMeta = LogMeta
 
 export interface ActivityLogPage {
-  activities: ActivityLog[]
+  activityLogs: ActivityLog[]
   nextCursor: string | null
-}
-
-export interface ActivityMeta {
-  actors: Array<Pick<ActivityActor, 'id' | 'name' | 'email' | 'role'>>
-  types: ActivityType[]
-  targetTypes: ActivityTargetType[]
-  outcomes: ActivityOutcome[]
 }
 
 interface ActivityLogResponse extends BasicResponse, ActivityLogPage {}
@@ -76,14 +39,11 @@ interface ActivityMetaResponse extends BasicResponse, ActivityMeta {}
 
 const PAGE_SIZE = 50
 
-function startOfUtcDay(value?: string) {
-  return value ? `${value}T00:00:00.000Z` : undefined
-}
-
-function endOfUtcDay(value?: string) {
-  return value ? `${value}T23:59:59.999Z` : undefined
-}
-
+/**
+ * The activity half of the audit table: what users did in the student app, plus every refused
+ * request. Same entry shape, cursor contract and query parameters as `/audit-logs`; only the
+ * action vocabulary differs, and the filter dropdowns take it from `/activity-logs/meta`.
+ */
 export class ActivityLogsService {
   private readonly client: ApiClient
 
@@ -91,20 +51,23 @@ export class ActivityLogsService {
     this.client = client
   }
 
-  async getLogs(filters: ActivityLogFilters = {}, cursor?: string | null): Promise<ActivityLogPage> {
+  async getLogs(
+    filters: ActivityLogFilters = {},
+    cursor?: string | null,
+  ): Promise<ActivityLogPage> {
     const response = await this.client.get<ActivityLogResponse>('/activity-logs', {
       limit: PAGE_SIZE,
       cursor,
       q: filters.q?.trim(),
       actorId: filters.actorId,
-      type: filters.type,
+      actorType: filters.actorType,
+      action: filters.action,
       targetType: filters.targetType,
-      outcome: filters.outcome,
       from: startOfUtcDay(filters.from),
       to: endOfUtcDay(filters.to),
     })
     return {
-      activities: response.activities,
+      activityLogs: response.activityLogs,
       nextCursor: response.nextCursor,
     }
   }
@@ -113,9 +76,9 @@ export class ActivityLogsService {
     const response = await this.client.get<ActivityMetaResponse>('/activity-logs/meta')
     return {
       actors: response.actors,
-      types: response.types,
+      actions: response.actions,
       targetTypes: response.targetTypes,
-      outcomes: response.outcomes,
+      actorTypes: response.actorTypes ?? [],
     }
   }
 }

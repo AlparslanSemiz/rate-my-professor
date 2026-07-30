@@ -6,10 +6,10 @@ import { DateFilterInput, SearchFilterInput } from '../../../components/LogFilte
 import Panel from '../../../components/Panel'
 import type { ActivityFilterDraft } from '../activityLogModel'
 import {
-  ActivityOutcomeFilter,
+  ActivityActionFilter,
+  ActivityActorTypeFilter,
   ActivityPersonFilter,
   ActivityTargetFilter,
-  ActivityTypeFilter,
   type ActivityDraftSetter,
 } from './ActivitySelectFilters'
 
@@ -47,13 +47,17 @@ export default function ActivityLogFilters({
             onChange={(q) => onDraftChange((current) => ({ ...current, q }))}
           />
           <ActivityPersonFilter value={draft.actorId} meta={meta} onDraftChange={onDraftChange} />
-          <ActivityTypeFilter value={draft.type} meta={meta} onDraftChange={onDraftChange} />
+          <ActivityActorTypeFilter
+            value={draft.actorType}
+            meta={meta}
+            onDraftChange={onDraftChange}
+          />
+          <ActivityActionFilter value={draft.action} meta={meta} onDraftChange={onDraftChange} />
           <ActivityTargetFilter
             value={draft.targetType}
             meta={meta}
             onDraftChange={onDraftChange}
           />
-          <ActivityOutcomeFilter value={draft.outcome} meta={meta} onDraftChange={onDraftChange} />
           <DateFilterInput
             label="From"
             ariaLabel="Activity start date"

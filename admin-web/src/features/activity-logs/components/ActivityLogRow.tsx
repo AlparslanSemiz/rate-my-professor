@@ -3,13 +3,7 @@ import type { ActivityLog } from '../../../api/ActivityLogsService'
 import { enumLabel } from '../../../utils/enumLabel'
 import { formatDate } from '../../../utils/formatDate'
 import { activateOnEnterOrSpace } from '../../../utils/keyboard'
-import {
-  activityTypeColor,
-  actorEmail,
-  actorName,
-  contextSummary,
-  outcomeColor,
-} from '../activityLogModel'
+import { activityActionColor, activitySummary } from '../activityLogModel'
 
 const cellStyle: CSSProperties = { padding: '14px 20px', verticalAlign: 'middle' }
 const nowrapCellStyle: CSSProperties = { ...cellStyle, whiteSpace: 'nowrap' }
@@ -43,7 +37,7 @@ export default function ActivityLogRow({ activity, isLast, onOpen }: ActivityLog
         event.currentTarget.style.background = 'transparent'
       }}
       tabIndex={0}
-      aria-label={`Open activity ${enumLabel(activity.type)} by ${actorName(activity.actor)}`}
+      aria-label={`Open activity ${enumLabel(activity.action)} by ${activity.actor.name}`}
     >
       <td style={nowrapCellStyle}>
         <Text size="xs" c="#6b7280">
@@ -52,15 +46,15 @@ export default function ActivityLogRow({ activity, isLast, onOpen }: ActivityLog
       </td>
       <td style={cellStyle}>
         <Text size="sm" fw={600} c="#e2e8f0">
-          {actorName(activity.actor)}
+          {activity.actor.name}
         </Text>
         <Text size="xs" c="#4b5563">
-          {actorEmail(activity.actor)}
+          {activity.actor.email}
         </Text>
       </td>
       <td style={nowrapCellStyle}>
-        <Badge variant="light" color={activityTypeColor(activity.type)} size="sm">
-          {enumLabel(activity.type)}
+        <Badge variant="light" color={activityActionColor(activity.action)} size="sm">
+          {enumLabel(activity.action)}
         </Badge>
       </td>
       <td style={cellStyle}>
@@ -81,13 +75,8 @@ export default function ActivityLogRow({ activity, isLast, onOpen }: ActivityLog
       </td>
       <td style={cellStyle}>
         <Text size="xs" c="#9ca3af" lineClamp={1}>
-          {contextSummary(activity.context)}
+          {activitySummary(activity.metadata)}
         </Text>
-      </td>
-      <td style={nowrapCellStyle}>
-        <Badge variant="light" color={outcomeColor(activity.outcome)} size="sm">
-          {enumLabel(activity.outcome)}
-        </Badge>
       </td>
     </tr>
   )

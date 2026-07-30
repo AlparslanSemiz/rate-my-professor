@@ -76,6 +76,7 @@ describe('AuditLogsService', () => {
       }],
       actions: ['ADMIN_LOGIN'],
       targetTypes: ['ADMIN_SESSION'],
+      actorTypes: ['ADMIN'],
     }
     fetchMock.mockResolvedValueOnce(jsonResponse(response))
     const service = createService()
@@ -84,6 +85,7 @@ describe('AuditLogsService', () => {
       actors: response.actors,
       actions: response.actions,
       targetTypes: response.targetTypes,
+      actorTypes: response.actorTypes,
     })
   })
 

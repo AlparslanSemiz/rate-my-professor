@@ -6,6 +6,7 @@ import type {
   AuditTargetType,
   AuditValue,
 } from '../../api/AuditLogsService'
+import { EMPTY_LOG_META } from '../../domain/auditLog'
 import { validateDateRange } from '../../utils/dateRange'
 import { getErrorMessage } from '../../utils/getErrorMessage'
 
@@ -21,7 +22,7 @@ export interface FilterDraft {
   to: string
 }
 
-export const EMPTY_AUDIT_META: AuditMeta = { actors: [], actions: [], targetTypes: [] }
+export const EMPTY_AUDIT_META: AuditMeta = EMPTY_LOG_META
 
 export const EMPTY_FILTERS: FilterDraft = {
   q: '',
@@ -69,10 +70,14 @@ export function getAuditErrorMessage(error: unknown, fallback: string) {
   return getErrorMessage(error, fallback)
 }
 
-export function auditActionColor(action: AuditAction) {
+/**
+ * Derived from the verb rather than a fixed table: the administrative action set grows with
+ * every new thing an admin can do, and a deletion has to read as a deletion whatever it removed.
+ */
+export function auditActionColor(action: string) {
   if (action === 'ADMIN_LOGIN') return 'green'
   if (action === 'ADMIN_LOGOUT') return 'gray'
-  if (action === 'USER_DELETED') return 'red'
+  if (action.endsWith('_DELETED')) return 'red'
   if (action === 'USER_BLOCKED' || action === 'USER_WARNING_CREATED') return 'orange'
   return 'blue'
 }

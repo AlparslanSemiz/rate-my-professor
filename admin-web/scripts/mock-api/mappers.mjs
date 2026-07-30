@@ -84,39 +84,74 @@ export function toAuditLog(row) {
   }
 }
 
-export function toActivityLog(row) {
-  return {
-    id: row.id,
-    type: row.type,
-    createdAt: iso(row.created_at),
-    actor: row.actor_id
-      ? {
-          type: row.actor_type,
-          id: row.actor_id,
-          name: row.actor_name,
-          email: row.actor_email,
-          role: row.actor_role,
-        }
-      : null,
-    target: row.target_type
-      ? {
-          type: row.target_type,
-          id: row.target_id,
-          label: row.target_label,
-        }
-      : null,
-    context: {
-      route: row.route,
-      method: row.method,
-      ip: row.ip,
-      userAgent: row.user_agent,
-    },
-    metadata: row.metadata ?? {},
-    outcome: row.outcome,
-  }
-}
-
 export async function findUserWithStatsById(id) {
   const result = await query(`${USER_WITH_STATS_SELECT} WHERE u.id = $1`, [id])
   return result.rows[0] ? toUser(result.rows[0]) : null
+}
+
+export function toManagedComment(row) {
+  return {
+    id: row.id,
+    content: row.content,
+    status: row.status,
+    author: toCommentUser(row, 'author'),
+    postContext: row.post_context,
+    lectureId: row.lecture_id,
+    answers: Number(row.answer_count ?? 0),
+    reports: Number(row.report_count ?? 0),
+    createdAt: iso(row.created_at),
+  }
+}
+
+export function toManagedAnswer(row) {
+  return {
+    id: row.id,
+    content: row.content,
+    status: row.status,
+    author: toCommentUser(row, 'author'),
+    commentId: row.comment_id,
+    commentPreview: row.comment_preview ?? '',
+    postContext: row.post_context,
+    reports: Number(row.report_count ?? 0),
+    createdAt: iso(row.created_at),
+  }
+}
+
+export function toReportedAnswer(row) {
+  return {
+    id: row.id,
+    answerContent: row.answer_content,
+    commentContent: row.comment_content,
+    postContext: row.post_context,
+    reportText: row.report_text,
+    reportedUser: toCommentUser(row, 'reported'),
+    reporter: toCommentUser(row, 'reporter'),
+    reason: row.reason,
+    status: row.status,
+    date: iso(row.date),
+  }
+}
+
+export function toLecture(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    code: row.code,
+    semesterYear: Number(row.semester_year),
+    semesterSeason: row.semester_season,
+    active: row.active,
+    professors: row.professors ?? [],
+    commentCount: Number(row.comment_count ?? 0),
+    ratingCount: Number(row.rating_count ?? 0),
+  }
+}
+
+export function toProfessor(row) {
+  return {
+    id: row.id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    averageRating: row.average_rating === null ? null : Number(row.average_rating),
+    ratingCount: Number(row.rating_count ?? 0),
+  }
 }

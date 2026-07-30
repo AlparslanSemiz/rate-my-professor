@@ -4,7 +4,7 @@ import LoadError from '../../components/LoadError'
 import PageHeader from '../../components/PageHeader'
 import PageLoader from '../../components/PageLoader'
 import DatabasePanel from './components/DatabasePanel'
-import LastWriteList from './components/LastWriteList'
+import LastWritePanel from './components/LastWritePanel'
 import SystemCounters from './components/SystemCounters'
 import SystemHealthBanner from './components/SystemHealthBanner'
 import { useSystemStatus } from './hooks/useSystemStatus'
@@ -33,7 +33,7 @@ export default function SystemStatusPage() {
       <SystemHealthBanner status={status} refreshing={refreshing} onRefresh={refresh} />
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing={16} mb={16}>
         <DatabasePanel database={status.database} />
-        <LastWriteList lastWriteAt={status.lastWriteAt} />
+        <LastWritePanel lastWrite={status.lastWrite} />
       </SimpleGrid>
       <SystemCounters counts={status.counts} />
     </>

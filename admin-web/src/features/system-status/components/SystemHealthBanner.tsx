@@ -36,8 +36,10 @@ export default function SystemHealthBanner({
         <Stack gap={6}>
           <Group gap={10}>
             <Box style={dotStyle(healthAccent[status.status])} aria-hidden />
+            {/* The API answered, or this page could not render at all — the status describes
+                the database behind it. */}
             <Text fw={700} c="#f1f5f9" style={{ fontSize: 20, lineHeight: 1.1 }}>
-              Backend is {enumLabel(status.status).toLowerCase()}
+              API is up, database is {enumLabel(status.status).toLowerCase()}
             </Text>
             <Badge variant="light" color={healthColor[status.status]} size="sm">
               {status.status}
@@ -48,7 +50,10 @@ export default function SystemHealthBanner({
           </Text>
           <Group gap={16} mt={4}>
             <Meta label="Checked" value={formatDate(status.checkedAt, { withTime: true })} />
-            <Meta label="Version" value={status.version ?? 'Unknown'} />
+            <Meta
+              label="Started"
+              value={status.startedAt ? formatDate(status.startedAt, { withTime: true }) : 'Unknown'}
+            />
             <Meta label="Uptime" value={formatUptime(status.uptimeSeconds)} />
           </Group>
         </Stack>

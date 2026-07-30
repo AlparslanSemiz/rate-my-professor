@@ -1,42 +1,42 @@
 import { Box, Group, Text, type CSSProperties } from '@mantine/core'
 import { IconMessageReport } from '@tabler/icons-react'
-import type { CommentReportStatus, ReportedComment } from '../../../api/CommentsService'
 import Panel from '../../../components/Panel'
 import TableHeaderRow from '../../../components/TableHeaderRow'
+import type { ReportStatus } from '../../../domain/moderation'
+import type { ReportItem } from '../moderationModel'
 import ReportRow from './ReportRow'
 
 const TABLE_COLUMNS = [
-  'Comment & Report',
+  'Content & Report',
   'Reported user',
   'Reported by',
   'Reason',
   'Date',
   'Status',
+  '',
 ] as const
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const panelHeaderStyle: CSSProperties = { borderBottom: '1px solid #21262d' }
 const emptyStateStyle: CSSProperties = { textAlign: 'center' }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
-const tableStyle: CSSProperties = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  minWidth: 900,
-}
+const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse', minWidth: 960 }
 
-interface CommentsTableProps {
-  reports: ReportedComment[]
+interface ReportsTableProps {
+  reports: ReportItem[]
   updating: boolean
   onOpenProfile: (userId: string) => void
-  onStatusChange: (id: string, status: CommentReportStatus) => void
+  onStatusChange: (id: string, status: ReportStatus) => void
+  onWithdraw: (report: ReportItem) => void
 }
 
-export default function CommentsTable({
+export default function ReportsTable({
   reports,
   updating,
   onOpenProfile,
   onStatusChange,
-}: CommentsTableProps) {
+  onWithdraw,
+}: ReportsTableProps) {
   return (
     <Panel style={panelStyle}>
       <Box px={20} py={14} style={panelHeaderStyle}>
@@ -52,7 +52,7 @@ export default function CommentsTable({
         <Box py={60} style={emptyStateStyle}>
           <IconMessageReport size={32} color="#374151" style={{ marginBottom: 12 }} />
           <Text c="#4b5563" size="sm">
-            Nothing here — no comments match these filters.
+            Nothing here — no reports match these filters.
           </Text>
         </Box>
       ) : (
@@ -68,6 +68,7 @@ export default function CommentsTable({
                   updating={updating}
                   onOpenProfile={onOpenProfile}
                   onStatusChange={onStatusChange}
+                  onWithdraw={onWithdraw}
                 />
               ))}
             </tbody>

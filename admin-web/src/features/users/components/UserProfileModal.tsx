@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { Center, Loader, Modal, Text } from '@mantine/core'
+import type { User, Warning } from '../../../api/UsersService'
 import ConfirmModal from '../../../components/ConfirmModal'
 import { darkModalStyles } from '../../../constants/modalStyles'
+import { useAuth } from '../../../context/useAuth'
 import { useUserProfile, type UserChange } from '../hooks/useUserProfile'
 import { getUserConfirmation, type ConfirmAction } from '../userConfirmation'
 import ProfileActions from './ProfileActions'
 import ProfileSummary from './ProfileSummary'
+import UserEditForm from './UserEditForm'
 import WarnForm from './WarnForm'
 import WarningHistory from './WarningHistory'
 
@@ -13,7 +16,8 @@ interface UserProfileModalProps {
   userId: string | null
   opened: boolean
   onClose: () => void
-  onUserChanged?: (id: string, change: UserChange) => void
+  /** `user` carries the re-read account for an `updated` change, so a list row can be replaced. */
+  onUserChanged?: (id: string, change: UserChange, user?: User) => void
 }
 
 export default function UserProfileModal({
@@ -22,14 +26,19 @@ export default function UserProfileModal({
   onClose,
   onUserChanged,
 }: UserProfileModalProps) {
+  const { user: currentAdmin } = useAuth()
   const profile = useUserProfile(userId, opened, onUserChanged)
   const [showWarnForm, setShowWarnForm] = useState(false)
+  const [showEditForm, setShowEditForm] = useState(false)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
+  const [withdrawing, setWithdrawing] = useState<Warning | null>(null)
 
   function handleClose() {
     profile.reset()
     setShowWarnForm(false)
+    setShowEditForm(false)
     setConfirmAction(null)
+    setWithdrawing(null)
     onClose()
   }
 
@@ -51,6 +60,8 @@ export default function UserProfileModal({
           delete: handleDelete,
         })
       : null
+
+  const isSelf = profile.user !== null && profile.user.id === currentAdmin?.id
 
   return (
     <>
@@ -77,9 +88,24 @@ export default function UserProfileModal({
             <ProfileSummary user={profile.user} />
             <ProfileActions
               user={profile.user}
+              isSelf={isSelf}
+              onToggleEdit={() => setShowEditForm((visible) => !visible)}
               onToggleWarning={() => setShowWarnForm((visible) => !visible)}
               onConfirm={setConfirmAction}
             />
+            {showEditForm && (
+              <UserEditForm
+                key={profile.user.id}
+                user={profile.user}
+                isSelf={isSelf}
+                loading={profile.editLoading}
+                onCancel={() => setShowEditForm(false)}
+                onSubmit={async (update) => {
+                  await profile.update(update)
+                  setShowEditForm(false)
+                }}
+              />
+            )}
             {showWarnForm && (
               <WarnForm
                 userName={profile.user.username}
@@ -88,13 +114,30 @@ export default function UserProfileModal({
                 onSubmit={handleWarning}
               />
             )}
-            <WarningHistory warnings={profile.warnings} />
+            <WarningHistory
+              warnings={profile.warnings}
+              busy={profile.warningBusy}
+              onEdit={profile.editWarning}
+              onWithdraw={setWithdrawing}
+            />
           </>
         )}
       </Modal>
 
       {confirmConfig && (
         <ConfirmModal opened onClose={() => setConfirmAction(null)} {...confirmConfig} />
+      )}
+
+      {withdrawing && (
+        <ConfirmModal
+          opened
+          title="Withdraw warning"
+          description="Withdraw this warning? The student is not notified — the notification went out when it was issued."
+          confirmLabel="Withdraw warning"
+          confirmColor="red"
+          onConfirm={() => profile.withdrawWarning(withdrawing)}
+          onClose={() => setWithdrawing(null)}
+        />
       )}
     </>
   )

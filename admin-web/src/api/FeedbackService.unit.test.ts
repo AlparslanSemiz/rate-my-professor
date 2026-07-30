@@ -9,6 +9,43 @@ function createFeedbackService() {
   return new FeedbackService(new ApiClient(TEST_API_BASE_URL))
 }
 
+describe('FeedbackService edits', () => {
+  beforeEach(() => {
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  it('rewrites the title and description of a report', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'Updated' }))
+    const service = createFeedbackService()
+
+    await service.updateReport('report-1', {
+      title: 'Profile upload fails on Android 14',
+      description: 'Fails with a 500 after picking an image.',
+    })
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe(`${TEST_API_BASE_URL}/reports/report-1`)
+    expect(init.method).toBe('PATCH')
+    expect(JSON.parse(init.body as string)).toEqual({
+      title: 'Profile upload fails on Android 14',
+      description: 'Fails with a 500 after picking an image.',
+    })
+  })
+
+  it('deletes a report', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'Deleted' }))
+    const service = createFeedbackService()
+
+    await service.deleteReport('report-1')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${TEST_API_BASE_URL}/reports/report-1`,
+      expect.objectContaining({ method: 'DELETE' })
+    )
+  })
+})
+
 describe('FeedbackService', () => {
   beforeEach(() => {
     fetchMock.mockReset()

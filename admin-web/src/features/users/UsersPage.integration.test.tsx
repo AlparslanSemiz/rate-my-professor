@@ -11,10 +11,13 @@ vi.mock('../../api/UsersService', () => ({
     getAll: vi.fn(),
     getById: vi.fn(),
     getWarnings: vi.fn(),
+    update: vi.fn(),
     delete: vi.fn(),
     block: vi.fn(),
     unblock: vi.fn(),
     warn: vi.fn(),
+    updateWarning: vi.fn(),
+    deleteWarning: vi.fn(),
   },
 }))
 
@@ -98,32 +101,32 @@ describe('Users page', () => {
     const user = userEvent.setup()
     renderUsers()
 
-    await user.click(await screen.findByText('Alice Smith'))
+    await user.click(await screen.findByText('Bob Johnson'))
     expect(await screen.findByText('User Profile')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Delete account' }))
     await user.click(await screen.findByRole('button', { name: 'Delete permanently' }))
 
-    await waitFor(() => expect(usersService.delete).toHaveBeenCalledWith('user-1'))
-    expect(screen.queryByText('Alice Smith')).not.toBeInTheDocument()
-    expect(screen.getByText('Bob Johnson')).toBeInTheDocument()
+    await waitFor(() => expect(usersService.delete).toHaveBeenCalledWith('user-2'))
+    expect(screen.queryByText('Bob Johnson')).not.toBeInTheDocument()
+    expect(screen.getByText('Alice Smith')).toBeInTheDocument()
   })
 
   it('blocks and unblocks a user after each API action succeeds', async () => {
     const user = userEvent.setup()
     renderUsers()
 
-    await user.click(await screen.findByText('Alice Smith'))
+    await user.click(await screen.findByText('Bob Johnson'))
     await user.click(await screen.findByRole('button', { name: 'Block' }))
     await user.click(await screen.findByRole('button', { name: 'Block user' }))
 
-    await waitFor(() => expect(usersService.block).toHaveBeenCalledWith('user-1'))
+    await waitFor(() => expect(usersService.block).toHaveBeenCalledWith('user-2'))
     expect(await screen.findByRole('button', { name: 'Unblock' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Unblock' }))
     await user.click(await screen.findByRole('button', { name: 'Unblock user' }))
 
-    await waitFor(() => expect(usersService.unblock).toHaveBeenCalledWith('user-1'))
+    await waitFor(() => expect(usersService.unblock).toHaveBeenCalledWith('user-2'))
     expect(await screen.findByRole('button', { name: 'Block' })).toBeInTheDocument()
   })
 
@@ -132,13 +135,51 @@ describe('Users page', () => {
     const user = userEvent.setup()
     renderUsers()
 
-    await user.click(await screen.findByText('Alice Smith'))
+    await user.click(await screen.findByText('Bob Johnson'))
     await user.click(await screen.findByRole('button', { name: 'Delete account' }))
     await user.click(await screen.findByRole('button', { name: 'Delete permanently' }))
 
     expect(await screen.findByText('Deletion rejected')).toBeInTheDocument()
-    expect(screen.getAllByText('Alice Smith')).not.toHaveLength(0)
+    expect(screen.getAllByText('Bob Johnson')).not.toHaveLength(0)
     expect(screen.getByRole('button', { name: 'Delete permanently' })).toBeInTheDocument()
+  })
+
+  it('does not offer moderation actions on an admin account', async () => {
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Alice Smith'))
+    expect(await screen.findByText('User Profile')).toBeInTheDocument()
+
+    // Self and other admin accounts cannot be warned, blocked or deleted — the backend
+    // answers 409 — but their profile fields stay editable.
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Warn' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Block' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument()
+  })
+
+  it('sends only the fields an edit changed and shows the re-read account', async () => {
+    vi.mocked(usersService.update).mockResolvedValue({ success: true, message: 'Updated user successfully' })
+    vi.mocked(usersService.getById).mockResolvedValueOnce(users[1]).mockResolvedValueOnce({
+      ...users[1],
+      username: 'Robert Johnson',
+    })
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Bob Johnson'))
+    await user.click(await screen.findByRole('button', { name: 'Edit' }))
+
+    const usernameInput = await screen.findByRole('textbox', { name: 'Username' })
+    await user.clear(usernameInput)
+    await user.type(usernameInput, 'Robert Johnson')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => {
+      expect(usersService.update).toHaveBeenCalledWith('user-2', { username: 'Robert Johnson' })
+    })
+    expect(await screen.findAllByText('Robert Johnson')).not.toHaveLength(0)
   })
 
   it('keeps the warning form open and shows an error when warning fails', async () => {
@@ -146,7 +187,7 @@ describe('Users page', () => {
     const user = userEvent.setup()
     renderUsers()
 
-    await user.click(await screen.findByText('Alice Smith'))
+    await user.click(await screen.findByText('Bob Johnson'))
     await user.click(await screen.findByRole('button', { name: 'Warn' }))
     await user.type(screen.getByPlaceholderText('Describe the reason for this warning...'), 'Test warning')
     await user.click(screen.getByRole('button', { name: 'Send warning' }))

@@ -8,14 +8,14 @@ const tileStyle: CSSProperties = { padding: '16px 18px' }
  * Live record counts straight from the production database. This is how an admin confirms an
  * action landed: block someone, refresh, watch "Blocked users" go up.
  */
-export default function SystemCounters({ counts }: { counts: Record<string, number> }) {
-  const entries = Object.entries(counts)
+export default function SystemCounters({ counts }: { counts: Record<string, number> | null }) {
+  const entries = Object.entries(counts ?? {})
 
   if (entries.length === 0) {
     return (
       <Panel style={tileStyle}>
         <Text size="sm" c="#6b7280">
-          The backend did not report any counters.
+          Counters are unavailable — the backend could not read them from the database.
         </Text>
       </Panel>
     )

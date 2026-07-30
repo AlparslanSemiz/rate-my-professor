@@ -17,9 +17,16 @@ interface BugReportsResponse extends BasicResponse {
   bugReports: BugReport[]
 }
 
+/**
+ * Partial edit of a bug report. An omitted field is left alone and at least one has to be
+ * supplied. `title` and `description` are editable so a report filed with a useless title can
+ * be made findable.
+ */
 export interface BugReportUpdate {
   status?: ReportStatus
   severity?: Severity
+  title?: string
+  description?: string
 }
 
 export class FeedbackService {
@@ -36,6 +43,10 @@ export class FeedbackService {
 
   updateReport(id: string, update: BugReportUpdate): Promise<BasicResponse> {
     return this.client.patch<BasicResponse>(`/reports/${id}`, update)
+  }
+
+  deleteReport(id: string): Promise<BasicResponse> {
+    return this.client.delete<BasicResponse>(`/reports/${id}`)
   }
 }
 

@@ -4,8 +4,10 @@ import type { ActivityMeta } from '../../../api/ActivityLogsService'
 import { darkInputStyles } from '../../../constants/inputStyles'
 import { enumLabel } from '../../../utils/enumLabel'
 import {
-  isActivityOutcome,
-  outcomeOptions,
+  actorTypeOptions,
+  isActivityAction,
+  isActivityActorType,
+  isActivityTargetType,
   type ActivityFilterDraft,
 } from '../activityLogModel'
 
@@ -18,6 +20,10 @@ interface ActivitySelectFilterProps {
   onDraftChange: ActivityDraftSetter
 }
 
+/**
+ * The actor list the backend serves is capped, so the free-text search is what finds a student
+ * who is not in it.
+ */
 export function ActivityPersonFilter({
   value,
   meta,
@@ -43,12 +49,41 @@ export function ActivityPersonFilter({
   )
 }
 
-export function ActivityTypeFilter({
+export function ActivityActorTypeFilter({
   value,
   meta,
   onDraftChange,
-}: ActivitySelectFilterProps & { value: ActivityFilterDraft['type'] }) {
-  const options = meta.types.map((type) => ({ value: type, label: enumLabel(type) }))
+}: ActivitySelectFilterProps & { value: ActivityFilterDraft['actorType'] }) {
+  const options = actorTypeOptions(meta).map((actorType) => ({
+    value: actorType,
+    label: enumLabel(actorType),
+  }))
+
+  return (
+    <Select
+      label="Who"
+      placeholder="Anyone"
+      data={options}
+      value={value}
+      onChange={(nextValue) => {
+        onDraftChange((current) => ({
+          ...current,
+          actorType: isActivityActorType(nextValue) ? nextValue : null,
+        }))
+      }}
+      clearable
+      style={filterFieldStyle}
+      styles={darkInputStyles}
+    />
+  )
+}
+
+export function ActivityActionFilter({
+  value,
+  meta,
+  onDraftChange,
+}: ActivitySelectFilterProps & { value: ActivityFilterDraft['action'] }) {
+  const options = meta.actions.map((action) => ({ value: action, label: enumLabel(action) }))
 
   return (
     <Select
@@ -56,7 +91,12 @@ export function ActivityTypeFilter({
       placeholder="All activity"
       data={options}
       value={value}
-      onChange={(type) => onDraftChange((current) => ({ ...current, type }))}
+      onChange={(nextValue) => {
+        onDraftChange((current) => ({
+          ...current,
+          action: isActivityAction(nextValue, meta) ? nextValue : null,
+        }))
+      }}
       searchable
       clearable
       style={filterFieldStyle}
@@ -78,34 +118,10 @@ export function ActivityTargetFilter({
       placeholder="All targets"
       data={options}
       value={value}
-      onChange={(targetType) => onDraftChange((current) => ({ ...current, targetType }))}
-      clearable
-      style={filterFieldStyle}
-      styles={darkInputStyles}
-    />
-  )
-}
-
-export function ActivityOutcomeFilter({
-  value,
-  meta,
-  onDraftChange,
-}: ActivitySelectFilterProps & { value: ActivityFilterDraft['outcome'] }) {
-  const options = outcomeOptions(meta).map((outcome) => ({
-    value: outcome,
-    label: enumLabel(outcome),
-  }))
-
-  return (
-    <Select
-      label="Result"
-      placeholder="Any result"
-      data={options}
-      value={value}
       onChange={(nextValue) => {
         onDraftChange((current) => ({
           ...current,
-          outcome: isActivityOutcome(nextValue) ? nextValue : null,
+          targetType: isActivityTargetType(nextValue, meta) ? nextValue : null,
         }))
       }}
       clearable

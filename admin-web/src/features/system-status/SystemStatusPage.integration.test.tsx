@@ -19,13 +19,15 @@ vi.mock('../../api/SystemStatusService', async (importOriginal) => {
 const healthyStatus: SystemStatus = {
   status: 'OK',
   checkedAt: '2026-07-28T13:40:00.000Z',
-  version: '1.4.2',
+  startedAt: '2026-07-27T02:00:00.000Z',
   uptimeSeconds: 128_400,
-  database: { status: 'UP', latencyMs: 3, pendingMigrations: 0 },
+  database: { reachable: true, latencyMs: 3, error: null },
   counts: { users: 412, blockedUsers: 4 },
-  lastWriteAt: {
-    USER_BLOCKED: '2026-07-28T12:11:00.000Z',
-    USER_DELETED: null,
+  lastWrite: {
+    at: '2026-07-28T12:11:00.000Z',
+    ageSeconds: 5340,
+    action: 'USER_BLOCKED',
+    actorName: 'Admin User',
   },
 }
 
@@ -42,16 +44,36 @@ describe('System Status page', () => {
     vi.mocked(systemStatusService.getStatus).mockResolvedValue(healthyStatus)
   })
 
-  it('reports health, uptime, counters and last writes', async () => {
+  it('reports health, uptime, counters and the last write', async () => {
     renderSystemStatus()
 
-    expect(await screen.findByText('Backend is ok')).toBeInTheDocument()
+    expect(await screen.findByText('API is up, database is ok')).toBeInTheDocument()
     expect(screen.getByText('1d 11h 40m')).toBeInTheDocument()
-    expect(screen.getByText('1.4.2')).toBeInTheDocument()
+    expect(screen.getByText('Reachable')).toBeInTheDocument()
     expect(screen.getByText('3 ms')).toBeInTheDocument()
     expect(screen.getByText('412')).toBeInTheDocument()
     expect(screen.getByText('Blocked users')).toBeInTheDocument()
-    expect(screen.getByText('Never')).toBeInTheDocument()
+    expect(screen.getByText('User Blocked')).toBeInTheDocument()
+    expect(screen.getByText('Admin User')).toBeInTheDocument()
+  })
+
+  it('says counters are unavailable when the database could not be read', async () => {
+    vi.mocked(systemStatusService.getStatus).mockResolvedValue({
+      ...healthyStatus,
+      status: 'DOWN',
+      database: { reachable: false, latencyMs: null, error: 'ConnectionRefused' },
+      counts: null,
+      lastWrite: null,
+    })
+    renderSystemStatus()
+
+    expect(await screen.findByText('API is up, database is down')).toBeInTheDocument()
+    expect(screen.getByText('Unreachable')).toBeInTheDocument()
+    expect(screen.getByText('ConnectionRefused')).toBeInTheDocument()
+    expect(
+      screen.getByText('Counters are unavailable — the backend could not read them from the database.')
+    ).toBeInTheDocument()
+    expect(screen.getByText('Nothing has been recorded yet.')).toBeInTheDocument()
   })
 
   it('re-reads the status on demand so a write can be confirmed', async () => {
@@ -77,13 +99,13 @@ describe('System Status page', () => {
     const user = userEvent.setup()
     renderSystemStatus()
 
-    await screen.findByText('Backend is ok')
+    await screen.findByText('API is up, database is ok')
     await user.click(screen.getByRole('button', { name: 'Refresh now' }))
 
     expect(await screen.findByText(
       'Status probe timed out Showing the last successful reading.'
     )).toBeInTheDocument()
-    expect(screen.getByText('Backend is ok')).toBeInTheDocument()
+    expect(screen.getByText('API is up, database is ok')).toBeInTheDocument()
   })
 
   it('explains when the configured backend has no status endpoint', async () => {

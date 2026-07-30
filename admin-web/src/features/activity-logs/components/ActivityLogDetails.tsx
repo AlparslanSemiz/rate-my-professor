@@ -4,14 +4,7 @@ import type { ActivityLog } from '../../../api/ActivityLogsService'
 import { darkModalStyles } from '../../../constants/modalStyles'
 import { enumLabel } from '../../../utils/enumLabel'
 import { formatDate } from '../../../utils/formatDate'
-import {
-  activityTypeColor,
-  actorEmail,
-  actorName,
-  contextEntries,
-  formatActivityValue,
-  outcomeColor,
-} from '../activityLogModel'
+import { activityActionColor, formatActivityValue, isRefusal } from '../activityLogModel'
 
 const detailCardStyle: CSSProperties = {
   padding: '12px 14px',
@@ -19,6 +12,8 @@ const detailCardStyle: CSSProperties = {
   background: '#0f1117',
   border: '1px solid #21262d',
 }
+const nowrapStyle: CSSProperties = { whiteSpace: 'nowrap' }
+const breakWordStyle: CSSProperties = { wordBreak: 'break-word' }
 
 export default function ActivityLogDetails({
   activity,
@@ -49,20 +44,17 @@ export default function ActivityLogDetails({
               </Text>
             )}
           </DetailSection>
-          <DetailSection label="Where it happened">
-            <PairList entries={contextEntries(activity.context)} empty="No request context recorded." />
+          {/* Student activity creates rather than modifies, so `changes` is empty for it and
+              the detail lives in the metadata. */}
+          <DetailSection label="What was recorded">
+            <PairList
+              entries={Object.entries(activity.metadata).map(([key, value]) => [
+                enumLabel(key),
+                formatActivityValue(value),
+              ])}
+              empty="Nothing beyond the action itself."
+            />
           </DetailSection>
-          {Object.keys(activity.metadata).length > 0 && (
-            <DetailSection label="Additional context">
-              <PairList
-                entries={Object.entries(activity.metadata).map(([key, value]) => [
-                  enumLabel(key),
-                  formatActivityValue(value),
-                ])}
-                empty=""
-              />
-            </DetailSection>
-          )}
         </Stack>
       )}
     </Modal>
@@ -75,19 +67,20 @@ function ActorSummary({ activity }: { activity: ActivityLog }) {
       <Group justify="space-between" align="flex-start">
         <div>
           <Group gap={6} mb={8}>
-            <Badge variant="light" color={activityTypeColor(activity.type)}>
-              {enumLabel(activity.type)}
+            <Badge variant="light" color={activityActionColor(activity.action)}>
+              {enumLabel(activity.action)}
             </Badge>
-            <Badge variant="light" color={outcomeColor(activity.outcome)}>
-              {enumLabel(activity.outcome)}
-            </Badge>
+            {isRefusal(activity.action) && (
+              <Badge variant="light" color="red">
+                Refused
+              </Badge>
+            )}
           </Group>
           <Text fw={600} c="#e2e8f0">
-            {actorName(activity.actor)}
+            {activity.actor.name}
           </Text>
           <Text size="xs" c="#6b7280">
-            {actorEmail(activity.actor)}
-            {activity.actor ? ` · ${enumLabel(activity.actor.role)}` : ''}
+            {activity.actor.email} · {enumLabel(activity.actor.role)}
           </Text>
         </div>
         <Text size="xs" c="#6b7280">
@@ -122,10 +115,10 @@ function PairList({ entries, empty }: { entries: Array<[string, string]>; empty:
     <Stack gap={6}>
       {entries.map(([label, value]) => (
         <Group key={label} justify="space-between" align="flex-start" wrap="nowrap" gap={16}>
-          <Text size="xs" c="#6b7280" style={{ whiteSpace: 'nowrap' }}>
+          <Text size="xs" c="#6b7280" style={nowrapStyle}>
             {label}
           </Text>
-          <Text size="sm" c="#d1d5db" ta="right" style={{ wordBreak: 'break-word' }}>
+          <Text size="sm" c="#d1d5db" ta="right" style={breakWordStyle}>
             {value}
           </Text>
         </Group>

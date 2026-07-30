@@ -1,46 +1,36 @@
 import { ApiError } from '../../api/ApiClient'
-import {
-  ACTIVITY_OUTCOMES,
-  type ActivityActor,
-  type ActivityContext,
-  type ActivityLogFilters,
-  type ActivityMeta,
-  type ActivityOutcome,
-  type ActivityTargetType,
-  type ActivityType,
-  type ActivityValue,
+import type {
+  ActivityAction,
+  ActivityLogFilters,
+  ActivityMeta,
+  ActivityTargetType,
+  ActivityValue,
 } from '../../api/ActivityLogsService'
+import { EMPTY_LOG_META, isLogActorType, type LogActorType } from '../../domain/auditLog'
 import { validateDateRange } from '../../utils/dateRange'
 import { getErrorMessage } from '../../utils/getErrorMessage'
 
 const ACTIVITY_API_UNAVAILABLE_MESSAGE =
   'The configured backend does not track application activity yet. Deploy the activity log API endpoints, then try again.'
 
-export const ANONYMOUS_ACTOR_NAME = 'Anonymous'
-
 export interface ActivityFilterDraft {
   q: string
   actorId: string | null
-  type: ActivityType | null
+  actorType: LogActorType | null
+  action: ActivityAction | null
   targetType: ActivityTargetType | null
-  outcome: ActivityOutcome | null
   from: string
   to: string
 }
 
-export const EMPTY_ACTIVITY_META: ActivityMeta = {
-  actors: [],
-  types: [],
-  targetTypes: [],
-  outcomes: [],
-}
+export const EMPTY_ACTIVITY_META: ActivityMeta = EMPTY_LOG_META
 
 export const EMPTY_ACTIVITY_FILTERS: ActivityFilterDraft = {
   q: '',
   actorId: null,
-  type: null,
+  actorType: null,
+  action: null,
   targetType: null,
-  outcome: null,
   from: '',
   to: '',
 }
@@ -51,9 +41,9 @@ export function toActivityFilters(draft: ActivityFilterDraft): ActivityLogFilter
   return {
     q: draft.q,
     actorId: draft.actorId ?? undefined,
-    type: draft.type ?? undefined,
+    actorType: draft.actorType ?? undefined,
+    action: draft.action ?? undefined,
     targetType: draft.targetType ?? undefined,
-    outcome: draft.outcome ?? undefined,
     from: draft.from || undefined,
     to: draft.to || undefined,
   }
@@ -68,32 +58,45 @@ export function getActivityErrorMessage(error: unknown, fallback: string) {
   return getErrorMessage(error, fallback)
 }
 
-/** The outcome filter falls back to the known values when the backend reports none. */
-export function outcomeOptions(meta: ActivityMeta): readonly ActivityOutcome[] {
-  return meta.outcomes.length > 0 ? meta.outcomes : ACTIVITY_OUTCOMES
+export function isActivityAction(
+  value: string | null,
+  meta: ActivityMeta,
+): value is ActivityAction {
+  return value !== null && meta.actions.some((action) => action === value)
 }
 
-export function isActivityOutcome(value: string | null): value is ActivityOutcome {
-  return value !== null && ACTIVITY_OUTCOMES.some((outcome) => outcome === value)
+export function isActivityTargetType(
+  value: string | null,
+  meta: ActivityMeta,
+): value is ActivityTargetType {
+  return value !== null && meta.targetTypes.some((targetType) => targetType === value)
 }
 
-export function outcomeColor(outcome: ActivityOutcome) {
-  if (outcome === 'FAILURE') return 'red'
-  if (outcome === 'DENIED') return 'orange'
-  return 'green'
+export function isActivityActorType(value: string | null): value is LogActorType {
+  return isLogActorType(value)
+}
+
+const BOTH_ACTOR_TYPES = ['ADMIN', 'USER'] as const
+
+/** The two actor types are always offered, even when the backend reports none in its meta. */
+export function actorTypeOptions(meta: ActivityMeta): readonly LogActorType[] {
+  return meta.actorTypes.length > 0 ? meta.actorTypes : BOTH_ACTOR_TYPES
+}
+
+export function isRefusal(action: string) {
+  return action === 'LOGIN_REFUSED' || action === 'ACCESS_REFUSED'
 }
 
 /**
- * Activity types are an open set, so the badge colour is derived from the verb at the end of
- * the type rather than from a fixed lookup table.
+ * A refusal is the one thing on this page that is not something someone successfully did, so it
+ * is the one that has to stand out.
  */
-export function activityTypeColor(type: ActivityType) {
-  if (type.endsWith('_DELETED')) return 'red'
-  if (type.endsWith('_FAILED')) return 'orange'
-  if (type.endsWith('_REPORTED') || type.endsWith('_SUBMITTED')) return 'yellow'
-  if (type.endsWith('_CREATED') || type.endsWith('_REGISTERED')) return 'teal'
-  if (type.startsWith('USER_LOGIN') || type.startsWith('USER_LOGOUT')) return 'violet'
-  return 'blue'
+export function activityActionColor(action: string) {
+  if (isRefusal(action)) return 'red'
+  if (action === 'USER_LOGIN' || action === 'USER_LOGOUT') return 'violet'
+  if (action.endsWith('_REPORT_CREATED')) return 'orange'
+  if (action === 'RATING_SUBMITTED') return 'yellow'
+  return 'teal'
 }
 
 export function formatActivityValue(value: ActivityValue): string {
@@ -102,32 +105,23 @@ export function formatActivityValue(value: ActivityValue): string {
   return String(value)
 }
 
-export function actorName(actor: ActivityActor | null) {
-  return actor?.name ?? ANONYMOUS_ACTOR_NAME
+function text(value: ActivityValue): string {
+  return typeof value === 'string' && value ? value : ''
 }
 
-export function actorEmail(actor: ActivityActor | null) {
-  return actor?.email ?? 'Not signed in'
-}
+/**
+ * The one-line summary in the table's last column. Student activity carries a content preview
+ * and a refusal carries why it was refused, so one column answers "what happened" for both.
+ */
+export function activitySummary(metadata: Record<string, ActivityValue>): string {
+  const preview = text(metadata.contentPreview)
+  if (preview) return preview
 
-const CONTEXT_LABELS: ReadonlyArray<[keyof ActivityContext, string]> = [
-  ['route', 'Route'],
-  ['method', 'Method'],
-  ['ip', 'IP address'],
-  ['userAgent', 'User agent'],
-]
+  const path = text(metadata.path)
+  const reason = text(metadata.reason)
+  if (reason) return path ? `${reason} · ${path}` : reason
 
-/** Flattens the optional context object into label/value pairs, skipping absent fields. */
-export function contextEntries(context: ActivityContext | null): Array<[string, string]> {
-  if (!context) return []
-  const entries: Array<[string, string]> = []
-  for (const [key, label] of CONTEXT_LABELS) {
-    const value = context[key]
-    if (value) entries.push([label, value])
-  }
-  return entries
-}
-
-export function contextSummary(context: ActivityContext | null) {
-  return context?.route ?? '—'
+  const method = text(metadata.method)
+  if (path) return method ? `${method} ${path}` : path
+  return method || '—'
 }

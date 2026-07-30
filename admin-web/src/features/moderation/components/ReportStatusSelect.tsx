@@ -1,10 +1,9 @@
 import { Select } from '@mantine/core'
-import type { CommentReportStatus, ReportedComment } from '../../../api/CommentsService'
 import { reportStatusColor } from '../../../constants/colors'
-import { isReportStatus } from '../../../domain/moderation'
-import { statusSelectOptions } from '../commentFilters'
+import { isReportStatus, type ReportStatus } from '../../../domain/moderation'
+import { reportStatusSelectOptions, type ReportItem } from '../moderationModel'
 
-function statusSelectStyles(status: CommentReportStatus) {
+function statusSelectStyles(status: ReportStatus) {
   return {
     input: {
       background: '#0f1117',
@@ -17,9 +16,9 @@ function statusSelectStyles(status: CommentReportStatus) {
 }
 
 interface ReportStatusSelectProps {
-  report: ReportedComment
+  report: ReportItem
   updating: boolean
-  onStatusChange: (id: string, status: CommentReportStatus) => void
+  onStatusChange: (id: string, status: ReportStatus) => void
 }
 
 export default function ReportStatusSelect({
@@ -31,7 +30,7 @@ export default function ReportStatusSelect({
     <Select
       size="xs"
       value={report.status}
-      data={statusSelectOptions}
+      data={reportStatusSelectOptions}
       styles={statusSelectStyles(report.status)}
       aria-label={`Status for report by ${report.reportedUser.name}`}
       disabled={updating}

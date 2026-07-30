@@ -33,7 +33,7 @@ export default function UsersPage() {
   const profile = useSelectedId()
   const { search, setSearch, filtered } = useSearch(users, matchesQuery)
 
-  function handleUserChanged(id: string, change: UserChange) {
+  function handleUserChanged(id: string, change: UserChange, updated?: User) {
     const userUpdates: Partial<Record<UserChange, (user: User) => User>> = {
       blocked: (user) => ({ ...user, status: 'BLOCKED' }),
       unblocked: (user) => ({ ...user, status: 'ACTIVE' }),
@@ -43,6 +43,12 @@ export default function UsersPage() {
     if (change === 'deleted') {
       setUsers((current) => current.filter((user) => user.id !== id))
       profile.close()
+      return
+    }
+
+    // An edit can change any field, so the row is replaced with what the backend now reports.
+    if (change === 'updated') {
+      if (updated) setUsers((current) => updateById(current, id, () => updated))
       return
     }
 

@@ -116,12 +116,65 @@ describe('UsersService', () => {
 
     await expect(service.getWarnings('user-1')).resolves.toEqual([
       {
+        id: null,
         userID: 'user-1',
         message: 'Inappropriate language.',
         createdAt: '2026-05-10T14:22:00Z',
         issuedBy: 'admin-1',
       },
     ])
+  })
+
+  it('carries the warning id through once the backend reports one', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      success: true,
+      message: 'OK',
+      warnings: [
+        {
+          id: 'warning-1',
+          userID: 'user-1',
+          message: 'Inappropriate language.',
+          createdAt: '2026-05-10T14:22:00Z',
+          createdFrom: { id: 'admin-1', createdAt: '2026-05-10T14:20:00Z' },
+        },
+      ],
+    }))
+    const service = createUsersService()
+
+    await expect(service.getWarnings('user-1')).resolves.toMatchObject([{ id: 'warning-1' }])
+  })
+
+  it('sends only the supplied fields when editing a user', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'Updated user successfully' }))
+    const service = createUsersService()
+
+    await service.update('user-1', { username: 'Renamed', role: 'ADMIN' })
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe(`${TEST_API_BASE_URL}/users/user-1`)
+    expect(init.method).toBe('PATCH')
+    expect(JSON.parse(init.body as string)).toEqual({ username: 'Renamed', role: 'ADMIN' })
+  })
+
+  it('corrects and withdraws a warning by its own id', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ success: true, message: 'Updated warning successfully' }))
+      .mockResolvedValueOnce(jsonResponse({ success: true, message: 'Deleted warning successfully' }))
+    const service = createUsersService()
+
+    await service.updateWarning('user-1', 'warning-1', 'Corrected reason')
+    await service.deleteWarning('user-1', 'warning-1')
+
+    const [patchUrl, patchInit] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(patchUrl).toBe(`${TEST_API_BASE_URL}/users/user-1/warnings/warning-1`)
+    expect(patchInit.method).toBe('PATCH')
+    expect(JSON.parse(patchInit.body as string)).toEqual({ message: 'Corrected reason' })
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `${TEST_API_BASE_URL}/users/user-1/warnings/warning-1`,
+      expect.objectContaining({ method: 'DELETE' })
+    )
   })
 
   it('blocks and unblocks users with bodyless PATCH requests', async () => {

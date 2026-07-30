@@ -5,7 +5,7 @@ import Panel from '../../../components/Panel'
 import TableHeaderRow from '../../../components/TableHeaderRow'
 import ActivityLogRow from './ActivityLogRow'
 
-const TABLE_COLUMNS = ['Time', 'Who', 'Activity', 'Target', 'Where', 'Result'] as const
+const TABLE_COLUMNS = ['Time', 'Who', 'Activity', 'Target', 'Detail'] as const
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
 const tableStyle: CSSProperties = {

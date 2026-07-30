@@ -15,27 +15,37 @@ describe('SystemStatusService', () => {
     vi.stubGlobal('fetch', fetchMock)
   })
 
-  it('reads the reported health, counters and last writes', async () => {
+  it('reads the reported health, counters and last write', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({
       success: true,
       message: 'Success',
-      status: 'DEGRADED',
+      status: 'OK',
       checkedAt: '2026-07-28T13:40:00.000Z',
-      version: '1.4.2',
+      startedAt: '2026-07-27T02:00:00.000Z',
       uptimeSeconds: 128400,
-      database: { status: 'UP', latencyMs: 310, pendingMigrations: 1 },
-      counts: { users: 412, blockedUsers: 4 },
-      lastWriteAt: { USER_BLOCKED: '2026-07-28T12:11:00.000Z', USER_DELETED: null },
+      database: { reachable: true, latencyMs: 3, error: null },
+      counts: { users: 412, admins: 6, openBugReports: 1 },
+      lastWrite: {
+        at: '2026-07-28T13:39:48.000Z',
+        ageSeconds: 12,
+        action: 'USER_BLOCKED',
+        actorName: 'Administrator',
+      },
     }))
 
     await expect(createService().getStatus()).resolves.toEqual({
-      status: 'DEGRADED',
+      status: 'OK',
       checkedAt: '2026-07-28T13:40:00.000Z',
-      version: '1.4.2',
+      startedAt: '2026-07-27T02:00:00.000Z',
       uptimeSeconds: 128400,
-      database: { status: 'UP', latencyMs: 310, pendingMigrations: 1 },
-      counts: { users: 412, blockedUsers: 4 },
-      lastWriteAt: { USER_BLOCKED: '2026-07-28T12:11:00.000Z', USER_DELETED: null },
+      database: { reachable: true, latencyMs: 3, error: null },
+      counts: { users: 412, admins: 6, openBugReports: 1 },
+      lastWrite: {
+        at: '2026-07-28T13:39:48.000Z',
+        ageSeconds: 12,
+        action: 'USER_BLOCKED',
+        actorName: 'Administrator',
+      },
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -44,20 +54,41 @@ describe('SystemStatusService', () => {
     )
   })
 
-  it('falls back to empty maps when the backend omits optional fields', async () => {
+  it('keeps counts and the last write null when the database could not be read', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      success: true,
+      message: 'Success',
+      status: 'DOWN',
+      checkedAt: '2026-07-28T13:40:00.000Z',
+      startedAt: '2026-07-27T02:00:00.000Z',
+      uptimeSeconds: 128400,
+      database: { reachable: false, latencyMs: null, error: 'CannotGetJdbcConnectionException' },
+      counts: null,
+      lastWrite: null,
+    }))
+
+    await expect(createService().getStatus()).resolves.toMatchObject({
+      status: 'DOWN',
+      counts: null,
+      lastWrite: null,
+      database: { reachable: false, error: 'CannotGetJdbcConnectionException' },
+    })
+  })
+
+  it('falls back to nulls when the backend omits optional fields', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({
       success: true,
       message: 'Success',
       status: 'OK',
       checkedAt: '2026-07-28T13:40:00.000Z',
-      database: { status: 'UP', latencyMs: 3, pendingMigrations: 0 },
+      database: { reachable: true, latencyMs: 3, error: null },
     }))
 
     await expect(createService().getStatus()).resolves.toMatchObject({
-      version: null,
+      startedAt: null,
       uptimeSeconds: null,
-      counts: {},
-      lastWriteAt: {},
+      counts: null,
+      lastWrite: null,
     })
   })
 

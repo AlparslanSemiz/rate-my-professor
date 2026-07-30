@@ -22,7 +22,7 @@ async function fetchPage(
   const page = cursor
     ? await activityLogsService.getLogs(filters, cursor)
     : await activityLogsService.getLogs(filters)
-  return { items: page.activities, nextCursor: page.nextCursor }
+  return { items: page.activityLogs, nextCursor: page.nextCursor }
 }
 
 export function useActivityLogs() {

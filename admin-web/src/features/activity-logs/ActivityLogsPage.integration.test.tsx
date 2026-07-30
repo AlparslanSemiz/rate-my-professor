@@ -23,14 +23,14 @@ vi.mock('../../api/ActivityLogsService', async (importOriginal) => {
 
 const meta: ActivityMeta = {
   actors: [{ id: 'user-1', name: 'MiraK', email: 'mira@student.kit.edu', role: 'STUDENT' }],
-  types: ['COMMENT_CREATED', 'ADMIN_ACCESS_DENIED'],
-  targetTypes: ['COMMENT', 'ADMIN_ENDPOINT'],
-  outcomes: ['SUCCESS', 'FAILURE', 'DENIED'],
+  actions: ['COMMENT_CREATED', 'ACCESS_REFUSED'],
+  targetTypes: ['COMMENT', 'ENDPOINT'],
+  actorTypes: ['ADMIN', 'USER'],
 }
 
 const commentActivity: ActivityLog = {
   id: 'activity-1',
-  type: 'COMMENT_CREATED',
+  action: 'COMMENT_CREATED',
   createdAt: '2026-07-23T10:00:00.000Z',
   actor: {
     type: 'USER',
@@ -40,20 +40,24 @@ const commentActivity: ActivityLog = {
     role: 'STUDENT',
   },
   target: { type: 'COMMENT', id: 'comment-1', label: 'Re: Exam dates' },
-  context: { route: '/posts/1/comments', method: 'POST', ip: '192.0.2.13', userAgent: 'Firefox' },
-  metadata: { length: 128 },
-  outcome: 'SUCCESS',
+  changes: {},
+  metadata: { contentPreview: 'Clear and well paced', contentLength: 20 },
 }
 
-const deniedActivity: ActivityLog = {
+const refusedActivity: ActivityLog = {
   id: 'activity-2',
-  type: 'ADMIN_ACCESS_DENIED',
+  action: 'ACCESS_REFUSED',
   createdAt: '2026-07-23T09:00:00.000Z',
-  actor: null,
-  target: { type: 'ADMIN_ENDPOINT', id: '/users', label: 'GET /users' },
-  context: { route: '/users', method: 'GET', ip: null, userAgent: null },
-  metadata: {},
-  outcome: 'DENIED',
+  actor: {
+    type: 'USER',
+    id: 'user-2',
+    name: 'Jonas',
+    email: 'jonas@student.kit.edu',
+    role: 'STUDENT',
+  },
+  target: { type: 'ENDPOINT', id: 'endpoint-1', label: 'GET /users' },
+  changes: {},
+  metadata: { method: 'GET', path: '/users/user-9', status: 403 },
 }
 
 function renderActivityLogs() {
@@ -68,12 +72,12 @@ describe('Activity Log page', () => {
   beforeEach(() => {
     vi.mocked(activityLogsService.getMeta).mockResolvedValue(meta)
     vi.mocked(activityLogsService.getLogs).mockResolvedValue({
-      activities: [commentActivity],
+      activityLogs: [commentActivity],
       nextCursor: null,
     })
   })
 
-  it('shows activity and opens the request context behind an event', async () => {
+  it('shows activity and opens what was recorded behind an event', async () => {
     const user = userEvent.setup()
     renderActivityLogs()
 
@@ -84,23 +88,22 @@ describe('Activity Log page', () => {
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('Activity Details')).toBeInTheDocument()
     expect(within(dialog).getByText('Re: Exam dates')).toBeInTheDocument()
-    expect(within(dialog).getByText('/posts/1/comments')).toBeInTheDocument()
-    expect(within(dialog).getByText('192.0.2.13')).toBeInTheDocument()
+    expect(within(dialog).getByText('Clear and well paced')).toBeInTheDocument()
   })
 
-  it('labels unauthenticated events as anonymous', async () => {
+  it('marks a refused request and summarises what was refused', async () => {
     vi.mocked(activityLogsService.getLogs).mockResolvedValue({
-      activities: [deniedActivity],
+      activityLogs: [refusedActivity],
       nextCursor: null,
     })
     renderActivityLogs()
 
     const row = await screen.findByRole('row', {
-      name: 'Open activity Admin Access Denied by Anonymous',
+      name: 'Open activity Access Refused by Jonas',
     })
-    expect(within(row).getByText('Anonymous')).toBeInTheDocument()
-    expect(within(row).getByText('Not signed in')).toBeInTheDocument()
-    expect(within(row).getByText('Denied')).toBeInTheDocument()
+    expect(within(row).getByText('Access Refused')).toBeInTheDocument()
+    expect(within(row).getByText('Endpoint')).toBeInTheDocument()
+    expect(within(row).getByText('GET /users/user-9')).toBeInTheDocument()
   })
 
   it('applies server-side filters', async () => {
@@ -120,8 +123,8 @@ describe('Activity Log page', () => {
 
   it('appends the next cursor page', async () => {
     vi.mocked(activityLogsService.getLogs)
-      .mockResolvedValueOnce({ activities: [commentActivity], nextCursor: 'next-page' })
-      .mockResolvedValueOnce({ activities: [deniedActivity], nextCursor: null })
+      .mockResolvedValueOnce({ activityLogs: [commentActivity], nextCursor: 'next-page' })
+      .mockResolvedValueOnce({ activityLogs: [refusedActivity], nextCursor: null })
     const user = userEvent.setup()
     renderActivityLogs()
 
@@ -136,7 +139,7 @@ describe('Activity Log page', () => {
 
   it('shows an empty state when nothing matches', async () => {
     vi.mocked(activityLogsService.getLogs).mockResolvedValue({
-      activities: [],
+      activityLogs: [],
       nextCursor: null,
     })
     renderActivityLogs()

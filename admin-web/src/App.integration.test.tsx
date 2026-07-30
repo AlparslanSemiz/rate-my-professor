@@ -89,6 +89,7 @@ describe('App routing and authentication', () => {
       actors: [],
       actions: [],
       targetTypes: [],
+      actorTypes: [],
     })
   })
 
