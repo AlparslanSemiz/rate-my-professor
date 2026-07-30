@@ -130,6 +130,7 @@ public class DomainModelTest {
                 "user123",
                 "lecture-1",
                 LocalDateTime.now(),
+                0, 0,
                 new ArrayList<>()
         );
         Vote vote = new Vote("vote-1", now, VoteType.UP, comment);
