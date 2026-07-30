@@ -1166,6 +1166,34 @@ class AdminApiIntegrationTests {
     }
 
     @Test
+    void ratingsListingIsAdminOnlyAndReturnsTheManagedShape() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session student = createSession("rater@student.kit.edu", false);
+        Lecture lecture = createLecture();
+
+        mockMvc.perform(post("/ratings/rate")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lectureId":"%s","topics":[{"category":"ORGANIZATION","value":4}]}
+                                """.formatted(lecture.getId())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/ratings")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/ratings").header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/ratings").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ratings", hasSize(1)))
+                .andExpect(jsonPath("$.ratings[0].lectureLabel").value("CS101 — Algorithms"))
+                .andExpect(jsonPath("$.ratings[0].lectureId").value(lecture.getId().toString()))
+                .andExpect(jsonPath("$.ratings[0].student.name").value("rater"))
+                .andExpect(jsonPath("$.ratings[0].topics", hasSize(1)))
+                .andExpect(jsonPath("$.ratings[0].topics[0].category").value("ORGANIZATION"))
+                .andExpect(jsonPath("$.ratings[0].topics[0].value").value(4.0));
+    }
+
+    @Test
     void lecturesAndProfessorsAreEditableAndDeletable() throws Exception {
         Session admin = createSession("admin@student.kit.edu", true);
         Lecture lecture = createLecture();
@@ -1230,6 +1258,57 @@ class AdminApiIntegrationTests {
 
         // The public catalogue read is untouched by the admin-only write rules.
         mockMvc.perform(get("/data/lectures")).andExpect(status().isOk());
+    }
+
+    @Test
+    void allLecturesAndAllProfessorsAreAdminOnlyAndIncludeDeactivatedEntries() throws Exception {
+        Session student = createSession("student@student.kit.edu", false);
+        Session admin = createSession("admin@student.kit.edu", true);
+
+        Lecture inactiveLecture = createLecture();
+        inactiveLecture.setCode("CS999");
+        inactiveLecture.setActive(false);
+        lectureRepository.saveAndFlush(inactiveLecture);
+
+        Professor activeProfessor = new Professor();
+        activeProfessor.setFirstName("Ada");
+        activeProfessor.setLastName("Lovelace");
+        professorRepository.saveAndFlush(activeProfessor);
+
+        Professor inactiveProfessor = new Professor();
+        inactiveProfessor.setFirstName("Grace");
+        inactiveProfessor.setLastName("Hopper");
+        inactiveProfessor.setActive(false);
+        professorRepository.saveAndFlush(inactiveProfessor);
+
+        mockMvc.perform(get("/data/lectures/all")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/data/lectures/all").header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/data/lectures/all").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lectures", hasSize(1)))
+                .andExpect(jsonPath("$.lectures[0].code").value("CS999"))
+                .andExpect(jsonPath("$.lectures[0].active").value(false))
+                .andExpect(jsonPath("$.lectures[0].lectureType").value("LECTURE_ONLY"));
+
+        mockMvc.perform(get("/data/professor/all")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/data/professor/all").header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/data/professor/all").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.professors", hasSize(2)))
+                .andExpect(jsonPath("$.professors[?(@.lastName == 'Hopper')].active")
+                        .value(org.hamcrest.Matchers.hasItem(false)))
+                .andExpect(jsonPath("$.professors[?(@.lastName == 'Lovelace')].active")
+                        .value(org.hamcrest.Matchers.hasItem(true)));
+
+        // The public catalogue reads stay filtered to active = true.
+        mockMvc.perform(get("/data/lectures"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lectures", hasSize(0)));
+        mockMvc.perform(get("/data/professor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.professors", hasSize(1)));
     }
 
     @Test
