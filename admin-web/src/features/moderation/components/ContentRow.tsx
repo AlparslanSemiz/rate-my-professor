@@ -1,5 +1,5 @@
-import { ActionIcon, Badge, Group, Text, Tooltip, type CSSProperties } from '@mantine/core'
-import { IconPencil, IconTrash } from '@tabler/icons-react'
+import { ActionIcon, Badge, Box, Group, Text, Tooltip, type CSSProperties } from '@mantine/core'
+import { IconChevronDown, IconChevronRight, IconPencil, IconTrash } from '@tabler/icons-react'
 import UserChip from '../../../components/UserChip'
 import { contentStatusColor } from '../../../constants/colors'
 import { enumLabel } from '../../../utils/enumLabel'
@@ -12,9 +12,14 @@ const contentCellStyle: CSSProperties = { padding: '16px 20px', maxWidth: 360 }
 const cellStyle: CSSProperties = { padding: '16px 20px' }
 const nowrapCellStyle: CSSProperties = { ...cellStyle, whiteSpace: 'nowrap' }
 const breakWordStyle: CSSProperties = { wordBreak: 'break-word' }
+const replyIndentStyle: CSSProperties = { paddingLeft: 20 }
+const contentTextBoxStyle: CSSProperties = { flex: 1, minWidth: 0 }
 
-function rowStyle(isLast: boolean): CSSProperties {
-  return { borderBottom: isLast ? 'none' : '1px solid #1c2128' }
+function rowStyle(isLast: boolean, isReply: boolean): CSSProperties {
+  return {
+    borderBottom: isLast ? 'none' : '1px solid #1c2128',
+    background: isReply ? 'rgba(255,255,255,0.015)' : undefined,
+  }
 }
 
 interface ContentRowProps {
@@ -24,6 +29,11 @@ interface ContentRowProps {
   onOpenProfile: (userId: string) => void
   onEdit: (item: ModeratedItem) => void
   onDelete: (item: ModeratedItem) => void
+  /** Renders this row indented, as an answer nested under its comment. */
+  isReply?: boolean
+  expanded?: boolean
+  /** Present only for a comment that has answers; toggles their visibility below this row. */
+  onToggleExpand?: () => void
 }
 
 export default function ContentRow({
@@ -33,33 +43,51 @@ export default function ContentRow({
   onOpenProfile,
   onEdit,
   onDelete,
+  isReply = false,
+  expanded = false,
+  onToggleExpand,
 }: ContentRowProps) {
   const hasTooltip = item.content.length > TOOLTIP_THRESHOLD
 
   return (
     <tr
-      style={rowStyle(isLast)}
+      style={rowStyle(isLast, isReply)}
       onMouseEnter={(event) => {
         event.currentTarget.style.background = '#1c2128'
       }}
       onMouseLeave={(event) => {
-        event.currentTarget.style.background = 'transparent'
+        event.currentTarget.style.background = isReply ? 'rgba(255,255,255,0.015)' : 'transparent'
       }}
     >
       <td style={contentCellStyle}>
-        <Tooltip label={item.content} multiline w={360} withArrow disabled={!hasTooltip}>
-          <Text
-            size="sm"
-            c="#d1d5db"
-            lineClamp={2}
-            style={{ ...breakWordStyle, cursor: hasTooltip ? 'help' : 'default' }}
-          >
-            {item.content}
-          </Text>
-        </Tooltip>
-        <Text size="xs" c="#4b5563" mt={4} lineClamp={1} style={breakWordStyle}>
-          {item.detail}
-        </Text>
+        <Group gap={6} wrap="nowrap" align="flex-start" style={isReply ? replyIndentStyle : undefined}>
+          {onToggleExpand && (
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="sm"
+              aria-label={expanded ? `Collapse answers under ${item.author.name}'s comment` : `Expand answers under ${item.author.name}'s comment`}
+              onClick={onToggleExpand}
+            >
+              {expanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+            </ActionIcon>
+          )}
+          <Box style={contentTextBoxStyle}>
+            <Tooltip label={item.content} multiline w={360} withArrow disabled={!hasTooltip}>
+              <Text
+                size="sm"
+                c="#d1d5db"
+                lineClamp={2}
+                style={{ ...breakWordStyle, cursor: hasTooltip ? 'help' : 'default' }}
+              >
+                {item.content}
+              </Text>
+            </Tooltip>
+            <Text size="xs" c="#4b5563" mt={4} lineClamp={1} style={breakWordStyle}>
+              {item.detail}
+            </Text>
+          </Box>
+        </Group>
       </td>
       <td style={nowrapCellStyle}>
         <UserChip

@@ -18,7 +18,7 @@ function statusSelectStyles(status: ReportStatus) {
 interface ReportStatusSelectProps {
   report: ReportItem
   updating: boolean
-  onStatusChange: (id: string, status: ReportStatus) => void
+  onStatusChange: (report: ReportItem, status: ReportStatus) => void
 }
 
 export default function ReportStatusSelect({
@@ -35,7 +35,7 @@ export default function ReportStatusSelect({
       aria-label={`Status for report by ${report.reportedUser.name}`}
       disabled={updating}
       onChange={(value) => {
-        if (isReportStatus(value)) onStatusChange(report.id, value)
+        if (isReportStatus(value)) onStatusChange(report, value)
       }}
     />
   )

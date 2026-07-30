@@ -5,7 +5,6 @@ import {
   IconHistory,
   IconLayoutDashboard,
   IconMessage,
-  IconMessageReply,
   IconSchool,
   IconUsers,
 } from '@tabler/icons-react'
@@ -26,15 +25,9 @@ export const MAIN_NAV_ITEMS = [
   },
   {
     label: 'Comments',
-    sublabel: 'Posts & reports',
+    sublabel: 'Posts, answers & reports',
     path: routes.comments,
     icon: IconMessage,
-  },
-  {
-    label: 'Answers',
-    sublabel: 'Replies & reports',
-    path: routes.answers,
-    icon: IconMessageReply,
   },
   {
     label: 'Catalogue',

@@ -58,15 +58,14 @@ function toWarning(w: BackendWarning): Warning {
 
 /**
  * Partial edit of a user. An omitted field is left alone and an empty body is rejected, so
- * only the fields that actually changed are sent.
+ * only the fields that actually changed are sent. The panel does not offer `kitEmail` as an
+ * editable field — it is the login identity, and changing it is not exposed here.
  *
  * `status` takes `ACTIVE` and `BLOCKED` only — deleting anonymizes the account, which is
- * `DELETE /users/{id}` and not a field edit. Changing `kitEmail` revokes the account's
- * sessions, and demoting an admin revokes them too.
+ * `DELETE /users/{id}` and not a field edit. Demoting an admin revokes its sessions.
  */
 export interface UserUpdate {
   username?: string
-  kitEmail?: string
   biography?: string
   status?: Extract<UserStatus, 'ACTIVE' | 'BLOCKED'>
   role?: UserRole

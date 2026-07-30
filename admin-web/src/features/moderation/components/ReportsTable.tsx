@@ -26,7 +26,7 @@ interface ReportsTableProps {
   reports: ReportItem[]
   updating: boolean
   onOpenProfile: (userId: string) => void
-  onStatusChange: (id: string, status: ReportStatus) => void
+  onStatusChange: (report: ReportItem, status: ReportStatus) => void
   onWithdraw: (report: ReportItem) => void
 }
 

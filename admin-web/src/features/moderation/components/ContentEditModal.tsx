@@ -25,22 +25,16 @@ function toEditableStatus(item: ModeratedItem): EditableContentStatus {
 
 interface ContentEditModalProps {
   item: ModeratedItem | null
-  noun: string
   onClose: () => void
-  onSubmit: (id: string, update: ContentUpdate) => Promise<void>
+  onSubmit: (item: ModeratedItem, update: ContentUpdate) => Promise<void>
 }
 
-export default function ContentEditModal({
-  item,
-  noun,
-  onClose,
-  onSubmit,
-}: ContentEditModalProps) {
+export default function ContentEditModal({ item, onClose, onSubmit }: ContentEditModalProps) {
   return (
     <Modal
       opened={item !== null}
       onClose={onClose}
-      title={`Edit ${noun}`}
+      title={`Edit ${item?.kind ?? 'content'}`}
       centered
       size="lg"
       styles={darkModalStyles}
@@ -55,7 +49,7 @@ export default function ContentEditModal({
 interface ContentEditFormProps {
   item: ModeratedItem
   onClose: () => void
-  onSubmit: (id: string, update: ContentUpdate) => Promise<void>
+  onSubmit: (item: ModeratedItem, update: ContentUpdate) => Promise<void>
 }
 
 /**
@@ -84,7 +78,7 @@ function ContentEditForm({ item, onClose, onSubmit }: ContentEditFormProps) {
     setSaving(true)
     setError('')
     try {
-      await onSubmit(item.id, update)
+      await onSubmit(item, update)
       onClose()
     } catch (submitError: unknown) {
       setError(getErrorMessage(submitError, 'The change could not be saved.'))

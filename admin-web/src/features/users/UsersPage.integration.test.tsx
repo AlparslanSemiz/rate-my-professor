@@ -159,6 +159,28 @@ describe('Users page', () => {
     expect(screen.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument()
   })
 
+  it('locks the KIT email always, and the credibility score only for a protected account', async () => {
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Alice Smith'))
+    await user.click(await screen.findByRole('button', { name: 'Edit' }))
+
+    expect(await screen.findByLabelText('KIT email')).toBeDisabled()
+    expect(screen.getByLabelText('Credibility score')).toBeDisabled()
+  })
+
+  it('leaves the credibility score editable for a non-protected account', async () => {
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Bob Johnson'))
+    await user.click(await screen.findByRole('button', { name: 'Edit' }))
+
+    expect(await screen.findByLabelText('KIT email')).toBeDisabled()
+    expect(screen.getByLabelText('Credibility score')).not.toBeDisabled()
+  })
+
   it('sends only the fields an edit changed and shows the re-read account', async () => {
     vi.mocked(usersService.update).mockResolvedValue({ success: true, message: 'Updated user successfully' })
     vi.mocked(usersService.getById).mockResolvedValueOnce(users[1]).mockResolvedValueOnce({

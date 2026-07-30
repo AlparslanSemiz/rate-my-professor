@@ -1,3 +1,4 @@
+import { Fragment, useState } from 'react'
 import { Box, Group, Text, type CSSProperties } from '@mantine/core'
 import { IconMessage } from '@tabler/icons-react'
 import Panel from '../../../components/Panel'
@@ -30,6 +31,17 @@ export default function ContentTable({
   onEdit,
   onDelete,
 }: ContentTableProps) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  function toggleExpanded(id: string) {
+    setExpanded((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   return (
     <Panel style={panelStyle}>
       <Box px={20} py={14} style={panelHeaderStyle}>
@@ -54,17 +66,39 @@ export default function ContentTable({
           <table style={tableStyle}>
             <TableHeaderRow columns={TABLE_COLUMNS} />
             <tbody>
-              {items.map((item, index) => (
-                <ContentRow
-                  key={item.id}
-                  item={item}
-                  isLast={index === items.length - 1}
-                  updating={updating}
-                  onOpenProfile={onOpenProfile}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
-              ))}
+              {items.map((item, index) => {
+                const replies = item.replies ?? []
+                const isExpanded = expanded.has(item.id)
+                const isLastTopLevel = index === items.length - 1
+
+                return (
+                  <Fragment key={item.id}>
+                    <ContentRow
+                      item={item}
+                      isLast={isLastTopLevel && !(isExpanded && replies.length > 0)}
+                      updating={updating}
+                      onOpenProfile={onOpenProfile}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      expanded={isExpanded}
+                      onToggleExpand={replies.length > 0 ? () => toggleExpanded(item.id) : undefined}
+                    />
+                    {isExpanded &&
+                      replies.map((reply, replyIndex) => (
+                        <ContentRow
+                          key={reply.id}
+                          item={reply}
+                          isLast={isLastTopLevel && replyIndex === replies.length - 1}
+                          updating={updating}
+                          onOpenProfile={onOpenProfile}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                          isReply
+                        />
+                      ))}
+                  </Fragment>
+                )
+              })}
             </tbody>
           </table>
         </div>

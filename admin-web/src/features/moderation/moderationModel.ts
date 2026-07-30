@@ -24,9 +24,14 @@ export type ContentStatusFilter = typeof ALL_FILTERS | ContentStatus
  * A comment or an answer, flattened to what the moderation table renders. Both endpoints
  * return the same fields under different names, and the extra one each carries — the answer
  * count of a comment, the parent thread of an answer — reads as one secondary line.
+ *
+ * `kind` tells the page which service a mutation on this item belongs to. `replies` is only
+ * populated on a comment: the answers nested under it in the table, fetched and attached by
+ * the comments page itself.
  */
 export interface ModeratedItem {
   id: string
+  kind: 'comment' | 'answer'
   content: string
   status: ContentStatus
   author: UserReference
@@ -35,11 +40,13 @@ export interface ModeratedItem {
   detail: string
   reports: number
   createdAt: string
+  replies?: ModeratedItem[]
 }
 
 /** A report against a comment or an answer, flattened the same way. */
 export interface ReportItem {
   id: string
+  kind: 'comment' | 'answer'
   content: string
   /** The parent comment of a reported answer; absent for a reported comment. */
   parentContent: string | null
@@ -55,6 +62,7 @@ export interface ReportItem {
 export function toModeratedComment(comment: ManagedComment): ModeratedItem {
   return {
     id: comment.id,
+    kind: 'comment',
     content: comment.content,
     status: comment.status,
     author: comment.author,
@@ -68,6 +76,7 @@ export function toModeratedComment(comment: ManagedComment): ModeratedItem {
 export function toModeratedAnswer(answer: ManagedAnswer): ModeratedItem {
   return {
     id: answer.id,
+    kind: 'answer',
     content: answer.content,
     status: answer.status,
     author: answer.author,
@@ -78,9 +87,25 @@ export function toModeratedAnswer(answer: ManagedAnswer): ModeratedItem {
   }
 }
 
+/** Nests each answer under its parent comment so the table can show it as an expandable reply. */
+export function attachReplies(comments: ManagedComment[], answers: ManagedAnswer[]): ModeratedItem[] {
+  const repliesByComment = new Map<string, ModeratedItem[]>()
+  for (const answer of answers) {
+    const replies = repliesByComment.get(answer.commentId) ?? []
+    replies.push(toModeratedAnswer(answer))
+    repliesByComment.set(answer.commentId, replies)
+  }
+
+  return comments.map((comment) => ({
+    ...toModeratedComment(comment),
+    replies: repliesByComment.get(comment.id) ?? [],
+  }))
+}
+
 export function toCommentReport(report: ReportedComment): ReportItem {
   return {
     id: report.id,
+    kind: 'comment',
     content: report.commentContent,
     parentContent: null,
     postContext: report.postContext,
@@ -96,6 +121,7 @@ export function toCommentReport(report: ReportedComment): ReportItem {
 export function toAnswerReport(report: ReportedAnswer): ReportItem {
   return {
     id: report.id,
+    kind: 'answer',
     content: report.answerContent,
     parentContent: report.commentContent,
     postContext: report.postContext,

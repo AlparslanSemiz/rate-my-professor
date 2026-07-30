@@ -6,7 +6,6 @@ import Sidebar from './components/Sidebar'
 import { routes } from '../constants/routes'
 
 const ActivityLogsPage = lazy(() => import('../features/activity-logs/ActivityLogsPage'))
-const AnswersPage = lazy(() => import('../features/answers/AnswersPage'))
 const AuditLogsPage = lazy(() => import('../features/audit-logs/AuditLogsPage'))
 const CatalogPage = lazy(() => import('../features/catalog/CatalogPage'))
 const CommentsPage = lazy(() => import('../features/comments/CommentsPage'))
@@ -43,7 +42,6 @@ export default function AdminLayout() {
               <Route path={routes.users} element={<UsersPage />} />
               <Route path={routes.feedback} element={<FeedbackPage />} />
               <Route path={routes.comments} element={<CommentsPage />} />
-              <Route path={routes.answers} element={<AnswersPage />} />
               <Route path={routes.catalog} element={<CatalogPage />} />
               <Route path={routes.auditLogs} element={<AuditLogsPage />} />
               <Route path={routes.activityLogs} element={<ActivityLogsPage />} />

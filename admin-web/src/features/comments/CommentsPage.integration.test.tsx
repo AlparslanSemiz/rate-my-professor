@@ -2,6 +2,7 @@ import { MantineProvider } from '@mantine/core'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { answersService, type ManagedAnswer, type ReportedAnswer } from '../../api/AnswersService'
 import {
   commentsService,
   type ManagedComment,
@@ -12,6 +13,17 @@ import CommentsPage from './CommentsPage'
 
 vi.mock('../../api/CommentsService', () => ({
   commentsService: {
+    getAll: vi.fn(),
+    getReported: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    updateStatus: vi.fn(),
+    deleteReport: vi.fn(),
+  },
+}))
+
+vi.mock('../../api/AnswersService', () => ({
+  answersService: {
     getAll: vi.fn(),
     getReported: vi.fn(),
     update: vi.fn(),
@@ -64,6 +76,35 @@ const comments: ManagedComment[] = [
     answers: 0,
     reports: 0,
     createdAt: '2026-06-02T09:00:00Z',
+  },
+]
+
+const answers: ManagedAnswer[] = [
+  {
+    id: 'answer-1',
+    content: 'I had the same issue',
+    status: 'VISIBLE',
+    author: { id: 'user-5', name: 'Erin Lee', role: 'STUDENT', warnings: 0, status: 'ACTIVE' },
+    commentId: 'comment-1',
+    commentPreview: 'Reported text',
+    postContext: 'CS101 — Algorithms',
+    reports: 0,
+    createdAt: '2026-06-03T17:00:00Z',
+  },
+]
+
+const answerReports: ReportedAnswer[] = [
+  {
+    id: 'answer-report-1',
+    answerContent: 'I had the same issue',
+    commentContent: 'Reported text',
+    postContext: 'CS101 — Algorithms',
+    reportText: 'Off topic',
+    reportedUser: { id: 'user-5', name: 'Erin Lee', role: 'STUDENT', warnings: 0, status: 'ACTIVE' },
+    reporter: { id: 'user-6', name: 'Frank Green', role: 'STUDENT', warnings: 0, status: 'ACTIVE' },
+    reason: 'OFF_TOPIC',
+    status: 'OPEN',
+    date: '2026-06-03T17:05:00Z',
   },
 ]
 
@@ -124,6 +165,13 @@ describe('Comments page', () => {
     vi.mocked(commentsService.delete).mockResolvedValue({ success: true, message: 'Deleted' })
     vi.mocked(commentsService.updateStatus).mockResolvedValue({ success: true, message: 'Updated' })
     vi.mocked(commentsService.deleteReport).mockResolvedValue({ success: true, message: 'Deleted' })
+
+    vi.mocked(answersService.getAll).mockResolvedValue(answers)
+    vi.mocked(answersService.getReported).mockResolvedValue(answerReports)
+    vi.mocked(answersService.update).mockResolvedValue({ success: true, message: 'Updated' })
+    vi.mocked(answersService.delete).mockResolvedValue({ success: true, message: 'Deleted' })
+    vi.mocked(answersService.updateStatus).mockResolvedValue({ success: true, message: 'Updated' })
+    vi.mocked(answersService.deleteReport).mockResolvedValue({ success: true, message: 'Deleted' })
   })
 
   it('lists every comment and filters them by text, author, or lecture', async () => {
@@ -166,6 +214,39 @@ describe('Comments page', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Delete permanently' }))
 
     await waitFor(() => expect(commentsService.delete).toHaveBeenCalledWith('comment-1'))
+  })
+
+  it('nests an answer under its comment and reveals it on expand', async () => {
+    const user = userEvent.setup()
+    renderComments()
+
+    await screen.findByText('Reported text')
+    expect(screen.queryByText('I had the same issue')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: "Expand answers under Alice Smith's comment" }))
+
+    expect(await screen.findByText('I had the same issue')).toBeInTheDocument()
+  })
+
+  it('edits an expanded answer through the answers service, not the comments one', async () => {
+    const user = userEvent.setup()
+    renderComments()
+
+    await screen.findByText('Reported text')
+    await user.click(screen.getByRole('button', { name: "Expand answers under Alice Smith's comment" }))
+    await user.click(await screen.findByRole('button', { name: 'Edit content by Erin Lee' }))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText('Edit answer')).toBeInTheDocument()
+    const textarea = within(dialog).getByRole('textbox', { name: 'Text' })
+    await user.clear(textarea)
+    await user.type(textarea, 'Corrected answer')
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => {
+      expect(answersService.update).toHaveBeenCalledWith('answer-1', { content: 'Corrected answer' })
+    })
+    expect(commentsService.update).not.toHaveBeenCalled()
   })
 
   it('filters reports by comment, user, or report text', async () => {

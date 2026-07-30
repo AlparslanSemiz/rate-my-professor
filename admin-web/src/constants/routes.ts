@@ -3,7 +3,6 @@ export const routes = {
   dashboard: '/dashboard',
   users: '/users',
   comments: '/comments',
-  answers: '/answers',
   catalog: '/catalog',
   feedback: '/feedback',
   auditLogs: '/audit-logs',

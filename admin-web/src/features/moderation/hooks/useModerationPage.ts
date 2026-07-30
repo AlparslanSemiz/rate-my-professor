@@ -28,10 +28,10 @@ import {
 export interface ModerationApi {
   loadContent: () => Promise<ModeratedItem[]>
   loadReports: () => Promise<ReportItem[]>
-  updateContent: (id: string, update: ContentUpdate) => Promise<BasicResponse>
-  deleteContent: (id: string) => Promise<BasicResponse>
-  updateReportStatus: (id: string, status: ReportStatus) => Promise<BasicResponse>
-  deleteReport: (id: string) => Promise<BasicResponse>
+  updateContent: (item: ModeratedItem, update: ContentUpdate) => Promise<BasicResponse>
+  deleteContent: (item: ModeratedItem) => Promise<BasicResponse>
+  updateReportStatus: (report: ReportItem, status: ReportStatus) => Promise<BasicResponse>
+  deleteReport: (report: ReportItem) => Promise<BasicResponse>
 }
 
 const EMPTY_CONTENT: ModeratedItem[] = []
@@ -112,9 +112,9 @@ export function useModerationPage({
   }, [refreshContent, refreshReports])
 
   const editContent = useCallback(
-    (id: string, update: ContentUpdate) =>
+    (item: ModeratedItem, update: ContentUpdate) =>
       run(
-        () => api.updateContent(id, update),
+        () => api.updateContent(item, update),
         refreshBoth,
         'The change could not be saved.',
       ),
@@ -122,15 +122,15 @@ export function useModerationPage({
   )
 
   const deleteContent = useCallback(
-    (id: string) =>
-      run(() => api.deleteContent(id), refreshBoth, 'The content could not be deleted.'),
+    (item: ModeratedItem) =>
+      run(() => api.deleteContent(item), refreshBoth, 'The content could not be deleted.'),
     [api, refreshBoth, run],
   )
 
   const changeReportStatus = useCallback(
-    (id: string, status: ReportStatus) =>
+    (report: ReportItem, status: ReportStatus) =>
       run(
-        () => api.updateReportStatus(id, status),
+        () => api.updateReportStatus(report, status),
         refreshBoth,
         'Failed to update the report. The change was not saved.',
       ).catch(() => {
@@ -140,8 +140,8 @@ export function useModerationPage({
   )
 
   const withdrawReport = useCallback(
-    (id: string) =>
-      run(() => api.deleteReport(id), refreshReports, 'The report could not be withdrawn.'),
+    (report: ReportItem) =>
+      run(() => api.deleteReport(report), refreshReports, 'The report could not be withdrawn.'),
     [api, refreshReports, run],
   )
 

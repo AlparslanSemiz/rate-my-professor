@@ -104,7 +104,6 @@ export default function ModerationPage({
 
       <ContentEditModal
         item={editing}
-        noun={noun}
         onClose={() => setEditing(null)}
         onSubmit={page.editContent}
       />
@@ -112,15 +111,15 @@ export default function ModerationPage({
       {deleting && (
         <ConfirmModal
           opened
-          title={`Delete ${noun}`}
+          title={`Delete ${deleting.kind}`}
           description={
-            noun === 'comment'
+            deleting.kind === 'comment'
               ? 'Delete this comment and every answer under it? This cannot be undone — use "Hidden" instead to take it out of the app while keeping it.'
               : 'Delete this answer? This cannot be undone — use "Hidden" instead to take it out of the app while keeping it.'
           }
           confirmLabel="Delete permanently"
           confirmColor="red"
-          onConfirm={() => page.deleteContent(deleting.id)}
+          onConfirm={() => page.deleteContent(deleting)}
           onClose={() => setDeleting(null)}
         />
       )}
@@ -129,10 +128,10 @@ export default function ModerationPage({
         <ConfirmModal
           opened
           title="Withdraw report"
-          description={`Withdraw this report? The ${noun} itself is left exactly as it is.`}
+          description={`Withdraw this report? The ${withdrawing.kind} itself is left exactly as it is.`}
           confirmLabel="Withdraw report"
           confirmColor="red"
-          onConfirm={() => page.withdrawReport(withdrawing.id)}
+          onConfirm={() => page.withdrawReport(withdrawing)}
           onClose={() => setWithdrawing(null)}
         />
       )}

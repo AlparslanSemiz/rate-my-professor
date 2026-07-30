@@ -52,7 +52,6 @@ export default function UserEditForm({
   onSubmit,
 }: UserEditFormProps) {
   const [username, setUsername] = useState(user.username)
-  const [kitEmail, setKitEmail] = useState(user.kitEmail)
   const [biography, setBiography] = useState(user.biography)
   const [status, setStatus] = useState(user.status === 'BLOCKED' ? 'BLOCKED' : 'ACTIVE')
   const [role, setRole] = useState<string>(user.role)
@@ -60,20 +59,18 @@ export default function UserEditForm({
   const [error, setError] = useState('')
 
   const trimmedUsername = username.trim()
-  const trimmedEmail = kitEmail.trim().toLowerCase()
   const accessLocked = isSelf || user.role === 'ADMIN'
 
   const update: UserUpdate = {}
   if (trimmedUsername !== user.username) update.username = trimmedUsername
-  if (trimmedEmail !== user.kitEmail) update.kitEmail = trimmedEmail
   if (biography !== user.biography) update.biography = biography
   if (!isSelf && user.role !== 'ADMIN' && isEditableStatus(status) && status !== user.status) {
     update.status = status
   }
   if (!isSelf && isRole(role) && role !== user.role) update.role = role
-  if (credibilityScore !== null) update.credibilityScore = credibilityScore
+  if (!accessLocked && credibilityScore !== null) update.credibilityScore = credibilityScore
 
-  const canSave = trimmedUsername.length > 0 && trimmedEmail.length > 0 && Object.keys(update).length > 0
+  const canSave = trimmedUsername.length > 0 && Object.keys(update).length > 0
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -103,9 +100,9 @@ export default function UserEditForm({
         />
         <TextInput
           label="KIT email"
-          description="Changing this signs the account out everywhere."
-          value={kitEmail}
-          onChange={(event) => setKitEmail(event.currentTarget.value)}
+          description="Login identity; cannot be changed here."
+          value={user.kitEmail}
+          disabled
           size="sm"
           styles={darkInputStyles}
         />
@@ -160,6 +157,8 @@ export default function UserEditForm({
           value={credibilityScore ?? ''}
           onChange={(value) => setCredibilityScore(typeof value === 'number' ? value : null)}
           allowDecimal={false}
+          disabled={accessLocked}
+          description={accessLocked ? 'Admin accounts are protected here.' : undefined}
           size="sm"
           styles={darkInputStyles}
         />
