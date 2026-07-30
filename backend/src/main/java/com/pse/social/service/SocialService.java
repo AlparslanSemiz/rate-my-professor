@@ -178,6 +178,34 @@ public class SocialService {
 
     }
 
+    // Needs a transaction: open-in-view is disabled and the response walks the
+    // lazy answers collection of every comment. Without it this endpoint fails
+    // with LazyInitializationException for any lecture that has comments.
+    @Transactional(readOnly = true)
+    public CommentsResponse getAllComments() {
+
+        List<Comment> comments = commentRepository
+                .findAllByStatus(ContentStatus.VISIBLE);
+
+        List<CommentResponse> commentsResponses = new ArrayList<>();
+
+        for(Comment comment : comments) {
+
+            List<AnswerResponse> answerResponses = getAnswerResponses(comment);
+
+            commentsResponses.add(new CommentResponse(
+                    comment.getId(),
+                    comment.getContent(),
+                    comment.getStatus(),
+                    comment.getStudent().getUsername(),
+                    comment.getLecture().getId(),
+                    comment.getCreatedAt(),
+                    commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
+                    commentVoteRepository.countByCommentAndVote(comment, VoteType.UP),
+                    answerResponses
+            ));
+
+        }
 
     @Transactional
     public BasicResponse submitAnswer(String authHeader, AnswerSubmitRequest request) {
