@@ -7,6 +7,7 @@ import com.pse.audit.dto.AuditLogResponse;
 import com.pse.audit.dto.AuditMetaResponse;
 import com.pse.audit.dto.AuditTargetResponse;
 import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditActionScope;
 import com.pse.audit.model.AuditActorType;
 import com.pse.audit.model.AuditLog;
 import com.pse.audit.model.AuditTargetType;
@@ -35,6 +36,13 @@ import java.util.UUID;
 @Service
 public class AuditLogService {
 
+    /**
+     * Upper bound on the actor filter list. It feeds a dropdown, and every account that
+     * ever signed in is an actor in the activity log; an unbounded list would be neither
+     * usable nor cheap. Beyond this the {@code q} search is the way to find an actor.
+     */
+    private static final int ACTOR_LIMIT = 200;
+
     private final AuditLogRepository repository;
     private final AuditCursorCodec cursorCodec;
 
@@ -45,10 +53,12 @@ public class AuditLogService {
 
     @Transactional(readOnly = true)
     public AuditLogPageResponse getLogs(
+            AuditActionScope scope,
             String rawLimit,
             String rawCursor,
             String q,
             String rawActorId,
+            String rawActorType,
             String rawAction,
             String rawTargetType,
             String rawFrom,
@@ -56,7 +66,15 @@ public class AuditLogService {
     ) {
         int limit = parseLimit(rawLimit);
         UUID actorId = parseUuid(rawActorId, "Invalid actor id");
+        AuditActorType actorType =
+                parseEnum(rawActorType, AuditActorType.class, "Invalid audit actor type");
+        List<AuditAction> scopeActions = AuditAction.of(scope);
         AuditAction action = parseEnum(rawAction, AuditAction.class, "Invalid audit action");
+        // An action from the other page is not a valid filter here. Silently returning
+        // nothing would look like "no such events" instead of "wrong endpoint".
+        if (action != null && action.getScope() != scope) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid audit action");
+        }
         AuditTargetType targetType =
                 parseEnum(rawTargetType, AuditTargetType.class, "Invalid audit target type");
         Instant from = parseDate(rawFrom);
@@ -73,8 +91,12 @@ public class AuditLogService {
 
         Specification<AuditLog> specification = (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
+            predicates.add(root.get("action").in(scopeActions));
             if (actorId != null) {
                 predicates.add(builder.equal(root.get("actorId"), actorId));
+            }
+            if (actorType != null) {
+                predicates.add(builder.equal(root.get("actorType"), actorType));
             }
             if (action != null) {
                 predicates.add(builder.equal(root.get("action"), action));
@@ -131,24 +153,29 @@ public class AuditLogService {
     }
 
     @Transactional(readOnly = true)
-    public AuditMetaResponse getMeta() {
+    public AuditMetaResponse getMeta(AuditActionScope scope) {
+        List<AuditAction> scopeActions = AuditAction.of(scope);
+
+        // One row per actor snapshot, newest activity first, so keeping the first row
+        // per id keeps the snapshot the log itself shows.
         Map<UUID, AuditActorMetaResponse> actors = new LinkedHashMap<>();
-        repository.findAllByActorTypeOrderByCreatedAtDesc(AuditActorType.ADMIN)
-                .forEach(log -> actors.putIfAbsent(
-                        log.getActorId(),
+        repository.findActorSnapshots(scopeActions, PageRequest.of(0, ACTOR_LIMIT))
+                .forEach(row -> actors.putIfAbsent(
+                        (UUID) row[0],
                         new AuditActorMetaResponse(
-                                log.getActorId(),
-                                log.getActorName(),
-                                log.getActorEmail(),
-                                log.getActorRole()
+                                (UUID) row[0],
+                                (String) row[1],
+                                (String) row[2],
+                                (String) row[3]
                         )
                 ));
         return new AuditMetaResponse(
                 "Success",
                 true,
                 List.copyOf(actors.values()),
-                Arrays.asList(AuditAction.values()),
-                Arrays.asList(AuditTargetType.values())
+                scopeActions,
+                Arrays.asList(AuditTargetType.values()),
+                Arrays.asList(AuditActorType.values())
         );
     }
 

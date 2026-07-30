@@ -29,6 +29,8 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
 
     List<Student> findAllByStatusNotOrderByCreatedAtDesc(UserStatus status);
 
+    long countByStatusNot(UserStatus status);
+
     Optional<Student> findByIdAndStatusNot(UUID id, UserStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

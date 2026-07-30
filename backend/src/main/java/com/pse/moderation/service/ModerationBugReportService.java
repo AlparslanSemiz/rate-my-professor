@@ -12,6 +12,7 @@ import com.pse.moderation.dto.response.BugReportsResponse;
 import com.pse.moderation.model.BugReport;
 import com.pse.moderation.repository.BugReportRepository;
 import com.pse.security.AuthenticatedUser;
+import com.pse.shared.enums.ReportStatus;
 import com.pse.shared.error.ApiException;
 import com.pse.shared.util.UtcDates;
 import com.pse.user.model.Student;
@@ -57,7 +58,11 @@ public class ModerationBugReportService {
             UUID reportId,
             BugReportUpdateRequest request
     ) {
-        if (request == null || (request.status() == null && request.severity() == null)) {
+        if (request == null
+                || (request.status() == null
+                && request.severity() == null
+                && request.title() == null
+                && request.description() == null)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "No update supplied");
         }
 
@@ -72,6 +77,26 @@ public class ModerationBugReportService {
         if (request.severity() != null && report.getSeverity() != request.severity()) {
             changes.put("severity", change(report.getSeverity().name(), request.severity().name()));
             report.setSeverity(request.severity());
+        }
+        if (request.title() != null) {
+            String title = request.title().trim();
+            if (title.isEmpty() || title.length() > 500) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid title");
+            }
+            if (!title.equals(report.getTitle())) {
+                changes.put("title", change(report.getTitle(), title));
+                report.setTitle(title);
+            }
+        }
+        if (request.description() != null) {
+            String description = request.description().trim();
+            if (description.isEmpty() || description.length() > 10_000) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid description");
+            }
+            if (!description.equals(report.getDescription())) {
+                changes.put("description", change(report.getDescription(), description));
+                report.setDescription(description);
+            }
         }
         if (changes.isEmpty()) {
             return new BasicResponse("Updated", true);
@@ -88,6 +113,30 @@ public class ModerationBugReportService {
                 Map.of()
         );
         return new BasicResponse("Updated", true);
+    }
+
+    /** Discards a bug report — a duplicate, or one filed by mistake. */
+    @Transactional
+    public BasicResponse deleteBugReport(AuthenticatedUser principal, UUID reportId) {
+        BugReport report = repository.findByIdForUpdate(reportId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Bug report not found"));
+        String title = report.getTitle();
+        ReportStatus status = report.getStatus();
+
+        repository.delete(report);
+
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("exists", Map.of("before", true, "after", false));
+        auditWriter.write(
+                principal.admin(),
+                AuditAction.BUG_REPORT_DELETED,
+                AuditTargetType.BUG_REPORT,
+                reportId,
+                title,
+                changes,
+                Map.of("status", status.name())
+        );
+        return new BasicResponse("Deleted bug report successfully", true);
     }
 
     @Transactional
@@ -111,6 +160,15 @@ public class ModerationBugReportService {
         report.setSeverity(request.severity());
         report.setReporter(student);
         repository.save(report);
+
+        auditWriter.writeStudentAction(
+                student,
+                AuditAction.BUG_REPORT_CREATED,
+                AuditTargetType.BUG_REPORT,
+                report.getId(),
+                report.getTitle(),
+                Map.of("severity", report.getSeverity().name())
+        );
         return new BasicResponse("Successfully sent BugReport", true);
     }
 

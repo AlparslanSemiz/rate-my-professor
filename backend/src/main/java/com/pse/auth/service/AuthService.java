@@ -133,6 +133,9 @@ public class AuthService {
         String emailSubject = rateLimitService.emailSubject(email);
         String ipSubject = rateLimitService.ipSubject(httpRequest.getRemoteAddr());
 
+        // Refusals by this gate are deliberately not audited. It consumes nothing, so it
+        // answers every request for the rest of the window; one record per refused request
+        // would be unbounded. The attempts that filled the bucket are already in the log.
         rateLimitService.ensureAllowed(RateLimitService.LOGIN_FAILURE, emailSubject, loginEmailLimit);
         rateLimitService.ensureAllowed(RateLimitService.LOGIN_FAILURE, ipSubject, loginIpLimit);
 
@@ -140,12 +143,17 @@ public class AuthService {
         // a valid code on a request that can only ever end in 403.
         Student existing = studentRepository.findByKitEmail(email).orElse(null);
         if (existing != null && !isLoginAllowed(existing.getStatus())) {
+            // Counts against the failure budget the same way a wrong code does. Without
+            // it this refusal never fills the bucket, and a known blocked address could
+            // be replayed to write audit records without limit.
+            consumeLoginFailure(emailSubject, ipSubject);
+            auditLoginRefusal(existing, "ACCOUNT_" + existing.getStatus().name());
             throw new ApiException(HttpStatus.FORBIDDEN, "Account is not active");
         }
 
         if (!otpService.consume(email, submittedCode)) {
-            rateLimitService.consume(RateLimitService.LOGIN_FAILURE, emailSubject, loginEmailLimit);
-            rateLimitService.consume(RateLimitService.LOGIN_FAILURE, ipSubject, loginIpLimit);
+            consumeLoginFailure(emailSubject, ipSubject);
+            auditLoginRefusal(existing, "INVALID_CODE");
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid or expired login code");
         }
 
@@ -178,6 +186,15 @@ public class AuthService {
                     AuditWriter.change("authenticated", false, true),
                     Map.of("method", "EMAIL_OTP")
             );
+        } else {
+            auditWriter.writeStudentAction(
+                    student,
+                    AuditAction.USER_LOGIN,
+                    AuditTargetType.USER_SESSION,
+                    token.getId(),
+                    student.getUsername() + " session",
+                    Map.of("method", "EMAIL_OTP", "newAccount", existing == null)
+            );
         }
 
         rateLimitService.reset(RateLimitService.LOGIN_FAILURE, emailSubject);
@@ -208,6 +225,15 @@ public class AuthService {
                         AuditWriter.change("authenticated", true, false),
                         Map.of()
                 );
+            } else {
+                auditWriter.writeStudentAction(
+                        principal.student(),
+                        AuditAction.USER_LOGOUT,
+                        AuditTargetType.USER_SESSION,
+                        token.getId(),
+                        principal.student().getUsername() + " session",
+                        Map.of()
+                );
             }
         }
         return new BasicResponse("Logged out successfully", true);
@@ -236,8 +262,45 @@ public class AuthService {
                     AuditWriter.change("authenticated", true, false),
                     Map.of("scope", "ALL_DEVICES", "revokedSessions", revoked)
             );
+        } else {
+            auditWriter.writeStudentAction(
+                    student,
+                    AuditAction.USER_LOGOUT,
+                    AuditTargetType.USER_SESSION,
+                    principal.token().getId(),
+                    student.getUsername() + " all sessions",
+                    Map.of("scope", "ALL_DEVICES", "revokedSessions", revoked)
+            );
         }
         return new BasicResponse("Logged out from all devices (" + revoked + " sessions)", true);
+    }
+
+    private void consumeLoginFailure(String emailSubject, String ipSubject) {
+        rateLimitService.consume(RateLimitService.LOGIN_FAILURE, emailSubject, loginEmailLimit);
+        rateLimitService.consume(RateLimitService.LOGIN_FAILURE, ipSubject, loginIpLimit);
+    }
+
+    /**
+     * Records a login the backend turned down. Written in its own transaction because
+     * every caller throws immediately afterwards. Unknown emails are skipped: there is
+     * no account to attribute the attempt to.
+     *
+     * <p>Every caller consumes the login-failure budget first, which is what bounds how
+     * many of these a single address can produce in a window.
+     */
+    private void auditLoginRefusal(Student account, String reason) {
+        if (account == null) {
+            return;
+        }
+        auditWriter.writeRefusal(
+                account,
+                adminRepository.findByStudent(account).isPresent(),
+                AuditAction.LOGIN_REFUSED,
+                AuditTargetType.USER_SESSION,
+                null,
+                account.getUsername() + " login attempt",
+                Map.of("reason", reason, "method", "EMAIL_OTP")
+        );
     }
 
     public AuthMeResponse me(AuthenticatedUser principal) {

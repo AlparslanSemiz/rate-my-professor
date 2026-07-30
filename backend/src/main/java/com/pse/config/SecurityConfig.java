@@ -2,6 +2,7 @@ package com.pse.config;
 
 import tools.jackson.databind.ObjectMapper;
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.security.AccessRefusalAuditor;
 import com.pse.security.BearerTokenAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +22,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             BearerTokenAuthenticationFilter bearerTokenFilter,
+            AccessRefusalAuditor accessRefusalAuditor,
             ObjectMapper objectMapper
     ) throws Exception {
         http
@@ -39,20 +41,36 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()
                         .requestMatchers(
                                 "/users/**",
+                                "/comments",
                                 "/comments/reported/**",
+                                "/answers",
+                                "/answers/reported/**",
                                 "/audit-logs/**",
-                                "/admins/**"
+                                "/activity-logs/**",
+                                "/admins/**",
+                                "/system/**"
                         )
                         .hasRole("ADMIN")
+                        // The content itself is edited and removed by id. The student app
+                        // reads comments under /social and never writes to these paths, so
+                        // only the admin verbs are matched here.
+                        .requestMatchers(HttpMethod.PATCH, "/comments/**", "/answers/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/comments/**", "/answers/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/ratings/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/data/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/data/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/reports", "/reports/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/reports/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/reports/**").hasRole("ADMIN")
                         .anyRequest().permitAll()
                 )
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, exception) ->
                                 writeError(response, objectMapper, 401, "Not logged in"))
-                        .accessDeniedHandler((request, response, exception) ->
-                                writeError(response, objectMapper, 403, "Could not authenticate Admin"))
+                        .accessDeniedHandler((request, response, exception) -> {
+                            accessRefusalAuditor.record(request);
+                            writeError(response, objectMapper, 403, "Could not authenticate Admin");
+                        })
                 )
                 .addFilterBefore(bearerTokenFilter, UsernamePasswordAuthenticationFilter.class);
 

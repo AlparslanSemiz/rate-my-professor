@@ -16,6 +16,15 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 
     List<Notification> findAllByRecipientAndSeenFalseOrderByCreatedAtDesc(Student recipient);
 
+    /**
+     * Clears the notifications that point at these answers. An answer notification
+     * dereferences its answer when it is read, so leaving one behind after the answer is
+     * deleted breaks the student's notification list — and the foreign key.
+     */
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.answer.id IN :answerIds")
+    int deleteByAnswerIdIn(@Param("answerIds") java.util.Collection<UUID> answerIds);
+
 
     @Modifying
     @Transactional

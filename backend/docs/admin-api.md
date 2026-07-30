@@ -140,15 +140,47 @@ Mutation endpoints:
 
 | Method and path | Body | Success message |
 | --- | --- | --- |
+| `PATCH /users/{id}` | any subset of `{"username","kitEmail","biography","status","role","credibilityScore"}` | `Updated user successfully` |
 | `DELETE /users/{id}` | none | `Deleted user successfully` |
 | `PATCH /users/{id}/block` | none | `Student blocked successfully` |
 | `PATCH /users/{id}/unblock` | none | `Student unblocked successfully` |
 | `POST /users/{id}/warnings` | `{"userID":"ignored","message":"Reason","createdFrom":{"id":"ignored"}}` | `Student warned successfully` |
+| `PATCH /users/{id}/warnings/{warningId}` | `{"message":"Corrected reason"}` | `Updated warning successfully` |
+| `DELETE /users/{id}/warnings/{warningId}` | none | `Deleted warning successfully` |
 
 The target is always the path ID and the actor is always the token principal.
 Self and other admin accounts cannot be deleted, blocked, unblocked, or warned.
 Repeated block/unblock requests are successful no-ops and create no new audit event.
 Delete is a soft delete and revokes the target's sessions.
+
+### Editing a user
+
+`PATCH /users/{id}` is how a wrong name, a typo'd address or a stale biography gets
+fixed. An omitted field is left alone, an empty body is `400`, and a request that changes
+nothing is a successful no-op with no audit event. One `USER_UPDATED` event records every
+field that actually changed.
+
+- `username` and `kitEmail` are unique; a collision is `409`. `kitEmail` must be a
+  `@student.kit.edu` address and is trimmed and lowercased.
+- Changing `kitEmail` **revokes the account's sessions** — the address is the login
+  identity, so the old sessions no longer correspond to how the account signs in.
+- `status` accepts `ACTIVE` and `BLOCKED`. `DELETED` is `400`: deleting anonymizes the
+  account, which is `DELETE /users/{id}` and not a field edit. For the same reason a
+  deleted account cannot be restored — its identifying fields are already scrubbed.
+- `role` moves the account in and out of the `admins` table. Demoting also revokes its
+  sessions, because an admin session outlives a student one and the panel would keep
+  working until it expired. Demoting is `409` once the account has moderation history —
+  a warning it issued or a report it reviewed points at its `admins` row, and that
+  attribution is not thrown away to satisfy a role change.
+- Two guards return `409`, both about not locking anyone out of an API with no other
+  recovery path: an admin cannot change **its own** status or role, and another admin
+  account's `status` is protected exactly as block/unblock/delete protect it. Profile
+  fields of an admin account are editable.
+
+`PATCH`/`DELETE /users/{id}/warnings/{warningId}` correct or withdraw a warning that was
+already issued. The student is not re-notified: the notification went out when the
+warning was created, and rewording it corrects the record rather than warning again. A
+warning addressed under the wrong student is `404`.
 
 `GET /users/{id}/warnings` returns:
 
@@ -232,8 +264,11 @@ submission endpoint.
 
 ## Audit
 
+This is the activity log: it holds both administrative actions and what users did in
+the student app, separated by `actor.type`.
+
 `GET /audit-logs` accepts `limit` (1–100, default 50), opaque `cursor`, `q`,
-`actorId`, `action`, `targetType`, and inclusive ISO date-time `from`/`to`.
+`actorId`, `actorType`, `action`, `targetType`, and inclusive ISO date-time `from`/`to`.
 Results use stable keyset ordering by `(createdAt DESC, id DESC)`. `q` searches the
 snapshotted actor name/email and target label case-insensitively.
 
@@ -256,14 +291,118 @@ snapshotted actor name/email and target label case-insensitively.
 
 `GET /audit-logs/meta` returns actor snapshots plus these enums:
 
-- Actions: `ADMIN_LOGIN`, `ADMIN_LOGOUT`, `USER_WARNING_CREATED`, `USER_BLOCKED`,
-  `USER_UNBLOCKED`, `USER_DELETED`, `COMMENT_REPORT_STATUS_CHANGED`,
-  `BUG_REPORT_UPDATED`
-- Target types: `ADMIN_SESSION`, `USER`, `COMMENT_REPORT`, `BUG_REPORT`
+- Actor types: `ADMIN`, `USER`
+- Administrative actions: `ADMIN_LOGIN`, `ADMIN_LOGOUT`, `USER_WARNING_CREATED`,
+  `USER_BLOCKED`, `USER_UNBLOCKED`, `USER_DELETED`,
+  `COMMENT_REPORT_STATUS_CHANGED`, `BUG_REPORT_UPDATED`
+- Student activity: `USER_LOGIN`, `USER_LOGOUT`, `COMMENT_CREATED`, `ANSWER_CREATED`,
+  `RATING_SUBMITTED`, `COMMENT_REPORT_CREATED`, `ANSWER_REPORT_CREATED`,
+  `BUG_REPORT_CREATED`
+- Refusals: `LOGIN_REFUSED`, `ACCESS_REFUSED`
+- Target types: `ADMIN_SESSION`, `USER_SESSION`, `USER`, `COMMENT`, `ANSWER`, `RATING`,
+  `COMMENT_REPORT`, `ANSWER_REPORT`, `BUG_REPORT`, `ENDPOINT`
+
+`actors` lists admin actors only. Every account that ever signed in appears in the log
+as a `USER` actor, so an exhaustive list of those is unbounded; filter students with `q`
+or `actorType` instead.
 
 Actor and target display data is copied into each event, so later lifecycle changes do
 not make old records unreadable. Domain mutations and audit inserts run in the same
 transaction.
+
+### Student activity
+
+Actions performed with a student token are recorded with `actor.type = "USER"` and
+`actor.role = "STUDENT"`. `changes` is empty for these — nothing existing is modified —
+and `metadata` carries the detail:
+
+```json
+{
+  "id":"audit-uuid",
+  "action":"COMMENT_CREATED",
+  "createdAt":"2026-07-23T10:30:00.000Z",
+  "actor":{"type":"USER","id":"uuid","name":"Student","email":"student@student.kit.edu","role":"STUDENT"},
+  "target":{"type":"COMMENT","id":"comment-uuid","label":"CS101 — Algorithms"},
+  "changes":{},
+  "metadata":{"contentPreview":"Clear and well paced","contentLength":20}
+}
+```
+
+`contentPreview` is the first 120 characters of the submitted text; the full body stays
+in its own table. `USER_LOGIN` carries `{"method":"EMAIL_OTP","newAccount":<bool>}` and
+targets the created session. Votes are not recorded: they carry no content and would
+outnumber every other event.
+
+### Refusals
+
+Two kinds of refusal are recorded, both written in their own transaction so that the
+record survives the rollback of the request it describes:
+
+| Action | When | `metadata` |
+| --- | --- | --- |
+| `LOGIN_REFUSED` | `POST /auth/login` answered `403` or `401` | `reason` is `INVALID_CODE` or `ACCOUNT_<status>`, plus `method` |
+| `ACCESS_REFUSED` | an authenticated caller was answered `403` | `method`, `path`, `status` |
+
+Only refusals attributable to a known account are recorded. A login attempt for an
+address with no account, and an anonymous request answered `401`, have no actor — and
+recording them would let anyone fill the table. A failing refusal insert is logged and
+swallowed for `ACCESS_REFUSED`, because the documented `403` answer has to hold either
+way.
+
+Both recorded login refusals consume the login-failure budget, so a single address
+produces at most `app.auth.rate-limit.login-email` of them per window. Once that budget is
+spent the endpoint answers `429` and records nothing: that gate consumes nothing itself, so
+it answers every request for the rest of the window and one record per refused request
+would be unbounded. A blocked account therefore reaches `429` under replay rather than
+answering `403` indefinitely.
+
+## System
+
+`GET /system/status` requires an admin token and answers `200` whenever the API is
+serving, reporting a failing database in `status` rather than in the HTTP code — a page
+that has to show "the API is up but the database is not" cannot do that if the request
+itself fails.
+
+```json
+{
+  "message":"Success",
+  "success":true,
+  "status":"OK",
+  "checkedAt":"2026-07-23T10:30:00.000Z",
+  "startedAt":"2026-07-23T09:00:00.000Z",
+  "uptimeSeconds":5400,
+  "database":{"reachable":true,"latencyMs":3,"error":null},
+  "counts":{
+    "users":42,
+    "admins":6,
+    "lectures":12,
+    "comments":83,
+    "answers":19,
+    "ratings":57,
+    "openCommentReports":2,
+    "openBugReports":1,
+    "auditEvents":314
+  },
+  "lastWrite":{
+    "at":"2026-07-23T10:29:48.000Z",
+    "ageSeconds":12,
+    "action":"USER_BLOCKED",
+    "actorName":"Administrator"
+  }
+}
+```
+
+`status` is one of:
+
+- `OK` — the `SELECT 1` probe answered and the counts were read
+- `DEGRADED` — the probe answered but a count query failed; `counts` and `lastWrite`
+  are `null`
+- `DOWN` — the database is unreachable; `database.error` names the failure class and
+  `counts`/`lastWrite` are `null`
+
+`counts.users` excludes soft-deleted accounts, matching `GET /users`. `lastWrite` is the
+newest audit event and is absent when nothing has been recorded yet; it is what answers
+whether an action taken in the panel actually reached the database.
 
 ## Health
 
@@ -272,6 +411,10 @@ transaction.
 ```json
 {"message":"API healthy","success":true}
 ```
+
+It answers `503 {"message":"API unhealthy","success":false}` when that query fails. This
+is the liveness probe for deployment tooling; the admin panel's status page uses
+`GET /system/status` instead, which stays `200` so it can render the failure.
 
 ## Configuration
 

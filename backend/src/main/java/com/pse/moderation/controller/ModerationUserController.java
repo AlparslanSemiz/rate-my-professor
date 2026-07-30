@@ -1,6 +1,7 @@
 package com.pse.moderation.controller;
 
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.moderation.dto.request.UserUpdateRequest;
 import com.pse.moderation.dto.request.WarningRequest;
 import com.pse.moderation.dto.response.UserListResponse;
 import com.pse.moderation.dto.response.UserResponse;
@@ -39,6 +40,15 @@ public class ModerationUserController {
         return service.getStudent(id);
     }
 
+    @PatchMapping("/{id}")
+    public BasicResponse updateStudent(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @PathVariable UUID id,
+            @RequestBody UserUpdateRequest request
+    ) {
+        return service.updateStudent(principal, id, request);
+    }
+
     @DeleteMapping("/{id}")
     public BasicResponse deleteStudent(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -75,5 +85,24 @@ public class ModerationUserController {
     @GetMapping("/{id}/warnings")
     public WarningHistoryResponse getWarningsForStudent(@PathVariable UUID id) {
         return service.getWarningsForStudent(id);
+    }
+
+    @PatchMapping("/{id}/warnings/{warningId}")
+    public BasicResponse updateWarning(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @PathVariable UUID id,
+            @PathVariable UUID warningId,
+            @RequestBody WarningRequest request
+    ) {
+        return service.updateWarning(principal, id, warningId, request);
+    }
+
+    @DeleteMapping("/{id}/warnings/{warningId}")
+    public BasicResponse deleteWarning(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @PathVariable UUID id,
+            @PathVariable UUID warningId
+    ) {
+        return service.deleteWarning(principal, id, warningId);
     }
 }

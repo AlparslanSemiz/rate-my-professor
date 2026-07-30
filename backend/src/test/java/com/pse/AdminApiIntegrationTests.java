@@ -1,6 +1,7 @@
 package com.pse;
 
 import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditActionScope;
 import com.pse.audit.model.AuditActorType;
 import com.pse.audit.model.AuditLog;
 import com.pse.audit.model.AuditTargetType;
@@ -20,6 +21,9 @@ import com.pse.moderation.model.Warning;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.BugReportRepository;
 import com.pse.moderation.repository.WarningRepository;
+import com.pse.professor.model.Professor;
+import com.pse.professor.repository.ProfessorRepository;
+import com.pse.rating.repository.RatingRepository;
 import com.pse.shared.enums.BugSeverity;
 import com.pse.shared.enums.ReportReason;
 import com.pse.shared.enums.ReportStatus;
@@ -29,6 +33,9 @@ import com.pse.shared.util.HashGenerator;
 import com.pse.shared.enums.ContentStatus;
 import com.pse.social.model.Comment;
 import com.pse.social.model.CommentReport;
+import com.pse.social.repository.AnswerReportRepository;
+import com.pse.social.repository.AnswerRepository;
+import com.pse.social.repository.AnswerVoteRepository;
 import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.NotificationRepository;
@@ -88,8 +95,13 @@ class AdminApiIntegrationTests {
     @Autowired CommentReportRepository commentReportRepository;
     @Autowired NotificationRepository notificationRepository;
     @Autowired LectureRepository lectureRepository;
+    @Autowired ProfessorRepository professorRepository;
     @Autowired BugReportRepository bugReportRepository;
     @Autowired AuditLogRepository auditLogRepository;
+    @Autowired AnswerRepository answerRepository;
+    @Autowired AnswerReportRepository answerReportRepository;
+    @Autowired AnswerVoteRepository answerVoteRepository;
+    @Autowired RatingRepository ratingRepository;
     @MockitoSpyBean AuditWriter auditWriter;
 
     @BeforeEach
@@ -97,14 +109,19 @@ class AdminApiIntegrationTests {
         auditLogRepository.deleteAll();
         notificationRepository.deleteAll();
         warningRepository.deleteAll();
+        answerReportRepository.deleteAll();
+        answerVoteRepository.deleteAll();
+        answerRepository.deleteAll();
         commentReportRepository.deleteAll();
         commentRepository.deleteAll();
         bugReportRepository.deleteAll();
+        ratingRepository.deleteAll();
         tokenRepository.deleteAll();
         otpRepository.deleteAll();
         rateLimitRepository.deleteAll();
         adminRepository.deleteAll();
         lectureRepository.deleteAll();
+        professorRepository.deleteAll();
         studentRepository.deleteAll();
         codeDelivery.clear();
         reset(auditWriter);
@@ -503,6 +520,10 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isBadRequest());
         mockMvc.perform(get("/audit-logs")
                         .header("Authorization", bearer(admin.rawToken()))
+                        .param("actorType", "INVALID"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/audit-logs")
+                        .header("Authorization", bearer(admin.rawToken()))
                         .param("from", "2026-07-24T00:00:00.000Z")
                         .param("to", "2026-07-23T00:00:00.000Z"))
                 .andExpect(status().isBadRequest());
@@ -513,13 +534,745 @@ class AdminApiIntegrationTests {
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.actors[0].name").value("admin"))
-                .andExpect(jsonPath("$.actions", hasSize(8)))
-                .andExpect(jsonPath("$.targetTypes", hasSize(4)));
+                // The administrative page offers administrative actions only; student
+                // activity and refusals are filtered by /activity-logs/meta.
+                .andExpect(jsonPath("$.actions",
+                        hasSize(AuditAction.of(AuditActionScope.ADMINISTRATIVE).size())))
+                .andExpect(jsonPath("$.targetTypes", hasSize(AuditTargetType.values().length)))
+                .andExpect(jsonPath("$.actorTypes", hasSize(AuditActorType.values().length)));
+
+        // An action that belongs to the other page is a bad filter, not an empty result.
+        mockMvc.perform(get("/audit-logs")
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .param("action", "USER_LOGIN"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/activity-logs")
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .param("action", "USER_BLOCKED"))
+                .andExpect(status().isBadRequest());
 
         Session student = createSession("audit-student@student.kit.edu", false);
         mockMvc.perform(get("/audit-logs")
                         .header("Authorization", bearer(student.rawToken())))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void studentActivityIsRecordedUnderTheUserActorType() throws Exception {
+        requestCode("activity@student.kit.edu");
+        String token = com.jayway.jsonpath.JsonPath.read(
+                mockMvc.perform(post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {"email":"activity@student.kit.edu","loginToken":"%s"}
+                                        """.formatted(codeDelivery.codeFor("activity@student.kit.edu"))))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(),
+                "$.authToken"
+        );
+
+        Lecture lecture = createLecture();
+        mockMvc.perform(post("/social/comments")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lectureID":"%s","content":"Clear and well paced"}
+                                """.formatted(lecture.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(post("/reports")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Profile upload fails","description":"Details","severity":"HIGH"}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/auth/logout").header("Authorization", bearer(token)))
+                .andExpect(status().isOk());
+
+        AuditLog comment = auditOf(AuditAction.COMMENT_CREATED);
+        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.USER, comment.getActorType());
+        org.junit.jupiter.api.Assertions.assertEquals("STUDENT", comment.getActorRole());
+        org.junit.jupiter.api.Assertions.assertEquals(AuditTargetType.COMMENT, comment.getTargetType());
+        org.junit.jupiter.api.Assertions.assertEquals("CS101 — Algorithms", comment.getTargetLabel());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "Clear and well paced",
+                comment.getMetadata().get("contentPreview")
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(
+                AuditTargetType.BUG_REPORT,
+                auditOf(AuditAction.BUG_REPORT_CREATED).getTargetType()
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(
+                AuditTargetType.USER_SESSION,
+                auditOf(AuditAction.USER_LOGIN).getTargetType()
+        );
+        auditOf(AuditAction.USER_LOGOUT);
+
+        // The two log pages read the same table but must not show each other's events.
+        // Nothing in this test performs an administrative action.
+        Session admin = createSession("admin@student.kit.edu", true);
+        mockMvc.perform(get("/activity-logs").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activityLogs", hasSize(4)))
+                .andExpect(jsonPath("$.activityLogs[0].actor.type").value("USER"));
+        mockMvc.perform(get("/audit-logs").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.auditLogs", hasSize(0)));
+
+        mockMvc.perform(get("/activity-logs/meta")
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.actions",
+                        hasSize(AuditAction.of(AuditActionScope.ACTIVITY).size())))
+                .andExpect(jsonPath("$.actors[0].email").value("activity@student.kit.edu"));
+
+        Session student = createSession("student@student.kit.edu", false);
+        mockMvc.perform(get("/activity-logs").header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/activity-logs")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void ratingsAnswersAndStudentReportsAreRecorded() throws Exception {
+        Session student = createSession("poster@student.kit.edu", false);
+        Lecture lecture = createLecture();
+
+        mockMvc.perform(post("/ratings/rate")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lectureId":"%s","topics":[{"category":"ORGANIZATION","value":4}]}
+                                """.formatted(lecture.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        Comment comment = new Comment();
+        comment.setStudent(student.student());
+        comment.setLecture(lecture);
+        comment.setContent("Original comment");
+        comment.setStatus(ContentStatus.VISIBLE);
+        comment = commentRepository.saveAndFlush(comment);
+
+        mockMvc.perform(post("/social/answers")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"commentID":"%s","content":"An answer"}
+                                """.formatted(comment.getId())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/social/comments/report")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"commentID":"%s","reportReason":"HARASSMENT","explanation":"Rude"}
+                                """.formatted(comment.getId())))
+                .andExpect(status().isOk());
+
+        AuditLog rating = auditOf(AuditAction.RATING_SUBMITTED);
+        org.junit.jupiter.api.Assertions.assertEquals(AuditTargetType.RATING, rating.getTargetType());
+        org.junit.jupiter.api.Assertions.assertEquals("CS101 — Algorithms", rating.getTargetLabel());
+
+        AuditLog answer = auditOf(AuditAction.ANSWER_CREATED);
+        org.junit.jupiter.api.Assertions.assertEquals(AuditTargetType.ANSWER, answer.getTargetType());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "Answer to poster in CS101 — Algorithms",
+                answer.getTargetLabel()
+        );
+
+        AuditLog report = auditOf(AuditAction.COMMENT_REPORT_CREATED);
+        org.junit.jupiter.api.Assertions.assertEquals(
+                AuditTargetType.COMMENT_REPORT,
+                report.getTargetType()
+        );
+        org.junit.jupiter.api.Assertions.assertEquals("HARASSMENT", report.getMetadata().get("reason"));
+    }
+
+    @Test
+    void refusedLoginsAndDeniedRequestsSurviveTheirRolledBackRequest() throws Exception {
+        Student blocked = createStudent("blocked@student.kit.edu");
+        blocked.setStatus(UserStatus.BLOCKED);
+        studentRepository.saveAndFlush(blocked);
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"blocked@student.kit.edu","loginToken":"ABC234"}
+                                """))
+                .andExpect(status().isForbidden());
+
+        createStudent("wrong-code@student.kit.edu");
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"wrong-code@student.kit.edu","loginToken":"ABC234"}
+                                """))
+                .andExpect(status().isUnauthorized());
+
+        // No account, so no actor to attribute the attempt to and nothing recorded.
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"nobody@student.kit.edu","loginToken":"ABC234"}
+                                """))
+                .andExpect(status().isUnauthorized());
+
+        org.junit.jupiter.api.Assertions.assertEquals(
+                2,
+                auditLogRepository.findAll().stream()
+                        .filter(log -> log.getAction() == AuditAction.LOGIN_REFUSED)
+                        .count()
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(
+                java.util.Set.of("ACCOUNT_BLOCKED", "INVALID_CODE"),
+                auditLogRepository.findAll().stream()
+                        .filter(log -> log.getAction() == AuditAction.LOGIN_REFUSED)
+                        .map(log -> log.getMetadata().get("reason"))
+                        .collect(java.util.stream.Collectors.toSet())
+        );
+
+        Session student = createSession("denied@student.kit.edu", false);
+        mockMvc.perform(get("/users").header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isForbidden());
+
+        AuditLog refused = auditOf(AuditAction.ACCESS_REFUSED);
+        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.USER, refused.getActorType());
+        org.junit.jupiter.api.Assertions.assertEquals(AuditTargetType.ENDPOINT, refused.getTargetType());
+        org.junit.jupiter.api.Assertions.assertEquals("GET /users", refused.getTargetLabel());
+        org.junit.jupiter.api.Assertions.assertEquals("/users", refused.getMetadata().get("path"));
+
+        // An anonymous request never reaches an authorization rule and has no actor.
+        mockMvc.perform(get("/users")).andExpect(status().isUnauthorized());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                1,
+                auditLogRepository.findAll().stream()
+                        .filter(log -> log.getAction() == AuditAction.ACCESS_REFUSED)
+                        .count()
+        );
+    }
+
+    @Test
+    void systemStatusReportsUptimeCountsAndTheLastPersistedWrite() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session target = createSession("target@student.kit.edu", false);
+        createLecture();
+
+        mockMvc.perform(patch("/users/{id}/block", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/system/status").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Success"))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("OK"))
+                .andExpect(jsonPath("$.checkedAt", endsWith("Z")))
+                .andExpect(jsonPath("$.startedAt", endsWith("Z")))
+                .andExpect(jsonPath("$.uptimeSeconds").isNumber())
+                .andExpect(jsonPath("$.database.reachable").value(true))
+                .andExpect(jsonPath("$.database.latencyMs").isNumber())
+                .andExpect(jsonPath("$.database.error").doesNotExist())
+                .andExpect(jsonPath("$.counts.users").value(2))
+                .andExpect(jsonPath("$.counts.admins").value(1))
+                .andExpect(jsonPath("$.counts.lectures").value(1))
+                .andExpect(jsonPath("$.counts.auditEvents").value(1))
+                .andExpect(jsonPath("$.counts.openCommentReports").value(0))
+                .andExpect(jsonPath("$.lastWrite.action").value("USER_BLOCKED"))
+                .andExpect(jsonPath("$.lastWrite.actorName").value("admin"))
+                .andExpect(jsonPath("$.lastWrite.at", endsWith("Z")))
+                .andExpect(jsonPath("$.lastWrite.ageSeconds").isNumber());
+
+        Session student = createSession("student@student.kit.edu", false);
+        mockMvc.perform(get("/system/status").header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/system/status")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void systemStatusWithoutAuditHistoryOmitsTheLastWrite() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+
+        mockMvc.perform(get("/system/status").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OK"))
+                .andExpect(jsonPath("$.counts.auditEvents").value(0))
+                .andExpect(jsonPath("$.lastWrite").doesNotExist());
+    }
+
+    @Test
+    void everyUserFieldIsEditableAndLockoutsAreRefused() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session target = createSession("target@student.kit.edu", false);
+        String targetToken = issueToken(target.student());
+
+        mockMvc.perform(patch("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"Corrected Name","biography":"Hi","credibilityScore":7}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Updated user successfully"));
+
+        mockMvc.perform(get("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("Corrected Name"))
+                .andExpect(jsonPath("$.biography").value("Hi"));
+
+        // Changing the address is a change of login identity, so the sessions have to go.
+        mockMvc.perform(patch("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kitEmail\":\"MOVED@student.kit.edu\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(targetToken)))
+                .andExpect(status().isUnauthorized());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "moved@student.kit.edu",
+                studentRepository.findById(target.student().getId()).orElseThrow().getKitEmail()
+        );
+
+        mockMvc.perform(patch("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertTrue(adminRepository
+                .findByStudent(studentRepository.findById(target.student().getId()).orElseThrow())
+                .isPresent());
+
+        mockMvc.perform(patch("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"STUDENT\"}"))
+                .andExpect(status().isOk());
+
+        AuditLog updated = auditLogRepository.findAll().stream()
+                .filter(log -> log.getAction() == AuditAction.USER_UPDATED)
+                .findFirst()
+                .orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(AuditTargetType.USER, updated.getTargetType());
+        org.junit.jupiter.api.Assertions.assertTrue(updated.getChanges().containsKey("username"));
+
+        // Refusals: no empty update, no self lockout, no colliding identity, no delete
+        // through a field edit.
+        mockMvc.perform(patch("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kitEmail\":\"not-kit@example.com\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"DELETED\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\"}"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch("/users/{id}", admin.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"STUDENT\"}"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch("/users/{id}", admin.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"BLOCKED\"}"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch("/users/{id}", UUID.randomUUID())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"Ghost\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void warningsCanBeRewordedAndWithdrawn() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session target = createSession("warned@student.kit.edu", false);
+
+        mockMvc.perform(post("/users/{id}/warnings", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Typo in teh reason\"}"))
+                .andExpect(status().isOk());
+        UUID warningId = warningRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(patch("/users/{id}/warnings/{warningId}",
+                        target.student().getId(), warningId)
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Typo in the reason\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/users/{id}/warnings", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warnings[0].message").value("Typo in the reason"));
+
+        // A warning addressed under the wrong student is a wrong URL.
+        mockMvc.perform(delete("/users/{id}/warnings/{warningId}",
+                        admin.student().getId(), warningId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(delete("/users/{id}/warnings/{warningId}",
+                        target.student().getId(), warningId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/users/{id}/warnings", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warnings", hasSize(0)));
+
+        auditOf(AuditAction.USER_WARNING_UPDATED);
+        auditOf(AuditAction.USER_WARNING_DELETED);
+    }
+
+    @Test
+    void commentsAndAnswersAreListedEditableAndDeletable() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session author = createSession("author@student.kit.edu", false);
+        Lecture lecture = createLecture();
+
+        Comment comment = new Comment();
+        comment.setStudent(author.student());
+        comment.setLecture(lecture);
+        comment.setContent("Origianl typo");
+        comment.setStatus(ContentStatus.VISIBLE);
+        comment = commentRepository.saveAndFlush(comment);
+
+        mockMvc.perform(post("/social/answers")
+                        .header("Authorization", bearer(author.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"commentID":"%s","content":"An answer"}
+                                """.formatted(comment.getId())))
+                .andExpect(status().isOk());
+        UUID answerId = answerRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(get("/comments").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments", hasSize(1)))
+                .andExpect(jsonPath("$.comments[0].content").value("Origianl typo"))
+                .andExpect(jsonPath("$.comments[0].postContext").value("CS101 — Algorithms"))
+                .andExpect(jsonPath("$.comments[0].author.name").value("author"))
+                .andExpect(jsonPath("$.comments[0].answers").value(1))
+                .andExpect(jsonPath("$.comments[0].reports").value(0));
+
+        mockMvc.perform(get("/answers").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answers", hasSize(1)))
+                .andExpect(jsonPath("$.answers[0].commentPreview").value("Origianl typo"))
+                .andExpect(jsonPath("$.answers[0].postContext").value("CS101 — Algorithms"));
+
+        mockMvc.perform(patch("/comments/{id}", comment.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"Original text\",\"status\":\"HIDDEN\"}"))
+                .andExpect(status().isOk());
+        Comment stored = commentRepository.findById(comment.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals("Original text", stored.getContent());
+        org.junit.jupiter.api.Assertions.assertEquals(ContentStatus.HIDDEN, stored.getStatus());
+
+        mockMvc.perform(patch("/answers/{id}", answerId)
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"A better answer\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(patch("/comments/{id}", comment.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch("/comments/{id}", comment.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"   \"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch("/comments/{id}", UUID.randomUUID())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"HIDDEN\"}"))
+                .andExpect(status().isNotFound());
+
+        // Deleting the comment takes the thread with it, including the notification the
+        // answer raised — which is not cascaded and would dangle.
+        mockMvc.perform(delete("/comments/{id}", comment.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertEquals(0, commentRepository.count());
+        org.junit.jupiter.api.Assertions.assertEquals(0, answerRepository.count());
+        org.junit.jupiter.api.Assertions.assertEquals(0, notificationRepository.count());
+
+        auditOf(AuditAction.COMMENT_UPDATED);
+        auditOf(AuditAction.ANSWER_UPDATED);
+        auditOf(AuditAction.COMMENT_DELETED);
+    }
+
+    @Test
+    void answerReportsCanBeReviewedAndReportsWithdrawn() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session reporter = createSession("reporter@student.kit.edu", false);
+        Lecture lecture = createLecture();
+
+        Comment comment = new Comment();
+        comment.setStudent(reporter.student());
+        comment.setLecture(lecture);
+        comment.setContent("Question");
+        comment.setStatus(ContentStatus.VISIBLE);
+        comment = commentRepository.saveAndFlush(comment);
+
+        mockMvc.perform(post("/social/answers")
+                        .header("Authorization", bearer(reporter.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"commentID":"%s","content":"Rude answer"}
+                                """.formatted(comment.getId())))
+                .andExpect(status().isOk());
+        UUID answerId = answerRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(post("/social/answers/report")
+                        .header("Authorization", bearer(reporter.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"answerID":"%s","reportReason":"HARASSMENT","explanation":"Rude"}
+                                """.formatted(answerId)))
+                .andExpect(status().isOk());
+
+        String reported = mockMvc.perform(get("/answers/reported")
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answers", hasSize(1)))
+                .andExpect(jsonPath("$.answers[0].answerContent").value("Rude answer"))
+                .andExpect(jsonPath("$.answers[0].commentContent").value("Question"))
+                .andExpect(jsonPath("$.answers[0].postContext").value("CS101 — Algorithms"))
+                .andExpect(jsonPath("$.answers[0].status").value("OPEN"))
+                .andReturn().getResponse().getContentAsString();
+        String reportId = com.jayway.jsonpath.JsonPath.read(reported, "$.answers[0].id");
+
+        // ACTION_TAKEN is the status that hides the answer, mirroring comment reports.
+        mockMvc.perform(patch("/answers/reported/{id}", reportId)
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"ACTION_TAKEN\"}"))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                ContentStatus.HIDDEN,
+                answerRepository.findById(answerId).orElseThrow().getStatus()
+        );
+
+        mockMvc.perform(patch("/answers/reported/{id}", reportId)
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"DISMISSED\"}"))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                ContentStatus.VISIBLE,
+                answerRepository.findById(answerId).orElseThrow().getStatus()
+        );
+
+        // Withdrawing the report leaves the answer alone.
+        mockMvc.perform(delete("/answers/reported/{id}", reportId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/answers/reported").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(jsonPath("$.answers", hasSize(0)));
+        org.junit.jupiter.api.Assertions.assertEquals(1, answerRepository.count());
+
+        // Two status changes were made, and each is its own event.
+        org.junit.jupiter.api.Assertions.assertEquals(
+                2,
+                auditLogRepository.findAll().stream()
+                        .filter(log -> log.getAction() == AuditAction.ANSWER_REPORT_STATUS_CHANGED)
+                        .count()
+        );
+        auditOf(AuditAction.ANSWER_REPORT_DELETED);
+    }
+
+    @Test
+    void bugReportTextIsEditableAndReportsAreDeletable() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        BugReport report = new BugReport();
+        report.setTitle("asdf");
+        report.setDescription("broken");
+        report.setSeverity(BugSeverity.LOW);
+        report.setReporter(createStudent("reporter@student.kit.edu"));
+        report = bugReportRepository.saveAndFlush(report);
+
+        mockMvc.perform(patch("/reports/{id}", report.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Profile upload fails","description":"Steps to reproduce"}
+                                """))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/reports").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bugReports[0].title").value("Profile upload fails"))
+                .andExpect(jsonPath("$.bugReports[0].description").value("Steps to reproduce"));
+
+        mockMvc.perform(patch("/reports/{id}", report.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"  \"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(delete("/reports/{id}", report.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertEquals(0, bugReportRepository.count());
+        auditOf(AuditAction.BUG_REPORT_DELETED);
+    }
+
+    @Test
+    void ratingsCanBeDiscarded() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session student = createSession("rater@student.kit.edu", false);
+        Lecture lecture = createLecture();
+
+        mockMvc.perform(post("/ratings/rate")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lectureId":"%s","topics":[{"category":"ORGANIZATION","value":1}]}
+                                """.formatted(lecture.getId())))
+                .andExpect(status().isOk());
+        UUID ratingId = ratingRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(delete("/ratings/{id}", ratingId)
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/ratings/{id}", ratingId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertEquals(0, ratingRepository.count());
+
+        // The public read stays public even though the delete beside it is admin-only.
+        mockMvc.perform(get("/ratings/{lectureId}", lecture.getId()))
+                .andExpect(status().isOk());
+        auditOf(AuditAction.RATING_DELETED);
+    }
+
+    @Test
+    void lecturesAndProfessorsAreEditableAndDeletable() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Lecture lecture = createLecture();
+        Professor professor = new Professor();
+        professor.setFirstName("Ada");
+        professor.setLastName("Lovelase");
+        professor = professorRepository.saveAndFlush(professor);
+
+        mockMvc.perform(patch("/data/professor/{id}", professor.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lastName":"Lovelace","lectureIds":["%s"]}
+                                """.formatted(lecture.getId())))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/data/lectures/{id}", lecture.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lecture.professors", hasSize(1)))
+                .andExpect(jsonPath("$.lecture.professors[0].lastName").value("Lovelace"));
+
+        mockMvc.perform(patch("/data/lectures/{id}", lecture.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code":"CS102","semesterYear":2027,"semesterSeason":"WINTER","active":false}
+                                """))
+                .andExpect(status().isOk());
+        Lecture stored = lectureRepository.findById(lecture.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals("CS102", stored.getCode());
+        org.junit.jupiter.api.Assertions.assertEquals(2027, stored.getSemesterYear());
+        org.junit.jupiter.api.Assertions.assertFalse(stored.isActive());
+
+        mockMvc.perform(patch("/data/lectures/{id}", lecture.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch("/data/lectures/{id}", lecture.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"professorIds\":[\"%s\"]}".formatted(UUID.randomUUID())))
+                .andExpect(status().isNotFound());
+
+        // Deleting the professor detaches it; the lecture and its history survive.
+        mockMvc.perform(delete("/data/professor/{id}", professor.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertEquals(0, professorRepository.count());
+        mockMvc.perform(get("/data/lectures/{id}", lecture.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lecture.professors", hasSize(0)));
+
+        mockMvc.perform(delete("/data/lectures/{id}", lecture.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertEquals(0, lectureRepository.count());
+
+        auditOf(AuditAction.PROFESSOR_UPDATED);
+        auditOf(AuditAction.PROFESSOR_DELETED);
+        auditOf(AuditAction.LECTURE_UPDATED);
+        auditOf(AuditAction.LECTURE_DELETED);
+
+        // The public catalogue read is untouched by the admin-only write rules.
+        mockMvc.perform(get("/data/lectures")).andExpect(status().isOk());
+    }
+
+    @Test
+    void deletingALectureTakesItsCommentsRatingsAndAnswerRowsWithIt() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session author = createSession("author@student.kit.edu", false);
+        Lecture lecture = createLecture();
+
+        Comment comment = new Comment();
+        comment.setStudent(author.student());
+        comment.setLecture(lecture);
+        comment.setContent("Comment");
+        comment.setStatus(ContentStatus.VISIBLE);
+        comment = commentRepository.saveAndFlush(comment);
+
+        mockMvc.perform(post("/social/answers")
+                        .header("Authorization", bearer(author.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"commentID":"%s","content":"Answer"}
+                                """.formatted(comment.getId())))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/ratings/rate")
+                        .header("Authorization", bearer(author.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"lectureId":"%s","topics":[{"category":"ORGANIZATION","value":3}]}
+                                """.formatted(lecture.getId())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/data/lectures/{id}", lecture.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+
+        org.junit.jupiter.api.Assertions.assertEquals(0, lectureRepository.count());
+        org.junit.jupiter.api.Assertions.assertEquals(0, commentRepository.count());
+        org.junit.jupiter.api.Assertions.assertEquals(0, answerRepository.count());
+        org.junit.jupiter.api.Assertions.assertEquals(0, ratingRepository.count());
+        org.junit.jupiter.api.Assertions.assertEquals(0, notificationRepository.count());
+
+        AuditLog deleted = auditOf(AuditAction.LECTURE_DELETED);
+        org.junit.jupiter.api.Assertions.assertEquals(1, deleted.getMetadata().get("deletedComments"));
+        org.junit.jupiter.api.Assertions.assertEquals(1, deleted.getMetadata().get("deletedRatings"));
     }
 
     @Test
@@ -810,8 +1563,11 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.success").value(true));
         mockMvc.perform(get("/auth/me").header("Authorization", bearer(student.rawToken())))
                 .andExpect(status().isUnauthorized());
-        // ADMIN_LOGOUT belongs to the administrative record only.
-        org.junit.jupiter.api.Assertions.assertEquals(0, auditLogRepository.count());
+        // A student logout is USER_LOGOUT; ADMIN_LOGOUT belongs to the administrative
+        // record only.
+        AuditLog logout = auditOf(AuditAction.USER_LOGOUT);
+        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.USER, logout.getActorType());
+        org.junit.jupiter.api.Assertions.assertEquals(1, auditLogRepository.count());
 
         Session admin = createSession("admin@student.kit.edu", true);
         String badTimestamp = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(
@@ -823,6 +1579,72 @@ class AdminApiIntegrationTests {
                         .param("cursor", badTimestamp))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Invalid audit cursor"));
+    }
+
+    @Test
+    void replayedRefusalsAgainstABlockedAccountCannotFillTheActivityLog() throws Exception {
+        Student blocked = createStudent("blocked@student.kit.edu");
+        blocked.setStatus(UserStatus.BLOCKED);
+        studentRepository.saveAndFlush(blocked);
+
+        // The status refusal has to consume the failure budget, otherwise the gate never
+        // closes and every replay of a known address writes another record.
+        for (int attempt = 0; attempt < 25; attempt++) {
+            mockMvc.perform(post("/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {"email":"blocked@student.kit.edu","loginToken":"ABC234"}
+                            """));
+        }
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"blocked@student.kit.edu","loginToken":"ABC234"}
+                                """))
+                .andExpect(status().isTooManyRequests());
+
+        long refusals = auditLogRepository.findAll().stream()
+                .filter(log -> log.getAction() == AuditAction.LOGIN_REFUSED)
+                .count();
+        org.junit.jupiter.api.Assertions.assertEquals(
+                10,
+                refusals,
+                "login refusals must stop at the per-email failure limit"
+        );
+    }
+
+    @Test
+    void demotingAnAdministratorWithModerationHistoryIsRefused() throws Exception {
+        Session acting = createSession("admin@student.kit.edu", true);
+        Session other = createSession("other@student.kit.edu", true);
+        Session target = createSession("target@student.kit.edu", false);
+
+        // The admin being demoted has already issued a warning, which points at its
+        // admin row with a non-null foreign key.
+        mockMvc.perform(post("/users/{id}/warnings", target.student().getId())
+                        .header("Authorization", bearer(other.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Be nice\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(patch("/users/{id}", other.student().getId())
+                        .header("Authorization", bearer(acting.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"STUDENT\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("Administrator has moderation history and cannot be demoted"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(
+                adminRepository.findByStudent(other.student()).isPresent(),
+                "the admin row must survive a refused demotion"
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(
+                1,
+                warningRepository.count(),
+                "the warning must survive a refused demotion"
+        );
     }
 
     private void requestCode(String email) throws Exception {
@@ -901,6 +1723,15 @@ class AdminApiIntegrationTests {
         log.setChanges(Map.of("status", status));
         log.setMetadata(Map.of());
         auditLogRepository.saveAndFlush(log);
+    }
+
+    /** The single recorded event with this action, failing when there is not exactly one. */
+    private AuditLog auditOf(AuditAction action) {
+        java.util.List<AuditLog> matches = auditLogRepository.findAll().stream()
+                .filter(log -> log.getAction() == action)
+                .toList();
+        org.junit.jupiter.api.Assertions.assertEquals(1, matches.size(), action + " entries");
+        return matches.getFirst();
     }
 
     private String bearer(String token) {

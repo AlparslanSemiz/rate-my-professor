@@ -126,6 +126,34 @@ public class ModerationCommentService {
         return new BasicResponse("Updated", true);
     }
 
+    /**
+     * Removes the report record itself. The reported comment is untouched: withdrawing a
+     * report that should not have been filed is not a judgement on the content.
+     */
+    @Transactional
+    public BasicResponse deleteReport(AuthenticatedUser principal, UUID reportId) {
+        CommentReport report = reportRepository.findByIdForUpdate(reportId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Report not found"));
+        String label = "Report about " + report.getComment().getStudent().getUsername()
+                + " in " + postContext(report);
+        ReportStatus status = report.getStatus();
+
+        reportRepository.delete(report);
+
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("exists", Map.of("before", true, "after", false));
+        auditWriter.write(
+                principal.admin(),
+                AuditAction.COMMENT_REPORT_DELETED,
+                AuditTargetType.COMMENT_REPORT,
+                reportId,
+                label,
+                changes,
+                Map.of("status", status.name())
+        );
+        return new BasicResponse("Deleted report successfully", true);
+    }
+
     private ReportedCommentResponse toResponse(CommentReport report) {
         return new ReportedCommentResponse(
                 report.getId(),

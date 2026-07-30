@@ -7,6 +7,7 @@ import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.model.Token;
 import com.pse.auth.repository.TokenRepository;
 import com.pse.auth.service.AuthService;
+import com.pse.moderation.dto.request.UserUpdateRequest;
 import com.pse.moderation.dto.request.WarningRequest;
 import com.pse.moderation.dto.response.UserListResponse;
 import com.pse.moderation.dto.response.UserResponse;
@@ -38,12 +39,17 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class ModerationUserService {
+
+    private static final Pattern KIT_EMAIL =
+            Pattern.compile("^[A-Z0-9._%+-]+@student\\.kit\\.edu$", Pattern.CASE_INSENSITIVE);
 
     private final StudentRepository studentRepository;
     private final AdminRepository adminRepository;
@@ -130,6 +136,163 @@ public class ModerationUserService {
             counts.put((UUID) row[0], ((Number) row[1]).intValue());
         }
         return counts;
+    }
+
+    /**
+     * Edits a user's own fields. Everything the panel shows about an account is
+     * changeable here so a wrong name, a typo'd address or a stale biography can simply
+     * be corrected.
+     *
+     * <p>Two guards, both about not locking anyone out: an admin cannot change its own
+     * status or role, and an admin account's status is protected the same way
+     * block/unblock/delete protect it. Changing the address invalidates the account's
+     * sessions, because the address is the login identity.
+     */
+    @Transactional
+    public BasicResponse updateStudent(
+            AuthenticatedUser principal,
+            UUID studentId,
+            UserUpdateRequest request
+    ) {
+        if (request == null
+                || (request.username() == null
+                && request.kitEmail() == null
+                && request.biography() == null
+                && request.status() == null
+                && request.role() == null
+                && request.credibilityScore() == null)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "No update supplied");
+        }
+
+        Student target = findMutableStudent(studentId);
+        boolean targetIsAdmin = adminRepository.existsByStudent(target);
+        boolean targetIsSelf = target.getId().equals(principal.student().getId());
+        String label = userLabel(target);
+        Map<String, Object> changes = new LinkedHashMap<>();
+
+        if (request.username() != null) {
+            String username = request.username().trim();
+            if (username.isEmpty() || username.length() > 100) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid username");
+            }
+            if (!username.equals(target.getUsername())) {
+                if (studentRepository.existsByUsername(username)) {
+                    throw new ApiException(HttpStatus.CONFLICT, "Username is already taken");
+                }
+                changes.put("username", change(target.getUsername(), username));
+                target.setUsername(username);
+            }
+        }
+
+        boolean addressChanged = false;
+        if (request.kitEmail() != null) {
+            String email = normalizeKitEmail(request.kitEmail());
+            if (!email.equals(target.getKitEmail())) {
+                if (studentRepository.findByKitEmail(email).isPresent()) {
+                    throw new ApiException(HttpStatus.CONFLICT, "Email is already taken");
+                }
+                changes.put("kitEmail", change(target.getKitEmail(), email));
+                target.setKitEmail(email);
+                addressChanged = true;
+            }
+        }
+
+        if (request.biography() != null) {
+            String biography = request.biography().trim();
+            if (biography.length() > 2_000) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Biography is too long");
+            }
+            String before = target.getBiography() == null ? "" : target.getBiography();
+            if (!biography.equals(before)) {
+                changes.put("biography", change(before, biography));
+                target.setBiography(biography);
+            }
+        }
+
+        if (request.credibilityScore() != null
+                && request.credibilityScore() != target.getCredibilityScore()) {
+            changes.put("credibilityScore",
+                    change(target.getCredibilityScore(), request.credibilityScore()));
+            target.setCredibilityScore(request.credibilityScore());
+        }
+
+        boolean sessionsRevoked = addressChanged;
+        if (request.status() != null && request.status() != target.getStatus()) {
+            if (request.status() == UserStatus.DELETED) {
+                throw new ApiException(
+                        HttpStatus.BAD_REQUEST,
+                        "Use DELETE /users/{id} to delete a user"
+                );
+            }
+            if (targetIsSelf) {
+                throw new ApiException(HttpStatus.CONFLICT, "You cannot change your own status");
+            }
+            if (targetIsAdmin) {
+                throw new ApiException(
+                        HttpStatus.CONFLICT,
+                        "Administrator accounts cannot be modified"
+                );
+            }
+            changes.put("status", change(target.getStatus().name(), request.status().name()));
+            if (request.status() == UserStatus.BLOCKED) {
+                target.setBlockedAt(LocalDateTime.now(clock));
+                sessionsRevoked = true;
+            } else {
+                target.setBlockedAt(null);
+                target.setBlockedReason(null);
+            }
+            target.setStatus(request.status());
+        }
+
+        UserRole roleBefore = targetIsAdmin ? UserRole.ADMIN : UserRole.STUDENT;
+        if (request.role() != null && request.role() != roleBefore) {
+            if (targetIsSelf) {
+                throw new ApiException(HttpStatus.CONFLICT, "You cannot change your own role");
+            }
+            changes.put("role", change(roleBefore.name(), request.role().name()));
+            if (request.role() == UserRole.ADMIN) {
+                Admin admin = new Admin();
+                admin.setStudent(target);
+                adminRepository.save(admin);
+            } else {
+                Admin admin = adminRepository.findByStudent(target).orElseThrow(
+                        () -> new ApiException(HttpStatus.CONFLICT, "User is not an administrator")
+                );
+                // Warnings and reviewed reports point at the admin row, so the database
+                // refuses to delete one that has been used. Checked up front: letting the
+                // constraint fire answers with an unexplained "State conflict" instead.
+                if (adminRepository.hasModerationHistory(admin)) {
+                    throw new ApiException(
+                            HttpStatus.CONFLICT,
+                            "Administrator has moderation history and cannot be demoted"
+                    );
+                }
+                // Demoting revokes the sessions too: an admin token outlives a student
+                // one, and the panel would keep working until it expired.
+                adminRepository.delete(admin);
+                sessionsRevoked = true;
+            }
+        }
+
+        if (changes.isEmpty()) {
+            return new BasicResponse("Updated user successfully", true);
+        }
+
+        studentRepository.save(target);
+        if (sessionsRevoked) {
+            revokeTokens(target);
+        }
+
+        auditWriter.write(
+                principal.admin(),
+                AuditAction.USER_UPDATED,
+                AuditTargetType.USER,
+                target.getId(),
+                label,
+                changes,
+                sessionsRevoked ? Map.of("sessionsRevoked", true) : Map.of()
+        );
+        return new BasicResponse("Updated user successfully", true);
     }
 
     @Transactional
@@ -282,6 +445,102 @@ public class ModerationUserService {
                 true,
                 warnings
         );
+    }
+
+    /**
+     * Corrects the text of a warning that was already issued. The student is not
+     * re-notified: the notification was delivered when the warning was created, and
+     * rewording it is a correction of the record, not a new warning.
+     */
+    @Transactional
+    public BasicResponse updateWarning(
+            AuthenticatedUser principal,
+            UUID studentId,
+            UUID warningId,
+            WarningRequest request
+    ) {
+        String message = request == null || request.message() == null
+                ? ""
+                : request.message().trim();
+        if (message.isEmpty() || message.length() > 2_000) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Warning message is required");
+        }
+
+        Warning warning = findWarning(studentId, warningId);
+        if (message.equals(warning.getMessage())) {
+            return new BasicResponse("Updated warning successfully", true);
+        }
+
+        String before = warning.getMessage();
+        warning.setMessage(message);
+        warningRepository.save(warning);
+        auditWriter.write(
+                principal.admin(),
+                AuditAction.USER_WARNING_UPDATED,
+                AuditTargetType.WARNING,
+                warning.getId(),
+                "Warning for " + userLabel(warning.getStudent()),
+                change("message", before, message),
+                Map.of()
+        );
+        return new BasicResponse("Updated warning successfully", true);
+    }
+
+    /** Withdraws a warning that should not have been issued. */
+    @Transactional
+    public BasicResponse deleteWarning(
+            AuthenticatedUser principal,
+            UUID studentId,
+            UUID warningId
+    ) {
+        Warning warning = findWarning(studentId, warningId);
+        Student target = warning.getStudent();
+        long before = warningRepository.countByStudent(target);
+        String message = warning.getMessage();
+
+        warningRepository.delete(warning);
+        auditWriter.write(
+                principal.admin(),
+                AuditAction.USER_WARNING_DELETED,
+                AuditTargetType.WARNING,
+                warningId,
+                "Warning for " + userLabel(target),
+                change("warnings", before, before - 1),
+                Map.of("reason", message)
+        );
+        return new BasicResponse("Deleted warning successfully", true);
+    }
+
+    private Warning findWarning(UUID studentId, UUID warningId) {
+        Warning warning = warningRepository.findById(warningId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Warning not found"));
+        // The warning is addressed as a sub-resource of the student, so a mismatched
+        // pair is a wrong URL rather than a warning that happens to belong elsewhere.
+        if (!warning.getStudent().getId().equals(studentId)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Warning not found");
+        }
+        return warning;
+    }
+
+    private String normalizeKitEmail(String rawEmail) {
+        String email = rawEmail == null ? "" : rawEmail.trim().toLowerCase(Locale.ROOT);
+        if (!KIT_EMAIL.matcher(email).matches()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid KIT email");
+        }
+        return email;
+    }
+
+    private static Map<String, Object> change(String field, Object before, Object after) {
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put(field, change(before, after));
+        return changes;
+    }
+
+    private static Map<String, Object> change(Object before, Object after) {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("before", before);
+        value.put("after", after);
+        return value;
     }
 
     private Student findMutableStudent(UUID id) {

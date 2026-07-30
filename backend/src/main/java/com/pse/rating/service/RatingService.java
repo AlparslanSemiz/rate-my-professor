@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.service.AuditWriter;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.lecture.service.LectureService;
@@ -36,16 +39,19 @@ public class RatingService {
 
 
     private final RatingRepository ratingRepository;
+    private final AuditWriter auditWriter;
 
-    public RatingService(StudentService studentService, AuthService authService, LectureService lectureService, RatingRepository ratingRepository) {
+    public RatingService(StudentService studentService, AuthService authService, LectureService lectureService, RatingRepository ratingRepository, AuditWriter auditWriter) {
         this.studentService = studentService;
         this.authService = authService;
         this.lectureService = lectureService;
         this.ratingRepository = ratingRepository;
+        this.auditWriter = auditWriter;
     }
 
 
-
+    // Needs a transaction so that the rating and its activity-log entry commit together.
+    @Transactional
     public BasicResponse submitRating(String authHeader, RatingRequest request) {
 
         Student student = authService.verifyUser(authHeader);
@@ -84,6 +90,18 @@ public class RatingService {
 
         ratingRepository.save(rating);
 
+        String code = lecture.getCode();
+        auditWriter.writeStudentAction(
+                student,
+                AuditAction.RATING_SUBMITTED,
+                AuditTargetType.RATING,
+                rating.getId(),
+                code == null || code.isBlank() ? lecture.getName() : code + " — " + lecture.getName(),
+                Map.of(
+                        "lectureId", lecture.getId(),
+                        "topicCount", rating.getTopics().size()
+                )
+        );
 
         return new BasicResponse("Rating submitted successfully",true);
 

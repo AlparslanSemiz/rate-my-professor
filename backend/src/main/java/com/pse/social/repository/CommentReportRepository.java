@@ -2,6 +2,7 @@ package com.pse.social.repository;
 
 
 
+import com.pse.shared.enums.ReportStatus;
 import com.pse.social.model.CommentReport;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -20,6 +21,8 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, UU
 
     long countByCommentStudent(Student student);
 
+    long countByStatus(ReportStatus status);
+
     /**
      * Reports received per comment author, as {@code [studentId, count]} rows.
      * The per-row equivalent of {@link #countByCommentStudent(Student)}.
@@ -30,6 +33,14 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, UU
         GROUP BY report.comment.student.id
     """)
     List<Object[]> countGroupedByCommentStudent();
+
+    /** Reports per comment, as {@code [commentId, count]} rows. */
+    @Query("""
+        SELECT report.comment.id, COUNT(report)
+        FROM CommentReport report
+        GROUP BY report.comment.id
+    """)
+    List<Object[]> countGroupedByComment();
 
     @EntityGraph(attributePaths = {"comment", "comment.student", "comment.lecture", "reporter"})
     List<CommentReport> findAllByOrderByCreatedAtDesc();

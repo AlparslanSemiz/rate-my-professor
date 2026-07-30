@@ -5,6 +5,7 @@ package com.pse.moderation.repository;
 import java.util.UUID;
 
 import com.pse.moderation.model.BugReport;
+import com.pse.shared.enums.ReportStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -20,6 +21,8 @@ public interface BugReportRepository extends JpaRepository<BugReport, UUID> {
 
     @EntityGraph(attributePaths = "reporter")
     List<BugReport> findAllByOrderByCreatedAtDesc();
+
+    long countByStatus(ReportStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = "reporter")
