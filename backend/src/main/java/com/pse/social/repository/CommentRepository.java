@@ -22,6 +22,9 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
     List<Comment> findAllByStudent(Student student);
 
     @EntityGraph(attributePaths = {"student", "lecture"})
+    List<Comment> findAllByStatus(ContentStatus status);
+
+    @EntityGraph(attributePaths = {"student", "lecture"})
     List<Comment> findAllByOrderByCreatedAtDesc();
 }
 

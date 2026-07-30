@@ -189,7 +189,7 @@ public class SocialService {
 
         List<CommentResponse> commentsResponses = new ArrayList<>();
 
-        for(Comment comment : comments) {
+        for (Comment comment : comments) {
 
             List<AnswerResponse> answerResponses = getAnswerResponses(comment);
 
@@ -206,6 +206,9 @@ public class SocialService {
             ));
 
         }
+
+        return new CommentsResponse("Comments loaded successfully", true, commentsResponses);
+    }
 
     @Transactional
     public BasicResponse submitAnswer(String authHeader, AnswerSubmitRequest request) {
