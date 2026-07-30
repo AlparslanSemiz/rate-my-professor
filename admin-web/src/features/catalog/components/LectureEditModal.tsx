@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import {
   Button,
   Group,
@@ -46,56 +46,71 @@ export default function LectureEditModal({
   onClose,
   onSubmit,
 }: LectureEditModalProps) {
-  const [name, setName] = useState('')
-  const [code, setCode] = useState('')
-  const [year, setYear] = useState(0)
-  const [season, setSeason] = useState<SemesterSeason>('WINTER')
-  const [active, setActive] = useState(true)
+  return (
+    <Modal
+      opened={lecture !== null}
+      onClose={onClose}
+      title="Edit lecture"
+      centered
+      size="lg"
+      styles={darkModalStyles}
+    >
+      {/* Keyed on the lecture so the fields are initial state rather than state kept in
+          step with a prop. */}
+      {lecture && (
+        <LectureEditForm
+          key={lecture.id}
+          lecture={lecture}
+          professors={professors}
+          onClose={onClose}
+          onSubmit={onSubmit}
+        />
+      )}
+    </Modal>
+  )
+}
+
+interface LectureEditFormProps {
+  lecture: Lecture
+  professors: Professor[]
+  onClose: () => void
+  onSubmit: (id: string, update: LectureUpdate) => Promise<void>
+}
+
+function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEditFormProps) {
+  const [name, setName] = useState(lecture.name)
+  const [code, setCode] = useState(lecture.code)
+  const [year, setYear] = useState(lecture.semesterYear)
+  const [season, setSeason] = useState<SemesterSeason>(lecture.semesterSeason)
+  const [active, setActive] = useState(lecture.active)
   const [lectureType, setLectureType] = useState<LectureType | null>(null)
-  const [professorIds, setProfessorIds] = useState<string[]>([])
+  const [professorIds, setProfessorIds] = useState<string[]>(
+    lecture.professors.map((professor) => professor.id),
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (!lecture) return
-    setName(lecture.name)
-    setCode(lecture.code)
-    setYear(lecture.semesterYear)
-    setSeason(lecture.semesterSeason)
-    setActive(lecture.active)
-    setLectureType(null)
-    setProfessorIds(lecture.professors.map((professor) => professor.id))
-    setError('')
-  }, [lecture])
 
   const trimmedName = name.trim()
   const trimmedCode = code.trim()
 
-  function buildUpdate(current: Lecture): LectureUpdate {
-    const update: LectureUpdate = {}
-    if (trimmedName !== current.name) update.name = trimmedName
-    if (trimmedCode !== current.code) update.code = trimmedCode
-    if (year !== current.semesterYear) update.semesterYear = year
-    if (season !== current.semesterSeason) update.semesterSeason = season
-    if (active !== current.active) update.active = active
-    // The catalogue read does not report the current type, so it is sent only when picked.
-    if (lectureType !== null) update.lectureType = lectureType
-    if (!sameIdSet(professorIds, current.professors.map((professor) => professor.id))) {
-      update.professorIds = professorIds
-    }
-    return update
+  const update: LectureUpdate = {}
+  if (trimmedName !== lecture.name) update.name = trimmedName
+  if (trimmedCode !== lecture.code) update.code = trimmedCode
+  if (year !== lecture.semesterYear) update.semesterYear = year
+  if (season !== lecture.semesterSeason) update.semesterSeason = season
+  if (active !== lecture.active) update.active = active
+  // The catalogue read does not report the current type, so it is sent only when picked.
+  if (lectureType !== null) update.lectureType = lectureType
+  if (!sameIdSet(professorIds, lecture.professors.map((professor) => professor.id))) {
+    update.professorIds = professorIds
   }
 
-  const update = lecture ? buildUpdate(lecture) : {}
   const canSave =
-    trimmedName.length > 0 &&
-    trimmedCode.length > 0 &&
-    year > 0 &&
-    Object.keys(update).length > 0
+    trimmedName.length > 0 && trimmedCode.length > 0 && year > 0 && Object.keys(update).length > 0
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!lecture || !canSave) return
+    if (!canSave) return
 
     setSaving(true)
     setError('')
@@ -110,95 +125,81 @@ export default function LectureEditModal({
   }
 
   return (
-    <Modal
-      opened={lecture !== null}
-      onClose={onClose}
-      title="Edit lecture"
-      centered
-      size="lg"
-      styles={darkModalStyles}
-      closeOnClickOutside={!saving}
-      closeOnEscape={!saving}
-      withCloseButton={!saving}
-    >
-      {lecture && (
-        <form onSubmit={handleSubmit}>
-          <Stack gap={14}>
-            <TextInput
-              label="Name"
-              value={name}
-              onChange={(event) => setName(event.currentTarget.value)}
-              styles={darkInputStyles}
-            />
-            <TextInput
-              label="Code"
-              value={code}
-              onChange={(event) => setCode(event.currentTarget.value)}
-              styles={darkInputStyles}
-            />
-            <Group grow align="flex-start">
-              <NumberInput
-                label="Semester year"
-                value={year}
-                onChange={(value) => setYear(typeof value === 'number' ? value : 0)}
-                min={1900}
-                max={2999}
-                clampBehavior="strict"
-                allowDecimal={false}
-                styles={darkInputStyles}
-              />
-              <Select
-                label="Semester season"
-                data={seasonOptions}
-                value={season}
-                onChange={(value) => {
-                  if (isSemesterSeason(value)) setSeason(value)
-                }}
-                clearable={false}
-                styles={darkInputStyles}
-              />
-            </Group>
-            <MultiSelect
-              label="Professors"
-              description="Replaces the assignment — clear it to leave the lecture unassigned."
-              data={professors.map((professor) => ({
-                value: professor.id,
-                label: professorName(professor),
-              }))}
-              value={professorIds}
-              onChange={setProfessorIds}
-              searchable
-              clearable
-              styles={darkInputStyles}
-            />
-            <Select
-              label="Lecture type"
-              description="Decides which categories future ratings can score. The catalogue does not report the current type, so this is only sent when you pick one."
-              placeholder="Leave unchanged"
-              data={lectureTypeOptions}
-              value={lectureType}
-              onChange={(value) => setLectureType(isLectureType(value) ? value : null)}
-              clearable
-              styles={darkInputStyles}
-            />
-            <Switch
-              label="Active"
-              checked={active}
-              onChange={(event) => setActive(event.currentTarget.checked)}
-              color="green"
-            />
-            <ErrorAlert message={error} mb={0} />
-            <Group justify="flex-end" gap={10}>
-              <Button variant="subtle" color="gray" onClick={onClose} disabled={saving}>
-                Cancel
-              </Button>
-              <Button type="submit" color="green" loading={saving} disabled={!canSave}>
-                Save changes
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      )}
-    </Modal>
+    <form onSubmit={handleSubmit}>
+      <Stack gap={14}>
+        <TextInput
+          label="Name"
+          value={name}
+          onChange={(event) => setName(event.currentTarget.value)}
+          styles={darkInputStyles}
+        />
+        <TextInput
+          label="Code"
+          value={code}
+          onChange={(event) => setCode(event.currentTarget.value)}
+          styles={darkInputStyles}
+        />
+        <Group grow align="flex-start">
+          <NumberInput
+            label="Semester year"
+            value={year}
+            onChange={(value) => setYear(typeof value === 'number' ? value : 0)}
+            min={1900}
+            max={2999}
+            clampBehavior="strict"
+            allowDecimal={false}
+            styles={darkInputStyles}
+          />
+          <Select
+            label="Semester season"
+            data={seasonOptions}
+            value={season}
+            onChange={(value) => {
+              if (isSemesterSeason(value)) setSeason(value)
+            }}
+            clearable={false}
+            styles={darkInputStyles}
+          />
+        </Group>
+        <MultiSelect
+          label="Professors"
+          description="Replaces the assignment — clear it to leave the lecture unassigned."
+          data={professors.map((professor) => ({
+            value: professor.id,
+            label: professorName(professor),
+          }))}
+          value={professorIds}
+          onChange={setProfessorIds}
+          searchable
+          clearable
+          styles={darkInputStyles}
+        />
+        <Select
+          label="Lecture type"
+          description="Decides which categories future ratings can score. The catalogue does not report the current type, so this is only sent when you pick one."
+          placeholder="Leave unchanged"
+          data={lectureTypeOptions}
+          value={lectureType}
+          onChange={(value) => setLectureType(isLectureType(value) ? value : null)}
+          clearable
+          styles={darkInputStyles}
+        />
+        <Switch
+          label="Active"
+          checked={active}
+          onChange={(event) => setActive(event.currentTarget.checked)}
+          color="green"
+        />
+        <ErrorAlert message={error} mb={0} />
+        <Group justify="flex-end" gap={10}>
+          <Button variant="subtle" color="gray" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" color="green" loading={saving} disabled={!canSave}>
+            Save changes
+          </Button>
+        </Group>
+      </Stack>
+    </form>
   )
 }

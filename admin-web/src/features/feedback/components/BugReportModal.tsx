@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Box, Button, Group, Modal, Text, type CSSProperties } from '@mantine/core'
 import { IconPencil, IconTrash } from '@tabler/icons-react'
 import type { BugReport, BugReportUpdate } from '../../../api/FeedbackService'
@@ -37,12 +37,6 @@ export default function BugReportModal({
   updating,
   updateError,
 }: BugReportModalProps) {
-  const [editing, setEditing] = useState(false)
-
-  useEffect(() => {
-    if (!opened) setEditing(false)
-  }, [opened])
-
   return (
     <Modal
       opened={opened}
@@ -52,58 +46,86 @@ export default function BugReportModal({
       size="lg"
       styles={darkModalStyles}
     >
+      {/* Keyed on the report so opening a different one starts collapsed, without an effect
+          resetting the toggle. */}
       {report && (
-        <>
-          <BugReportSummary report={report} />
-
-          <Group gap={8} mb={16}>
-            <Button
-              size="xs"
-              variant="light"
-              color="blue"
-              leftSection={<IconPencil size={13} />}
-              onClick={() => setEditing((visible) => !visible)}
-            >
-              Edit
-            </Button>
-            <Button
-              size="xs"
-              variant="light"
-              color="red"
-              leftSection={<IconTrash size={13} />}
-              onClick={onDelete}
-              style={deleteButtonStyle}
-            >
-              Delete report
-            </Button>
-          </Group>
-
-          {editing ? (
-            <BugReportEditForm
-              key={report.id}
-              report={report}
-              loading={updating}
-              onCancel={() => setEditing(false)}
-              onSubmit={async (update) => {
-                await onEdit(report.id, update)
-                setEditing(false)
-              }}
-            />
-          ) : (
-            <Box mb={20} style={detailsPanelStyle}>
-              <Text size="xs" c="#4b5563" mb={4}>
-                Description
-              </Text>
-              <Text size="sm" c="#9ca3af">
-                {report.description}
-              </Text>
-            </Box>
-          )}
-
-          <ErrorAlert message={updateError} />
-          <BugReportControls report={report} updating={updating} onUpdate={onUpdate} />
-        </>
+        <BugReportDetails
+          key={report.id}
+          report={report}
+          onUpdate={onUpdate}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          updating={updating}
+          updateError={updateError}
+        />
       )}
     </Modal>
+  )
+}
+
+type BugReportDetailsProps = Omit<BugReportModalProps, 'report' | 'opened' | 'onClose'> & {
+  report: BugReport
+}
+
+function BugReportDetails({
+  report,
+  onUpdate,
+  onEdit,
+  onDelete,
+  updating,
+  updateError,
+}: BugReportDetailsProps) {
+  const [editing, setEditing] = useState(false)
+
+  return (
+    <>
+      <BugReportSummary report={report} />
+
+      <Group gap={8} mb={16}>
+        <Button
+          size="xs"
+          variant="light"
+          color="blue"
+          leftSection={<IconPencil size={13} />}
+          onClick={() => setEditing((visible) => !visible)}
+        >
+          Edit
+        </Button>
+        <Button
+          size="xs"
+          variant="light"
+          color="red"
+          leftSection={<IconTrash size={13} />}
+          onClick={onDelete}
+          style={deleteButtonStyle}
+        >
+          Delete report
+        </Button>
+      </Group>
+
+      {editing ? (
+        <BugReportEditForm
+          report={report}
+          loading={updating}
+          onCancel={() => setEditing(false)}
+          onSubmit={async (update) => {
+            await onEdit(report.id, update)
+            setEditing(false)
+          }}
+        />
+      ) : (
+        <Box mb={20} style={detailsPanelStyle}>
+          <Text size="xs" c="#4b5563" mb={4}>
+            Description
+          </Text>
+          <Text size="sm" c="#9ca3af">
+            {report.description}
+          </Text>
+        </Box>
+      )}
+
+      <ErrorAlert message={updateError} />
+      <BugReportControls report={report} updating={updating} onUpdate={onUpdate} />
+    </>
   )
 }

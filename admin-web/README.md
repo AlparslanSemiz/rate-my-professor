@@ -5,9 +5,10 @@ platform. It gives administrators one place to monitor the system, manage user
 accounts, review community reports, process bug reports, and inspect an
 immutable history of administrative actions.
 
-The repository contains both the React frontend and a complete local demo
-environment. The demo environment consists of a small Node.js mock API,
-PostgreSQL, and seeded sample data.
+This repository contains the React frontend only. It talks to the backend
+service over HTTP and holds no database or API of its own — point
+`VITE_API_BASE_URL` at a running backend and everything else follows from
+that.
 
 ## Table of Contents
 
@@ -15,7 +16,7 @@ PostgreSQL, and seeded sample data.
 - [Technology Stack](#technology-stack)
 - [System Architecture](#system-architecture)
 - [Quick Start](#quick-start)
-- [Demo Walkthrough](#demo-walkthrough)
+- [Walkthrough](#walkthrough)
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
 - [Authentication and Authorization](#authentication-and-authorization)
@@ -33,11 +34,13 @@ PostgreSQL, and seeded sample data.
 | --- | --- |
 | Authentication | Two-step email and login-code flow with protected admin routes |
 | Dashboard | At-a-glance user, activity, administrator, and report statistics |
-| Users | Search users, inspect profiles and warning history, warn, block, unblock, or delete accounts |
-| Reported Comments | Search and filter community reports, inspect involved users, and update moderation status |
-| Bug Reports | Review submitted problems and update their status or severity |
-| Audit Logs | Filter and inspect successful administrative actions, including before/after values |
-| Activity Log | Filter and inspect what everyone does in the application, including failed and denied attempts |
+| Users | Search users, inspect profiles and warning history, edit account fields, warn, block, unblock, or delete accounts |
+| Comments | Browse every comment, edit or hide its text, delete it, and work the report queue |
+| Answers | The same for replies posted under comments, with the parent thread as context |
+| Catalogue | Edit and remove lectures and professors, and reassign who teaches what |
+| Bug Reports | Review submitted problems, rewrite the title or description, update status or severity, and delete |
+| Audit Logs | Filter and inspect administrative actions, including before/after values |
+| Activity Log | Filter and inspect what users did in the student app, plus every refused request |
 | System Status | Watch backend health, live record counts, and when each admin action last reached the database |
 
 Additional engineering features include:
@@ -47,7 +50,6 @@ Additional engineering features include:
 - Feature-based source organization with small, focused components and hooks.
 - Route-level lazy loading to keep the initial JavaScript download small.
 - Unit and integration tests with Vitest and Testing Library.
-- A reproducible local stack with Docker Compose and seeded PostgreSQL data.
 
 ## Technology Stack
 
@@ -57,9 +59,7 @@ Additional engineering features include:
 | Build tooling | Vite 8, TypeScript compiler |
 | Tests | Vitest, Testing Library, jsdom |
 | Code quality | ESLint, TypeScript strict checks |
-| Local API | Node.js HTTP server |
-| Database | PostgreSQL 16 |
-| Containers | Docker Compose (local Postgres), multi-stage Docker build + Nginx (production image, built in CI/CD) |
+| Containers | Multi-stage Docker build + Nginx (production image, built in CI/CD) |
 
 Node.js 24 is recommended because it matches the version used by the Docker
 build.
@@ -75,33 +75,22 @@ build.
                              │ Authorization: Bearer <token>
                              ▼
 ┌──────────────────────────────────────────────────────────┐
-│ API                                                      │
-│ auth · users · comments · reports · logs · system status │
-└────────────────────────────┬─────────────────────────────┘
-                             │ parameterized SQL
-                             │ transactional writes
-                             ▼
-┌──────────────────────────────────────────────────────────┐
-│ PostgreSQL                                               │
-│ users · sessions · warnings · reports · audit · activity │
+│ Backend (separate repository)                            │
+│ auth · users · content · catalogue · logs · system status │
 └──────────────────────────────────────────────────────────┘
 ```
 
-Locally, Vite serves the frontend directly and calls the mock API at
-`http://localhost:8080`. In production, Nginx serves the static build under
-`VITE_BASE_PATH` with no API proxy — the browser calls the real backend
-directly (same-origin; see "Deploying the production image").
-
-The local API is intentionally lightweight. It implements the contract needed
-by this admin application; it is not intended to replace the production
-backend.
+In development, Vite serves the frontend and the browser calls the backend at
+`VITE_API_BASE_URL`. In production, Nginx serves the static build under
+`VITE_BASE_PATH` with no API proxy — the browser calls the backend directly
+(same-origin; see "Deploying the production image").
 
 ## Quick Start
 
 ### Prerequisites
 
-- Docker Engine (runs local PostgreSQL only — see `docker-compose.yml`)
 - Node.js 24 and npm
+- A reachable backend (see the backend repository for how to run one)
 
 ### Start the application
 
@@ -111,61 +100,45 @@ Install the dependencies once:
 npm ci
 ```
 
-Start PostgreSQL and the mock API in the first terminal:
+Point the frontend at your backend in `.env`:
+
+```env
+VITE_API_BASE_URL=https://your-backend.example.org
+```
+
+Start the development server:
 
 ```bash
-npm run mock:up
+npm run dev
 ```
 
-Start the frontend in a second terminal:
+Open [http://localhost:5173](http://localhost:5173) and sign in with one of the
+admin addresses (see "Authentication and Authorization"). The backend emails a
+six-character login code, which expires after five minutes.
 
-```bash
-npm run dev:local
-```
+If the backend rejects the request with `403 Invalid CORS request`, add the
+panel's origin (`http://localhost:5173`) to the backend's
+`ADMIN_FRONTEND_ORIGINS`.
 
-Open [http://localhost:5173](http://localhost:5173) and sign in with the
-demo administrator:
-
-```text
-Email: u-kisi4@student.kit.edu
-Code:  123456
-```
-
-The login-code endpoint does not send a real email in local demo mode. It
-returns the configured demo code so the entire workflow can be evaluated
-without an email provider.
-
-### Stop the application
-
-```bash
-npm run db:down
-```
-
-The PostgreSQL data is stored in the `admin_web_pgdata` Docker volume and
-therefore remains available after the container is stopped.
-
-To restore the seeded demo records:
-
-```bash
-npm run mock:reset
-```
-
-## Demo Walkthrough
+## Walkthrough
 
 The following short flow demonstrates the important project capabilities:
 
-1. Sign in with the demo administrator and code.
+1. Sign in with an admin address and the emailed code.
 2. Review the system summary and recent registrations on the dashboard.
-3. Open **Users**, select a profile, and inspect its moderation history.
-4. Open **Reported Comments** and change the status of a report.
+3. Open **Users**, select a profile, edit a field, and inspect its moderation
+   history.
+4. Open **Comments**, hide a comment from the content tab, then work its report
+   from the reports tab.
 5. Open **Bug Reports** and update a report's status or severity.
 6. Open **Audit Logs** and locate the actions performed in the previous steps.
 7. Inspect an audit event to compare its before and after values.
-8. Sign out and verify that protected routes return to the login page.
+8. Open **Activity Log** to see what students did and what the backend refused.
+9. Sign out and verify that protected routes return to the login page.
 
 State-changing operations are recorded in the audit log only when they
-succeed. This makes the final two steps useful for demonstrating both the UI
-and the data model.
+succeed. This makes the final steps useful for demonstrating both the UI and
+the data model.
 
 ## Configuration
 
@@ -175,36 +148,15 @@ Vite reads `VITE_API_BASE_URL` when the development server starts or the
 production bundle is built.
 
 ```env
-VITE_API_BASE_URL=http://localhost:8080
+VITE_API_BASE_URL=https://your-backend.example.org
 ```
 
-The repository provides these environment files:
-
-| File | Usage |
-| --- | --- |
-| `.env` | Default Vite config, used by `npm run dev` (points at the production backend) |
-| `.env.demo-local` | Local Vite mode used by `npm run dev:local` (points at the mock API) |
-| `.env.docker` | Local PostgreSQL credentials and mock API demo values |
+`.env` is the only environment file: it is what `npm run dev` reads. For a
+reverse proxy that exposes the backend under `/api`, use
+`VITE_API_BASE_URL=/api` — that is a proxy prefix, not a backend route prefix.
 
 Environment values are read at startup/build time. Restart the Vite server
 after changing them.
-
-### Local PostgreSQL and mock API settings
-
-The defaults in `.env.docker` are:
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `LOCAL_DB_PORT` | `5432` | PostgreSQL port exposed on the host |
-| `LOCAL_DB_NAME` | `admin_web` | Local database name |
-| `LOCAL_DB_USER` | `admin_web` | Local database user |
-| `LOCAL_DB_PASSWORD` | `admin_web` | Local database password |
-| `VITE_DEMO_LOGIN_CODE` | `123456` | Local login code |
-| `VITE_DEMO_ADMIN_TOKEN` | `dev-admin-token` | Stable local token for the primary demo administrator |
-
-These values are development conveniences, not production secrets. Production
-credentials and tokens must be provided through the deployment environment and
-must not be committed.
 
 ## Project Structure
 
@@ -219,11 +171,14 @@ src/
 ├── domain/       Shared domain types and moderation rules
 ├── features/     Feature-owned pages, components, hooks, and tests
 │   ├── activity-logs/
+│   ├── answers/
 │   ├── audit-logs/
 │   ├── auth/
+│   ├── catalog/
 │   ├── comments/
 │   ├── dashboard/
 │   ├── feedback/
+│   ├── moderation/   Content and report screens shared by comments and answers
 │   ├── system-status/
 │   └── users/
 ├── hooks/        Reusable hooks without feature ownership
@@ -236,32 +191,12 @@ Each feature keeps its page, feature-specific components, hooks, and tests
 together. Shared code is moved to a top-level folder only when more than one
 feature owns the same responsibility.
 
-The local API follows a similar separation:
-
-```text
-scripts/mock-api/
-├── routes/            Endpoint-specific request handlers
-├── server.mjs         HTTP server entry point
-├── router.mjs         Top-level route dispatch and error boundary
-├── http.mjs           Request parsing and response helpers
-├── auth-session.mjs   Authentication and admin authorization
-├── db.mjs             PostgreSQL connection and transactions
-├── mappers.mjs        Database-to-API response mapping
-├── audit.mjs          Audit event definitions and writes
-├── audit-query.mjs    Audit filtering and cursor pagination
-├── audit-cursor.mjs   Opaque cursor encoding and validation
-├── schema.mjs         Database schema
-├── fixtures.mjs       Demo records
-├── seed-data.mjs      Fixture persistence
-└── seed.mjs           Database initialization and reseeding orchestration
-```
-
 ## Authentication and Authorization
 
-The local login flow has two steps:
+Signing in has two steps:
 
-1. `POST /auth/request-login` validates a KIT student email and creates a demo
-   login code.
+1. `POST /auth/request-login` validates a KIT student email and emails a
+   six-character login code.
 2. `POST /auth/login` exchanges the email and code for an `authToken`.
 
 The frontend stores the authenticated session locally and the shared API client
@@ -271,19 +206,28 @@ sends the token on protected requests:
 Authorization: Bearer <authToken>
 ```
 
-The browser route guard prevents anonymous access to admin pages. The API
-independently validates the token and requires the associated user to have the
-`ADMIN` role. Client-side protection improves the user experience, while the
-server-side check is the actual authorization boundary.
+### Who may sign in
 
-The demo login must use one of the seeded administrator accounts. A valid
-`@student.kit.edu` address that is not an administrator can authenticate, but
-cannot access protected admin endpoints.
+The panel is limited to the admin team. `src/utils/adminAccess.ts` holds those
+addresses, and the login form checks the address **before** requesting a code:
+an address outside the list is answered with "You do not have access to this
+panel" and no code is ever sent. The check runs again before the code is
+exchanged, because the address can be edited between the two steps.
+
+To add or remove an administrator, edit that list and the backend's
+`ADMIN_BOOTSTRAP_EMAILS` together — the frontend decides who is offered a code,
+the backend decides who is actually authorized.
+
+This client-side gate is a usability boundary, not a security one. The backend
+independently validates the token and requires an `admins` row for every
+protected endpoint; a valid non-admin token is answered with `403` regardless
+of what the frontend does.
 
 ## API Reference
 
 Unless stated otherwise, endpoints require an authenticated administrator
-token.
+token. The backend repository's `docs/admin-api.md` is the authoritative
+contract; this table is the subset the panel calls.
 
 ### Health
 
@@ -298,7 +242,7 @@ token.
 | `POST` | `/auth/request-login` | Request a login code for `{ "email": "..." }` | No |
 | `POST` | `/auth/login` | Exchange `{ "email": "...", "loginToken": "..." }` for an `authToken` | No |
 | `POST` | `/auth/logout` | Revoke the current token | Admin |
-| `GET` | `/auth/me` | Inspect the current session | Optional |
+| `GET` | `/auth/me` | Inspect the current session | Any |
 
 ### Users
 
@@ -306,74 +250,126 @@ token.
 | --- | --- | --- |
 | `GET` | `/users` | List users and moderation statistics |
 | `GET` | `/users/:id` | Get one user profile |
-| `DELETE` | `/users/:id` | Delete one user |
+| `PATCH` | `/users/:id` | Edit any subset of `username`, `kitEmail`, `biography`, `status`, `role`, `credibilityScore` |
+| `DELETE` | `/users/:id` | Soft-delete and anonymize one user |
 | `PATCH` | `/users/:id/block` | Set user status to `BLOCKED` |
 | `PATCH` | `/users/:id/unblock` | Set user status to `ACTIVE` |
 | `GET` | `/users/:id/warnings` | Get warning history |
 | `POST` | `/users/:id/warnings` | Create a warning with `{ "message": "..." }` |
+| `PATCH` | `/users/:id/warnings/:warningId` | Correct a warning's text |
+| `DELETE` | `/users/:id/warnings/:warningId` | Withdraw a warning |
 
-### Reported comments
+Changing `kitEmail` revokes the account's sessions, and demoting an admin
+revokes them too. Self and other admin accounts cannot be blocked, unblocked,
+warned or deleted, so the panel does not offer those buttons for them.
+
+> The warning history does not yet return each warning's `id`. Until it does,
+> the panel hides the correct/withdraw controls rather than offering an action
+> it cannot address — the calls are implemented and light up as soon as the
+> field appears.
+
+### Comments and answers
 
 | Method | Path | Description |
 | --- | --- | --- |
+| `GET` | `/comments` | List every comment with author, answer and report counts |
+| `PATCH` | `/comments/:id` | Edit `content`, `status` (`VISIBLE`/`HIDDEN`), or both |
+| `DELETE` | `/comments/:id` | Delete the comment and the thread under it |
 | `GET` | `/comments/reported` | List reported comments |
 | `PATCH` | `/comments/reported/:id` | Update `{ "status": "..." }` |
+| `DELETE` | `/comments/reported/:id` | Withdraw the report, leaving the comment alone |
+| `GET` | `/answers` | List every answer with its parent thread |
+| `PATCH` | `/answers/:id` | Edit `content`, `status`, or both |
+| `DELETE` | `/answers/:id` | Delete the answer |
+| `GET` | `/answers/reported` | List reported answers |
+| `PATCH` | `/answers/reported/:id` | Update `{ "status": "..." }` |
+| `DELETE` | `/answers/reported/:id` | Withdraw the report |
 
-Supported statuses are `OPEN`, `REVIEWED`, `DISMISSED`, and `ACTION_TAKEN`.
+Report statuses are `OPEN`, `REVIEWED`, `DISMISSED`, and `ACTION_TAKEN`.
+`ACTION_TAKEN` is the only status that means the content was moderated, so it
+is the only one that hides it; any other status puts it back. Hiding keeps the
+content in the database — deleting does not.
+
+### Catalogue
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/data/lectures` | List lectures with their professors and counts |
+| `PATCH` | `/data/lectures/:id` | Edit `name`, `code`, `semesterYear`, `semesterSeason`, `active`, `lectureType`, `professorIds` |
+| `DELETE` | `/data/lectures/:id` | Delete the lecture with its comments, answers and ratings |
+| `GET` | `/data/professor` | List professors with their average rating |
+| `PATCH` | `/data/professor/:id` | Edit `firstName`, `lastName`, `active`, `lectureIds` |
+| `DELETE` | `/data/professor/:id` | Delete the professor; the lectures stay |
+
+`professorIds` and `lectureIds` replace an assignment wholesale — send `[]` to
+clear it. The catalogue reads do not report a lecture's `lectureType` or a
+professor's `active` flag, so the panel sends those only when explicitly
+picked and leaves them untouched otherwise.
+
+### Ratings
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `DELETE` | `/ratings/:id` | Delete one rating |
+
+A rating is someone's actual opinion, so it can be removed but not edited.
+There is no panel screen for this yet: the backend has no admin listing of
+individual ratings, so there is nothing to take an id from. `RatingsService`
+implements the call for when one exists.
 
 ### Bug reports
 
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/reports` | List bug reports |
-| `PATCH` | `/reports/:id` | Update `status`, `severity`, or both |
+| `PATCH` | `/reports/:id` | Update any of `status`, `severity`, `title`, `description` |
+| `DELETE` | `/reports/:id` | Delete a bug report |
 
 Supported severities are `LOW`, `MEDIUM`, `HIGH`, and `CRITICAL`. Bug report
-statuses use the same values as reported comments.
+statuses use the same values as content reports.
 
-### Audit logs
+### Audit logs and activity log
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/audit-logs` | Get a filtered, cursor-paginated audit history |
-| `GET` | `/audit-logs/meta` | Get available actors, actions, and target types |
+| `GET` | `/audit-logs` | Filtered, cursor-paginated administrative history |
+| `GET` | `/audit-logs/meta` | Actors, actions, target types and actor types for that log |
+| `GET` | `/activity-logs` | The same for student activity and refused requests |
+| `GET` | `/activity-logs/meta` | Filter vocabulary for that log |
 
-`GET /audit-logs` accepts:
+Both endpoints read the same table and take the same parameters, differing only
+in which actions they serve and whether the array is called `auditLogs` or
+`activityLogs`:
 
 | Query parameter | Meaning |
 | --- | --- |
-| `limit` | Number of records to return; the frontend requests 50 |
+| `limit` | Number of records to return (1–100); the frontend requests 50 |
 | `cursor` | Opaque cursor returned by the previous page |
 | `q` | Search actor name/email or target label |
-| `actorId` | Filter by administrator |
-| `action` | Filter by action type |
+| `actorId` | Filter by actor |
+| `actorType` | `ADMIN` or `USER` |
+| `action` | Filter by action |
 | `targetType` | Filter by target type |
 | `from` | Inclusive ISO date/time lower bound |
 | `to` | Inclusive ISO date/time upper bound |
 
-### Activity log
-
-| Method | Path | Description |
-| --- | --- | --- |
-| `GET` | `/activity-logs` | Get a filtered, cursor-paginated history of what everyone did |
-| `GET` | `/activity-logs/meta` | Get available actors, activity types, target types, and outcomes |
-
-`GET /activity-logs` takes the same parameters as the audit history, except
-that `action` becomes `type` and an `outcome` filter is added
-(`SUCCESS`, `FAILURE`, or `DENIED`). Unlike audit actions, activity types are an
-open set: the filter dropdown is built from the metadata endpoint so a new
-backend type appears without a frontend release.
+The filter dropdowns are built from the metadata endpoints, so an action added
+by the backend appears without a frontend release. `actors` is capped rather
+than exhaustive — every account that ever signed in is an actor in the activity
+log — so `q` is what finds someone beyond the cap.
 
 ### System status
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/system/status` | Get backend health, live record counts, and last write timestamps |
+| `GET` | `/system/status` | Backend health, live record counts, and the newest audit event |
 
-The response reports `status` (`OK`, `DEGRADED`, or `DOWN`), a measured
-database round trip, live counters, and the last successful write time per
-administrative action. The counters are what confirm an action reached the
-database: block a user, refresh, and watch `blockedUsers` increase.
+The endpoint answers `200` whenever the API is serving and reports a failing
+database in `status` (`OK`, `DEGRADED`, or `DOWN`) instead — a page that has to
+show "the API is up but the database is not" cannot do that if the request
+itself fails. `counts` and `lastWrite` are `null` unless the database answered.
+The counters are what confirm an action reached the database: block a user,
+refresh, and watch the count move.
 
 ## Audit Log Design
 
@@ -407,16 +403,18 @@ they did, **which record** they affected, and **what changed**.
 }
 ```
 
-Supported actions:
+One table holds both logs, split by the scope an action belongs to.
+`/audit-logs` serves what admins did through the panel — sign-in and sign-out,
+user edits, warnings, blocks and deletions, content and report moderation,
+bug report changes, and catalogue edits. `/activity-logs` serves what students
+did in the app (`USER_LOGIN`, `COMMENT_CREATED`, `RATING_SUBMITTED`, …) plus
+the two refusals, `LOGIN_REFUSED` and `ACCESS_REFUSED`. The split is by action
+rather than by actor, so a refused admin login sits next to every other
+refusal. `src/domain/auditLog.ts` holds both vocabularies.
 
-- `ADMIN_LOGIN`
-- `ADMIN_LOGOUT`
-- `USER_WARNING_CREATED`
-- `USER_BLOCKED`
-- `USER_UNBLOCKED`
-- `USER_DELETED`
-- `COMMENT_REPORT_STATUS_CHANGED`
-- `BUG_REPORT_UPDATED`
+For student activity, `changes` is empty — nothing existing was modified — and
+`metadata` carries the detail, such as the first 120 characters of the
+submitted text.
 
 Audit entries contain snapshots of their actor and target labels. They
 therefore remain understandable even if the original user or report is later
@@ -436,8 +434,8 @@ This project uses `React.lazy`, dynamic `import()`, and `Suspense` at route
 boundaries:
 
 - The login and authenticated application layout are separate chunks.
-- Dashboard, Users, Reported Comments, Bug Reports, Audit Logs, Activity Log,
-  and System Status are separate page chunks.
+- Dashboard, Users, Comments, Answers, Catalogue, Bug Reports, Audit Logs,
+  Activity Log, and System Status are separate page chunks.
 - `PageLoader` provides feedback while a requested chunk is loading.
 
 As a result, the initial production bundle contains only the application shell
@@ -462,13 +460,13 @@ The checks cover:
 
 - ESLint rules and React hook usage.
 - TypeScript compilation.
-- Unit tests for utilities, domain rules, API services, hooks, authentication,
-  and audit queries.
+- Unit tests for utilities, domain rules, API services, hooks, and
+  authentication.
 - Integration tests for routing and the main feature pages.
 - A production build, including Vite's route chunk generation.
 
-Tests use controlled HTTP responses and do not require the Docker stack unless
-the test explicitly exercises the live local API.
+Tests stub `fetch` with controlled HTTP responses, so the suite runs without a
+backend.
 
 ## Available Commands
 
@@ -476,22 +474,9 @@ the test explicitly exercises the live local API.
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start Vite using the default environment |
-| `npm run dev:local` | Start Vite against the local mock API |
+| `npm run dev` | Start Vite using `.env` |
 | `npm run build` | Type-check and create the production bundle |
 | `npm run preview` | Preview the built `dist/` directory |
-
-### Local database and mock API
-
-| Command | Description |
-| --- | --- |
-| `npm run db:up` | Start the local PostgreSQL container |
-| `npm run db:down` | Stop the local PostgreSQL container |
-| `npm run db:logs` | Follow PostgreSQL logs |
-| `npm run mock:api` | Run the mock API directly with Node |
-| `npm run mock:up` | Start PostgreSQL, then the mock API |
-| `npm run mock:seed` | Seed the local database with demo data |
-| `npm run mock:reset` | Start PostgreSQL and reseed demo data |
 
 ### Quality
 
@@ -503,18 +488,6 @@ the test explicitly exercises the live local API.
 | `npm test` | Run all tests once |
 | `npm run test:unit` | Run unit tests only |
 | `npm run test:integration` | Run integration tests only |
-
-### Mock API and database
-
-| Command | Description |
-| --- | --- |
-| `npm run mock:up` | Start PostgreSQL, then run the mock API |
-| `npm run mock:api` | Run only the mock API |
-| `npm run mock:seed` | Initialize or reseed the database |
-| `npm run mock:reset` | Start PostgreSQL and reseed the database |
-| `npm run db:up` | Start only PostgreSQL |
-| `npm run db:down` | Stop only PostgreSQL |
-| `npm run db:logs` | Follow PostgreSQL logs |
 
 ## Production Build
 
@@ -536,16 +509,12 @@ changed afterwards without rebuilding:
 
 | Variable | Meaning | Default |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | Backend the panel calls | `http://localhost:8080` |
+| `VITE_API_BASE_URL` | Backend the panel calls | `/api` |
 | `VITE_BASE_PATH` | URL path the panel is served from | `/admin/` for builds, `/` for the dev server |
 
-The repository's multi-stage `Dockerfile` provides three runtime targets:
-
-- `api` runs the local mock API.
-- `web` serves the compiled frontend at the root and proxies `/api/` to the
-  mock API. It is part of the local demo stack and expects that service.
-- `web-prod` serves the compiled frontend under `VITE_BASE_PATH` with no
-  upstream dependency. This is the deployable image.
+The repository's multi-stage `Dockerfile` builds one runtime target,
+`web-prod`: the compiled frontend served under `VITE_BASE_PATH` with no
+upstream dependency. This is the deployable image.
 
 ### Deploying the production image
 
@@ -596,45 +565,45 @@ contract documented above.
 
 ## Troubleshooting
 
-### A port is already in use
-
-Change `LOCAL_DB_PORT` in `.env.docker`, then restart PostgreSQL with
-`npm run db:down && npm run db:up`. The mock API's port is `MOCK_API_PORT`
-(defaults to `8080`, set as an environment variable when running
-`npm run mock:api`).
-
 ### The frontend cannot reach the API
 
-Check the API health endpoint:
+Check the backend's health endpoint:
 
 ```bash
-curl http://localhost:8080/health
+curl <api base>/health
 ```
 
-For hot-reload development, use `npm run dev:local`. If
-`VITE_API_BASE_URL` was changed while Vite was running, restart the development
-server.
+If `VITE_API_BASE_URL` was changed while Vite was running, restart the
+development server — the value is read at startup.
+
+### `403 Invalid CORS request` when requesting a login code
+
+The backend answers this before the request reaches a controller when the
+panel's origin is not in its `ADMIN_FRONTEND_ORIGINS`. The origin has to be
+listed even when the panel and the API share a host, because the browser sends
+`Origin` on every non-`GET` request. Confirm with:
+
+```bash
+curl -i -X POST -H "Origin: <panel origin>" -H "Content-Type: application/json"   -d '{"email":"nobody@example.invalid"}' <api base>/auth/request-login
+```
+
+`400 Invalid KIT email` means the origin is accepted. `403 Invalid CORS
+request` means it is not.
+
+### "You do not have access to this panel"
+
+The address is not in the admin list in `src/utils/adminAccess.ts`, so no code
+was requested. Add it there and to the backend's `ADMIN_BOOTSTRAP_EMAILS`.
 
 ### Login succeeds but admin requests return `403`
 
-Only seeded administrator accounts can access protected endpoints. Use the
-documented demo account when evaluating the local stack.
+The account authenticated but has no `admins` row on the backend. Admin
+membership comes from that table, not from the frontend — check
+`ADMIN_BOOTSTRAP_EMAILS` and sign in again so the account is provisioned.
 
-### Demo data is missing or was modified
+### The login code never arrives
 
-Restore the fixtures:
-
-```bash
-npm run mock:reset
-```
-
-### PostgreSQL is unhealthy
-
-Inspect its logs:
-
-```bash
-npm run db:logs
-```
-
-The mock API waits for PostgreSQL to become healthy before serving requests,
-so a failing `mock:up` usually traces back to the database container.
+Codes are delivered over SMTP by the backend and are never returned in a
+response or written to a log. Check the backend's SMTP configuration and its
+rate limits: requests default to 3 per email and 20 per source IP per 15
+minutes, after which the endpoint answers `429` with `Retry-After`.

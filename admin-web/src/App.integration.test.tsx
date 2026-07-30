@@ -38,7 +38,7 @@ vi.mock('./api/AuditLogsService', () => ({
 const adminAccount: User = {
   id: 'admin-1',
   username: 'Admin User',
-  kitEmail: 'admin@student.kit.edu',
+  kitEmail: 'u-kisi5@student.kit.edu',
   role: 'ADMIN',
   status: 'ACTIVE',
   joined: '2025-01-10',
@@ -145,6 +145,32 @@ describe('App routing and authentication', () => {
     expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
     expect(localStorage.getItem('token')).toBe('mock-token-1')
     expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(adminUser)
+  })
+
+  it('refuses an address outside the admin team without sending a code', async () => {
+    const user = userEvent.setup()
+    window.history.pushState({}, '', '/login')
+
+    render(<App />)
+
+    await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), 'someone@student.kit.edu')
+    await user.click(screen.getByRole('button', { name: 'Send me a code' }))
+
+    expect(await screen.findByText(
+      'You do not have access to this panel. It is limited to the admin team, so no login code was sent.'
+    )).toBeInTheDocument()
+    expect(authService.requestLoginCode).not.toHaveBeenCalled()
+    expect(screen.queryByPlaceholderText('Code from your email')).not.toBeInTheDocument()
+  })
+
+  it('greets the signed-in admin by name', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(adminUser))
+    window.history.pushState({}, '', '/dashboard')
+
+    render(<App />)
+
+    expect(await screen.findByText(`Welcome back, ${adminUser.name}`)).toBeInTheDocument()
   })
 
   it('logs in the required admin email as admin even when the backend user role is student', async () => {

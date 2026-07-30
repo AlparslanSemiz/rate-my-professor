@@ -1,6 +1,5 @@
 import { apiClient } from '../api/ApiClient'
 import type { AuthUser } from './AuthContextValue'
-import { getDemoAdminTokenForEmail } from '../utils/demoAuth'
 
 const TOKEN_STORAGE_KEY = 'token'
 const USER_STORAGE_KEY = 'user'
@@ -55,13 +54,8 @@ export function readStoredSession(): AuthState {
       return EMPTY_AUTH_STATE
     }
 
-    const demoToken = getDemoAdminTokenForEmail(user.email)
-    const activeToken = demoToken ?? token
-    if (demoToken && demoToken !== token) {
-      localStorage.setItem(TOKEN_STORAGE_KEY, demoToken)
-    }
-    apiClient.setToken(activeToken)
-    return { token: activeToken, user }
+    apiClient.setToken(token)
+    return { token, user }
   } catch {
     clearStoredSession()
     return EMPTY_AUTH_STATE

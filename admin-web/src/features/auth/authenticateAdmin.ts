@@ -4,14 +4,18 @@ import { usersService, type User } from '../../api/UsersService'
 import {
   getRequiredAdminUser,
   hasAdminAccess,
+  isRequiredAdminEmail,
   normalizeEmail,
   withRequiredAdminRole,
 } from '../../utils/adminAccess'
-import { getDemoAdminTokenForEmail, isDemoLoginCode } from '../../utils/demoAuth'
 import { getErrorMessage } from '../../utils/getErrorMessage'
 
 const LOGIN_ERROR_FALLBACK = 'Login failed'
 export const ADMIN_ACCESS_ERROR = 'Login succeeded, but this account is not authorized for the admin panel.'
+
+/** Shown to an address that is not on the admin list, before any code is requested. */
+export const NOT_AN_ADMIN_ERROR =
+  'You do not have access to this panel. It is limited to the admin team, so no login code was sent.'
 
 function findUserByEmail(users: User[], email: string) {
   const normalizedEmail = normalizeEmail(email)
@@ -58,13 +62,12 @@ export function getLoginErrorMessage(error: unknown) {
 }
 
 export async function authenticateAdmin(email: string, code: string): Promise<{ token: string; user: AuthUser }> {
-  const demoToken = getDemoAdminTokenForEmail(email)
-  if (demoToken && !isDemoLoginCode(code)) {
-    throw new Error('Invalid token')
+  // Checked again here, not only before the code was requested: the address can be edited
+  // between the two steps, and `/auth/login` serves students as well.
+  if (!isRequiredAdminEmail(email)) {
+    throw new Error(NOT_AN_ADMIN_ERROR)
   }
 
-  // Even the local demo completes the backend exchange so successful admin
-  // logins are recorded and the server remains the source of session truth.
   const { token } = await authService.login(email, code)
 
   apiClient.setToken(token)

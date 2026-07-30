@@ -4,9 +4,13 @@ import { apiClient } from '../../../api/ApiClient'
 import { authService } from '../../../api/AuthService'
 import { routes } from '../../../constants/routes'
 import { useAuth } from '../../../context/useAuth'
-import { getDemoAdminTokenForEmail } from '../../../utils/demoAuth'
+import { isRequiredAdminEmail } from '../../../utils/adminAccess'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
-import { authenticateAdmin, getLoginErrorMessage } from '../authenticateAdmin'
+import {
+  authenticateAdmin,
+  getLoginErrorMessage,
+  NOT_AN_ADMIN_ERROR,
+} from '../authenticateAdmin'
 
 export type LoginStep = 'email' | 'code'
 
@@ -25,14 +29,19 @@ export function useLoginFlow() {
     const trimmedEmail = email.trim()
     if (!trimmedEmail) return
 
+    // Checked before the request is made, so an address outside the team never causes a login
+    // code to be sent. The backend is still what actually authorizes anything.
+    if (!isRequiredAdminEmail(trimmedEmail)) {
+      setEmail(trimmedEmail)
+      setError(NOT_AN_ADMIN_ERROR)
+      return
+    }
+
     setError('')
     setLoading(true)
     try {
-      const demoToken = getDemoAdminTokenForEmail(trimmedEmail)
-      if (!demoToken) {
-        const response = await authService.requestLoginCode(trimmedEmail)
-        if (!response.success) throw new Error(response.message)
-      }
+      const response = await authService.requestLoginCode(trimmedEmail)
+      if (!response.success) throw new Error(response.message)
       setEmail(trimmedEmail)
       setStep('code')
     } catch (requestError: unknown) {
