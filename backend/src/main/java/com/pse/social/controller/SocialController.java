@@ -108,7 +108,12 @@ public class SocialController {
 
     }
 
+    //Returns both Comments *AND* answers
+    @GetMapping("/sync/comments")
+    public CommentsResponse getComments(){
 
+        return socialService.getAllComments();
+    }
 
 
 
