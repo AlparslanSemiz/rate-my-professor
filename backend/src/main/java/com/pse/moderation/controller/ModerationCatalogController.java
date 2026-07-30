@@ -1,12 +1,17 @@
 package com.pse.moderation.controller;
 
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.lecture.dto.response.LecturesResponse;
+import com.pse.lecture.service.LectureService;
 import com.pse.moderation.dto.request.LectureUpdateRequest;
 import com.pse.moderation.dto.request.ProfessorUpdateRequest;
 import com.pse.moderation.service.ModerationCatalogService;
+import com.pse.professor.dto.response.ProfessorsResponse;
+import com.pse.professor.service.ProfessorService;
 import com.pse.security.AuthenticatedUser;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,15 +23,38 @@ import java.util.UUID;
 /**
  * Shares the {@code /data} base path with the public catalogue reads. The reads stay
  * public; these writes are admin-only, separated by method in the security rules.
+ *
+ * <p>{@code /lectures/all} and {@code /professor/all} are the exception: the public reads
+ * filter to {@code active = true}, so a deactivated lecture or professor would otherwise
+ * be unreachable from the panel to correct or reactivate. They are admin-only, matched by
+ * path rather than method.
  */
 @RestController
 @RequestMapping("/data")
 public class ModerationCatalogController {
 
     private final ModerationCatalogService service;
+    private final LectureService lectureService;
+    private final ProfessorService professorService;
 
-    public ModerationCatalogController(ModerationCatalogService service) {
+    public ModerationCatalogController(
+            ModerationCatalogService service,
+            LectureService lectureService,
+            ProfessorService professorService
+    ) {
         this.service = service;
+        this.lectureService = lectureService;
+        this.professorService = professorService;
+    }
+
+    @GetMapping("/lectures/all")
+    public LecturesResponse getAllLectures() {
+        return lectureService.getAllLectures();
+    }
+
+    @GetMapping("/professor/all")
+    public ProfessorsResponse getAllProfessors() {
+        return professorService.getAllProfessors();
     }
 
     @PatchMapping("/lectures/{id}")

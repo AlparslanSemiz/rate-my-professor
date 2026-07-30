@@ -5,6 +5,7 @@ import java.util.UUID;
 public record ProfessorShortResponse(
         UUID id,
         String firstName,
-        String lastName
+        String lastName,
+        boolean active
 ) {
 }

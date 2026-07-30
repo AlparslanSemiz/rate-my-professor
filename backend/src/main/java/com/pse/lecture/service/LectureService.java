@@ -62,7 +62,8 @@ public class LectureService {
                     new ProfessorShortResponse(
                         professor.getId(),
                         professor.getFirstName(),
-                        professor.getLastName()
+                        professor.getLastName(),
+                        professor.isActive()
                     )
                 );
             }
@@ -75,6 +76,52 @@ public class LectureService {
                             lecture.getSemesterYear(),
                             lecture.getSemesterSeason(),
                             lecture.isActive(),
+                            lecture.getLectureType(),
+                            professorResponses,
+                            lecture.getComments().size(),
+                            lecture.getRatings().size()
+                    )
+            );
+        }
+
+        return new LecturesResponse("Found " + responses.size() + " lectures", true, responses);
+    }
+
+
+    // For the admin panel: getLectures() filters to active=true, the same as the
+    // student app's catalogue read, so a deactivated lecture would otherwise be
+    // unreachable from the panel to correct or reactivate.
+    @Transactional(readOnly = true)
+    public LecturesResponse getAllLectures() {
+
+        List<Lecture> lectures = lectureRepository.findAllByOrderByNameAsc();
+
+        List<LectureResponse> responses = new ArrayList<>();
+
+        for (Lecture lecture : lectures) {
+
+            List<ProfessorShortResponse> professorResponses = new ArrayList<>();
+
+            for (Professor professor : lecture.getProfessors()) {
+                professorResponses.add(
+                    new ProfessorShortResponse(
+                        professor.getId(),
+                        professor.getFirstName(),
+                        professor.getLastName(),
+                        professor.isActive()
+                    )
+                );
+            }
+
+            responses.add(
+                    new LectureResponse(
+                            lecture.getId(),
+                            lecture.getName(),
+                            lecture.getCode(),
+                            lecture.getSemesterYear(),
+                            lecture.getSemesterSeason(),
+                            lecture.isActive(),
+                            lecture.getLectureType(),
                             professorResponses,
                             lecture.getComments().size(),
                             lecture.getRatings().size()
@@ -103,7 +150,8 @@ public class LectureService {
                     new ProfessorShortResponse(
                         professor.getId(),
                         professor.getFirstName(),
-                        professor.getLastName()
+                        professor.getLastName(),
+                        professor.isActive()
                     )
                 );
             }
@@ -116,6 +164,7 @@ public class LectureService {
                 lecture.getSemesterYear(),
                 lecture.getSemesterSeason(),
                 lecture.isActive(),
+                lecture.getLectureType(),
                 professorResponses,
                 lecture.getComments().size(),
                 lecture.getRatings().size()

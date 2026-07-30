@@ -201,6 +201,46 @@ warning addressed under the wrong student is `404`.
 }
 ```
 
+## Comments
+
+`GET /comments` returns every comment, not only reported ones — this is what the panel
+edits or removes content from independent of any report:
+
+```json
+{
+  "message":"Successfully found all comments",
+  "success":true,
+  "comments":[{
+    "id":"comment-uuid",
+    "content":"Comment text",
+    "status":"VISIBLE",
+    "author":{"id":"uuid","name":"Student","role":"STUDENT","warnings":0,"status":"ACTIVE"},
+    "postContext":"CS101 — Algorithms",
+    "lectureId":"lecture-uuid",
+    "answers":2,
+    "reports":0,
+    "createdAt":"2026-07-23T10:00:00.000Z"
+  }]
+}
+```
+
+`PATCH /comments/{id}` accepts any subset of `{"content","status"}`, at least one
+required:
+
+```json
+{"content":"Corrected text","status":"HIDDEN"}
+```
+
+`content` is trimmed and 1–10000 characters. `status` is `VISIBLE`, `HIDDEN`, or
+`DELETED`; `HIDDEN` is what the student app's read path filters out, independent of
+whether a report exists. Returns `{"message":"Updated comment successfully","success":true}`;
+an unchanged request is a no-op with no audit event.
+
+`DELETE /comments/{id}` is a real delete, not a hide — it removes the comment, its
+answers, votes and reports. Use `status = HIDDEN` to take content out of the student
+app while keeping its history. Returns
+`{"message":"Deleted comment successfully","success":true}`.
+
 ## Comment reports
 
 `GET /comments/reported` returns every report:
@@ -230,7 +270,169 @@ warning addressed under the wrong student is `404`.
 ```
 
 It returns `{"message":"Updated","success":true}`. An unchanged status is an
-audits-free no-op.
+audits-free no-op. Moving a report to `ACTION_TAKEN` hides the comment (and its
+answers, which nest under it in the student read path); moving it to any other status
+puts the comment back.
+
+`DELETE /comments/reported/{id}` withdraws the report record itself — the reported
+comment is untouched, since retracting a report that should not have been filed is not
+a judgement on the content. Returns `{"message":"Deleted report successfully","success":true}`.
+
+## Answers
+
+Mirrors comments in every respect, including `content`/`status` validation.
+
+`GET /answers` returns every answer:
+
+```json
+{
+  "message":"Successfully found all answers",
+  "success":true,
+  "answers":[{
+    "id":"answer-uuid",
+    "content":"Answer text",
+    "status":"VISIBLE",
+    "author":{"id":"uuid","name":"Student","role":"STUDENT","warnings":0,"status":"ACTIVE"},
+    "commentId":"comment-uuid",
+    "commentPreview":"First 120 characters of the parent comment…",
+    "postContext":"CS101 — Algorithms",
+    "reports":0,
+    "createdAt":"2026-07-23T10:00:00.000Z"
+  }]
+}
+```
+
+`PATCH /answers/{id}` body and behavior are identical to `PATCH /comments/{id}`, and
+returns `{"message":"Updated answer successfully","success":true}`.
+
+`DELETE /answers/{id}` deletes the answer and its votes/reports. Returns
+`{"message":"Deleted answer successfully","success":true}`.
+
+## Answer reports
+
+Mirrors comment reports for answers.
+
+`GET /answers/reported` returns every report:
+
+```json
+{
+  "message":"Success",
+  "success":true,
+  "answers":[{
+    "id":"report-uuid",
+    "answerContent":"Reported answer",
+    "commentContent":"The comment it answers",
+    "postContext":"CS101 — Algorithms",
+    "reportText":"",
+    "reportedUser":{"id":"uuid","name":"User","role":"STUDENT","warnings":0,"status":"ACTIVE"},
+    "reporter":{"id":"uuid","name":"Reporter","role":"STUDENT","warnings":0,"status":"ACTIVE"},
+    "reason":"HARASSMENT",
+    "status":"OPEN",
+    "date":"2026-07-23T10:00:00.000Z"
+  }]
+}
+```
+
+`PATCH /answers/reported/{id}` accepts `{"status":"<ReportStatus>"}` and
+`DELETE /answers/reported/{id}` withdraws the report — both behave exactly like the
+comment-report equivalents, hiding/restoring the answer on `ACTION_TAKEN` transitions.
+
+## Ratings
+
+`GET /ratings` returns every rating individually, not aggregated into a lecture
+average — this is what a bogus rating gets identified and deleted by id from:
+
+```json
+{
+  "message":"Successfully found all ratings",
+  "success":true,
+  "ratings":[{
+    "id":"rating-uuid",
+    "student":{"id":"uuid","name":"Student","role":"STUDENT","warnings":0,"status":"ACTIVE"},
+    "lectureLabel":"CS101 — Algorithms",
+    "lectureId":"lecture-uuid",
+    "topics":[{"category":"LECTURE_UNDERSTANDABILITY","value":4.5}],
+    "createdAt":"2026-07-23T10:00:00.000Z"
+  }]
+}
+```
+
+`category` is a `RatingCategory` (see `LectureType` below for which categories a given
+lecture offers); `value` is the score the student gave that category.
+
+`DELETE /ratings/{id}` discards the rating. Deliberately delete-only: rewriting
+someone's scores would put an opinion they never gave into the lecture average, so a
+bogus rating is removed rather than corrected. Returns
+`{"message":"Deleted rating successfully","success":true}`.
+
+## Catalogue: lectures and professors
+
+Lectures and professors are the catalogue the ratings are filed against. `GET`
+endpoints under `/data` are public and shared with the student app; writes
+(`POST`/`PATCH`/`DELETE`) are admin-only.
+
+`GET /data/lectures` and `GET /data/professor` — the public catalogue reads used by the
+student app — filter to `active = true`. **Once a lecture or professor is deactivated it
+disappears from both**, so the panel has no way back to it through those endpoints. Use
+the `/all` variants below instead when building the management view; they are
+admin-only and return every row regardless of `active`.
+
+| Method and path | Body | Notes |
+| --- | --- | --- |
+| `GET /data/lectures` | — | Public. Active lectures only. |
+| `GET /data/lectures/all` | — | Admin-only. Every lecture, active or not. |
+| `GET /data/lectures/{id}` | — | Public. `404`-shaped as `{"message":"...","success":false,"lecture":null}` rather than an HTTP 404 if not found. |
+| `POST /data/lectures` | `{"name","code","semesterYear","semesterSeason","active","professorIds"}` | Admin only in practice — checks the caller is an admin internally rather than through the security chain, and answers `200 {"success":false}` (not `403`) when the caller is not one. `active` is currently ignored; new lectures are always created active. `409`-shaped as `{"success":false}` on a duplicate name, not an HTTP `409`. |
+| `PATCH /data/lectures/{id}` | any subset of `{"name","code","semesterYear","semesterSeason","active","lectureType","professorIds"}` | `LECTURE_UPDATED` audit event. |
+| `DELETE /data/lectures/{id}` | none | Deletes the lecture and every comment, answer and rating filed under it. Use `active = false` instead to take a lecture out of the app while keeping its history. `LECTURE_DELETED` audit event. |
+| `GET /data/professor` | — | Public. Active professors only. |
+| `GET /data/professor/all` | — | Admin-only. Every professor, active or not. |
+| `GET /data/professor/{id}` | — | Public. |
+| `GET /data/professor/id?firstName=&lastName=` | — | Public. Returns a bare UUID string, or `null` if no match — not wrapped in a response object. |
+| `POST /data/professor` | `{"firstName","lastName","lectureIDs"}` | Same non-standard auth/error shape as `POST /data/lectures`. |
+| `PATCH /data/professor/{id}` | any subset of `{"firstName","lastName","active","lectureIds"}` | `PROFESSOR_UPDATED` audit event. |
+| `DELETE /data/professor/{id}` | none | Detaches the professor from every lecture; the lectures themselves survive. `PROFESSOR_DELETED` audit event. |
+
+`LectureResponse` (returned by the lecture reads, and nested in `LectureDetailResponse`
+as `lecture`):
+
+```json
+{
+  "id":"lecture-uuid",
+  "name":"Algorithms",
+  "code":"CS101",
+  "semesterYear":2026,
+  "semesterSeason":"WINTER",
+  "active":true,
+  "lectureType":"LECTURE_AND_EXERCISE",
+  "professors":[{"id":"prof-uuid","firstName":"Jane","lastName":"Doe","active":true}],
+  "commentCount":3,
+  "ratingCount":12
+}
+```
+
+`lectureType` is `LECTURE_ONLY` or `LECTURE_AND_EXERCISE`; it decides which
+`RatingCategory` values the lecture offers on `GET /ratings`. Changing it does not
+rewrite ratings already submitted — they keep the categories they were given.
+
+`ProfessorResponse` (returned by the professor reads, and nested in
+`ProfessorDetailResponse` as `professor`):
+
+```json
+{
+  "id":"prof-uuid",
+  "firstName":"Jane",
+  "lastName":"Doe",
+  "active":true,
+  "averageRating":4.2,
+  "ratingCount":12
+}
+```
+
+`PATCH /data/lectures/{id}` and `PATCH /data/professor/{id}` validate names and years
+the same way `PATCH /users/{id}` validates a username: trimmed, non-empty,
+length-capped, `400` on violation. `professorIds`/`lectureIds` replace the assignment
+wholesale — pass `[]` to clear it — and a `404` if any id in the list does not resolve.
 
 ## Bug reports
 
@@ -252,15 +454,22 @@ audits-free no-op.
 }
 ```
 
-`PATCH /reports/{id}` requires at least one of `status` or `severity`:
+`PATCH /reports/{id}` accepts any subset of `{"status","severity","title","description"}`,
+at least one required:
 
 ```json
 {"status":"ACTION_TAKEN","severity":"HIGH"}
 ```
 
-Only changed fields are persisted. A request changing both fields creates one
-`BUG_REPORT_UPDATED` event. `POST /reports` remains the legacy authenticated-student
-submission endpoint.
+Only changed fields are persisted. A request changing several fields creates one
+`BUG_REPORT_UPDATED` event. `title` and `description` are trimmed and length-capped
+(500 and 10000 characters) the same way a comment's content is.
+
+`DELETE /reports/{id}` discards the report — a duplicate, or one filed by mistake.
+Returns `{"message":"Deleted bug report successfully","success":true}` and a
+`BUG_REPORT_DELETED` audit event.
+
+`POST /reports` remains the legacy authenticated-student submission endpoint.
 
 ## Audit
 
@@ -292,15 +501,21 @@ snapshotted actor name/email and target label case-insensitively.
 `GET /audit-logs/meta` returns actor snapshots plus these enums:
 
 - Actor types: `ADMIN`, `USER`
-- Administrative actions: `ADMIN_LOGIN`, `ADMIN_LOGOUT`, `USER_WARNING_CREATED`,
-  `USER_BLOCKED`, `USER_UNBLOCKED`, `USER_DELETED`,
-  `COMMENT_REPORT_STATUS_CHANGED`, `BUG_REPORT_UPDATED`
+- Administrative actions: `ADMIN_LOGIN`, `ADMIN_LOGOUT`, `USER_UPDATED`,
+  `USER_WARNING_CREATED`, `USER_WARNING_UPDATED`, `USER_WARNING_DELETED`,
+  `USER_BLOCKED`, `USER_UNBLOCKED`, `USER_DELETED`, `COMMENT_UPDATED`,
+  `COMMENT_DELETED`, `ANSWER_UPDATED`, `ANSWER_DELETED`, `RATING_DELETED`,
+  `COMMENT_REPORT_STATUS_CHANGED`, `COMMENT_REPORT_DELETED`,
+  `ANSWER_REPORT_STATUS_CHANGED`, `ANSWER_REPORT_DELETED`, `BUG_REPORT_UPDATED`,
+  `BUG_REPORT_DELETED`, `LECTURE_UPDATED`, `LECTURE_DELETED`, `PROFESSOR_UPDATED`,
+  `PROFESSOR_DELETED`
 - Student activity: `USER_LOGIN`, `USER_LOGOUT`, `COMMENT_CREATED`, `ANSWER_CREATED`,
   `RATING_SUBMITTED`, `COMMENT_REPORT_CREATED`, `ANSWER_REPORT_CREATED`,
   `BUG_REPORT_CREATED`
 - Refusals: `LOGIN_REFUSED`, `ACCESS_REFUSED`
-- Target types: `ADMIN_SESSION`, `USER_SESSION`, `USER`, `COMMENT`, `ANSWER`, `RATING`,
-  `COMMENT_REPORT`, `ANSWER_REPORT`, `BUG_REPORT`, `ENDPOINT`
+- Target types: `ADMIN_SESSION`, `USER_SESSION`, `USER`, `WARNING`, `COMMENT`,
+  `ANSWER`, `RATING`, `LECTURE`, `PROFESSOR`, `COMMENT_REPORT`, `ANSWER_REPORT`,
+  `BUG_REPORT`, `ENDPOINT`
 
 `actors` lists admin actors only. Every account that ever signed in appears in the log
 as a `USER` actor, so an exhaustive list of those is unbounded; filter students with `q`

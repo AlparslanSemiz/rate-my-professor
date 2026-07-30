@@ -45,6 +45,7 @@ public class SecurityConfig {
                                 "/comments/reported/**",
                                 "/answers",
                                 "/answers/reported/**",
+                                "/ratings",
                                 "/audit-logs/**",
                                 "/activity-logs/**",
                                 "/admins/**",
@@ -59,6 +60,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/ratings/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/data/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/data/**").hasRole("ADMIN")
+                        // Unlike the rest of /data, these two reads are admin-only: they are
+                        // the panel's only way back to a lecture or professor it deactivated,
+                        // since the public catalogue reads filter to active = true.
+                        .requestMatchers(HttpMethod.GET, "/data/lectures/all", "/data/professor/all")
+                        .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/reports", "/reports/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/reports/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/reports/**").hasRole("ADMIN")

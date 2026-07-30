@@ -13,5 +13,7 @@ public interface ProfessorRepository extends JpaRepository<Professor, UUID> {
 
     List<Professor> findByActiveTrueOrderByLastNameAscFirstNameAsc();
 
+    List<Professor> findAllByOrderByLastNameAscFirstNameAsc();
+
     Optional<Professor> findByFirstNameAndLastName(String firstName, String lastName);
 }

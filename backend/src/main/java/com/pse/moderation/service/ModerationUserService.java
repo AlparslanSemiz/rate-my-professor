@@ -613,6 +613,7 @@ public class ModerationUserService {
                         UtcDates.format(warning.getCreatedAt())
                 );
         return new WarningResponse(
+                warning.getId(),
                 warning.getStudent().getId(),
                 warning.getMessage(),
                 UtcDates.format(warning.getCreatedAt()),

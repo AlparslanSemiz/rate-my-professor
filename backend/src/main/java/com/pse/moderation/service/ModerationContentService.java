@@ -9,6 +9,9 @@ import com.pse.moderation.dto.response.ManagedAnswerResponse;
 import com.pse.moderation.dto.response.ManagedAnswersResponse;
 import com.pse.moderation.dto.response.ManagedCommentResponse;
 import com.pse.moderation.dto.response.ManagedCommentsResponse;
+import com.pse.moderation.dto.response.ManagedRatingResponse;
+import com.pse.moderation.dto.response.ManagedRatingTopicResponse;
+import com.pse.moderation.dto.response.ManagedRatingsResponse;
 import com.pse.moderation.dto.response.UserReferenceResponse;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.WarningRepository;
@@ -254,6 +257,31 @@ public class ModerationContentService {
                 Map.of()
         );
         return new BasicResponse("Deleted answer successfully", true);
+    }
+
+    @Transactional(readOnly = true)
+    public ManagedRatingsResponse getRatings() {
+        Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
+        Map<UUID, Integer> warningCounts = toCountMap(warningRepository.countGroupedByStudent());
+
+        List<ManagedRatingResponse> ratings = ratingRepository
+                .findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(rating -> new ManagedRatingResponse(
+                        rating.getId(),
+                        toUserReference(rating.getStudent(), adminIds, warningCounts),
+                        lectureLabel(rating.getLecture()),
+                        rating.getLecture().getId(),
+                        rating.getTopics().stream()
+                                .map(topic -> new ManagedRatingTopicResponse(
+                                        topic.getCategory(),
+                                        topic.getValue()
+                                ))
+                                .toList(),
+                        UtcDates.format(rating.getCreatedAt())
+                ))
+                .toList();
+        return new ManagedRatingsResponse("Successfully found all ratings", true, ratings);
     }
 
     /**

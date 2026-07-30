@@ -46,6 +46,34 @@ public class ProfessorService {
                             professor.getId(),
                             professor.getFirstName(),
                             professor.getLastName(),
+                            professor.isActive(),
+                            professor.getAverageRating(),
+                            professor.getRatingCount()
+                    )
+            );
+        }
+
+        return new ProfessorsResponse("Found" + responses.size() + " professors", true, responses);
+    }
+
+
+    // For the admin panel: getProfessors() filters to active=true, the same as the
+    // student app's catalogue read, so a deactivated professor would otherwise be
+    // unreachable from the panel to correct or reactivate.
+    public ProfessorsResponse getAllProfessors() {
+
+        List<Professor> professors = professorRepository.findAllByOrderByLastNameAscFirstNameAsc();
+
+        List<ProfessorResponse> responses = new ArrayList<>();
+
+        for (Professor professor : professors) {
+
+            responses.add(
+                    new ProfessorResponse(
+                            professor.getId(),
+                            professor.getFirstName(),
+                            professor.getLastName(),
+                            professor.isActive(),
                             professor.getAverageRating(),
                             professor.getRatingCount()
                     )
@@ -68,6 +96,7 @@ public class ProfessorService {
                 professor.getId(),
                 professor.getFirstName(),
                 professor.getLastName(),
+                professor.isActive(),
                 professor.getAverageRating(),
                 professor.getRatingCount()
         );
