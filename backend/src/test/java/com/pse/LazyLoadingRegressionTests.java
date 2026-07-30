@@ -35,6 +35,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -112,6 +113,19 @@ class LazyLoadingRegressionTests {
 
         mockMvc.perform(get("/ratings/" + lecture.getId()))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void syncCommentsEndpointSurvivesACommentWithAnAnswer() throws Exception {
+        Student student = createStudent("lazy-sync-comment@student.kit.edu");
+        Lecture lecture = createLecture(student);
+        Comment comment = createComment(student, lecture);
+        createAnswer(student, comment);
+
+        mockMvc.perform(get("/social/sync/comments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.comments[0].commentID").value(comment.getId().toString()));
     }
 
     @Test
