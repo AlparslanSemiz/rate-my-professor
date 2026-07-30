@@ -4,10 +4,13 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
 
+import com.example.myapplication_java.DomainModel.CommentModel;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
+
+import org.w3c.dom.Comment;
 
 import java.util.List;
 
@@ -133,4 +136,12 @@ public interface SearchService {
             "semesterYear = :semesterYear AND semesterSeason = :season")
     List<Lecture> getLecture(String professorId, String lectureTitle, int semesterYear, SemesterSeason season);
 
+    @Query("UPDATE lectures SET professorId = '748d6383-5dd6-42f1-a797-77f304beb3fb' WHERE id = 'bd9dd15d-bc13-4630-a2d1-ac76f542124d'")
+    void fillMissingData();
+
+    @Insert
+    void insertComment(CommentModel comment);
+
+    @Query("DELETE FROM comments")
+    void deleteComments();
 }

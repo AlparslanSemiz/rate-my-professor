@@ -8,10 +8,10 @@ public enum VoteType {
     /**
      * The user agrees with the comment.
      */
-    UPVOTE,
+    UP,
 
     /**
      * The user disagrees with the comment.
      */
-    DOWNVOTE
+    DOWN
 }

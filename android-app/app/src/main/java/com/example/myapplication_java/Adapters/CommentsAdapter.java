@@ -11,6 +11,8 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.DomainModel.Comment;
+import com.example.myapplication_java.DomainModel.CommentType;
+import com.example.myapplication_java.DomainModel.VoteType;
 import com.example.myapplication_java.databinding.ItemCommentBinding;
 import com.example.myapplication_java.databinding.ItemReplyBinding;
 
@@ -27,10 +29,12 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
 
     private final List<Comment> comments;
     private final OnCommentClickListener listener;
+    private final CommentType type;
 
-    public CommentsAdapter(List<Comment> comments, OnCommentClickListener listener) {
+    public CommentsAdapter(List<Comment> comments, OnCommentClickListener listener, CommentType type) {
         this.comments = comments;
         this.listener = listener;
+        this.type = type;
     }
 
     @NonNull
@@ -46,6 +50,8 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         Comment comment = comments.get(position);
         holder.userName.setText(comment.studentUsername());
         holder.commentContent.setText(comment.content());
+        holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
+        holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
 
         holder.replyButton.setOnClickListener(v -> holder.commentBox.setVisibility(View.VISIBLE));
         holder.cancelButton.setOnClickListener(v -> holder.commentBox.setVisibility(View.GONE));
@@ -53,7 +59,27 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
                 listener.onReplySend(comment.commentID(), holder.replyText.getText().toString())
         );
 
-        holder.showCommentButton.setOnClickListener(v -> toggleReplies(holder, comment));
+
+        holder.showCommentButton.setOnClickListener(v -> openReplies(comment));
+        holder.upVoteButton.setOnClickListener(v -> {
+            holder.upVoteCount.setText(String.valueOf(comment.upVotes() + 1));
+            holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
+            listener.vote(comment.commentID(), VoteType.UP, type);
+        });
+
+        holder.downVoteButton.setOnClickListener(v -> {
+            holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
+            holder.downVoteCount.setText(String.valueOf(comment.downVotes() + 1));
+            listener.vote(comment.commentID(), VoteType.DOWN, type);
+        });
+        if (type == CommentType.REPLY) {
+            holder.replyButton.setVisibility(View.INVISIBLE);
+            holder.showCommentButton.setVisibility(View.INVISIBLE);
+            holder.commentsNum.setVisibility(View.GONE);
+        } else {
+            holder.commentsNum.setText(String.valueOf(comment.answers().size()));
+        }
+
     }
 
     /**
@@ -63,16 +89,8 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
      * position is read from the holder instead of the bound one, because rows can be reused
      * and moved before the click happens.</p>
      */
-    private void toggleReplies(CommentViewHolder holder, Comment comment) {
-        int firstReplyPosition = holder.getBindingAdapterPosition() + 1;
-
-        if (holder.repliesVisible) {
-            listener.onCloseReplies(firstReplyPosition, comment);
-        } else {
-            listener.onOpenReplies(firstReplyPosition, comment);
-        }
-
-        holder.repliesVisible = !holder.repliesVisible;
+    private void openReplies(Comment comment) {
+        listener.onOpenReplies(comment);
     }
 
     @Override
@@ -93,6 +111,11 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         final EditText replyText;
         final View commentBox;
         final ImageView showCommentButton;
+        final ImageView upVoteButton;
+        final ImageView downVoteButton;
+        final TextView upVoteCount;
+        final TextView downVoteCount;
+        final TextView commentsNum;
 
         /**
          * Whether the answers of this comment are currently folded out.
@@ -113,7 +136,12 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             cancelButton = replyBinding.cancelButton;
             replyText = replyBinding.replyText;
             showCommentButton = binding.commentsIcon;
+            upVoteButton = binding.upvoteIcon;
+            downVoteButton = binding.downvoteIcon;
             repliesVisible = false;
+            upVoteCount = binding.upvotesNum;
+            downVoteCount = binding.downvotesNum;
+            commentsNum = binding.commentsNum;
         }
 
     }
@@ -135,17 +163,12 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         /**
          * Called when the answers of a comment should be shown.
          *
-         * @param position the position the answers are inserted at
          * @param comment  the comment whose answers are opened
          */
-        void onOpenReplies(int position, Comment comment);
-
+        void onOpenReplies(Comment comment);
         /**
-         * Called when the answers of a comment should be hidden again.
-         *
-         * @param position the position the answers start at
-         * @param comment  the comment whose answers are closed
+         * For voting on a comment or answer.
          */
-        void onCloseReplies(int position, Comment comment);
+        void vote(String commentID, VoteType voteType, CommentType commentType);
     }
 }
