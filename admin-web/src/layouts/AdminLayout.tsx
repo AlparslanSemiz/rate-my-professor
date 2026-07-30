@@ -11,6 +11,7 @@ const CatalogPage = lazy(() => import('../features/catalog/CatalogPage'))
 const CommentsPage = lazy(() => import('../features/comments/CommentsPage'))
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'))
 const FeedbackPage = lazy(() => import('../features/feedback/FeedbackPage'))
+const HelpPage = lazy(() => import('../features/help/HelpPage'))
 const SystemStatusPage = lazy(() => import('../features/system-status/SystemStatusPage'))
 const UsersPage = lazy(() => import('../features/users/UsersPage'))
 
@@ -46,6 +47,7 @@ export default function AdminLayout() {
               <Route path={routes.auditLogs} element={<AuditLogsPage />} />
               <Route path={routes.activityLogs} element={<ActivityLogsPage />} />
               <Route path={routes.systemStatus} element={<SystemStatusPage />} />
+              <Route path={routes.help} element={<HelpPage />} />
               <Route path="*" element={<Navigate to={routes.dashboard} replace />} />
             </Routes>
           </Suspense>

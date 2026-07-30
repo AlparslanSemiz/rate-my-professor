@@ -2,6 +2,7 @@ import {
   IconActivity,
   IconBug,
   IconHeartRateMonitor,
+  IconHelpCircle,
   IconHistory,
   IconLayoutDashboard,
   IconMessage,
@@ -62,6 +63,12 @@ export const OVERSIGHT_NAV_ITEMS = [
     sublabel: 'Backend health',
     path: routes.systemStatus,
     icon: IconHeartRateMonitor,
+  },
+  {
+    label: 'Help',
+    sublabel: 'What things mean',
+    path: routes.help,
+    icon: IconHelpCircle,
   },
 ] as const
 
