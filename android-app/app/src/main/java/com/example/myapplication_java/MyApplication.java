@@ -17,6 +17,10 @@ public class MyApplication extends Application {
     public static final String SETTINGS_STORAGE = "settings";
 
     /**
+     * SharedPreferences file that stores the personal statistics.
+     */
+    public static final String STATISTICS_STORAGE = "statistics";
+    /**
      * Key for the saved dark mode choice.
      */
     public static final String DARK_MODE_KEY = "darkMode";

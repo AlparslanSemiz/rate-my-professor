@@ -1,8 +1,13 @@
 package com.example.myapplication_java.Fragments;
 
+import static android.content.Context.MODE_PRIVATE;
+
 import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -14,12 +19,15 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.Adapters.RatingAdapter;
 import com.example.myapplication_java.Adapters.CommentsAdapter;
 import com.example.myapplication_java.DomainModel.Comment;
+import com.example.myapplication_java.DomainModel.CommentType;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Semester;
+import com.example.myapplication_java.DomainModel.VoteType;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
@@ -27,6 +35,7 @@ import com.example.myapplication_java.ServerCommunication.Responses.RatingAverag
 import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.SubmitAnswerRequest;
+import com.example.myapplication_java.ServerCommunication.VoteRequest;
 import com.example.myapplication_java.databinding.FragmentOfferingRatingsBinding;
 import com.example.myapplication_java.logic.RatingColorCalculator;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
@@ -36,6 +45,8 @@ import com.example.myapplication_java.ServerCommunication.Responses.ServerRespon
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import retrofit2.Call;
 import retrofit2.Response;
@@ -60,6 +71,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
     private Lecture lecture;
     private Professor professor;
 
+    private ControlFlowInterface flowInterface;
     /**
      * Part of the offering identity. Not displayed yet, the header currently only shows the
      * professor.
@@ -67,7 +79,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
     private Semester semester;
 
     private final APIService apiService;
-
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     FragmentOfferingRatingsBinding binding;
 
     /**
@@ -111,6 +123,16 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         return binding.getRoot();
     }
 
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        if (context instanceof ControlFlowInterface) {
+            flowInterface = (ControlFlowInterface) context;
+        } else {
+            throw new RuntimeException(context + "must implement ControlFlowInterface");
+        }
+    }
+
     /**
      * Gets the comments for the offering to display them.
      */
@@ -128,7 +150,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                 // Copied into an own list, because folding answers in and out modifies it.
                 comments = new ArrayList<>(body.comments());
                 runOnUiThread(() -> {
-                    adapter = new CommentsAdapter(comments, OfferingRatingsFragment.this);
+                    adapter = new CommentsAdapter(comments, OfferingRatingsFragment.this, CommentType.COMMENT);
                     binding.commentList.setAdapter(adapter);
                 });
             }
@@ -261,28 +283,33 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
      */
     @SuppressLint("NotifyDataSetChanged")
     @Override
-    public void onOpenReplies(int position, Comment comment) {
-        Log.d(TAG, "adapter add reply " + position);
-        comments.addAll(position, comment.answers());
-
-        // Everything after the insert moves, so the whole list is redrawn rather than a range.
-        adapter.notifyDataSetChanged();
+    public void onOpenReplies(Comment comment) {
+        flowInterface.openReplyFragment(comment);
     }
 
-    /**
-     * Removes the answers of a comment from the list again.
-     */
-    @SuppressLint("NotifyDataSetChanged")
     @Override
-    public void onCloseReplies(int position, Comment comment) {
-        Log.d(TAG, "adapter remove reply " + position + " " + comment.answers().size());
-
-        // Every removal shifts the following entries one position down, so the answers are all
-        // taken from the same index instead of from increasing ones.
-        for (int i = 0; i < comment.answers().size(); i++) {
-            comments.remove(position);
+    public void vote(String commentID, VoteType voteType, CommentType commentType) {
+        LoginSession session = LoginSession.from(getContext());
+        String authToken = session.bearerToken();
+        Call<BasicResponse> call;
+        if (commentType == CommentType.COMMENT) {
+            call = apiService.voteComment(authToken, commentID, new VoteRequest(voteType));
+        } else {
+            call = apiService.voteAnswer(authToken, commentID, new VoteRequest(voteType));
         }
-        adapter.notifyDataSetChanged();
+        call.enqueue(new Callback<>() {
+            @Override
+            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                if (!response.isSuccessful()) {
+                    Toast.makeText(getContext(), "Vote couldn't be sent.", Toast.LENGTH_SHORT);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                Toast.makeText(getContext(), "Vote couldn't be sent.", Toast.LENGTH_SHORT);
+            }
+        });
     }
 
     /**

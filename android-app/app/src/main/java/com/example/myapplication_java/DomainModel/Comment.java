@@ -26,5 +26,7 @@ public record Comment (
         String studentUsername,
         String lectureID,
         LocalDateTime createdAt,
+        int downVotes,
+        int upVotes,
         List<Comment> answers
 ) {}

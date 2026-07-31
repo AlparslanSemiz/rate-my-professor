@@ -5,20 +5,27 @@ import android.util.Log;
 
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.room.TypeConverters;
 
+import com.example.myapplication_java.Adapters.LocalDateTimeConverter;
 import com.example.myapplication_java.Adapters.SearchService;
+import com.example.myapplication_java.DomainModel.Comment;
+import com.example.myapplication_java.DomainModel.CommentModel;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import retrofit2.Call;
+import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
@@ -29,9 +36,10 @@ import retrofit2.Response;
  * and is meant to exist only once per process, so every screen shares the same instance.</p>
  */
 @androidx.room.Database(
-        entities = {Lecture.class, Professor.class},
-        version = 4
+        entities = {Lecture.class, Professor.class, CommentModel.class},
+        version = 5
 )
+@TypeConverters(LocalDateTimeConverter.class)
 public abstract class Database extends RoomDatabase {
 
     /**
@@ -41,6 +49,10 @@ public abstract class Database extends RoomDatabase {
 
     private static final String TAG = "Database";
 
+    /**
+     * The counter for the amount of tables that have been updated.
+     */
+    AtomicInteger completed = new AtomicInteger(0);
     /**
      * Switch to skip the server update while working on something else locally.
      */
@@ -56,6 +68,7 @@ public abstract class Database extends RoomDatabase {
     public Database() {}
 
     public abstract SearchService searchService();
+
 
     /**
      * Returns the shared database and builds it on first use.
@@ -97,6 +110,17 @@ public abstract class Database extends RoomDatabase {
         // Room forbids database access on the main thread, so all writes go through this executor.
         ExecutorService executor = Executors.newSingleThreadExecutor();
 
+        Runnable tableFinished = () -> {
+            if (completed.incrementAndGet() == 2) {
+                // both tables are updated
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        service.fillMissingData();
+                    }
+                });
+            }
+        };
         //the calls to the server for updating
         refreshTable(
                 apiService.getProfessors(),
@@ -104,7 +128,8 @@ public abstract class Database extends RoomDatabase {
                 service::deleteProfessors,
                 service::insertProfessor,
                 executor,
-                "professors"
+                "professors",
+                tableFinished
         );
 
         refreshTable(
@@ -113,7 +138,18 @@ public abstract class Database extends RoomDatabase {
                 service::deleteLectures,
                 service::insertLecture,
                 executor,
-                "lectures"
+                "lectures",
+                tableFinished
+        );
+
+        refreshTable(
+                apiService.getAllComments(),
+                CommentsResponse::comments,
+                service::deleteComments,
+                this::insertComment,
+                executor,
+                "comments",
+                null
         );
     }
 
@@ -138,7 +174,8 @@ public abstract class Database extends RoomDatabase {
             Runnable clearTable,
             Consumer<E> insert,
             ExecutorService executor,
-            String label
+            String label,
+            Runnable onComplete
     ) {
         // retrofit2.Callback has to be written out here: RoomDatabase brings its own nested
         // Callback class along, which would shadow the imported one.
@@ -166,6 +203,9 @@ public abstract class Database extends RoomDatabase {
                         insert.accept(entity);
                     }
                 });
+                if (onComplete != null) {
+                    onComplete.run();
+                }
             }
 
             @Override
@@ -174,4 +214,22 @@ public abstract class Database extends RoomDatabase {
             }
         });
     }
+
+    /**
+     * We need special handling for comments because of the hierarchical structure of the
+     * incoming data.
+     */
+    private void insertComment(Comment comment) {
+        SearchService service = searchService();
+        service.insertComment(parseCommentToModel(comment, null));
+        for (Comment reply : comment.answers()) {
+            service.insertComment(parseCommentToModel(reply, comment.commentID()));
+        }
+    }
+    private CommentModel parseCommentToModel(Comment comment, String parentID) {
+        return new CommentModel(comment.commentID(), parentID, comment.content(),
+                comment.status(), comment.studentUsername(), comment.lectureID(),
+                comment.createdAt(), comment.downVotes(), comment.upVotes());
+    }
+
 }

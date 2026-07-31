@@ -130,13 +130,14 @@ public class DomainModelTest {
                 "user123",
                 "lecture-1",
                 LocalDateTime.now(),
+                0, 0,
                 new ArrayList<>()
         );
-        Vote vote = new Vote("vote-1", now, VoteType.UPVOTE, comment);
+        Vote vote = new Vote("vote-1", now, VoteType.UP, comment);
 
         assertEquals("vote-1", vote.voteId());
         assertEquals(now, vote.createdAt());
-        assertEquals(VoteType.UPVOTE, vote.type());
+        assertEquals(VoteType.UP, vote.type());
         assertEquals(comment, vote.comment());
     }
 
