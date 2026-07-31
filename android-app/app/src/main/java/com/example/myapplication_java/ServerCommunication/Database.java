@@ -142,6 +142,8 @@ public abstract class Database extends RoomDatabase {
                 tableFinished
         );
 
+        //Wir kommentieren das aus bis comment sachen gelöst sind.
+        /**
         refreshTable(
                 apiService.getAllComments(),
                 CommentsResponse::comments,
@@ -151,6 +153,7 @@ public abstract class Database extends RoomDatabase {
                 "comments",
                 null
         );
+         */
     }
 
     /**
@@ -220,10 +223,12 @@ public abstract class Database extends RoomDatabase {
      * incoming data.
      */
     private void insertComment(Comment comment) {
+        Log.println(Log.DEBUG, "comments", comment.commentID());
         SearchService service = searchService();
         service.insertComment(parseCommentToModel(comment, null));
         for (Comment reply : comment.answers()) {
-            service.insertComment(parseCommentToModel(reply, comment.commentID()));
+            Log.println(Log.DEBUG, "replies", reply.commentID());
+            service.insertComment(parseCommentToModel(reply, reply.commentID()));
         }
     }
     private CommentModel parseCommentToModel(Comment comment, String parentID) {
