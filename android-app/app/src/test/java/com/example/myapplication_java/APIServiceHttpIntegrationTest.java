@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.example.myapplication_java.DomainModel.Comment;
+import com.example.myapplication_java.DomainModel.RatingCategory;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
@@ -151,8 +152,18 @@ public class APIServiceHttpIntegrationTest {
     public void getRatingsParsesAverageRatings() throws Exception {
         server.enqueue(new MockResponse()
                 .setResponseCode(200)
-                .setBody("{\"message\":\"ok\",\"success\":true,\"ratings\":["
-                        + "{\"name\":\"Clarity\",\"value\":4.5}]}"));
+                .setBody("""
+                {
+                  "message":"ok",
+                  "success":true,
+                  "ratings":[
+                    {
+                      "category":"LECTURE_UNDERSTANDABILITY",
+                      "value":4.5
+                    }
+                  ]
+                }
+                """));
 
         Response<RatingAverageResponse> response = apiService.getRatings("l1").execute();
 
@@ -160,7 +171,10 @@ public class APIServiceHttpIntegrationTest {
         assertNotNull(response.body());
         assertTrue(response.body().success());
         assertEquals(1, response.body().ratings().size());
-        assertEquals("Clarity", response.body().ratings().get(0).category().getDisplayName());
+        assertEquals(
+                RatingCategory.LECTURE_UNDERSTANDABILITY,
+                response.body().ratings().get(0).category()
+        );
         assertEquals(4.5, response.body().ratings().get(0).value(), 0.001);
     }
 }
