@@ -160,7 +160,7 @@ public class APIServiceHttpIntegrationTest {
         assertNotNull(response.body());
         assertTrue(response.body().success());
         assertEquals(1, response.body().ratings().size());
-        assertEquals("Clarity", response.body().ratings().get(0).name());
+        assertEquals("Clarity", response.body().ratings().get(0).category().getDisplayName());
         assertEquals(4.5, response.body().ratings().get(0).value(), 0.001);
     }
 }
