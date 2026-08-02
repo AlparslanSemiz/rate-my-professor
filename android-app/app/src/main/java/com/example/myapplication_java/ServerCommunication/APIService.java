@@ -1,5 +1,6 @@
 package com.example.myapplication_java.ServerCommunication;
 
+import com.example.myapplication_java.ServerCommunication.Requests.SubmitAnswerRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRequest;
@@ -10,6 +11,7 @@ import com.example.myapplication_java.ServerCommunication.Responses.PersonalStat
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.StudentProfileResponse;
 
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -141,6 +143,9 @@ public interface APIService {
             @Path("lectureId") String lectureId
     );
 
+    /**
+     * Submits a new rating
+     */
     @POST("/ratings/rate")
     Call<ServerResponse> submitRating(
             @Header("Authorization") String token,
@@ -186,5 +191,16 @@ public interface APIService {
      */
     @GET("/social/sync/comments")
     Call<CommentsResponse> getAllComments();
+
+    /**
+     * Returns the User Information
+     *
+     * @param token the auth token for authorization
+     * @return the student's profile information
+     */
+    @GET("/account/information")
+    Call<StudentProfileResponse> getUserInformation(
+            @Header("Authorization") String token
+    );
 
 }

@@ -8,6 +8,8 @@
     <string name="no_notifications">You have no notifications yet.</string>
     <string name="notification_reply_title">%1$s replied to your comment</string>
 
+    <string name="List_of_my_Ratings">List of my Ratings</string>
+
     <string name="back">Back</string>
     <string name="close">Close</string>
     <string name="cancel">Cancel</string>

@@ -17,6 +17,6 @@ public enum SelectionType {
     /**
      * List of lectures.
      */
-    LECTURES;
+    LECTURES
 
 }

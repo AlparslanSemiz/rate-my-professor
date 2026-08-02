@@ -1,4 +1,4 @@
-package com.example.myapplication_java.ServerCommunication;
+package com.example.myapplication_java.ServerCommunication.Requests;
 
 /**
  * Body for answering an existing comment.

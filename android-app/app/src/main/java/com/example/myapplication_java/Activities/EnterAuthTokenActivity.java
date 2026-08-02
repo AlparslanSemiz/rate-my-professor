@@ -14,7 +14,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.ServerCommunication.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;

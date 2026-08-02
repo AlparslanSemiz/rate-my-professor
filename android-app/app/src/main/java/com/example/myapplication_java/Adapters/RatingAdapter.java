@@ -8,6 +8,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.myapplication_java.DomainModel.RatingCategory;
 import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
 import com.example.myapplication_java.databinding.ItemRatingBinding;
 import com.example.myapplication_java.logic.RatingColorCalculator;
@@ -23,32 +24,31 @@ import java.util.Map;
  * <p>Each row shows two bars: the average everybody gave, which is read only, and the bar the
  * user can drag to give their own rating.</p>
  */
-public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingViewHolder> {
+public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingViewHolder> implements OnRatingChangedListener{
 
     /**
      * Format of the numbers next to the bars, always with one decimal.
      */
     private static final String RATING_FORMAT = "%.1f";
 
-    private final List<TopicAverageResponse> ratings;
+    private List<TopicAverageResponse> ratings;
 
     /**
      * Used to keep track of changes the User made to his ratings, so they can be submitted later
      */
-    private final Map<String, Double> changedRatings = new HashMap<>();
+    private final Map<RatingCategory, Double> changedRatings = new HashMap<>();
 
     public RatingAdapter(List<TopicAverageResponse> ratings) {
         this.ratings = ratings;
     }
 
-    public Map<String, Double> getChangedRatings() {
+    public Map<RatingCategory, Double> getChangedRatings() {
         return changedRatings;
     }
 
     @Override
-    public void onRatingChanged(String name, double rating) {
-        changedRatings.put(name, rating);
-        System.out.println("name: " + name + ", value: " + rating);
+    public void onRatingChanged(RatingCategory category, double rating) {
+        changedRatings.put(category, rating);
     }
 
     public void updateRatings(List<TopicAverageResponse> newRatings) {
@@ -61,18 +61,17 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
     public RatingViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ItemRatingBinding binding = ItemRatingBinding.inflate(LayoutInflater.from(parent.getContext()),
                 parent,false);
-        return new RatingViewHolder(binding, this);
+        return new RatingViewHolder(binding);
     }
 
     @Override
     public void onBindViewHolder(@NonNull RatingAdapter.RatingViewHolder holder, int position) {
         TopicAverageResponse rating = ratings.get(position);
+        holder.setCategory(rating.category(), this);
 
-        changedRatings.put(rating.name(), rating.value());
 
-        holder.name.setText(rating.name());
+        holder.name.setText(rating.category().getDisplayName());
         holder.averageRating.setText(String.format(Locale.ROOT, RATING_FORMAT, rating.value()));
-        holder.averageRating.setTextColor(RatingColorCalculator.ratingColourCalculator(holder.averageRating.getContext(), rating.value()));
         holder.averageBar.setRating((float) rating.value());
     }
 
@@ -89,26 +88,29 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
         final TextView name;
         final TextView averageRating;
         final RatingBar averageBar;
-
         final RatingBar userRatingBar;
         final TextView userRatingNum;
 
-        public RatingViewHolder(@NonNull ItemRatingBinding binding, OnRatingChangedListener listener) {
+        public RatingViewHolder(@NonNull ItemRatingBinding binding) {
             super(binding.getRoot());
+
             name = binding.categoryName;
             averageRating = binding.averageRatingNum;
             averageBar = binding.ratingBarAverage;
-
             userRatingBar = binding.ratingBarYourRating;
             userRatingNum = binding.yourRatingNum;
+        }
 
-            // Handling a changed User Rating
+        public void setCategory(RatingCategory category, OnRatingChangedListener listener) {
+
             userRatingBar.setOnRatingBarChangeListener(
                     (bar, rating, fromUser) -> {
-                        userRatingNum.setText(String.valueOf((double) rating));
-                        userRatingNum.setTextColor(RatingColorCalculator.ratingColourCalculator(rating));
-                        listener.onRatingChanged(name.getText().toString(), rating);
+                        if (fromUser) {
+                            userRatingNum.setText(String.valueOf((double) rating));
+                            userRatingNum.setTextColor(RatingColorCalculator.ratingColourCalculator(bar.getContext(), rating));
 
+                            listener.onRatingChanged(category, rating);
+                        }
                     }
             );
         }

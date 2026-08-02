@@ -1,17 +1,43 @@
 package com.example.myapplication_java.DomainModel;
 
-/**
- * A topic that can be rated, as defined by the backend.
- *
- * <p>While a {@link RatingTopic} is one user's answer, this is the question itself, which is
- * the same for every lecture offering.</p>
- *
- * @param categoryId  unique id of the category
- * @param name        the displayed name, for example "Clarity"
- * @param description the explanation shown to the user before they grade this topic
- */
-public record RatingCategory (
-    String categoryId,
-    String name,
-    String description
-) {}
+public enum RatingCategory {
+    ROOM("Raum"),
+    ORGANIZATION("Organisation"),
+    MATERIALS("Unterlagen/Folien"),
+    WORKLOAD("Arbeitsaufwand"),
+
+    LECTURE_UNDERSTANDABILITY("Verständlichkeit"),
+    LECTURE_INTEREST("Interessantheit"),
+    LECTURE_DIFFICULTY("Schwierigkeit"),
+    LECTURE_STRUCTURE("Struktur"),
+    LECTURE_PACE("Tempo"),
+    LECTURE_EXAMPLES("Praxisbeispiele"),
+
+    PROFESSOR_ENGAGEMENT("Engagement"),
+    PROFESSOR_COMMUNICATION("Kommunikation"),
+    PROFESSOR_AVAILABILITY("Erreichbarkeit"),
+    PROFESSOR_EXAM_PREPARATION("Prüfungsvorbereitung"),
+
+    EXERCISE_BOARDWORK("Tafelanschrieb"),
+    EXERCISE_QUESTIONS("Fragen beantwortet"),
+    EXERCISE_HELPFULNESS("Hilfreich"),
+    EXERCISE_EXPLANATIONS("Erklärungen"),
+    EXERCISE_EXAMPLES("Beispielaufgaben"),
+    EXERCISE_PACE("Tempo"),
+
+    TUTOR_EXPLANATION("Erklärfähigkeit"),
+    TUTOR_PREPARATION("Vorbereitung"),
+    TUTOR_MOTIVATION("Motivation"),
+    TUTOR_FRIENDLINESS("Freundlichkeit"),
+    TUTOR_FEEDBACK("Feedback");
+
+    private final String displayName;
+
+    RatingCategory(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+}

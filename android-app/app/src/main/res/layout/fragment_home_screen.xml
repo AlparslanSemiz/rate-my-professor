@@ -73,7 +73,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="@font/inter_bold"
-        android:text="3,0"
+        android:text="-,-"
         android:textColor="@color/text_primary"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="@+id/average_rating_given"
@@ -145,11 +145,11 @@
         app:layout_constraintTop_toBottomOf="@+id/average_rating_given_num" />
 
     <TextView
-        android:id="@+id/average_rating_given_num2"
+        android:id="@+id/professors_rated_num"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="@font/inter_bold"
-        android:text="5"
+        android:text="-"
         android:textColor="@color/text_primary"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="@+id/average_rating_given"
@@ -165,14 +165,14 @@
         android:text="Comments Written"
         android:textColor="@color/text_primary"
         app:layout_constraintStart_toStartOf="@+id/your_stats_background"
-        app:layout_constraintTop_toBottomOf="@+id/average_rating_given_num2" />
+        app:layout_constraintTop_toBottomOf="@+id/professors_rated_num" />
 
     <TextView
         android:id="@+id/comments_written_num"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="@font/inter_bold"
-        android:text="39"
+        android:text="-"
         android:textColor="@color/text_primary"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="@+id/average_rating_given"
@@ -195,7 +195,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="@font/inter_bold"
-        android:text="-7"
+        android:text="-"
         android:textColor="@color/text_primary"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="@+id/average_rating_given"
@@ -203,8 +203,9 @@
 
     <TextView
         android:id="@+id/user_name"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
         android:fontFamily="@font/inter_bold"
         android:text="Username"
