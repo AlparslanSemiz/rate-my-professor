@@ -6,6 +6,7 @@ import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRe
 import com.example.myapplication_java.ServerCommunication.Requests.RatingRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.PersonalStatisticsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
@@ -158,5 +159,32 @@ public interface APIService {
             @Header("Authorization") String token,
             @Body SubmitAnswerRequest request
     );
+
+    @POST("/social/comments/vote/comment/{commentID}")
+    Call<BasicResponse> voteComment(
+            @Header("Authorization") String token,
+            @Path("commentID") String commentID,
+            @Body VoteRequest request
+    );
+
+    @POST("/social/comments/vote/answer/{answerID}")
+    Call<BasicResponse> voteAnswer(
+            @Header("Authorization") String token,
+            @Path("answerID") String answerID,
+            @Body VoteRequest request
+    );
+
+    @GET("/account")
+    Call<PersonalStatisticsResponse> getHomepageData(
+            @Header("Authorization") String token
+    );
+
+    /**
+     * Loads all comments from the backend.
+     *
+     * @return the response with all comments
+     */
+    @GET("/social/sync/comments")
+    Call<CommentsResponse> getAllComments();
 
 }

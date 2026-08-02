@@ -1,5 +1,6 @@
 package com.example.myapplication_java.Adapters;
 
+import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Semester;
@@ -49,4 +50,6 @@ public interface ControlFlowInterface {
      * @param lecture   the selected lecture offering
      */
     void openLectureProfile(Professor professor, Semester semester, Lecture lecture);
+
+    void openReplyFragment(Comment comment);
 }

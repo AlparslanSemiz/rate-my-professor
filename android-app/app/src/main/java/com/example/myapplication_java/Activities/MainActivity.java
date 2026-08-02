@@ -1,7 +1,11 @@
 package com.example.myapplication_java.Activities;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -10,19 +14,28 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.myapplication_java.Adapters.ControlFlowInterface;
+import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.Fragments.HomeFragment;
 import com.example.myapplication_java.Fragments.OfferingRatingsFragment;
 import com.example.myapplication_java.Fragments.ProfileFragment;
+import com.example.myapplication_java.Fragments.ReplyFragment;
 import com.example.myapplication_java.Fragments.SearchFragment;
 import com.example.myapplication_java.Fragments.SettingsFragment;
+import com.example.myapplication_java.MyApplication;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.Database;
+import com.example.myapplication_java.ServerCommunication.LoginSession;
+import com.example.myapplication_java.ServerCommunication.Responses.PersonalStatisticsResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.databinding.ActivityMainBinding;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * Hosts every screen of the logged in app. The bottom navigation and the selection flow both
@@ -92,6 +105,33 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
                 .commit();
     }
 
+    private void getHomepageData() {
+        APIService apiService = RetrofitClient.getClient().create(APIService.class);
+        String authToken = LoginSession.from(this).bearerToken();
+        Call<PersonalStatisticsResponse> call = apiService.getHomepageData(authToken);
+        call.enqueue(new Callback<PersonalStatisticsResponse>() {
+            @Override
+            public void onResponse(Call<PersonalStatisticsResponse> call, Response<PersonalStatisticsResponse> response) {
+                if (response.isSuccessful()) {
+                    PersonalStatisticsResponse statisticsResponse = response.body();
+                    SharedPreferences statistics = getSharedPreferences(MyApplication.STATISTICS_STORAGE, Context.MODE_PRIVATE);
+                    statistics.edit().putString("username", statisticsResponse.username())
+                    .putString("profilePicture", statisticsResponse.profilePicture())
+                    .putFloat("averageRating", statisticsResponse.averageRating())
+                    .putInt("ratingCount", statisticsResponse.ratingCount())
+                    .putInt("writtencomments", statisticsResponse.writtencomments())
+                    .putInt("credibilityScore", statisticsResponse.credibilityScore()).apply();
+                } else {
+                    Log.println(Log.ERROR, "HomePage", "couldn't get the homepage data.");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<PersonalStatisticsResponse> call, Throwable throwable) {
+                Log.println(Log.ERROR, "HomePage", "couldn't get the homepage data.");
+            }
+        });
+    }
     @Override
     public void openHome() {
         loadFragment(new HomeFragment());
@@ -110,6 +150,11 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
     @Override
     public void openLectureProfile(Professor professor, Semester semester, Lecture lecture) {
         loadFragment(new OfferingRatingsFragment(professor, semester, lecture));
+    }
+
+    @Override
+    public void openReplyFragment(Comment comment) {
+        loadFragment(new ReplyFragment(comment));
     }
 
 }
