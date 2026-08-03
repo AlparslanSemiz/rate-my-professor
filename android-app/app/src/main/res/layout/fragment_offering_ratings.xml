@@ -72,7 +72,7 @@
         app:srcCompat="@drawable/go_back_icon"
         android:scaleType="center"/>
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginStart="8dp"
@@ -118,6 +118,23 @@
                     android:nestedScrollingEnabled="false"
                     app:layout_constraintTop_toBottomOf="@id/ratings_text" />
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/submit_rating"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:fontFamily="@font/inter_bold"
+                    android:letterSpacing="0"
+                    android:text="Submit Ratings"
+                    android:textColor="#282828"
+                    android:textSize="16sp"
+                    android:typeface="normal"
+                    app:backgroundTint="#CFCFCF"
+                    app:cornerRadius="24dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/ratingView" />
+
+
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -152,15 +169,22 @@
 
                 </EditText>
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/submit_comment"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:backgroundTint="@color/surface_container"
-                    android:text="Submit"
                     android:textAllCaps="false"
+                    android:fontFamily="@font/inter_bold"
+                    android:letterSpacing="0"
+                    android:text="Submit Comment"
+                    android:textColor="#282828"
+                    android:textSize="16sp"
+                    android:typeface="normal"
+                    app:backgroundTint="#CFCFCF"
+                    app:cornerRadius="24dp"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/input_comment" />
+                    app:layout_constraintTop_toBottomOf="@id/input_comment" />
 
 
             </androidx.constraintlayout.widget.ConstraintLayout>
@@ -170,6 +194,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_marginBottom="100dp"
+                android:nestedScrollingEnabled="false"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -179,7 +204,7 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
 
 
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

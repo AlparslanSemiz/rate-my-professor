@@ -6,12 +6,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,39 +13,47 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.myapplication_java.Adapters.CommentsAdapter;
 import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.Adapters.RatingAdapter;
-import com.example.myapplication_java.Adapters.CommentsAdapter;
 import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.CommentType;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.DomainModel.RatingCategory;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.DomainModel.VoteType;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
+import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.RatingRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.RatingTopicRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.SubmitAnswerRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
-import com.example.myapplication_java.ServerCommunication.SubmitAnswerRequest;
 import com.example.myapplication_java.ServerCommunication.VoteRequest;
 import com.example.myapplication_java.databinding.FragmentOfferingRatingsBinding;
 import com.example.myapplication_java.logic.RatingColorCalculator;
-import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
-import com.example.myapplication_java.ServerCommunication.PostCommentRequest;
-import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import retrofit2.Call;
-import retrofit2.Response;
-
 import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * The rating (and comment) Screen for a lecture Offering.
@@ -87,7 +89,9 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
      * the user folds them out, which is why it has to stay modifiable.
      */
     List<Comment> comments;
-    CommentsAdapter adapter;
+    CommentsAdapter commentsAdapter;
+
+    RatingAdapter ratingAdapter;
 
     public OfferingRatingsFragment() {
         apiService = RetrofitClient.getClient().create(APIService.class);
@@ -119,6 +123,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         setSubmitCommentListener();
 
         insertAverageRatings(lecture);
+        setSubmitRatingListener();
 
         return binding.getRoot();
     }
@@ -150,8 +155,8 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                 // Copied into an own list, because folding answers in and out modifies it.
                 comments = new ArrayList<>(body.comments());
                 runOnUiThread(() -> {
-                    adapter = new CommentsAdapter(comments, OfferingRatingsFragment.this, CommentType.COMMENT);
-                    binding.commentList.setAdapter(adapter);
+                    commentsAdapter = new CommentsAdapter(comments, OfferingRatingsFragment.this, CommentType.COMMENT);
+                    binding.commentList.setAdapter(commentsAdapter);
                 });
             }
 
@@ -204,7 +209,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         Call<RatingAverageResponse> ratingCall = apiService.getRatings(lecture.id);
         Log.d(TAG, "loading ratings for id: " + lecture.id);
 
-        ratingCall.enqueue(new retrofit2.Callback<RatingAverageResponse>() {
+        ratingCall.enqueue(new Callback<RatingAverageResponse>() {
             @Override
             public void onResponse(Call<RatingAverageResponse> call,
                                    Response<RatingAverageResponse> response) {
@@ -215,6 +220,9 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                 }
 
                 List<TopicAverageResponse> ratings = body.ratings();
+                for(TopicAverageResponse rating : ratings) {
+                    System.out.println(rating.category() + "->" + rating.value());
+                }
                 runOnUiThread(() -> showRatings(ratings));
             }
 
@@ -234,7 +242,8 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
     private void showRatings(List<TopicAverageResponse> ratings) {
         RecyclerView recyclerView = binding.ratingView;
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        recyclerView.setAdapter(new RatingAdapter(ratings));
+        ratingAdapter = new RatingAdapter(ratings);
+        recyclerView.setAdapter(ratingAdapter);
 
         // Nothing was rated yet, so there is no average to show either. Without this the
         // division below would produce NaN.
@@ -243,8 +252,6 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
             return;
         }
 
-        // Temporary calculation of average lecture rating on top of the screen (very dirty code ewww)
-        // I think it looks cool <3.
         double sum = 0;
         for (TopicAverageResponse rating : ratings) {
             sum += rating.value();
@@ -253,6 +260,64 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         binding.averageLectureRating.setText(String.format(Locale.ROOT, RATING_FORMAT, lectureRating));
         binding.averageLectureRating.setTextColor(RatingColorCalculator.ratingColourCalculator(
                 binding.averageLectureRating.getContext(), lectureRating));
+    }
+
+    /**
+     * Sends the updated ratings to the server
+     */
+    public void setSubmitRatingListener() {
+        binding.submitRating.setOnClickListener(v -> {
+
+
+            // Creating the Request
+            Map<RatingCategory, Double> changedRatings = ratingAdapter.getChangedRatings();
+            List<RatingTopicRequest> requestList = new ArrayList<>();
+            for (Map.Entry<RatingCategory, Double> entry : changedRatings.entrySet()) {
+                requestList.add(new RatingTopicRequest(entry.getKey(), entry.getValue()));
+            }
+
+            RatingRequest request = new RatingRequest(lecture.id, requestList);
+            String token = LoginSession.from(requireContext()).bearerToken();
+                    System.out.println(token);
+
+            for (Map.Entry<RatingCategory, Double> entry : changedRatings.entrySet()) {
+                Log.d(TAG,entry.getKey() + " -> " + entry.getValue());
+                System.out.println(entry.getKey() + " -> " + entry.getValue());
+            }
+
+
+            // (Trying to) submit the ratings
+            apiService.submitRating(token, request).enqueue(new Callback<ServerResponse>() {
+                @Override
+                public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                    if (!response.isSuccessful()) {
+                        Toast.makeText(requireContext(),
+                                "Your rating couldn't be sent.",
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+
+                    Toast.makeText(requireContext(),
+                            "Rating submitted successfully.",
+                            Toast.LENGTH_SHORT).show();
+
+                    // update View
+                    insertAverageRatings(lecture);
+                }
+
+                @Override
+                public void onFailure(Call<ServerResponse> call, Throwable throwable) {
+                    requireActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(requireContext(), "Your rating couldn't be sent.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            });
+        }
+        );
     }
 
     @Override

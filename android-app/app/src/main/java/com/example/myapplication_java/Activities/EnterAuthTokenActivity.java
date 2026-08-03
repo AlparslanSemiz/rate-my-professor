@@ -1,6 +1,7 @@
 package com.example.myapplication_java.Activities;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -13,8 +14,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.ServerCommunication.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
+import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.databinding.ActivityEnterAuthTokenBinding;
@@ -112,5 +113,6 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
                 ).show();
             }
         });
+
     }
 }

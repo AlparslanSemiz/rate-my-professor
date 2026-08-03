@@ -21,16 +21,20 @@ import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
 import com.example.myapplication_java.Fragments.SelectionFragment;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.Requests.RatingRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Database;
-import com.example.myapplication_java.ServerCommunication.LoginRequest;
-import com.example.myapplication_java.ServerCommunication.PostCommentRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.PersonalStatisticsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
-import com.example.myapplication_java.ServerCommunication.SubmitAnswerRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.SubmitAnswerRequest;
+import com.example.myapplication_java.ServerCommunication.Responses.StudentProfileResponse;
+import com.example.myapplication_java.ServerCommunication.VoteRequest;
 
 import org.junit.After;
 import org.junit.Before;
@@ -40,7 +44,6 @@ import org.junit.runner.RunWith;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -216,6 +219,11 @@ public class ProfessorFeatureInstrumentedTest {
         }
 
         @Override
+        public Call<BasicResponse> logoutAllDevices(String token) {
+            return null;
+        }
+
+        @Override
         public Call<BasicResponse> deleteAccount(String token) { return null; }
 
         @Override
@@ -238,7 +246,37 @@ public class ProfessorFeatureInstrumentedTest {
         public Call<RatingAverageResponse> getRatings(String lectureId) { return null; }
 
         @Override
+        public Call<ServerResponse> submitRating(String token, RatingRequest request) {
+            return null;
+        }
+
+        @Override
         public Call<BasicResponse> postAnswer(String token, SubmitAnswerRequest request) {
+            return null;
+        }
+
+        @Override
+        public Call<BasicResponse> voteComment(String token, String commentID, VoteRequest request) {
+            return null;
+        }
+
+        @Override
+        public Call<BasicResponse> voteAnswer(String token, String answerID, VoteRequest request) {
+            return null;
+        }
+
+        @Override
+        public Call<PersonalStatisticsResponse> getHomepageData(String token) {
+            return null;
+        }
+
+        @Override
+        public Call<CommentsResponse> getAllComments() {
+            return null;
+        }
+
+        @Override
+        public Call<StudentProfileResponse> getUserInformation(String token) {
             return null;
         }
     }

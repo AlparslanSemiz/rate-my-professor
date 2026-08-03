@@ -1,4 +1,4 @@
-package com.example.myapplication_java.ServerCommunication;
+package com.example.myapplication_java.ServerCommunication.Requests;
 
 /**
  * Body for posting a new comment on a lecture offering.
