@@ -1188,7 +1188,7 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.ratings[0].lectureLabel").value("CS101 — Algorithms"))
                 .andExpect(jsonPath("$.ratings[0].lectureId").value(lecture.getId().toString()))
                 .andExpect(jsonPath("$.ratings[0].student.name").value("rater"))
-                .andExpect(jsonPath("$.ratings[0].topics", hasSize(1)))
+                .andExpect(jsonPath("$.ratings[0].topics", hasSize(2)))
                 .andExpect(jsonPath("$.ratings[0].topics[0].category").value("ORGANIZATION"))
                 .andExpect(jsonPath("$.ratings[0].topics[0].value").value(4.0));
     }
