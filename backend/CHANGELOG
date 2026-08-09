@@ -184,3 +184,26 @@ public record AnswerResponse(
         int upVotes
 ) {
 }
+
+was:
+public record StudentProfileResponse(
+        String message,
+        boolean success,
+        String username,
+        double averageRating,
+        int ratingsCount,
+        int commentsWritten,
+        int credibilityScore
+) {}
+
+now:
+public record StudentProfileResponse(
+        String message,
+        boolean success,
+        String username,
++++     String profilePicture,
+        double averageRating,
+        int ratingsCount,
+        int commentsWritten,
+        int credibilityScore
+) {}
