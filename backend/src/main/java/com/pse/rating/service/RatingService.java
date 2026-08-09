@@ -63,7 +63,7 @@ public class RatingService {
         Lecture lecture = lectureService.findById(request.lectureId());
 
         if (lecture == null) {
-            return new BasicResponse("Error, cannot find lecture with id " + request.lectureId() + "", false);
+            return new BasicResponse("Error, cannot find lecture with id " + request.lectureId(), false);
         }
 
 
@@ -73,11 +73,31 @@ public class RatingService {
             return new BasicResponse("Error, cannot find student", false);
         }
 
-        Rating rating = new Rating();
-        rating.setLecture(lecture);
-        rating.setStudent(student);
+        //Check if User already has Rating
+        Rating rating = ratingRepository.findByStudentIdAndLectureId(student.getId(), request.lectureId()).orElse(null);
+
+        if (rating == null) {
+            rating = new Rating();
+            rating.setLecture(lecture);
+            rating.setStudent(student);
+
+        } else {
+            //Overwrite existing rating topics
+            rating.getTopics().clear();
+            ratingRepository.flush();
+        }
+
+
+        double weightedSum = 0.0;
+        double totalWeight = 0.0;
+
 
         for (RatingTopicRequest topicRequest : request.topics()) {
+
+            // OVERALL shouldnt be set by client
+            if (topicRequest.category() == RatingCategory.OVERALL) {
+                continue;
+            }
 
             RatingTopic topic = new RatingTopic();
 
@@ -86,6 +106,25 @@ public class RatingService {
             topic.setRating(rating);
 
             rating.getTopics().add(topic);
+
+            //for overall Rating
+            double weight = topicRequest.category().getDefaultWeight();
+
+            weightedSum += topicRequest.value() * weight;
+            totalWeight += weight;
+        }
+
+        //Calculate Overall
+        if (totalWeight  > 0) {
+
+            double overall = weightedSum / totalWeight;
+
+            RatingTopic overallTopic = new RatingTopic();
+            overallTopic.setCategory(RatingCategory.OVERALL);
+            overallTopic.setValue(overall);
+            overallTopic.setRating(rating);
+
+            rating.getTopics().add(overallTopic);
         }
 
         ratingRepository.save(rating);
@@ -144,6 +183,40 @@ public class RatingService {
 
     }
 
+    @Transactional
+    public RatingsAverageResponse getOwnRating(String authHeader, UUID lectureId) {
+
+        Student student = authService.verifyUser(authHeader);
+
+        if(student == null) {
+            return new RatingsAverageResponse("Error, cannot authenticate user", false, null);
+        }
+
+        Lecture lecture = lectureService.findById(lectureId);
+
+        if (lecture == null) {
+            return new RatingsAverageResponse("Error, cannot find lecture with id " + lectureId, false, null);
+        }
+
+
+        Rating rating = ratingRepository.findByStudentIdAndLectureId(student.getId(), lectureId).orElse(null);
+
+        if (rating == null) {
+            return new RatingsAverageResponse("Error, couldnt find rating for Lecture: " + lectureId, false, null);
+        }
+
+
+
+        List<TopicAverageResponse> topics = new ArrayList<>();
+
+
+        for (RatingTopic topic : rating.getTopics()) {
+            topics.add(new TopicAverageResponse(topic.getCategory(), topic.getValue()));
+        }
+
+        return new RatingsAverageResponse("Success, found " + topics.size() + " ratings", true, topics);
+    }
+
 
     public RatingCategoriesResponse getRatingCategories(UUID lectureId) {
 
@@ -164,4 +237,6 @@ public class RatingService {
 
         return new RatingCategoriesResponse("Found " + responses.size() + " categories", true, responses);
     }
+
+
 }

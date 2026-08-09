@@ -50,6 +50,13 @@ public class RatingController {
         return ratingService.getRatingCategories(lectureId);
     }
 
+    @GetMapping("own/{lectureId}")
+    public RatingsAverageResponse getOwnRating(@RequestHeader("Authorization") String authHeader, @PathVariable UUID lectureId) {
+        return ratingService.getOwnRating(authHeader, lectureId);
+    }
+
+
+
 
 
 

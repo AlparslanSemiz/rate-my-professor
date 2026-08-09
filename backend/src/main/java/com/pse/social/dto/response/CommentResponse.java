@@ -12,6 +12,7 @@ public record CommentResponse(
         String content,
         ContentStatus status,
         String studentUsername,
+        String profilePicture,
         UUID lectureID,
         LocalDateTime createdAt,
         int downVotes,

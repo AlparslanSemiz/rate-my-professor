@@ -3,6 +3,7 @@ package com.pse.user.service;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.UserRatingResponse;
 import com.pse.auth.service.AuthService;
+import com.pse.shared.util.ProfilePictureGenerator;
 import com.pse.user.dto.StudentProfileResponse;
 import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,7 @@ public class AccountService {
             return new StudentProfileResponse(
                     "Error, cannot authenticate user",
                     false,
+                    null,
                     null,
                     0,
                     0,

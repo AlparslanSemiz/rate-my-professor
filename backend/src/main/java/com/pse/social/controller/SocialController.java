@@ -36,7 +36,6 @@ public class SocialController {
 
 
 
-
     @GetMapping("/notifications/")
     public NotificationsResponse getNotifications(@RequestHeader("Authorization") String authHeader){
 
