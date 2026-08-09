@@ -121,5 +121,66 @@ Added "log out from all devices" endpoint
 
 
 
+09.08
+
+Edited Interface GET "/social/comments/{lecture_id}
+
+Was:
+public record CommentResponse(
+
+        UUID commentID,
+        String content,
+        ContentStatus status,
+        String studentUsername,
+        UUID lectureID,
+        LocalDateTime createdAt,
+        int downVotes,
+        int upVotes,
+
+        List<AnswerResponse> answers
+
+) {
+}
+Now:
+public record CommentResponse(
+
+        UUID commentID,
+        String content,
+        ContentStatus status,
+        String studentUsername,
++++     String studentProfilePicture,
+        UUID lectureID,
+        LocalDateTime createdAt,
+        int downVotes,
+        int upVotes,
+
+        List<AnswerResponse> answers
+
+) {
+}
 
 
+
+Was:
+public record AnswerResponse(
+        UUID commentID,
+        String content,
+        ContentStatus status,
+        String studentUsername,
+        LocalDateTime createdAt,
+        int downVotes,
+        int upVotes
+) {
+}
+Now:
+public record AnswerResponse(
+        UUID commentID,
+        String content,
+        ContentStatus status,
+        String studentUsername,
++++     String studentProfilePicture,
+        LocalDateTime createdAt,
+        int downVotes,
+        int upVotes
+) {
+}
