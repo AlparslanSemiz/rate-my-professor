@@ -148,7 +148,7 @@ public record CommentResponse(
         String content,
         ContentStatus status,
         String studentUsername,
-+++     String studentProfilePicture,
++++     String profilePicture,
         UUID lectureID,
         LocalDateTime createdAt,
         int downVotes,
@@ -178,7 +178,7 @@ public record AnswerResponse(
         String content,
         ContentStatus status,
         String studentUsername,
-+++     String studentProfilePicture,
++++     String profilePicture,
         LocalDateTime createdAt,
         int downVotes,
         int upVotes
