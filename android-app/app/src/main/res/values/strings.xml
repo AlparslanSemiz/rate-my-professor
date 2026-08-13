@@ -24,11 +24,14 @@
 
     <string name="settings_dark_mode">Dark Mode</string>
     <string name="settings_bug_report">Bug Report</string>
+    <string name="comments_report">Report Comment</string>
     <string name="settings_logout_all_devices">Log Out On All Devices</string>
     <string name="settings_delete_account">Delete Account</string>
 
     <string name="bug_report_prompt">What went wrong?</string>
+    <string name="comment_report_prompt">Please select Reason of Report and give and explanation.</string>
     <string name="bug_report_hint">Describe the bug</string>
+    <string name="comment_report_hint">Explain the report reason</string>
     <string name="bug_report_empty_error">Please describe the bug before submitting.</string>
     <string name="bug_report_submitted">Thanks for the report.</string>
     <string name="logout_all_devices_title">Log Out On All Devices?</string>

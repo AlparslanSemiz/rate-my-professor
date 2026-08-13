@@ -62,7 +62,7 @@
         app:hintTextColor="@color/text_muted">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/bug_report_input"
+            android:id="@+id/comment_report_input"
             android:layout_width="match_parent"
             android:layout_height="176dp"
             android:fontFamily="@font/inter"

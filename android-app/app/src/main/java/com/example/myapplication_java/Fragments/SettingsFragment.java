@@ -172,7 +172,7 @@ public class SettingsFragment extends Fragment {
         dialogBinding.bugReportClose.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.bugReportCancel.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.bugReportSubmit.setOnClickListener(v -> submitBugReport(dialogBinding, dialog));
-        dialogBinding.bugReportInput.addTextChangedListener(new TextWatcher() {
+        dialogBinding.commentReportInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
@@ -205,9 +205,9 @@ public class SettingsFragment extends Fragment {
      * @param dialog        the dialog to close once the report is accepted
      */
     private void submitBugReport(DialogBugReportBinding dialogBinding, Dialog dialog) {
-        String report = dialogBinding.bugReportInput.getText() == null
+        String report = dialogBinding.commentReportInput.getText() == null
                 ? ""
-                : dialogBinding.bugReportInput.getText().toString().trim();
+                : dialogBinding.commentReportInput.getText().toString().trim();
 
         // There is no bug-report endpoint yet, so this only validates local input.
         if (report.isEmpty()) {

@@ -1,15 +1,21 @@
 package com.example.myapplication_java.Fragments;
 
+import android.app.Dialog;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import com.example.myapplication_java.Adapters.CommentsAdapter;
@@ -19,12 +25,15 @@ import com.example.myapplication_java.DomainModel.VoteType;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
+import com.example.myapplication_java.ServerCommunication.ReportReason;
+import com.example.myapplication_java.ServerCommunication.Requests.CommentReportRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
-import com.example.myapplication_java.ServerCommunication.VoteRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.VoteRequest;
+import com.example.myapplication_java.databinding.DialogCommentReportBinding;
 import com.example.myapplication_java.databinding.FragmentReplyBinding;
 import com.example.myapplication_java.databinding.ItemCommentBinding;
-import com.example.myapplication_java.databinding.ItemReplyBinding;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.List;
 
@@ -92,7 +101,7 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         mainComment.replyButton.setVisibility(View.INVISIBLE);
         mainComment.commentsIcon.setOnClickListener(v -> {});
         mainComment.commentsNum.setText(String.valueOf(comment.answers().size()));
-
+        mainComment.reportButton.setOnClickListener(v ->reportComment(comment.commentID()));
 
         answerList.setLayoutManager(new LinearLayoutManager(getContext()));
         List<Comment> answers = comment.answers();
@@ -136,5 +145,111 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
                 Toast.makeText(getContext(), "Vote couldn't be sent(error). ", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    @Override
+    public void reportComment(String commentID) {
+        showCommentReportDialog(commentID, CommentType.COMMENT);
+    }
+
+    @Override
+    public void reportReply(String commentID) {
+        showCommentReportDialog(commentID, CommentType.REPLY);
+    }
+
+    /**
+     * Opens the bug report dialog.
+     */
+    private void showCommentReportDialog(String commentID, CommentType type) {
+        DialogCommentReportBinding dialogBinding = DialogCommentReportBinding.inflate(getLayoutInflater());
+
+        ReportReason[] reasons = ReportReason.values();
+
+        ArrayAdapter<ReportReason> adapter = new ArrayAdapter<>(
+                getContext(),
+                android.R.layout.simple_spinner_item,
+                reasons
+        );
+
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        dialogBinding.reportReason.setAdapter(adapter);
+
+        Dialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setView(dialogBinding.getRoot())
+                .create();
+
+        dialogBinding.bugReportClose.setOnClickListener(v -> dialog.dismiss());
+        dialogBinding.bugReportCancel.setOnClickListener(v -> dialog.dismiss());
+        dialogBinding.bugReportSubmit.setOnClickListener(v -> submitCommentReport(dialogBinding, dialog, commentID, type));
+        dialogBinding.commentReportInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            /**
+             * Clears the empty-input error once the user starts typing.
+             */
+            @Override
+            public void afterTextChanged(Editable s) {
+                dialogBinding.bugReportInputLayout.setError(null);
+            }
+        });
+
+        dialog.setOnShowListener(dialogInterface -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            }
+        });
+        dialog.show();
+    }
+    /**
+     * Validates the bug report text before closing the dialog.
+     *
+     * @param dialogBinding the views of the bug report dialog
+     * @param dialog        the dialog to close once the report is accepted
+     */
+    private void submitCommentReport(DialogCommentReportBinding dialogBinding, Dialog dialog,
+                                     String commentID, CommentType type) {
+        String report = dialogBinding.commentReportInput.getText() == null
+                ? ""
+                : dialogBinding.commentReportInput.getText().toString().trim();
+
+        // There is no bug-report endpoint yet, so this only validates local input.
+        if (report.isEmpty()) {
+            dialogBinding.bugReportInputLayout.setError(getString(R.string.bug_report_empty_error));
+            return;
+        }
+
+        ReportReason reason = (ReportReason) dialogBinding.reportReason.getSelectedItem();
+        CommentReportRequest request = new CommentReportRequest(commentID, reason, report);
+        Call<BasicResponse> reportCall;
+        String authToken = LoginSession.from(getContext()).bearerToken();
+        if (type == CommentType.COMMENT) {
+            reportCall = apiService.reportComment(authToken, request);
+        } else {
+            reportCall = apiService.reportReply(authToken, request);
+        }
+        reportCall.enqueue(new Callback<BasicResponse>() {
+            @Override
+            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                BasicResponse body = response.body();
+                if (!response.isSuccessful() || body == null || !body.success()) {
+                    Log.println(Log.DEBUG, "comment report", "failure: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                Log.println(Log.DEBUG, "comment report", "failure: " + throwable.getMessage());
+            }
+        });
+        dialogBinding.bugReportInputLayout.setError(null);
+        Toast.makeText(requireContext(), R.string.bug_report_submitted, Toast.LENGTH_SHORT).show();
+        dialog.dismiss();
     }
 }

@@ -1,6 +1,8 @@
 package com.example.myapplication_java.ServerCommunication;
 
+import com.example.myapplication_java.ServerCommunication.Requests.CommentReportRequest;
 import com.example.myapplication_java.ServerCommunication.Requests.SubmitAnswerRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.VoteRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRequest;
@@ -202,5 +204,18 @@ public interface APIService {
     Call<StudentProfileResponse> getUserInformation(
             @Header("Authorization") String token
     );
+
+    @POST("/comments/report")
+    Call<BasicResponse> reportComment(
+            @Header("Authorization") String token,
+            @Body CommentReportRequest request
+    );
+
+    @POST("/answers/report")
+    Call<BasicResponse> reportReply(
+            @Header("Authorization") String token,
+            @Body CommentReportRequest request
+    );
+
 
 }
