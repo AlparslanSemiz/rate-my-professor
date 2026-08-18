@@ -142,8 +142,6 @@ public abstract class Database extends RoomDatabase {
                 tableFinished
         );
 
-        //Wir kommentieren das aus bis comment sachen gelöst sind.
-        /**
         refreshTable(
                 apiService.getAllComments(),
                 CommentsResponse::comments,
@@ -153,7 +151,6 @@ public abstract class Database extends RoomDatabase {
                 "comments",
                 null
         );
-         */
     }
 
     /**
@@ -226,10 +223,13 @@ public abstract class Database extends RoomDatabase {
         Log.println(Log.DEBUG, "comments", comment.commentID());
         SearchService service = searchService();
         service.insertComment(parseCommentToModel(comment, null));
+        // We will store replies too when the unique-id problem is solved.
+        /**
         for (Comment reply : comment.answers()) {
             Log.println(Log.DEBUG, "replies", reply.commentID());
             service.insertComment(parseCommentToModel(reply, reply.commentID()));
         }
+         */
     }
     private CommentModel parseCommentToModel(Comment comment, String parentID) {
         return new CommentModel(comment.commentID(), parentID, comment.content(),

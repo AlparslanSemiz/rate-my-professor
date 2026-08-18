@@ -4,6 +4,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -60,6 +61,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         );
 
 
+        holder.itemView.setOnClickListener(v -> openReplies(comment));
         holder.showCommentButton.setOnClickListener(v -> openReplies(comment));
         holder.upVoteButton.setOnClickListener(v -> {
             holder.upVoteCount.setText(String.valueOf(comment.upVotes() + 1));
@@ -76,8 +78,10 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             holder.replyButton.setVisibility(View.INVISIBLE);
             holder.showCommentButton.setVisibility(View.INVISIBLE);
             holder.commentsNum.setVisibility(View.GONE);
+            holder.reportButton.setOnClickListener(v ->listener.reportReply(comment.commentID()));
         } else {
             holder.commentsNum.setText(String.valueOf(comment.answers().size()));
+            holder.reportButton.setOnClickListener(v ->listener.reportComment(comment.commentID()));
         }
 
     }
@@ -116,6 +120,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         final TextView upVoteCount;
         final TextView downVoteCount;
         final TextView commentsNum;
+        final ImageButton reportButton;
 
         /**
          * Whether the answers of this comment are currently folded out.
@@ -142,6 +147,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             upVoteCount = binding.upvotesNum;
             downVoteCount = binding.downvotesNum;
             commentsNum = binding.commentsNum;
+            reportButton = binding.reportButton;
         }
 
     }
@@ -170,5 +176,16 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
          * For voting on a comment or answer.
          */
         void vote(String commentID, VoteType voteType, CommentType commentType);
+
+        /**
+         * for reporting comments.
+         * @param commentID the ID of the comment.
+         */
+        void reportComment(String commentID);
+        /**
+         * for reporting replies.
+         * @param commentID the ID of the reply.
+         */
+        void reportReply(String commentID);
     }
 }

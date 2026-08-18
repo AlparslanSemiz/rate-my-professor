@@ -4,10 +4,15 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.Dns;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
@@ -63,10 +68,25 @@ public class RetrofitClient {
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
 
+        //Filter out IPv6 traffic because it doesn't work right now.
+        Dns ipv4OnlyDns = hostname -> {
+            List<InetAddress> addresses = Dns.SYSTEM.lookup(hostname);
+
+            List<InetAddress> ipv4Addresses = new ArrayList<>();
+            for (InetAddress address : addresses) {
+                if (address instanceof Inet4Address) {
+                    ipv4Addresses.add(address);
+                }
+            }
+
+            return ipv4Addresses;
+        };
+
         return new OkHttpClient.Builder()
                 .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .addInterceptor(loggingInterceptor)
+                .dns(ipv4OnlyDns)
                 .build();
     }
 

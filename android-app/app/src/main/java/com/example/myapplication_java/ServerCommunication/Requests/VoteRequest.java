@@ -1,4 +1,4 @@
-package com.example.myapplication_java.ServerCommunication;
+package com.example.myapplication_java.ServerCommunication.Requests;
 
 import com.example.myapplication_java.DomainModel.VoteType;
 

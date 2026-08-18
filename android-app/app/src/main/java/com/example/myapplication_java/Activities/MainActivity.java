@@ -12,8 +12,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.example.myapplication_java.Adapters.ControlFlowInterface;
+import com.example.myapplication_java.Adapters.MainViewModel;
 import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
@@ -68,41 +70,43 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
         // On recreation (e.g. after a dark mode change) the fragment manager restores
         // the previous fragment, so only load the home screen on a fresh start.
         if (savedInstanceState == null) {
-            loadFragment(new HomeFragment());
+            loadFragment(new HomeFragment(), false);
         }
 
-        refreshLocalData();
+        MainViewModel viewModel = new ViewModelProvider(this).get(MainViewModel.class);
         setUpBottomNavigation();
     }
 
-    /**
-     * Pulls the current professors and lectures from the server into the local database, so
-     * the search screen has something to work with.
-     */
-    private void refreshLocalData() {
-        APIService apiService = RetrofitClient.getClient().create(APIService.class);
-        Database.getInstance(this).updateDB(apiService);
-    }
 
     /**
      * Connects each bottom navigation button to the screen it opens.
      */
     private void setUpBottomNavigation() {
-        binding.navHome.setOnClickListener(v -> loadFragment(new HomeFragment()));
-        binding.navSearch.setOnClickListener(v -> loadFragment(new SearchFragment()));
-        binding.navSettings.setOnClickListener(v -> loadFragment(new SettingsFragment()));
+        binding.navHome.setOnClickListener(v -> loadFragment(new HomeFragment(), false));
+        binding.navSearch.setOnClickListener(v -> loadFragment(new SearchFragment(), false));
+        binding.navSettings.setOnClickListener(v -> loadFragment(new SettingsFragment(), false));
     }
 
     /**
      * Shows the given fragment as the current screen.
      *
      * @param fragment the screen to display
+     * @param keepInStack if the previous fragment should be remembered so that it
+     *                    can be accessed with the back button.
      */
-    private void loadFragment(Fragment fragment) {
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.fragment_container, fragment)
-                .commit();
+    private void loadFragment(Fragment fragment, boolean keepInStack) {
+        if (!keepInStack) {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, fragment)
+                    .commit();
+        } else {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, fragment)
+                    .addToBackStack(null)
+                    .commit();
+        }
     }
 
     private void getHomepageData() {
@@ -134,27 +138,27 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
     }
     @Override
     public void openHome() {
-        loadFragment(new HomeFragment());
+        loadFragment(new HomeFragment(), false);
     }
 
     @Override
     public void onProfessorSelected(Professor professor) {
-        loadFragment(new ProfileFragment(professor));
+        loadFragment(new ProfileFragment(professor), true);
     }
 
     @Override
     public void onLectureSelected(String lectureTitle) {
-        loadFragment(new ProfileFragment(lectureTitle));
+        loadFragment(new ProfileFragment(lectureTitle),  true);
     }
 
     @Override
     public void openLectureProfile(Professor professor, Semester semester, Lecture lecture) {
-        loadFragment(new OfferingRatingsFragment(professor, semester, lecture));
+        loadFragment(new OfferingRatingsFragment(professor, semester, lecture), true);
     }
 
     @Override
     public void openReplyFragment(Comment comment) {
-        loadFragment(new ReplyFragment(comment));
+        loadFragment(new ReplyFragment(comment), true);
     }
 
 }

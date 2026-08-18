@@ -34,7 +34,7 @@ import com.example.myapplication_java.ServerCommunication.Responses.RatingAverag
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.ServerCommunication.Requests.SubmitAnswerRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.StudentProfileResponse;
-import com.example.myapplication_java.ServerCommunication.VoteRequest;
+import com.example.myapplication_java.ServerCommunication.Requests.VoteRequest;
 
 import org.junit.After;
 import org.junit.Before;
