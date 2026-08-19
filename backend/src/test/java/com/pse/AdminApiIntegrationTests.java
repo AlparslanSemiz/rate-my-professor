@@ -1768,6 +1768,60 @@ class AdminApiIntegrationTests {
         );
     }
 
+    @Test
+    void ownRatingCategoriesAndOverwriteAreCovered() throws Exception {
+        Session student = createSession("edit-rating@student.kit.edu", false);
+        Lecture lecture = createLecture();
+
+        // Rating existiert noch nicht
+        mockMvc.perform(get("/ratings/own/{lectureId}", lecture.getId())
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false));
+
+        // Lecture existiert nicht
+        mockMvc.perform(get("/ratings/own/{lectureId}", UUID.randomUUID())
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false));
+
+        // Rating erstmals erstellen
+        mockMvc.perform(post("/ratings/rate")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {"lectureId":"%s","topics":[{"category":"ORGANIZATION","value":4}]}
+                            """.formatted(lecture.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // Eigenes Rating lesen
+        mockMvc.perform(get("/ratings/own/{lectureId}", lecture.getId())
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.ratings", hasSize(2)));
+
+        // Rating-Kategorien lesen
+        mockMvc.perform(get("/ratings/{lectureId}/categories", lecture.getId())
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.categories").isArray());
+
+        // Gleiche Lecture erneut bewerten -> EDIT/OVERWRITE-Zweig
+        mockMvc.perform(post("/ratings/rate")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {"lectureId":"%s","topics":[{"category":"ORGANIZATION","value":2}]}
+                            """.formatted(lecture.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, ratingRepository.count());
+    }
+
     private void requestCode(String email) throws Exception {
         mockMvc.perform(post("/auth/request-login")
                         .contentType(MediaType.APPLICATION_JSON)
