@@ -10,6 +10,7 @@ public record AnswerResponse(
         String content,
         ContentStatus status,
         String studentUsername,
+        String profilePicture,
         LocalDateTime createdAt,
         int downVotes,
         int upVotes

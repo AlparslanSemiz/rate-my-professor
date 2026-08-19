@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.pse.shared.util.ProfilePictureGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,12 +49,13 @@ public class StudentService {
     public StudentProfileResponse getUserInformation(UUID studentId) {
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null) {
-            return new StudentProfileResponse("Error, cannot authenticate user", false, null, 0, 0, 0, 0);
+            return new StudentProfileResponse("Error, cannot authenticate user", false, null, null, 0, 0, 0, 0);
         }
         return new StudentProfileResponse(
                 "Success",
                 true,
                 student.getUsername(),
+                ProfilePictureGenerator.generateProfilePicture(student),
                 getAverageRating(student),
                 student.getRatings().size(),
                 student.getComments().size(),

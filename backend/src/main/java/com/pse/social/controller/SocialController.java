@@ -36,14 +36,13 @@ public class SocialController {
 
 
 
-
-    @GetMapping("/notifications/")
+    @GetMapping("/notifications")
     public NotificationsResponse getNotifications(@RequestHeader("Authorization") String authHeader){
 
         return socialService.getNotifications(authHeader);
     }
 
-    @PatchMapping
+    @PatchMapping("notifications")
     public BasicResponse markAllNotificationsAsSeen(@RequestHeader("Authorization") String authHeader){
 
         return socialService.markAllNotificationsAsSeen(authHeader);
