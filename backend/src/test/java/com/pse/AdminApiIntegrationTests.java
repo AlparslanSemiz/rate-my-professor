@@ -1355,6 +1355,48 @@ class AdminApiIntegrationTests {
     }
 
     @Test
+    void auditWriterCoversAdminRefusalAndNullPayloadBranches() {
+        Session admin = createSession("coverage-admin@student.kit.edu", true);
+        Session student = createSession("coverage-student@student.kit.edu", false);
+
+        AuditLog adminRefusal = auditWriter.writeRefusal(
+                admin.student(),
+                true,
+                AuditAction.ACCESS_REFUSED,
+                AuditTargetType.ENDPOINT,
+                null,
+                "PATCH /users/{id}/block",
+                Map.of("path", "/users/coverage/block")
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.ADMIN, adminRefusal.getActorType());
+        org.junit.jupiter.api.Assertions.assertEquals("ADMIN", adminRefusal.getActorRole());
+
+        AuditLog studentRefusal = auditWriter.writeRefusal(
+                student.student(),
+                false,
+                AuditAction.ACCESS_REFUSED,
+                AuditTargetType.ENDPOINT,
+                null,
+                "GET /users",
+                Map.of("path", "/users")
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.USER, studentRefusal.getActorType());
+        org.junit.jupiter.api.Assertions.assertEquals("STUDENT", studentRefusal.getActorRole());
+
+        AuditLog nullPayloads = auditWriter.write(
+                admin.admin(),
+                AuditAction.USER_BLOCKED,
+                AuditTargetType.USER,
+                student.student().getId(),
+                "coverage-student",
+                null,
+                null
+        );
+        org.junit.jupiter.api.Assertions.assertTrue(nullPayloads.getChanges().isEmpty());
+        org.junit.jupiter.api.Assertions.assertTrue(nullPayloads.getMetadata().isEmpty());
+    }
+
+    @Test
     void auditFailureRollsBackDomainMutation() throws Exception {
         Session admin = createSession("admin@student.kit.edu", true);
         Session target = createSession("rollback@student.kit.edu", false);
@@ -1465,12 +1507,12 @@ class AdminApiIntegrationTests {
         // The student is told, with the reason, through their own feed. The payload
         // key is "answers" for historical reasons; renaming it would break the
         // student app, so the new entries ride along in the same list.
-        mockMvc.perform(get("/social/notifications")
+        mockMvc.perform(get("/social/notifications/")
                         .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.notifications", hasSize(1)))
-                .andExpect(jsonPath("$.notifications[0].type").value("WARNING"))
-                .andExpect(jsonPath("$.notifications[0].message")
+                .andExpect(jsonPath("$.answers", hasSize(1)))
+                .andExpect(jsonPath("$.answers[0].type").value("WARNING"))
+                .andExpect(jsonPath("$.answers[0].message")
                         .value("Repeated harassment after prior warning"));
 
         // A warning is a disciplinary record, not a restriction: the account keeps
@@ -1726,60 +1768,6 @@ class AdminApiIntegrationTests {
         );
     }
 
-
-    @Test
-    void auditWriterCoversAdminRefusalAndNullPayloadBranches() {
-        Session admin = createSession("coverage-admin@student.kit.edu", true);
-        Session student = createSession("coverage-student@student.kit.edu", false);
-
-        AuditLog adminRefusal = auditWriter.writeRefusal(
-                admin.student(),
-                true,
-                AuditAction.ACCESS_REFUSED,
-                AuditTargetType.ENDPOINT,
-                null,
-                "PATCH /users/{id}/block",
-                Map.of("path", "/users/coverage/block")
-        );
-        org.junit.jupiter.api.Assertions.assertEquals(
-                AuditActorType.ADMIN, adminRefusal.getActorType());
-        org.junit.jupiter.api.Assertions.assertEquals(
-                "ADMIN", adminRefusal.getActorRole());
-
-        AuditLog studentRefusal = auditWriter.writeRefusal(
-                student.student(),
-                false,
-                AuditAction.ACCESS_REFUSED,
-                AuditTargetType.ENDPOINT,
-                null,
-                "GET /users",
-                Map.of("path", "/users")
-        );
-        org.junit.jupiter.api.Assertions.assertEquals(
-                AuditActorType.USER, studentRefusal.getActorType());
-        org.junit.jupiter.api.Assertions.assertEquals(
-                "STUDENT", studentRefusal.getActorRole());
-
-        AuditLog nullPayloads = auditWriter.write(
-                admin.admin(),
-                AuditAction.USER_BLOCKED,
-                AuditTargetType.USER,
-                student.student().getId(),
-                "coverage-student",
-                null,
-                null
-        );
-        org.junit.jupiter.api.Assertions.assertTrue(
-                nullPayloads.getChanges().isEmpty());
-        org.junit.jupiter.api.Assertions.assertTrue(
-                nullPayloads.getMetadata().isEmpty());
-    }
-
-
-
-
-
-
     private void requestCode(String email) throws Exception {
         mockMvc.perform(post("/auth/request-login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -1874,3 +1862,4 @@ class AdminApiIntegrationTests {
     private record Session(Student student, Admin admin, Token token, String rawToken) {
     }
 }
+
