@@ -3,6 +3,7 @@ package com.pse.user.service;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.UserRatingResponse;
 import com.pse.auth.service.AuthService;
+import com.pse.shared.util.ProfilePictureGenerator;
 import com.pse.user.dto.StudentProfileResponse;
 import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +30,7 @@ public class AccountService {
             return new UserRatingResponse("Error, couldnt verify User", false,null);
         }
 
-        return studentService.getUserRatings(student);
+        return studentService.getUserRatings(student.getId());
 
 
     }
@@ -51,14 +52,22 @@ public class AccountService {
             );
         }
 
-        return studentService.getUserInformation(student);
+        return studentService.getUserInformation(student.getId());
     }
 
     public BasicResponse deleteAccount(String authHeader) {
 
         Student student = authService.verifyUser(authHeader);
 
-        return studentService.deleteAccount(student);
+        BasicResponse response = studentService.deleteAccount(student);
+
+        if (response.success()) {
+            // Without this the account is DELETED but every issued token stays
+            // valid until it expires, which for a student is a full year.
+            authService.invalidateAllAuthTokensForEmail(student.getKitEmail());
+        }
+
+        return response;
     }
 
     public BasicResponse requestLogout(String authHeader) {

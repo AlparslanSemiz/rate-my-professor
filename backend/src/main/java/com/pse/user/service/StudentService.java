@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.pse.shared.util.ProfilePictureGenerator;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.UserRatingDto;
@@ -36,12 +38,24 @@ public class StudentService {
 
     //Methods used by AccountController
 
-    public StudentProfileResponse getUserInformation(Student student) {
+    // Takes the id rather than the Student handed back by AuthService, and
+    // re-fetches it here. That earlier Student was loaded in
+    // TokenAuthenticationService's own (by now committed and closed)
+    // transaction, so its lazy collections are bound to a session that no
+    // longer exists; wrapping this method in @Transactional does not reattach
+    // it. Re-fetching inside this transaction is what actually makes
+    // student.getRatings()/getComments() below initializable.
+    @Transactional(readOnly = true)
+    public StudentProfileResponse getUserInformation(UUID studentId) {
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null) {
+            return new StudentProfileResponse("Error, cannot authenticate user", false, null, null, 0, 0, 0, 0);
+        }
         return new StudentProfileResponse(
                 "Success",
                 true,
                 student.getUsername(),
-                getProfilePicture(student),
+                ProfilePictureGenerator.generateProfilePicture(student),
                 getAverageRating(student),
                 student.getRatings().size(),
                 student.getComments().size(),
@@ -49,15 +63,14 @@ public class StudentService {
         );
     }
 
+    // Same reattachment reason as getUserInformation above.
+    @Transactional(readOnly = true)
+    public UserRatingResponse getUserRatings(UUID studentId) {
 
-
-    private String getProfilePicture(Student student) {
-        return "https://api.dicebear.com/10.x/thumbs/svg?eyesProbability=100&eyesVariant=variant02,variant03,variant04,variant05,variant06,variant07,variant08&seed=" + student.getId();
-    }
-
-
-    public UserRatingResponse getUserRatings(Student student) {
-
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null) {
+            return new UserRatingResponse("Error, cannot authenticate user", false, new ArrayList<>());
+        }
 
         List<UserRatingDto> ratingDtos = new ArrayList<>();
 
@@ -65,40 +78,42 @@ public class StudentService {
 
             String lectureName = rating.getLecture().getName();
 
-
-            String semester = rating.getLecture().getSemesterSeason().toString()
+            String semester = rating.getLecture().getSemesterSeason()
+                    + " "
                     + rating.getLecture().getSemesterYear();
 
-            double overallRating = 0;
+            double weightedSum = 0;
+            double totalWeight = 0;
 
             for (RatingTopic topic : rating.getTopics()) {
 
-                //TODO calculate overall
+                double weight = topic.getCategory().getDefaultWeight();
 
-
-
-
-
-                if (topic.getCategory().equals("overall")) {
-                    overallRating = topic.getValue();
-                    break;
-                }
+                weightedSum += topic.getValue() * weight;
+                totalWeight += weight;
             }
 
-            ratingDtos.add(new UserRatingDto(
-                    lectureName,
-                    semester,
-                    overallRating
-            ));
+            double overallRating = totalWeight == 0? 0: weightedSum / totalWeight;
+
+            overallRating = Math.round(overallRating * 100.0) / 100.0;
+
+            ratingDtos.add(
+                    new UserRatingDto(
+                            lectureName,
+                            semester,
+                            overallRating
+                    )
+            );
         }
 
         return new UserRatingResponse(
-                "Success",
+                "Success, found " + ratingDtos.size() + " ratings.",
                 true,
                 ratingDtos
         );
-
     }
+
+
 
     public BasicResponse requestLogout(Student student) {
 
@@ -174,7 +189,25 @@ public class StudentService {
 
 
 
+    private double calculateOverallRating(Rating rating) {
 
+        double weightedSum = 0;
+        double totalWeight = 0;
+
+        for (RatingTopic topic : rating.getTopics()) {
+
+            double weight = topic.getCategory().getDefaultWeight();
+
+            weightedSum += topic.getValue() * weight;
+            totalWeight += weight;
+        }
+
+        if (totalWeight == 0) {
+            return 0;
+        }
+
+        return weightedSum / totalWeight;
+    }
 
 
     //Repository Methods
@@ -189,7 +222,17 @@ public class StudentService {
     }
 
     public double getAverageRating(Student student) {
-        return studentRepository.getAverageOverallRating(student);
+        if (student.getRatings().isEmpty()) {
+        return 0;
+        }
+
+        double sum = 0;
+
+        for (Rating rating : student.getRatings()) {
+            sum += calculateOverallRating(rating);
+        }
+
+        return sum / student.getRatings().size();
     }
 
     public List<Student> getAllUsers() {

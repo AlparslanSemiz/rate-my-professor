@@ -108,4 +108,102 @@ public record ProfessorShortResponse(
 
 
 
+28.07
 
+Added "log out from all devices" endpoint
+
+++ POST /auth/logout-all
+   - requires "Authorization: Bearer <authToken>" header (missing/invalid => 401)
+   - no request body
+   - revokes every auth token of the calling account, including the caller's own device
+   - the account is not deleted; email + OTP login still works afterwards
+   - returns BasicResponse: {"message": string, "success": boolean}
+
+
+
+09.08
+
+Edited Interface GET "/social/comments/{lecture_id}
+
+Was:
+public record CommentResponse(
+
+        UUID commentID,
+        String content,
+        ContentStatus status,
+        String studentUsername,
+        UUID lectureID,
+        LocalDateTime createdAt,
+        int downVotes,
+        int upVotes,
+
+        List<AnswerResponse> answers
+
+) {
+}
+Now:
+public record CommentResponse(
+
+        UUID commentID,
+        String content,
+        ContentStatus status,
+        String studentUsername,
++++     String profilePicture,
+        UUID lectureID,
+        LocalDateTime createdAt,
+        int downVotes,
+        int upVotes,
+
+        List<AnswerResponse> answers
+
+) {
+}
+
+
+
+Was:
+public record AnswerResponse(
+        UUID commentID,
+        String content,
+        ContentStatus status,
+        String studentUsername,
+        LocalDateTime createdAt,
+        int downVotes,
+        int upVotes
+) {
+}
+Now:
+public record AnswerResponse(
+        UUID commentID,
+        String content,
+        ContentStatus status,
+        String studentUsername,
++++     String profilePicture,
+        LocalDateTime createdAt,
+        int downVotes,
+        int upVotes
+) {
+}
+
+was:
+public record StudentProfileResponse(
+        String message,
+        boolean success,
+        String username,
+        double averageRating,
+        int ratingsCount,
+        int commentsWritten,
+        int credibilityScore
+) {}
+
+now:
+public record StudentProfileResponse(
+        String message,
+        boolean success,
+        String username,
++++     String profilePicture,
+        double averageRating,
+        int ratingsCount,
+        int commentsWritten,
+        int credibilityScore
+) {}

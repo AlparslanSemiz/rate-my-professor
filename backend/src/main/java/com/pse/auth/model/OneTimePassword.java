@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "one_time_passwords")
@@ -26,12 +27,19 @@ public class    OneTimePassword {
     @Column(nullable = false)
     private String email;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT")
     private String hash;
+
+    @Column(name = "value", columnDefinition = "TEXT")
+    private String legacyValue;
 
     @Column(nullable = false)
     private boolean used = false;
 
     @Column(nullable = false)
     private LocalDateTime expiresAt;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 }

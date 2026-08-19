@@ -34,7 +34,11 @@ public class LectureController {
     }
 
 
-    @GetMapping("/professor/{lecture_id}")
+    // Was mapped to "/professor/{lecture_id}" — an exact path collision with
+    // ProfessorController's "/data/professor/{professor_id}". Spring can't pick
+    // between them at request time and throws "Ambiguous handler methods
+    // mapped", so this endpoint 500'd unconditionally, for every id, always.
+    @GetMapping("/lectures/{lecture_id}")
     public LectureDetailResponse getLecture(@PathVariable UUID lecture_id) {
         return lectureService.getLecture(lecture_id);
     }

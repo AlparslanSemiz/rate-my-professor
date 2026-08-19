@@ -1,5 +1,6 @@
 HELP.md
 target/
+.m2/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -32,8 +33,6 @@ build/
 ### VS Code ###
 .vscode/
 
-### Node / Prisma ###
+### Node / local env ###
 node_modules/
 .env
-src/generated/prisma/
-ERD.md

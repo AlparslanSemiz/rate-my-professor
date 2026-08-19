@@ -6,10 +6,11 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record AnswerResponse(
-        UUID commentId,
+        UUID commentID,
         String content,
         ContentStatus status,
         String studentUsername,
+        String profilePicture,
         LocalDateTime createdAt,
         int downVotes,
         int upVotes

@@ -2,14 +2,22 @@ package com.pse.social.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import com.pse.shared.util.ProfilePictureGenerator;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.service.AuditWriter;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.service.LectureService;
+import com.pse.shared.enums.ContentStatus;
+import com.pse.shared.enums.NotificationType;
 import com.pse.shared.enums.ReportReason;
 import com.pse.shared.enums.ReportStatus;
 import com.pse.shared.enums.VoteType;
@@ -61,6 +69,8 @@ public class SocialService {
 
     private final NotificationRepository notificationRepository;
 
+    private final AuditWriter auditWriter;
+
     public SocialService(LectureService lectureService, AuthService authService,
                          CommentRepository commentRepository,
                          AnswerRepository answerRepository,
@@ -68,7 +78,8 @@ public class SocialService {
                          AnswerReportRepository answerReportRepository,
                          CommentVoteRepository commentVoteRepository,
                          AnswerVoteRepository answerVoteRepository,
-                         NotificationRepository notificationRepository) {
+                         NotificationRepository notificationRepository,
+                         AuditWriter auditWriter) {
 
         this.lectureService = lectureService;
         this.authService = authService;
@@ -79,12 +90,16 @@ public class SocialService {
         this.commentVoteRepository = commentVoteRepository;
         this.answerVoteRepository = answerVoteRepository;
         this.notificationRepository = notificationRepository;
+        this.auditWriter = auditWriter;
 
     }
 
 
 
 
+    // Needs a transaction so that the comment and its activity-log entry commit
+    // together. The same holds for the other submit methods below.
+    @Transactional
     public BasicResponse submitComment(String authHeader, CommentSubmitRequest request) {
 
         Student student = authService.verifyUser(authHeader);
@@ -114,6 +129,15 @@ public class SocialService {
         comment.setLecture(lecture);
 
         commentRepository.save(comment);
+
+        auditWriter.writeStudentAction(
+                student,
+                AuditAction.COMMENT_CREATED,
+                AuditTargetType.COMMENT,
+                comment.getId(),
+                lectureLabel(lecture),
+                contentMetadata(content)
+        );
 
         return true;
 
@@ -155,7 +179,40 @@ public class SocialService {
 
     }
 
+    // Needs a transaction: open-in-view is disabled and the response walks the
+    // lazy answers collection of every comment. Without it this endpoint fails
+    // with LazyInitializationException for any lecture that has comments.
+    @Transactional(readOnly = true)
+    public CommentsResponse getAllComments() {
 
+        List<Comment> comments = commentRepository
+                .findAllByStatus(ContentStatus.VISIBLE);
+
+        List<CommentResponse> commentsResponses = new ArrayList<>();
+
+        for (Comment comment : comments) {
+
+            List<AnswerResponse> answerResponses = getAnswerResponses(comment);
+
+            commentsResponses.add(new CommentResponse(
+                    comment.getId(),
+                    comment.getContent(),
+                    comment.getStatus(),
+                    comment.getStudent().getUsername(),
+                    ProfilePictureGenerator.generateProfilePicture(comment.getStudent()),
+                    comment.getLecture().getId(),
+                    comment.getCreatedAt(),
+                    commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
+                    commentVoteRepository.countByCommentAndVote(comment, VoteType.UP),
+                    answerResponses
+            ));
+
+        }
+
+        return new CommentsResponse("Comments loaded successfully", true, commentsResponses);
+    }
+
+    @Transactional
     public BasicResponse submitAnswer(String authHeader, AnswerSubmitRequest request) {
 
         Student student = authService.verifyUser(authHeader);
@@ -191,6 +248,16 @@ public class SocialService {
         notification.setRecipient(comment.getStudent());
         notification.setAnswer(answer);
         notificationRepository.save(notification);
+
+        auditWriter.writeStudentAction(
+                student,
+                AuditAction.ANSWER_CREATED,
+                AuditTargetType.ANSWER,
+                answer.getId(),
+                "Answer to " + comment.getStudent().getUsername()
+                        + " in " + lectureLabel(comment.getLecture()),
+                contentMetadata(content)
+        );
 
         return true;
     }
@@ -236,6 +303,7 @@ public class SocialService {
 
 
 
+    @Transactional
     public BasicResponse submitCommentReport(String authHeader, CommentReportRequest request) {
 
         Student student = authService.verifyUser(authHeader);
@@ -269,11 +337,22 @@ public class SocialService {
 
         commentReportRepository.save(report);
 
+        auditWriter.writeStudentAction(
+                student,
+                AuditAction.COMMENT_REPORT_CREATED,
+                AuditTargetType.COMMENT_REPORT,
+                report.getId(),
+                "Report about " + comment.getStudent().getUsername()
+                        + " in " + lectureLabel(comment.getLecture()),
+                Map.of("reason", reportReason == null ? "UNSPECIFIED" : reportReason.name())
+        );
+
         return true;
 
     }
 
 
+    @Transactional
     public BasicResponse submitAnswerReport(String authHeader, AnswerReportRequest request) {
 
         Student student = authService.verifyUser(authHeader);
@@ -305,11 +384,42 @@ public class SocialService {
 
         answerReportRepository.save(report);
 
+        auditWriter.writeStudentAction(
+                student,
+                AuditAction.ANSWER_REPORT_CREATED,
+                AuditTargetType.ANSWER_REPORT,
+                report.getId(),
+                "Report about " + answer.getStudent().getUsername()
+                        + " in " + lectureLabel(answer.getComment().getLecture()),
+                Map.of("reason", reportReason == null ? "UNSPECIFIED" : reportReason.name())
+        );
+
         return true;
 
     }
 
 
+    /**
+     * The lecture a piece of content belongs to, formatted the way the reported-comments
+     * endpoint formats its {@code postContext}.
+     */
+    private String lectureLabel(Lecture lecture) {
+        String code = lecture.getCode();
+        String name = lecture.getName();
+        return code == null || code.isBlank() ? name : code + " — " + name;
+    }
+
+    /**
+     * A preview of submitted text. The full body stays in its own table; the activity
+     * log only needs enough to recognise the entry.
+     */
+    private Map<String, Object> contentMetadata(String content) {
+        String text = content == null ? "" : content;
+        return Map.of(
+                "contentPreview", text.substring(0, Math.min(text.length(), 120)),
+                "contentLength", text.length()
+        );
+    }
 
 
     //Methods used by other Services
@@ -335,9 +445,16 @@ public class SocialService {
     }
 
 
+    // Needs a transaction: open-in-view is disabled and the response walks the
+    // lazy answers collection of every comment. Without it this endpoint fails
+    // with LazyInitializationException for any lecture that has comments.
+    @Transactional(readOnly = true)
     public CommentsResponse getComments(UUID lecture_id) {
 
-        List<Comment> comments = commentRepository.findAllByLectureId(lecture_id);
+        // Only VISIBLE comments reach the student app. A comment is set to HIDDEN
+        // when an admin resolves a report against it as ACTION_TAKEN.
+        List<Comment> comments = commentRepository
+                .findAllByLectureIdAndStatus(lecture_id, ContentStatus.VISIBLE);
 
         List<CommentResponse> commentsResponses = new ArrayList<>();
 
@@ -350,6 +467,7 @@ public class SocialService {
                     comment.getContent(),
                     comment.getStatus(),
                     comment.getStudent().getUsername(),
+                    ProfilePictureGenerator.generateProfilePicture(comment.getStudent()),
                     comment.getLecture().getId(),
                     comment.getCreatedAt(),
                     commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
@@ -370,11 +488,18 @@ public class SocialService {
         List<AnswerResponse> answerResponses = new ArrayList<>();
         for(Answer answer : answers) {
 
+            // Hidden answers must not reach students once an admin has resolved a
+            // report against them as ACTION_TAKEN, mirroring the comment filter above.
+            if (answer.getStatus() != ContentStatus.VISIBLE) {
+                continue;
+            }
+
             answerResponses.add(new AnswerResponse(
                     answer.getComment().getId(),
                     answer.getContent(),
                     answer.getStatus(),
                     answer.getStudent().getUsername(),
+                    ProfilePictureGenerator.generateProfilePicture(answer.getStudent()),
                     answer.getCreatedAt(),
                     answerVoteRepository.countByAnswerAndVote(answer, VoteType.DOWN),
                     answerVoteRepository.countByAnswerAndVote(answer, VoteType.UP)
@@ -384,6 +509,7 @@ public class SocialService {
     }
 
 
+    @Transactional(readOnly = true)
     public NotificationsResponse getNotifications(String authHeader) {
 
         Student student = authService.verifyUser(authHeader);
@@ -401,10 +527,29 @@ public class SocialService {
 
         for(Notification notification : notifications) {
 
+            // Rows written before the type column existed are answer notifications.
+            NotificationType type = notification.getType() == null
+                    ? NotificationType.ANSWER
+                    : notification.getType();
+
+            if (type == NotificationType.WARNING) {
+                notificationResponses.add(
+                        new NotificationResponse(
+                                type,
+                                null,
+                                null,
+                                notification.getMessage(),
+                                notification.getCreatedAt()
+                        ));
+                continue;
+            }
+
             notificationResponses.add(
                     new NotificationResponse(
+                            type,
                             notification.getAnswer().getStudent().getUsername(),
                             notification.getAnswer().getContent(),
+                            null,
                             notification.getCreatedAt()
                     ));
         }

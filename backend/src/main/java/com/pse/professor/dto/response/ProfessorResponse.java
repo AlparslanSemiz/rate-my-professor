@@ -8,6 +8,7 @@ public record ProfessorResponse(
         UUID id,
         String firstName,
         String lastName,
+        boolean active,
         BigDecimal averageRating,
         int ratingCount
 ) {}

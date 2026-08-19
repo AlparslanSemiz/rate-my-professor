@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
@@ -40,6 +41,11 @@ public class LectureService {
 
 
 
+    // Needs a transaction: open-in-view is disabled and the response walks the
+    // lazy professors/comments/ratings collections of every lecture. Without it
+    // this endpoint fails with LazyInitializationException for any lecture with
+    // professors, comments, or ratings.
+    @Transactional(readOnly = true)
     public LecturesResponse getLectures() {
 
         List<Lecture> lectures = lectureRepository.findByActiveTrueOrderByNameAsc();
@@ -56,7 +62,8 @@ public class LectureService {
                     new ProfessorShortResponse(
                         professor.getId(),
                         professor.getFirstName(),
-                        professor.getLastName()
+                        professor.getLastName(),
+                        professor.isActive()
                     )
                 );
             }
@@ -69,6 +76,7 @@ public class LectureService {
                             lecture.getSemesterYear(),
                             lecture.getSemesterSeason(),
                             lecture.isActive(),
+                            lecture.getLectureType(),
                             professorResponses,
                             lecture.getComments().size(),
                             lecture.getRatings().size()
@@ -80,6 +88,52 @@ public class LectureService {
     }
 
 
+    // For the admin panel: getLectures() filters to active=true, the same as the
+    // student app's catalogue read, so a deactivated lecture would otherwise be
+    // unreachable from the panel to correct or reactivate.
+    @Transactional(readOnly = true)
+    public LecturesResponse getAllLectures() {
+
+        List<Lecture> lectures = lectureRepository.findAllByOrderByNameAsc();
+
+        List<LectureResponse> responses = new ArrayList<>();
+
+        for (Lecture lecture : lectures) {
+
+            List<ProfessorShortResponse> professorResponses = new ArrayList<>();
+
+            for (Professor professor : lecture.getProfessors()) {
+                professorResponses.add(
+                    new ProfessorShortResponse(
+                        professor.getId(),
+                        professor.getFirstName(),
+                        professor.getLastName(),
+                        professor.isActive()
+                    )
+                );
+            }
+
+            responses.add(
+                    new LectureResponse(
+                            lecture.getId(),
+                            lecture.getName(),
+                            lecture.getCode(),
+                            lecture.getSemesterYear(),
+                            lecture.getSemesterSeason(),
+                            lecture.isActive(),
+                            lecture.getLectureType(),
+                            professorResponses,
+                            lecture.getComments().size(),
+                            lecture.getRatings().size()
+                    )
+            );
+        }
+
+        return new LecturesResponse("Found " + responses.size() + " lectures", true, responses);
+    }
+
+
+    @Transactional(readOnly = true)
     public LectureDetailResponse getLecture(UUID lectureId) {
 
         Lecture lecture = lectureRepository.findById(lectureId).orElse(null);
@@ -96,7 +150,8 @@ public class LectureService {
                     new ProfessorShortResponse(
                         professor.getId(),
                         professor.getFirstName(),
-                        professor.getLastName()
+                        professor.getLastName(),
+                        professor.isActive()
                     )
                 );
             }
@@ -109,6 +164,7 @@ public class LectureService {
                 lecture.getSemesterYear(),
                 lecture.getSemesterSeason(),
                 lecture.isActive(),
+                lecture.getLectureType(),
                 professorResponses,
                 lecture.getComments().size(),
                 lecture.getRatings().size()

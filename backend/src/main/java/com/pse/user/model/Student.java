@@ -61,6 +61,10 @@ public class Student {
     @Column(name = "blocked_reason")
     private String blockedReason;
 
+    /** Set when the account is deleted and its identifying fields are scrubbed. */
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @OneToMany(mappedBy = "student")
     private List<Rating> ratings = new ArrayList<>();
 
