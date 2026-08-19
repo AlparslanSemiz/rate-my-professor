@@ -1465,7 +1465,7 @@ class AdminApiIntegrationTests {
         // The student is told, with the reason, through their own feed. The payload
         // key is "answers" for historical reasons; renaming it would break the
         // student app, so the new entries ride along in the same list.
-        mockMvc.perform(get("/social/notifications/")
+        mockMvc.perform(get("/social/notifications")
                         .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.answers", hasSize(1)))
