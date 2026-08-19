@@ -1468,9 +1468,9 @@ class AdminApiIntegrationTests {
         mockMvc.perform(get("/social/notifications")
                         .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.answers", hasSize(1)))
-                .andExpect(jsonPath("$.answers[0].type").value("WARNING"))
-                .andExpect(jsonPath("$.answers[0].message")
+                .andExpect(jsonPath("$.notifications", hasSize(1)))
+                .andExpect(jsonPath("$.notifications[0].type").value("WARNING"))
+                .andExpect(jsonPath("$.notifications[0].message")
                         .value("Repeated harassment after prior warning"));
 
         // A warning is a disciplinary record, not a restriction: the account keeps
