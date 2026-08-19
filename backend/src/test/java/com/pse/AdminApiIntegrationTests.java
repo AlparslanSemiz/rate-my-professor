@@ -1507,12 +1507,12 @@ class AdminApiIntegrationTests {
         // The student is told, with the reason, through their own feed. The payload
         // key is "answers" for historical reasons; renaming it would break the
         // student app, so the new entries ride along in the same list.
-        mockMvc.perform(get("/social/notifications/")
+        mockMvc.perform(get("/social/notifications")
                         .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.answers", hasSize(1)))
-                .andExpect(jsonPath("$.answers[0].type").value("WARNING"))
-                .andExpect(jsonPath("$.answers[0].message")
+                .andExpect(jsonPath("$.notifications", hasSize(1)))
+                .andExpect(jsonPath("$.notifications[0].type").value("WARNING"))
+                .andExpect(jsonPath("$.notifications[0].message")
                         .value("Repeated harassment after prior warning"));
 
         // A warning is a disciplinary record, not a restriction: the account keeps
