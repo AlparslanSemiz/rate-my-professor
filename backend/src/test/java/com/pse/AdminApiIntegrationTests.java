@@ -1726,6 +1726,60 @@ class AdminApiIntegrationTests {
         );
     }
 
+
+    @Test
+    void auditWriterCoversAdminRefusalAndNullPayloadBranches() {
+        Session admin = createSession("coverage-admin@student.kit.edu", true);
+        Session student = createSession("coverage-student@student.kit.edu", false);
+
+        AuditLog adminRefusal = auditWriter.writeRefusal(
+                admin.student(),
+                true,
+                AuditAction.ACCESS_REFUSED,
+                AuditTargetType.ENDPOINT,
+                null,
+                "PATCH /users/{id}/block",
+                Map.of("path", "/users/coverage/block")
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(
+                AuditActorType.ADMIN, adminRefusal.getActorType());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "ADMIN", adminRefusal.getActorRole());
+
+        AuditLog studentRefusal = auditWriter.writeRefusal(
+                student.student(),
+                false,
+                AuditAction.ACCESS_REFUSED,
+                AuditTargetType.ENDPOINT,
+                null,
+                "GET /users",
+                Map.of("path", "/users")
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(
+                AuditActorType.USER, studentRefusal.getActorType());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "STUDENT", studentRefusal.getActorRole());
+
+        AuditLog nullPayloads = auditWriter.write(
+                admin.admin(),
+                AuditAction.USER_BLOCKED,
+                AuditTargetType.USER,
+                student.student().getId(),
+                "coverage-student",
+                null,
+                null
+        );
+        org.junit.jupiter.api.Assertions.assertTrue(
+                nullPayloads.getChanges().isEmpty());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                nullPayloads.getMetadata().isEmpty());
+    }
+
+
+
+
+
+
     private void requestCode(String email) throws Exception {
         mockMvc.perform(post("/auth/request-login")
                         .contentType(MediaType.APPLICATION_JSON)
