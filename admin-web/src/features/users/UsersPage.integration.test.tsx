@@ -343,4 +343,39 @@ describe('Users page', () => {
       expect(usersService.update).toHaveBeenCalledWith('user-2', { username: 'Robert Johnson' })
     })
   })
+  it('offers no moderation actions on the account the operator is signed in as', async () => {
+    const user = userEvent.setup()
+    // Same guard, reached by identity rather than by role: this account is a plain student
+    // and is protected only because it is the operator's own.
+    const self: User = { ...users[1], id: authUser.id, username: 'Admin User' }
+    accounts = [self]
+    renderUsers()
+
+    await user.click(await screen.findByText('Admin User'))
+    expect(await screen.findByText('User Profile')).toBeInTheDocument()
+
+    const dialog = within(screen.getByRole('dialog'))
+    expect(dialog.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(dialog.queryByRole('button', { name: 'Block' })).not.toBeInTheDocument()
+    expect(dialog.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument()
+  })
+
+  it('deletes nothing when the confirmation is dismissed', async () => {
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Bob Johnson'))
+    await user.click(await screen.findByRole('button', { name: 'Delete account' }))
+
+    expect(await screen.findByText(/Permanently delete Bob Johnson/)).toBeInTheDocument()
+    expect(usersService.delete).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(usersService.delete).not.toHaveBeenCalled()
+    expect(screen.queryByText(/Permanently delete Bob Johnson/)).not.toBeInTheDocument()
+    // Still listed, and the profile is still open behind the dismissed confirmation.
+    expect(screen.getAllByText('Bob Johnson').length).toBeGreaterThan(0)
+  })
+
 })

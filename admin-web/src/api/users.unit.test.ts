@@ -213,4 +213,18 @@ describe('UsersService', () => {
       createdFrom: { id: 'admin-1' },
     })
   })
+  it('soft-deletes a user account by id', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'Deleted user successfully' }))
+    const service = createUsersService()
+
+    await expect(service.delete('user-1')).resolves.toEqual({
+      success: true,
+      message: 'Deleted user successfully',
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${TEST_API_BASE_URL}/users/user-1`,
+      expect.objectContaining({ method: 'DELETE' })
+    )
+  })
 })
