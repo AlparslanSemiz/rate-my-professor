@@ -13,6 +13,8 @@ import com.pse.audit.model.AuditLog;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.repository.AuditLogRepository;
 import com.pse.shared.error.ApiException;
+import com.pse.shared.util.KeysetCursorCodec;
+import com.pse.shared.util.SqlLike;
 import com.pse.shared.util.UtcDates;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.PageRequest;
@@ -82,7 +84,7 @@ public class AuditLogService {
         if (from != null && to != null && from.isAfter(to)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid audit date range");
         }
-        AuditCursorCodec.Cursor cursor =
+        KeysetCursorCodec.Cursor cursor =
                 rawCursor == null || rawCursor.isBlank() ? null : cursorCodec.decode(rawCursor);
         String search = q == null ? "" : q.trim();
         if (search.length() > 200) {
@@ -111,7 +113,7 @@ public class AuditLogService {
                 predicates.add(builder.lessThanOrEqualTo(root.get("createdAt"), to));
             }
             if (!search.isEmpty()) {
-                String pattern = "%" + escapeLike(search.toLowerCase(Locale.ROOT)) + "%";
+                String pattern = "%" + SqlLike.escape(search.toLowerCase(Locale.ROOT)) + "%";
                 predicates.add(builder.or(
                         builder.like(builder.lower(root.get("actorName")), pattern, '\\'),
                         builder.like(builder.lower(root.get("actorEmail")), pattern, '\\'),
@@ -257,9 +259,5 @@ public class AuditLogService {
         } catch (IllegalArgumentException exception) {
             throw new ApiException(HttpStatus.BAD_REQUEST, errorMessage);
         }
-    }
-
-    private String escapeLike(String value) {
-        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }
