@@ -124,6 +124,19 @@ describe('Dashboard page', () => {
     expect(statValue('Open reports')).toBe('1')
   })
 
+  it('calls the active share the same thing everywhere it appears', async () => {
+    renderDashboard()
+    await screen.findByText('Total users')
+
+    // The hero, the stat card and System Pulse all describe `active / total`, so none of
+    // them may give it a different name.
+    expect(screen.queryByText('Accounts not blocked')).not.toBeInTheDocument()
+    const shares = screen
+      .getAllByText('Active accounts')
+      .map((label) => label.nextElementSibling?.textContent)
+    expect(shares).toContain('67%')
+  })
+
   it('reports a failed first load instead of claiming the platform is empty', async () => {
     vi.mocked(usersService.getAll).mockRejectedValue(new Error('Users are unavailable.'))
     vi.mocked(feedbackService.getReports).mockRejectedValue(new Error('Users are unavailable.'))

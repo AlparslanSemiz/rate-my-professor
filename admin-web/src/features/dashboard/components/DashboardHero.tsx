@@ -49,7 +49,10 @@ export default function DashboardHero({
   lastUpdated,
 }: DashboardHeroProps) {
   const metrics = [
-    { label: 'Accounts not blocked', value: `${activeRate}%` },
+    // The same share System Pulse and the stat grid show. An INACTIVE account is neither
+    // active nor blocked, so calling this "not blocked" made the dashboard disagree with
+    // itself about its own number.
+    { label: 'Active accounts', value: `${activeRate}%` },
     { label: 'Reports waiting', value: String(stats.openReports) },
     {
       label: 'Updated',
