@@ -1,5 +1,22 @@
 import type { ContentStatus, ReportReason, ReportStatus, Severity } from '../domain/moderation'
 import type { UserRole, UserStatus } from '../domain/user'
+import { routes } from './routes'
+
+/**
+ * The colour a section is drawn in, keyed by its route. The dashboard's module cards, its
+ * stat cards and the sidebar all read it from here: they used to hold their own copies, so
+ * the same section could be one colour on the dashboard and another in the navigation.
+ */
+export const moduleAccent: Record<string, string> = {
+  [routes.dashboard]: '#22c55e',
+  [routes.catalog]: '#14b8a6',
+  [routes.users]: '#3b82f6',
+  [routes.comments]: '#8b5cf6',
+  [routes.feedback]: '#f97316',
+}
+
+/** For the oversight views, which are not modules and have no colour of their own. */
+export const DEFAULT_ACCENT = '#22c55e'
 
 export const roleColor: Record<UserRole, string> = {
   ADMIN: 'blue',

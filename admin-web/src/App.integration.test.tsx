@@ -125,6 +125,21 @@ describe('App routing and authentication', () => {
     expect(order[1]).toMatch(/^Catalogue/)
   })
 
+  it('draws the active sidebar item in its own section colour', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(adminUser))
+    window.history.pushState({}, '', '/users')
+
+    render(<App />)
+
+    const mainNavigation = await screen.findByRole('navigation', { name: 'Main navigation' })
+    const active = within(mainNavigation).getByRole('button', { current: 'page' })
+
+    // The blue the dashboard's "People" module card and "Total users" stat card also use;
+    // before, every active item was the same green whatever section it led to.
+    expect(active.firstElementChild).toHaveStyle({ background: 'rgba(59, 130, 246, 0.18)' })
+  })
+
   it('routes authenticated admins to the Audit Logs page', async () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(adminUser))
