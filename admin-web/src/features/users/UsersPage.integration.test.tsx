@@ -1,9 +1,10 @@
 import { MantineProvider } from '@mantine/core'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../api/ApiClient'
-import { usersService, type User, type Warning } from '../../api/UsersService'
+import { systemStatusService, type SystemStatus } from '../../api/SystemStatusService'
+import { usersService, type User, type UserQuery, type Warning } from '../../api/UsersService'
 import { AuthProvider } from '../../context/AuthContext'
 import UsersPage from './UsersPage'
 
@@ -13,9 +14,15 @@ vi.mock('../../api/AuthService', () => ({
   },
 }))
 
+vi.mock('../../api/SystemStatusService', () => ({
+  systemStatusService: {
+    getStatus: vi.fn(),
+  },
+}))
+
 vi.mock('../../api/UsersService', () => ({
   usersService: {
-    getAll: vi.fn(),
+    list: vi.fn(),
     getById: vi.fn(),
     getWarnings: vi.fn(),
     update: vi.fn(),
@@ -27,6 +34,17 @@ vi.mock('../../api/UsersService', () => ({
     deleteWarning: vi.fn(),
   },
 }))
+
+const status: SystemStatus = {
+  status: 'OK',
+  checkedAt: '2026-06-11T18:30:00Z',
+  startedAt: null,
+  uptimeSeconds: null,
+  database: { reachable: true, latencyMs: 3, error: null },
+  counts: { users: 2, activeUsers: 2, admins: 1 },
+  lastWrite: null,
+  gitlabEnabled: false,
+}
 
 const authUser = {
   id: 'admin-1',
@@ -88,7 +106,22 @@ describe('Users page', () => {
 
   beforeEach(() => {
     accounts = users.map((user) => ({ ...user }))
-    vi.mocked(usersService.getAll).mockImplementation(async () => accounts.map((user) => ({ ...user })))
+    vi.mocked(systemStatusService.getStatus).mockResolvedValue(status)
+    // Stands in for the backend's own filtering, so a test that filters proves the parameters
+    // were sent and that the screen shows what came back — not that it narrowed rows itself.
+    vi.mocked(usersService.list).mockImplementation(async (query: UserQuery = {}) => ({
+      users: accounts
+        .filter((user) => !query.status || user.status === query.status)
+        .filter((user) => !query.role || user.role === query.role)
+        .filter(
+          (user) =>
+            !query.q ||
+            user.username.toLowerCase().includes(query.q.toLowerCase()) ||
+            user.kitEmail.toLowerCase().includes(query.q.toLowerCase()),
+        )
+        .map((user) => ({ ...user })),
+      nextCursor: null,
+    }))
     vi.mocked(usersService.getById).mockImplementation(async (id) => ({ ...accountById(id) }))
     vi.mocked(usersService.getWarnings).mockResolvedValue([])
     vi.mocked(usersService.delete).mockResolvedValue({ success: true, message: 'Deleted' })
@@ -103,18 +136,77 @@ describe('Users page', () => {
     vi.mocked(usersService.warn).mockResolvedValue({ success: true, message: 'Warned' })
   })
 
-  it('loads users and filters by name or email', async () => {
-    const user = userEvent.setup()
+  it('asks the backend for the page, and for the counters above it', async () => {
     renderUsers()
 
     expect(await screen.findByText('Alice Smith')).toBeInTheDocument()
     expect(screen.getByText('Bob Johnson')).toBeInTheDocument()
+    // One page, newest first — the ordering the backend switches to as soon as it is given
+    // any parameter at all.
+    expect(usersService.list).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 50, sort: 'newest' }),
+    )
+    expect(screen.getByText('Total users').previousElementSibling).toHaveTextContent('2')
+  })
 
-    await user.type(screen.getByPlaceholderText('Search by name or email...'), 'bob')
+  it('searches and filters on the backend rather than narrowing the rows on screen', async () => {
+    const user = userEvent.setup()
+    renderUsers()
 
-    expect(screen.queryByText('Alice Smith')).not.toBeInTheDocument()
+    await screen.findByText('Alice Smith')
+    await user.type(screen.getByLabelText('Search'), 'bob')
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }))
+
+    await waitFor(() => expect(screen.queryByText('Alice Smith')).not.toBeInTheDocument())
     expect(screen.getByText('Bob Johnson')).toBeInTheDocument()
-    expect(screen.getByText('bob@student.kit.edu')).toBeInTheDocument()
+    expect(usersService.list).toHaveBeenLastCalledWith(expect.objectContaining({ q: 'bob' }))
+  })
+
+  it('filters by status and role through the same request', async () => {
+    const user = userEvent.setup()
+    renderUsers()
+
+    await screen.findByText('Alice Smith')
+    await user.click(screen.getByLabelText('Filter by role'))
+    // Mantine's dropdown never gets a non-zero layout in jsdom, so the option stays
+    // `display: none` even though the select is logically open; fireEvent skips the
+    // visibility check userEvent would fail on.
+    fireEvent.click(await screen.findByRole('option', { name: 'Admin', hidden: true }))
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }))
+
+    await waitFor(() => expect(screen.queryByText('Bob Johnson')).not.toBeInTheDocument())
+    expect(screen.getByText('Alice Smith')).toBeInTheDocument()
+    expect(usersService.list).toHaveBeenLastCalledWith(expect.objectContaining({ role: 'ADMIN' }))
+  })
+
+  it('shows what the backend said was wrong with a refused filter', async () => {
+    const user = userEvent.setup()
+    renderUsers()
+
+    await screen.findByText('Alice Smith')
+    vi.mocked(usersService.list).mockRejectedValueOnce(new ApiError(400, 'Invalid user status'))
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }))
+
+    // The backend's own wording, not "Failed to apply the user filters".
+    expect(await screen.findByText('Invalid user status')).toBeInTheDocument()
+    expect(screen.getByText('Alice Smith')).toBeInTheDocument()
+  })
+
+  it('loads the next page onto the end of the list', async () => {
+    const user = userEvent.setup()
+    vi.mocked(usersService.list)
+      .mockResolvedValueOnce({ users: [{ ...users[0] }], nextCursor: 'cursor-1' })
+      .mockResolvedValueOnce({ users: [{ ...users[1] }], nextCursor: null })
+    renderUsers()
+
+    await screen.findByText('Alice Smith')
+    await user.click(screen.getByRole('button', { name: 'Load more' }))
+
+    expect(await screen.findByText('Bob Johnson')).toBeInTheDocument()
+    expect(screen.getByText('Alice Smith')).toBeInTheDocument()
+    expect(usersService.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursor: 'cursor-1' }),
+    )
   })
 
   it('deletes a user from the profile modal after the API confirms removal', async () => {

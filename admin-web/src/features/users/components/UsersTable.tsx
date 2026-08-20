@@ -1,4 +1,4 @@
-import { Text, type CSSProperties } from '@mantine/core'
+import { Box, Button, Text, type CSSProperties } from '@mantine/core'
 import type { User } from '../../../api/UsersService'
 import Panel from '../../../components/Panel'
 import TableHeaderRow from '../../../components/TableHeaderRow'
@@ -20,43 +20,41 @@ const panelStyle: CSSProperties = { overflow: 'hidden' }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
 const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse' }
 const emptyCellStyle: CSSProperties = { padding: '40px 20px', textAlign: 'center' }
+const loadMoreStyle: CSSProperties = { padding: '14px 20px', textAlign: 'center' }
 
 interface UsersTableProps {
   users: User[]
-  filteredUsers: User[]
-  search: string
-  onSearchChange: (value: string) => void
+  sortLabel: string
+  nextCursor: string | null
+  loadingMore: boolean
+  onLoadMore: () => Promise<void>
   onOpenProfile: (id: string) => void
 }
 
 export default function UsersTable({
   users,
-  filteredUsers,
-  search,
-  onSearchChange,
+  sortLabel,
+  nextCursor,
+  loadingMore,
+  onLoadMore,
   onOpenProfile,
 }: UsersTableProps) {
   return (
     <Panel style={panelStyle}>
-      <UsersTableHeader
-        filteredCount={filteredUsers.length}
-        totalCount={users.length}
-        search={search}
-        onSearchChange={onSearchChange}
-      />
+      <UsersTableHeader loadedCount={users.length} sortLabel={sortLabel} />
 
       <div style={tableScrollStyle}>
         <table style={tableStyle}>
           <TableHeaderRow columns={TABLE_COLUMNS} />
           <tbody>
-            {filteredUsers.length === 0 ? (
+            {users.length === 0 ? (
               <EmptyUsersRow />
             ) : (
-              filteredUsers.map((user, index) => (
+              users.map((user, index) => (
                 <UserTableRow
                   key={user.id}
                   user={user}
-                  isLast={index === filteredUsers.length - 1}
+                  isLast={index === users.length - 1}
                   onOpenProfile={onOpenProfile}
                 />
               ))
@@ -64,6 +62,14 @@ export default function UsersTable({
           </tbody>
         </table>
       </div>
+
+      {nextCursor && (
+        <Box style={loadMoreStyle}>
+          <Button variant="light" loading={loadingMore} onClick={() => void onLoadMore()}>
+            Load more
+          </Button>
+        </Box>
+      )}
     </Panel>
   )
 }

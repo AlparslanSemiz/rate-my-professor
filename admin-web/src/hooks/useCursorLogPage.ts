@@ -22,9 +22,9 @@ export interface CursorLogPageOptions<TItem, TMeta, TDraft, TFilters> {
 }
 
 /**
- * Shared state machine for the cursor-paginated log screens (admin audit events and
- * application activity). Every callback is expected to be defined at module scope so the
- * initial load runs once, the same way `useAsyncData` is used elsewhere.
+ * Shared state machine for the cursor-paginated screens: the two logs (admin audit events and
+ * application activity) and the user listing. Every callback is expected to be defined at
+ * module scope so the initial load runs once, the same way `useAsyncData` is used elsewhere.
  */
 export function useCursorLogPage<TItem, TMeta, TDraft, TFilters>({
   fetchMeta,
@@ -133,6 +133,12 @@ export function useCursorLogPage<TItem, TMeta, TDraft, TFilters>({
 
   return {
     items,
+    /**
+     * For a screen whose rows can change while they are on it — a profile action, say. The
+     * log screens never call it: an audit entry is a record of something that happened and
+     * does not change afterwards.
+     */
+    setItems,
     meta,
     draft,
     setDraft,
