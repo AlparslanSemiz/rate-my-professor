@@ -36,3 +36,9 @@ build/
 ### Node / local env ###
 node_modules/
 .env
+
+### Local working notes (not repo history)
+CLAUDE.md
+STATUS.md
+TODO.md
+FRONTEND-TASKS.md
