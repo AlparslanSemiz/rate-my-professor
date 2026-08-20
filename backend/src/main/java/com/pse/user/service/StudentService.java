@@ -5,6 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.pse.shared.enums.VoteType;
+import com.pse.social.model.Answer;
+import com.pse.social.model.AnswerVote;
+import com.pse.social.model.Comment;
+import com.pse.social.model.CommentVote;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +55,34 @@ public class StudentService {
         if (student == null) {
             return new StudentProfileResponse("Error, cannot authenticate user", false, null, 0, 0, 0, 0);
         }
+
+        //CredibilityScore = |Upvotes| - |DownVotes|
+        int credibilityScore = 0;
+
+        // Kommentare
+        for (Comment comment : student.getComments()) {
+            for (CommentVote vote : comment.getVotes()) {
+                if (vote.getVote() == VoteType.UP) {
+                    credibilityScore++;
+                } else if (vote.getVote() == VoteType.DOWN) {
+                    credibilityScore--;
+                }
+            }
+        }
+
+        // Antworten
+        for (Answer answer : student.getAnswers()) {
+            for (AnswerVote vote : answer.getVotes()) {
+                if (vote.getVote() == VoteType.UP) {
+                    credibilityScore++;
+                } else if (vote.getVote() == VoteType.DOWN) {
+                    credibilityScore--;
+                }
+            }
+        }
+
+        student.setCredibilityScore(credibilityScore);
+
         return new StudentProfileResponse(
                 "Success",
                 true,
