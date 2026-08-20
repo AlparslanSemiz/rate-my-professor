@@ -34,13 +34,13 @@ that.
 | Module | Purpose |
 | --- | --- |
 | Authentication | Two-step email and login-code flow with protected admin routes |
-| Dashboard | At-a-glance user, activity, administrator, and report statistics |
-| Users | Search users, inspect profiles and warning history, edit account fields, warn, block, unblock, or delete accounts |
-| Comments | Browse every comment, edit or hide its text, delete it, and work the report queue |
+| Dashboard | At-a-glance user, administrator and report counters, read from `/system/status` |
+| Users | Search, filter and page through accounts on the server; inspect profiles and warning history, edit account fields, warn, block, unblock, or delete |
+| Comments | Browse every comment, edit or hide its text, delete it, and work the report queue — acting on the reported content from the queue itself |
 | Answers | The same for replies posted under comments, with the parent thread as context |
-| Catalogue | Edit and remove lectures and professors, and reassign who teaches what |
-| Bug Reports | Review submitted problems, rewrite the title or description, update status or severity, and delete |
-| Audit Logs | Filter and inspect administrative actions, including before/after values |
+| Catalogue | Edit and remove lectures and professors, reassign who teaches what, and remove individual ratings |
+| Bug Reports | Review submitted problems, rewrite the title or description, update status or severity, delete, and open a GitLab issue |
+| Audit Logs | Filter and inspect administrative actions, including before/after values, and undo a field edit |
 | Activity Log | Filter and inspect what users did in the student app, plus every refused request |
 | System Status | Watch backend health, live record counts, and when each admin action last reached the database |
 
@@ -282,7 +282,7 @@ contract; this table is the subset the panel calls.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/users` | List users and moderation statistics |
+| `GET` | `/users` | List users and moderation statistics; takes `limit`, `cursor`, `q`, `status`, `role`, `sort` and returns `nextCursor` |
 | `GET` | `/users/:id` | Get one user profile |
 | `PATCH` | `/users/:id` | Edit any subset of `username`, `kitEmail`, `biography`, `status`, `role`, `credibilityScore` |
 | `DELETE` | `/users/:id` | Soft-delete and anonymize one user |
@@ -297,10 +297,20 @@ Changing `kitEmail` revokes the account's sessions, and demoting an admin
 revokes them too. Self and other admin accounts cannot be blocked, unblocked,
 warned or deleted, so the panel does not offer those buttons for them.
 
-> The warning history does not yet return each warning's `id`. Until it does,
-> the panel hides the correct/withdraw controls rather than offering an action
-> it cannot address — the calls are implemented and light up as soon as the
-> field appears.
+The listing parameters mirror the log endpoints: `limit` is 1–100 (the panel
+asks for 50), `cursor` continues the previous page, `q` searches name and
+email, `status` is `ACTIVE`/`INACTIVE`/`BLOCKED`, `role` is `ADMIN`/`STUDENT`
+and `sort` is `newest`/`oldest`. **Passing any of them changes the ordering**:
+the listing is administrators-first only on an unparameterised call, and
+strictly newest-first otherwise, because role is not a column to sort on. A bad
+parameter is a `400` with a usable message (`A cursor requires a limit`,
+`Invalid user status`), which the panel shows verbatim.
+
+A warning carries its own `id`, and `createdFrom` is `{ id, name, createdAt }`
+where `id` is the issuing admin's **student** id — the same value `/auth/me`
+reports, so "did I issue this?" needs no second lookup. The issuer is taken from
+the auth token, so `POST /users/:id/warnings` sends `{ message }` and nothing
+else; the older body is still accepted.
 
 ### Comments and answers
 
@@ -309,15 +319,19 @@ warned or deleted, so the panel does not offer those buttons for them.
 | `GET` | `/comments` | List every comment with author, answer and report counts |
 | `PATCH` | `/comments/:id` | Edit `content`, `status` (`VISIBLE`/`HIDDEN`), or both |
 | `DELETE` | `/comments/:id` | Delete the comment and the thread under it |
-| `GET` | `/comments/reported` | List reported comments |
+| `GET` | `/comments/reported` | List reported comments, each carrying its `commentId` |
 | `PATCH` | `/comments/reported/:id` | Update `{ "status": "..." }` |
 | `DELETE` | `/comments/reported/:id` | Withdraw the report, leaving the comment alone |
 | `GET` | `/answers` | List every answer with its parent thread |
 | `PATCH` | `/answers/:id` | Edit `content`, `status`, or both |
 | `DELETE` | `/answers/:id` | Delete the answer |
-| `GET` | `/answers/reported` | List reported answers |
+| `GET` | `/answers/reported` | List reported answers, each carrying `answerId` and `commentId` |
 | `PATCH` | `/answers/reported/:id` | Update `{ "status": "..." }` |
 | `DELETE` | `/answers/reported/:id` | Withdraw the report |
+
+A report's own `id` addresses the report — its status and its withdrawal. The
+`commentId` / `answerId` beside it addresses the content the report is about,
+which is what the reports tab edits, hides or deletes.
 
 Report statuses are `OPEN`, `REVIEWED`, `DISMISSED`, and `ACTION_TAKEN`.
 `ACTION_TAKEN` is the only status that means the content was moderated, so it
@@ -331,7 +345,7 @@ content in the database — deleting does not.
 | `GET` | `/data/lectures` | List lectures with their professors and counts |
 | `PATCH` | `/data/lectures/:id` | Edit `name`, `code`, `semesterYear`, `semesterSeason`, `active`, `lectureType`, `professorIds` |
 | `DELETE` | `/data/lectures/:id` | Delete the lecture with its comments, answers and ratings |
-| `GET` | `/data/professor` | List professors with their average rating |
+| `GET` | `/data/professor` | List professors with their average rating and `lectureIds` |
 | `PATCH` | `/data/professor/:id` | Edit `firstName`, `lastName`, `active`, `lectureIds` |
 | `DELETE` | `/data/professor/:id` | Delete the professor; the lectures stay |
 
@@ -344,30 +358,35 @@ only when actually changed.
 rated, so `ratingCount` is what separates "rated badly" from "not rated"; the
 panel shows a dash for the latter.
 
-`GET /data/professor` does not report which lectures a professor teaches, so the
-panel builds that index from the lecture list it already loaded.
-
 ### Ratings
 
 | Method | Path | Description |
 | --- | --- | --- |
+| `GET` | `/ratings` | List individual ratings; takes `limit`, `cursor` and `lectureId` |
 | `DELETE` | `/ratings/:id` | Delete one rating |
 
-A rating is someone's actual opinion, so it can be removed but not edited.
-There is no panel screen for this yet: the backend has no admin listing of
-individual ratings, so there is nothing to take an id from. `RatingsService`
-implements the call for when one exists.
+A rating is someone's actual opinion, so the Catalogue's Ratings tab is
+read-and-delete: there is no edit call, by design. `scores` is read as an open
+map, because which categories a rating carries depends on the lecture's type.
 
 ### Bug reports
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/reports` | List bug reports |
+| `GET` | `/reports` | List bug reports, each with `issueUrl` and `issueState` |
 | `PATCH` | `/reports/:id` | Update any of `status`, `severity`, `title`, `description` |
 | `DELETE` | `/reports/:id` | Delete a bug report |
+| `POST` | `/reports/:id/gitlab-issue` | Open a GitLab issue for the report; idempotent |
 
 Supported severities are `LOW`, `MEDIUM`, `HIGH`, and `CRITICAL`. Bug report
 statuses use the same values as content reports.
+
+`issueState` is `NONE`, `CREATED` or `FAILED`, and `issueUrl` is set once an
+issue exists. Creating one is idempotent — a double press, two admins on the
+same queue, or a retry after a timeout all get the existing issue back. The
+endpoint answers `503` until the backend is given `GITLAB_BASE_URL`,
+`GITLAB_PROJECT_ID` and `GITLAB_TOKEN`, so the panel hides the control while
+`/system/status` reports `gitlabEnabled: false`.
 
 ### Audit logs and activity log
 
@@ -375,6 +394,7 @@ statuses use the same values as content reports.
 | --- | --- | --- |
 | `GET` | `/audit-logs` | Filtered, cursor-paginated administrative history |
 | `GET` | `/audit-logs/meta` | Actors, actions, target types and actor types for that log |
+| `POST` | `/audit-logs/:id/revert` | Undo the field edit an entry recorded |
 | `GET` | `/activity-logs` | The same for student activity and refused requests |
 | `GET` | `/activity-logs/meta` | Filter vocabulary for that log |
 
@@ -394,6 +414,17 @@ in which actions they serve and whether the array is called `auditLogs` or
 | `from` | Inclusive ISO date/time lower bound |
 | `to` | Inclusive ISO date/time upper bound |
 
+Every audit entry also reports whether it can be undone: `revertible`,
+`revertBlockedReason` and `revertedByAuditId`. Only field edits are revertible —
+a creation, a deletion or a sign-in records that something happened, not what it
+contained. A refused revert is a `409` whose `reason` is one of
+`ACTION_NOT_REVERTIBLE`, `WINDOW_EXPIRED`, `VALUE_CHANGED`, `ALREADY_REVERTED`
+or `TARGET_MISSING` — the same vocabulary `revertBlockedReason` uses, so the
+hidden button and the refused one are explained the same way. The success body
+is `{ message, success }` and nothing else, so the panel **re-reads** the log
+afterwards: that is where the reversal's own entry appears. The grace period is
+a backend setting and is deliberately not recomputed here.
+
 The filter dropdowns are built from the metadata endpoints, so an action added
 by the backend appears without a frontend release. `actors` is capped rather
 than exhaustive — every account that ever signed in is an actor in the activity
@@ -411,6 +442,14 @@ show "the API is up but the database is not" cannot do that if the request
 itself fails. `counts` and `lastWrite` are `null` unless the database answered.
 The counters are what confirm an action reached the database: block a user,
 refresh, and watch the count move.
+
+`counts` is read as an open map, so a counter the backend adds renders without a
+frontend release. The panel reads `users`, `activeUsers`, `admins`,
+`openBugReports`, `openCommentReports` and `comments` from it: the dashboard and
+the Users page take their figures from here rather than counting rows, which is
+what removed two full-table reads every fifteen seconds. `gitlabEnabled` on the
+same response is what decides whether the Bug Reports screen offers to open an
+issue.
 
 ## Known Backend Gaps
 
