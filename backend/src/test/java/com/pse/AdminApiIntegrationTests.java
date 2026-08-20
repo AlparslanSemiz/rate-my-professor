@@ -333,6 +333,57 @@ class AdminApiIntegrationTests {
     }
 
     @Test
+    void lastSeenFollowsApiActivityAndIsNotRewrittenOnEveryRequest() throws Exception {
+        Session target = createSession("target@student.kit.edu", false);
+        org.junit.jupiter.api.Assertions.assertNull(
+                target.student().getLastSeenAt(), "seeded student has never been seen");
+
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
+                .andExpect(status().isOk());
+        LocalDateTime firstSeen = reloadStudent(target).getLastSeenAt();
+        org.junit.jupiter.api.Assertions.assertNotNull(
+                firstSeen, "the first authenticated request records last seen");
+
+        // Inside the refresh window the value is left alone, so a busy client does not
+        // turn every one of its calls into a row update.
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                firstSeen,
+                reloadStudent(target).getLastSeenAt(),
+                "a second request inside the refresh window does not rewrite last seen"
+        );
+
+        // Once the stored value falls outside the window, the next request moves it on.
+        LocalDateTime stale = firstSeen.minusHours(1);
+        Student student = reloadStudent(target);
+        student.setLastSeenAt(stale);
+        studentRepository.saveAndFlush(student);
+
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                reloadStudent(target).getLastSeenAt().isAfter(stale),
+                "a request outside the refresh window advances last seen"
+        );
+
+        // A refused request is not activity: the status gate runs before the write, so a
+        // blocked account's retries cannot keep its "last seen" looking current.
+        student = reloadStudent(target);
+        student.setLastSeenAt(stale);
+        student.setStatus(UserStatus.BLOCKED);
+        studentRepository.saveAndFlush(student);
+
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
+                .andExpect(status().isUnauthorized());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                stale,
+                reloadStudent(target).getLastSeenAt(),
+                "a refused request does not register as activity"
+        );
+    }
+
+    @Test
     void adminAccountsAndEmptyWarningsAreProtected() throws Exception {
         Session admin = createSession("admin@student.kit.edu", true);
         Session otherAdmin = createSession("other-admin@student.kit.edu", true);
@@ -2522,6 +2573,10 @@ class AdminApiIntegrationTests {
                 .toList();
         org.junit.jupiter.api.Assertions.assertEquals(1, matches.size(), action + " entries");
         return matches.getFirst();
+    }
+
+    private Student reloadStudent(Session session) {
+        return studentRepository.findById(session.student().getId()).orElseThrow();
     }
 
     private String bearer(String token) {

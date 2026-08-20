@@ -154,6 +154,14 @@ read in this API that does not wrap. `warnings` is the persisted warning count; 
 counts reports against comments authored by the user; `credibilityScore` is the value
 `PATCH /users/{id}` writes, returned by both reads so an edit form can seed its input.
 
+`lastOnline` is **last API activity, not last login**. It is refreshed as authenticated
+requests come in, which is what makes it meaningful for accounts that stay signed in for
+weeks on one token. The write is throttled to once every five minutes per account, so the
+value can trail real activity by that much — render it as a timestamp or a coarse "x hours
+ago", not as a live online indicator. A request that is refused (blocked or deleted account,
+expired token) does not count as activity. Accounts that have signed in but never called
+anything else fall back to `joined`, so the field is never null.
+
 **Soft-deleted accounts are excluded from both reads.** `DELETE /users/{id}` anonymises the
 account, and it then disappears from the listing and `404`s by id, so a "total users" counter
 built on this listing does not over-report the platform.

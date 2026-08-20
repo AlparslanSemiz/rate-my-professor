@@ -6,27 +6,41 @@ import com.pse.moderation.model.Admin;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.shared.enums.UserStatus;
 import com.pse.shared.util.HashGenerator;
+import com.pse.user.model.Student;
+import com.pse.user.repository.StudentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
 public class TokenAuthenticationService {
 
+    /**
+     * How stale a student's "last seen" is allowed to get before it is written again.
+     * Every authenticated request passes through here, so refreshing it unconditionally
+     * would add a row update to every single API call. The panel renders the value as a
+     * timestamp, where a few minutes of lag is not visible.
+     */
+    private static final Duration LAST_SEEN_REFRESH_INTERVAL = Duration.ofMinutes(5);
+
     private final TokenRepository tokenRepository;
     private final AdminRepository adminRepository;
+    private final StudentRepository studentRepository;
     private final Clock clock;
 
     public TokenAuthenticationService(
             TokenRepository tokenRepository,
             AdminRepository adminRepository,
+            StudentRepository studentRepository,
             Clock clock
     ) {
         this.tokenRepository = tokenRepository;
         this.adminRepository = adminRepository;
+        this.studentRepository = studentRepository;
         this.clock = clock;
     }
 
@@ -55,8 +69,25 @@ public class TokenAuthenticationService {
             return Optional.empty();
         }
 
+        touchLastSeen(token.getStudent(), now);
+
         Admin admin = adminRepository.findByStudent(token.getStudent()).orElse(null);
         return Optional.of(new AuthenticatedUser(token.getStudent(), token, admin));
+    }
+
+    /**
+     * Counts this request towards the student's "last seen" so the panel's column shows
+     * actual API activity rather than the last login, which for a long-lived token can be
+     * weeks stale. Called after the status gate above, so a request that is about to be
+     * refused does not register as activity.
+     */
+    private void touchLastSeen(Student student, LocalDateTime now) {
+        LocalDateTime lastSeen = student.getLastSeenAt();
+        if (lastSeen != null && lastSeen.isAfter(now.minus(LAST_SEEN_REFRESH_INTERVAL))) {
+            return;
+        }
+        student.setLastSeenAt(now);
+        studentRepository.save(student);
     }
 
     private Optional<Token> upgradeLegacyToken(String rawToken, String hash, LocalDateTime now) {
