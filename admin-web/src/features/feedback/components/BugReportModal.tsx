@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Box, Button, Group, Modal, Text, type CSSProperties } from '@mantine/core'
-import { IconPencil, IconTrash } from '@tabler/icons-react'
+import { Anchor, Box, Button, Group, Modal, Text, type CSSProperties } from '@mantine/core'
+import { IconBrandGitlab, IconExternalLink, IconPencil, IconTrash } from '@tabler/icons-react'
 import type { BugReport, BugReportUpdate } from '../../../api/FeedbackService'
 import ErrorAlert from '../../../components/ErrorAlert'
 import { darkModalStyles } from '../../../constants/modalStyles'
@@ -15,6 +15,9 @@ interface BugReportModalProps {
   onUpdate: (id: string, update: BugReportUpdate) => void
   onEdit: (id: string, update: BugReportUpdate) => Promise<void>
   onDelete: () => void
+  /** False while the backend holds no GitLab credentials; the control stays hidden then. */
+  gitlabEnabled: boolean
+  onCreateIssue: (id: string) => void
   updating: boolean
   updateError: string
 }
@@ -34,6 +37,8 @@ export default function BugReportModal({
   onUpdate,
   onEdit,
   onDelete,
+  gitlabEnabled,
+  onCreateIssue,
   updating,
   updateError,
 }: BugReportModalProps) {
@@ -55,6 +60,8 @@ export default function BugReportModal({
           onUpdate={onUpdate}
           onEdit={onEdit}
           onDelete={onDelete}
+          gitlabEnabled={gitlabEnabled}
+          onCreateIssue={onCreateIssue}
           updating={updating}
           updateError={updateError}
         />
@@ -72,6 +79,8 @@ function BugReportDetails({
   onUpdate,
   onEdit,
   onDelete,
+  gitlabEnabled,
+  onCreateIssue,
   updating,
   updateError,
 }: BugReportDetailsProps) {
@@ -91,6 +100,12 @@ function BugReportDetails({
         >
           Edit
         </Button>
+        <IssueControl
+          report={report}
+          gitlabEnabled={gitlabEnabled}
+          updating={updating}
+          onCreateIssue={onCreateIssue}
+        />
         <Button
           size="xs"
           variant="light"
@@ -127,5 +142,48 @@ function BugReportDetails({
       <ErrorAlert message={updateError} />
       <BugReportControls report={report} updating={updating} onUpdate={onUpdate} />
     </>
+  )
+}
+
+/**
+ * The link once an issue exists, the button while it does not, and nothing at all when the
+ * backend has no GitLab credentials — the endpoint answers `503` then, and a control that
+ * cannot work is worse than none.
+ */
+function IssueControl({
+  report,
+  gitlabEnabled,
+  updating,
+  onCreateIssue,
+}: {
+  report: BugReport
+  gitlabEnabled: boolean
+  updating: boolean
+  onCreateIssue: (id: string) => void
+}) {
+  if (report.issueUrl) {
+    return (
+      <Anchor href={report.issueUrl} target="_blank" rel="noreferrer" size="xs" c="#f97316">
+        <Group gap={4} wrap="nowrap">
+          <IconExternalLink size={13} />
+          Open issue on GitLab
+        </Group>
+      </Anchor>
+    )
+  }
+
+  if (!gitlabEnabled) return null
+
+  return (
+    <Button
+      size="xs"
+      variant="light"
+      color="orange"
+      leftSection={<IconBrandGitlab size={13} />}
+      loading={updating}
+      onClick={() => onCreateIssue(report.id)}
+    >
+      Create issue
+    </Button>
   )
 }

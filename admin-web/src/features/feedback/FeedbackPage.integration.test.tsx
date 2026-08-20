@@ -3,14 +3,33 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { feedbackService, type BugReport } from '../../api/FeedbackService'
+import { systemStatusService, type SystemStatus } from '../../api/SystemStatusService'
 import FeedbackPage from './FeedbackPage'
 
 vi.mock('../../api/FeedbackService', () => ({
   feedbackService: {
     getReports: vi.fn(),
     updateReport: vi.fn(),
+    createGitlabIssue: vi.fn(),
   },
 }))
+
+vi.mock('../../api/SystemStatusService', () => ({
+  systemStatusService: {
+    getStatus: vi.fn(),
+  },
+}))
+
+const status: SystemStatus = {
+  status: 'OK',
+  checkedAt: '2026-06-11T18:30:00Z',
+  startedAt: null,
+  uptimeSeconds: null,
+  database: { reachable: true, latencyMs: 3, error: null },
+  counts: null,
+  lastWrite: null,
+  gitlabEnabled: true,
+}
 
 const reports: BugReport[] = [
   {
@@ -21,6 +40,8 @@ const reports: BugReport[] = [
     status: 'OPEN',
     reporterName: 'Alice Smith',
     reportedAt: '2026-06-11T18:30:00Z',
+    issueUrl: null,
+    issueState: 'NONE',
   },
   {
     id: 'report-2',
@@ -30,6 +51,8 @@ const reports: BugReport[] = [
     status: 'REVIEWED',
     reporterName: 'Bob Johnson',
     reportedAt: '2026-06-10T22:15:00Z',
+    issueUrl: 'https://gitlab.example.com/team/app/-/issues/42',
+    issueState: 'CREATED',
   },
 ]
 
@@ -48,6 +71,13 @@ describe('Feedback page', () => {
 
   beforeEach(() => {
     queue = reports.map((report) => ({ ...report }))
+    vi.mocked(systemStatusService.getStatus).mockResolvedValue(status)
+    vi.mocked(feedbackService.createGitlabIssue).mockImplementation(async (id) => {
+      const stored = queue.find((report) => report.id === id)
+      const issueUrl = 'https://gitlab.example.com/team/app/-/issues/7'
+      if (stored) Object.assign(stored, { issueUrl, issueState: 'CREATED' })
+      return { success: true, message: 'Issue created', issueUrl, issueIid: 7, issueState: 'CREATED' }
+    })
     vi.mocked(feedbackService.getReports).mockImplementation(async () =>
       queue.map((report) => ({ ...report }))
     )
@@ -161,4 +191,46 @@ describe('Feedback page', () => {
     expect(await screen.findByText(/reading it back failed/)).toHaveTextContent('Database unavailable')
     expect(screen.queryByText(/The change was not saved/)).not.toBeInTheDocument()
   })
+  it('creates a GitLab issue and then shows the link the backend reported', async () => {
+    const user = userEvent.setup()
+    renderFeedback()
+
+    await user.click(await screen.findByText('Crash on login'))
+    const dialog = within(await screen.findByRole('dialog'))
+    await user.click(dialog.getByRole('button', { name: 'Create issue' }))
+
+    await waitFor(() => expect(feedbackService.createGitlabIssue).toHaveBeenCalledWith('report-1'))
+    // The link comes from the re-read queue, not from the response the button received.
+    expect(await dialog.findByRole('link', { name: /Open issue on GitLab/ })).toHaveAttribute(
+      'href',
+      'https://gitlab.example.com/team/app/-/issues/7',
+    )
+  })
+
+  it('links to the issue a report already has instead of offering to create one', async () => {
+    const user = userEvent.setup()
+    renderFeedback()
+
+    await user.click(await screen.findByText('Typo on profile page'))
+
+    const dialog = within(await screen.findByRole('dialog'))
+    expect(dialog.getByRole('link', { name: /Open issue on GitLab/ })).toHaveAttribute(
+      'href',
+      'https://gitlab.example.com/team/app/-/issues/42',
+    )
+    expect(dialog.queryByRole('button', { name: 'Create issue' })).not.toBeInTheDocument()
+  })
+
+  it('hides the control entirely while the backend has no GitLab credentials', async () => {
+    vi.mocked(systemStatusService.getStatus).mockResolvedValue({ ...status, gitlabEnabled: false })
+    const user = userEvent.setup()
+    renderFeedback()
+
+    await user.click(await screen.findByText('Crash on login'))
+
+    const dialog = within(await screen.findByRole('dialog'))
+    // The endpoint answers 503 in this state, so the button is never offered to be pressed.
+    expect(dialog.queryByRole('button', { name: 'Create issue' })).not.toBeInTheDocument()
+  })
+
 })

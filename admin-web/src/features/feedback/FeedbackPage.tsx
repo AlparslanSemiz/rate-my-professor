@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { feedbackService, type BugReport, type BugReportUpdate } from '../../api/FeedbackService'
+import { systemStatusService } from '../../api/SystemStatusService'
 import ConfirmModal from '../../components/ConfirmModal'
 import LoadError from '../../components/LoadError'
 import PageHeader from '../../components/PageHeader'
@@ -13,11 +14,21 @@ import ReportQueue from './components/ReportQueue'
 
 const LOAD_ERROR_MESSAGE = 'Failed to load bug reports'
 const UPDATE_ERROR_MESSAGE = 'Failed to update the report. The change was not saved.'
+const ISSUE_ERROR_MESSAGE = 'The issue could not be created. Nothing was opened on the board.'
 const RE_READ_ERROR_FALLBACK = 'the report queue could not be read back'
 const EMPTY_REPORTS: BugReport[] = []
 
 function loadReports() {
   return feedbackService.getReports()
+}
+
+/**
+ * Whether the backend holds GitLab credentials. Read once, and a failure reads as "off": the
+ * endpoint answers `503` without them, and offering a button that cannot work is worse than
+ * not offering one.
+ */
+async function loadGitlabEnabled() {
+  return (await systemStatusService.getStatus()).gitlabEnabled
 }
 
 export default function FeedbackPage() {
@@ -28,6 +39,7 @@ export default function FeedbackPage() {
     error,
     retry,
   } = useAsyncData(loadReports, EMPTY_REPORTS, LOAD_ERROR_MESSAGE)
+  const { data: gitlabEnabled } = useAsyncData(loadGitlabEnabled, false, '')
   const reportDetails = useSelectedId()
   const [reportUpdating, setReportUpdating] = useState(false)
   const [updateError, setUpdateError] = useState('')
@@ -52,15 +64,15 @@ export default function FeedbackPage() {
    * A failed re-read does not fail the action — the write already succeeded. The report stays
    * as last read and the modal says the view may be out of date.
    */
-  async function applyUpdate(id: string, update: BugReportUpdate) {
+  async function runWrite(write: () => Promise<unknown>, failureMessage: string) {
     setReportUpdating(true)
     setUpdateError('')
     try {
-      await feedbackService.updateReport(id, update)
-    } catch (updateFailure: unknown) {
-      setUpdateError(getErrorMessage(updateFailure, UPDATE_ERROR_MESSAGE))
+      await write()
+    } catch (writeFailure: unknown) {
+      setUpdateError(getErrorMessage(writeFailure, failureMessage))
       setReportUpdating(false)
-      throw updateFailure
+      throw writeFailure
     }
 
     try {
@@ -70,6 +82,21 @@ export default function FeedbackPage() {
     } finally {
       setReportUpdating(false)
     }
+  }
+
+  function applyUpdate(id: string, update: BugReportUpdate) {
+    return runWrite(() => feedbackService.updateReport(id, update), UPDATE_ERROR_MESSAGE)
+  }
+
+  /**
+   * The call is idempotent, so a second press is safe. The queue is re-read rather than
+   * patched with the response: the report's own `issueUrl` and `issueState` are what the rest
+   * of the screen reads, and they should come from a read like every other field does.
+   */
+  function createIssue(id: string) {
+    void runWrite(() => feedbackService.createGitlabIssue(id), ISSUE_ERROR_MESSAGE).catch(
+      () => undefined,
+    )
   }
 
   function handleReportUpdate(id: string, update: BugReportUpdate) {
@@ -107,6 +134,8 @@ export default function FeedbackPage() {
         onUpdate={handleReportUpdate}
         onEdit={applyUpdate}
         onDelete={() => setConfirmingDelete(true)}
+        gitlabEnabled={gitlabEnabled}
+        onCreateIssue={createIssue}
         updating={reportUpdating}
         updateError={updateError}
       />
