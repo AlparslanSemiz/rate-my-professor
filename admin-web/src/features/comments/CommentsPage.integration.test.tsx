@@ -11,6 +11,12 @@ import {
 import { AuthProvider } from '../../context/AuthContext'
 import CommentsPage from './CommentsPage'
 
+vi.mock('../../api/AuthService', () => ({
+  authService: {
+    me: vi.fn().mockResolvedValue({ success: true, message: 'Signed in' }),
+  },
+}))
+
 vi.mock('../../api/CommentsService', () => ({
   commentsService: {
     getAll: vi.fn(),
@@ -185,6 +191,30 @@ describe('Comments page', () => {
 
     expect(screen.getByText('Hidden already')).toBeInTheDocument()
     expect(screen.queryByText('Reported text')).not.toBeInTheDocument()
+  })
+
+  it('finds an answer by its own text and reveals it under its comment', async () => {
+    const user = userEvent.setup()
+    renderComments()
+
+    await screen.findByText('Reported text')
+    // Answers are nested, so a search that only looked at comments would report nothing
+    // here even though the text is in the table.
+    await user.type(screen.getByRole('textbox', { name: 'Search comments' }), 'same issue')
+
+    expect(await screen.findByText('I had the same issue')).toBeInTheDocument()
+    // The parent is kept for context; the unrelated comment is not.
+    expect(screen.getByText('Reported text')).toBeInTheDocument()
+    expect(screen.queryByText('Hidden already')).not.toBeInTheDocument()
+  })
+
+  it('counts answers in the content statistics, not only comments', async () => {
+    renderComments()
+
+    await screen.findByText('Reported text')
+    // Two comments plus one answer, all moderated from this table.
+    const total = screen.getByText('Total comments').closest('div')
+    expect(total).toHaveTextContent(/^3Total comments$/)
   })
 
   it('saves only the fields an edit actually changed', async () => {

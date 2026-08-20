@@ -8,10 +8,9 @@ import type { ReportStatus } from '../../../domain/moderation'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
 import {
   ALL_FILTERS,
-  matchesContentFilters,
-  matchesContentQuery,
   matchesReportFilters,
   matchesReportQuery,
+  narrowContent,
   type ContentStatusFilter,
   type ModeratedItem,
   type ReasonFilter,
@@ -58,12 +57,14 @@ export function useModerationPage({
   const [actionError, setActionError] = useState('')
 
   const profile = useSelectedId()
-  const contentSearch = useSearch(content.data, matchesContentQuery)
+  // The content list is nested, so it is narrowed rather than filtered: `useSearch` drops
+  // whole rows, which would take matching answers down with their parent comment.
+  const [contentSearch, setContentSearch] = useState('')
   const reportSearch = useSearch(reports.data, matchesReportQuery)
 
   const filteredContent = useMemo(
-    () => contentSearch.filtered.filter((item) => matchesContentFilters(item, contentStatusFilter)),
-    [contentSearch.filtered, contentStatusFilter],
+    () => narrowContent(content.data, contentSearch, contentStatusFilter),
+    [content.data, contentSearch, contentStatusFilter],
   )
 
   const filteredReports = useMemo(
@@ -156,8 +157,10 @@ export function useModerationPage({
       content.retry()
       reports.retry()
     },
-    contentSearch: contentSearch.search,
-    setContentSearch: contentSearch.setSearch,
+    contentSearch,
+    setContentSearch,
+    /** True while a search or status filter is in effect, so the table can reveal matches. */
+    contentNarrowed: contentSearch.trim() !== '' || contentStatusFilter !== ALL_FILTERS,
     reportSearch: reportSearch.search,
     setReportSearch: reportSearch.setSearch,
     contentStatusFilter,

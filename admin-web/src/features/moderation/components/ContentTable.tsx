@@ -18,6 +18,12 @@ interface ContentTableProps {
   items: ModeratedItem[]
   noun: string
   updating: boolean
+  /**
+   * True while the list is narrowed by a search or filter. Threads then start open, because
+   * a match inside an answer is otherwise hidden behind a collapsed row and the operator is
+   * left looking at a comment with no visible reason to be there.
+   */
+  autoExpand?: boolean
   onOpenProfile: (userId: string) => void
   onEdit: (item: ModeratedItem) => void
   onDelete: (item: ModeratedItem) => void
@@ -27,10 +33,13 @@ export default function ContentTable({
   items,
   noun,
   updating,
+  autoExpand = false,
   onOpenProfile,
   onEdit,
   onDelete,
 }: ContentTableProps) {
+  // While auto-expanding, the set records the rows explicitly closed instead; the component
+  // is remounted when that mode changes, so the two meanings never mix.
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   function toggleExpanded(id: string) {
@@ -68,7 +77,7 @@ export default function ContentTable({
             <tbody>
               {items.map((item, index) => {
                 const replies = item.replies ?? []
-                const isExpanded = expanded.has(item.id)
+                const isExpanded = autoExpand ? !expanded.has(item.id) : expanded.has(item.id)
                 const isLastTopLevel = index === items.length - 1
 
                 return (

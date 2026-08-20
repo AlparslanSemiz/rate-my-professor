@@ -72,9 +72,11 @@ export default function ModerationPage({
             onStatusChange={page.setContentStatusFilter}
           />
           <ContentTable
+            key={page.contentNarrowed ? 'narrowed' : 'full'}
             items={page.filteredContent}
             noun={noun}
             updating={page.mutating}
+            autoExpand={page.contentNarrowed}
             onOpenProfile={page.profile.open}
             onEdit={setEditing}
             onDelete={setDeleting}

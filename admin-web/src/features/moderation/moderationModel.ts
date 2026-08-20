@@ -196,3 +196,46 @@ export function matchesContentQuery(item: ModeratedItem, query: string) {
 export function matchesContentFilters(item: ModeratedItem, status: ContentStatusFilter) {
   return status === ALL_FILTERS || item.status === status
 }
+
+function matchesContent(item: ModeratedItem, query: string, status: ContentStatusFilter) {
+  return matchesContentQuery(item, query) && matchesContentFilters(item, status)
+}
+
+/**
+ * Answers are rendered as rows nested under their comment, so a search or a status filter
+ * that only looked at the parent would hide every matching answer — the text is in the
+ * table, but nothing finds it.
+ *
+ * A comment that matches keeps its whole thread, because the surrounding replies are the
+ * context the operator came for. A comment that does not match is kept only for the replies
+ * that do, narrowed to exactly those.
+ */
+export function narrowContent(
+  items: ModeratedItem[],
+  search: string,
+  status: ContentStatusFilter,
+): ModeratedItem[] {
+  const query = search.trim().toLowerCase()
+  if (!query && status === ALL_FILTERS) return items
+
+  const narrowed: ModeratedItem[] = []
+  for (const item of items) {
+    if (matchesContent(item, query, status)) {
+      narrowed.push(item)
+      continue
+    }
+
+    const matchingReplies = (item.replies ?? []).filter((reply) =>
+      matchesContent(reply, query, status),
+    )
+    if (matchingReplies.length > 0) {
+      narrowed.push({ ...item, replies: matchingReplies })
+    }
+  }
+  return narrowed
+}
+
+/** A comment and every answer under it, as one list — what the table actually renders. */
+export function flattenContent(items: ModeratedItem[]): ModeratedItem[] {
+  return items.flatMap((item) => [item, ...(item.replies ?? [])])
+}
