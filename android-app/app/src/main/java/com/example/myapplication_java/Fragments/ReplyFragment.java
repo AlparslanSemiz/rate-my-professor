@@ -18,6 +18,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.example.myapplication_java.Adapters.CommentsAdapter;
 import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.CommentType;
@@ -25,6 +26,7 @@ import com.example.myapplication_java.DomainModel.VoteType;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
+import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.ReportReason;
 import com.example.myapplication_java.ServerCommunication.Requests.CommentReportRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
@@ -73,6 +75,11 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         answerList = binding.answerList;
         ItemCommentBinding mainComment = binding.mainComment;
 
+        if (comment.profilePicture() != null) {
+            Glide.with(getContext())
+                    .load(comment.profilePicture().replaceFirst("svg", "png"))
+                    .into(mainComment.profilePicture);
+        }
 
         mainComment.userName.setText(comment.studentUsername());
         mainComment.contentText.setText(comment.content());
@@ -105,7 +112,7 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
 
         answerList.setLayoutManager(new LinearLayoutManager(getContext()));
         List<Comment> answers = comment.answers();
-        CommentsAdapter adapter = new CommentsAdapter(answers, this, CommentType.REPLY);
+        CommentsAdapter adapter = new CommentsAdapter(getContext(), answers, this, CommentType.REPLY);
         answerList.setAdapter(adapter);
         return binding.getRoot();
     }
@@ -130,21 +137,25 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
             call = apiService.voteAnswer(authToken, commentID, new VoteRequest(voteType));
             Log.println(Log.DEBUG, "Reply", "voteanswer");
         }
-        call.enqueue(new Callback<>() {
-            @Override
-            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
-                if (!response.isSuccessful()) {
-                    Log.println(Log.ERROR, "replyfragment", response.errorBody().toString());
-                    Toast.makeText(getContext(), "Vote couldn't be sent. (fail) ", Toast.LENGTH_SHORT).show();
+        if (!NetworkUtils.isInternetAvailable(getContext())) {
+            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        } else {
+            call.enqueue(new Callback<>() {
+                @Override
+                public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                    if (!response.isSuccessful()) {
+                        Log.println(Log.ERROR, "replyfragment", response.errorBody().toString());
+                        Toast.makeText(getContext(), "Vote couldn't be sent. (fail) ", Toast.LENGTH_SHORT).show();
+                    }
                 }
-            }
 
-            @Override
-            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
-                Log.println(Log.ERROR, "replyfragment", throwable.getMessage());
-                Toast.makeText(getContext(), "Vote couldn't be sent(error). ", Toast.LENGTH_SHORT).show();
-            }
-        });
+                @Override
+                public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                    Log.println(Log.ERROR, "replyfragment", throwable.getMessage());
+                    Toast.makeText(getContext(), "Vote couldn't be sent(error). ", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
     @Override
@@ -234,22 +245,26 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         } else {
             reportCall = apiService.reportReply(authToken, request);
         }
-        reportCall.enqueue(new Callback<BasicResponse>() {
-            @Override
-            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
-                BasicResponse body = response.body();
-                if (!response.isSuccessful() || body == null || !body.success()) {
-                    Log.println(Log.DEBUG, "comment report", "failure: " + response.code());
+        if (!NetworkUtils.isInternetAvailable(getContext())) {
+            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        } else {
+            reportCall.enqueue(new Callback<BasicResponse>() {
+                @Override
+                public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                    BasicResponse body = response.body();
+                    if (!response.isSuccessful() || body == null || !body.success()) {
+                        Log.println(Log.DEBUG, "comment report", "failure: " + response.code());
+                    }
                 }
-            }
 
-            @Override
-            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
-                Log.println(Log.DEBUG, "comment report", "failure: " + throwable.getMessage());
-            }
-        });
-        dialogBinding.bugReportInputLayout.setError(null);
-        Toast.makeText(requireContext(), R.string.bug_report_submitted, Toast.LENGTH_SHORT).show();
+                @Override
+                public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                    Log.println(Log.DEBUG, "comment report", "failure: " + throwable.getMessage());
+                }
+            });
+            dialogBinding.bugReportInputLayout.setError(null);
+            Toast.makeText(requireContext(), R.string.bug_report_submitted, Toast.LENGTH_SHORT).show();
+        }
         dialog.dismiss();
     }
 }

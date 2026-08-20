@@ -18,6 +18,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.example.myapplication_java.BuildConfig;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
@@ -105,46 +106,50 @@ public class LoginActivity extends AppCompatActivity {
 
         /// 'call.enqueue' executes the request to the server.
         /// 'callback' specifies how to handle the answer of the request.
-        call.enqueue(new Callback<>() {
-            @Override
-            public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
-                ServerResponse body = response.body();
+        if (!NetworkUtils.isInternetAvailable(this)) {
+            Toast.makeText(this, "Internet not available", Toast.LENGTH_SHORT).show();
+        } else {
+            call.enqueue(new Callback<>() {
+                @Override
+                public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                    ServerResponse body = response.body();
 
-                // A rejected request comes back without a usable body, and the server can also
-                // answer with 200 and success=false. Both mean no token was sent, so neither
-                // may continue to the screen that asks for one.
-                if (!response.isSuccessful() || body == null || !body.success()) {
-                    Log.e(TAG, readErrorMessage(response));
+                    // A rejected request comes back without a usable body, and the server can also
+                    // answer with 200 and success=false. Both mean no token was sent, so neither
+                    // may continue to the screen that asks for one.
+                    if (!response.isSuccessful() || body == null || !body.success()) {
+                        Log.e(TAG, readErrorMessage(response));
 
-                    String message = body == null || body.message() == null || body.message().isEmpty()
-                            ? getString(R.string.login_request_failed)
-                            : body.message();
-                    Toast.makeText(LoginActivity.this, message, Toast.LENGTH_LONG).show();
-                    return;
+                        String message = body == null || body.message() == null || body.message().isEmpty()
+                                ? getString(R.string.login_request_failed)
+                                : body.message();
+                        Toast.makeText(LoginActivity.this, message, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    /// 'SharedPreferences' is used to save data (at the moment just the email)
+                    /// persistently, even when the app is closed
+                    LoginSession.from(LoginActivity.this).saveMailAddress(trimmedMailAddress);
+
+                    Toast.makeText(
+                            LoginActivity.this,
+                            getString(R.string.login_token_sent, trimmedMailAddress),
+                            Toast.LENGTH_LONG
+                    ).show();
+                    LoginActivity.this.startActivity(enterAuthTokenActivity);
                 }
 
-                /// 'SharedPreferences' is used to save data (at the moment just the email)
-                /// persistently, even when the app is closed
-                LoginSession.from(LoginActivity.this).saveMailAddress(trimmedMailAddress);
-
-                Toast.makeText(
-                        LoginActivity.this,
-                        getString(R.string.login_token_sent, trimmedMailAddress),
-                        Toast.LENGTH_LONG
-                ).show();
-                LoginActivity.this.startActivity(enterAuthTokenActivity);
-            }
-
-            @Override
-            public void onFailure(Call<ServerResponse> call, Throwable t) {
-                Log.e(TAG, "request-login failed: " + t);
-                Toast.makeText(
-                        LoginActivity.this,
-                        R.string.login_server_unreachable,
-                        Toast.LENGTH_LONG
-                ).show();
-            }
-        });
+                @Override
+                public void onFailure(Call<ServerResponse> call, Throwable t) {
+                    Log.e(TAG, "request-login failed: " + t);
+                    Toast.makeText(
+                            LoginActivity.this,
+                            R.string.login_server_unreachable,
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+            });
+        }
     }
 
     /**

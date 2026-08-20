@@ -1,5 +1,6 @@
 package com.example.myapplication_java.Adapters;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +12,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.CommentType;
 import com.example.myapplication_java.DomainModel.VoteType;
@@ -31,8 +33,13 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
     private final List<Comment> comments;
     private final OnCommentClickListener listener;
     private final CommentType type;
+    private final Context context;
 
-    public CommentsAdapter(List<Comment> comments, OnCommentClickListener listener, CommentType type) {
+    public CommentsAdapter(Context context,
+                           List<Comment> comments,
+                           OnCommentClickListener listener,
+                           CommentType type) {
+        this.context = context;
         this.comments = comments;
         this.listener = listener;
         this.type = type;
@@ -49,6 +56,12 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
     @Override
     public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
         Comment comment = comments.get(position);
+        if (comment.profilePicture() != null) {
+            Glide.with(context)
+                    .load(comment.profilePicture().replaceFirst("svg", "png"))
+                    .into(holder.profilePicture);
+        }
+
         holder.userName.setText(comment.studentUsername());
         holder.commentContent.setText(comment.content());
         holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
@@ -121,6 +134,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         final TextView downVoteCount;
         final TextView commentsNum;
         final ImageButton reportButton;
+        final ImageView profilePicture;
 
         /**
          * Whether the answers of this comment are currently folded out.
@@ -134,6 +148,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             ItemReplyBinding replyBinding = binding.commentBox;
             commentBox = replyBinding.getRoot();
 
+            profilePicture = binding.profilePicture;
             userName = binding.userName;
             commentContent = binding.contentText;
             replyButton = binding.replyButton;
