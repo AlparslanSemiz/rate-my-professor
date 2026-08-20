@@ -59,8 +59,8 @@ No authentication.
 
 The opaque token is returned once; only its SHA-256 hash is persisted. Admin sessions
 expire after 12 hours and student sessions after 365 days by default. An eligible email
-in `ADMIN_BOOTSTRAP_EMAILS` is provisioned into `admins` after successful OTP
-verification. Admin token creation and `ADMIN_LOGIN` audit insertion share one
+in `ADMIN_BOOTSTRAP_EMAILS` is provisioned into `admins` at startup, and again after
+successful OTP verification if the row is missing. Admin token creation and `ADMIN_LOGIN` audit insertion share one
 transaction.
 
 ### `POST /auth/logout`
@@ -71,6 +71,21 @@ Admin authentication; no body. Revokes the current token and writes
 ```json
 {"message":"Logged out successfully","success":true}
 ```
+
+**Not every `ADMIN_LOGIN` has a matching `ADMIN_LOGOUT`, and that is the intended
+behaviour.** A session ends without one whenever the client never calls this endpoint: a
+closed tab, or a request that came back `401` on an already-rejected token, where there is
+nothing left to revoke. A session that reaches its TTL (`AUTH_ADMIN_SESSION_TTL`, 12 hours
+by default) simply stops authenticating — there is no request at that moment and no actor to
+attribute an entry to, and this log records what someone did, not what a clock did.
+
+The one case where the backend itself ends an *admin's* session is a role change through
+`PATCH /users/{id}`; blocking and deleting refuse administrator targets outright. That case
+is already in the log, as the `USER_UPDATED` entry carrying `metadata.sessionsRevoked = true`
+— with its `changes.role` saying why. An `ADMIN_LOGOUT` written there would be attributed to
+the admin who made the change rather than to the one whose session died, which is a worse
+record than none. So treat a missing `ADMIN_LOGOUT` as ordinary, and never read the absence
+of one as evidence that a session is still live.
 
 ### `POST /auth/logout-all`
 
@@ -127,14 +142,50 @@ includes the authenticated admin:
     "lastOnline":"2026-07-23T10:00:00.000Z",
     "biography":"",
     "warnings":0,
-    "reports":0
-  }]
+    "reports":0,
+    "credibilityScore":0
+  }],
+  "nextCursor":null
 }
 ```
 
-`GET /users/{id}` returns that user object directly, without a wrapper.
-`warnings` is the persisted warning count; `reports` counts reports against comments
-authored by the user.
+`GET /users/{id}` returns that user object directly, **without a wrapper** — it is the one
+read in this API that does not wrap. `warnings` is the persisted warning count; `reports`
+counts reports against comments authored by the user; `credibilityScore` is the value
+`PATCH /users/{id}` writes, returned by both reads so an edit form can seed its input.
+
+**Soft-deleted accounts are excluded from both reads.** `DELETE /users/{id}` anonymises the
+account, and it then disappears from the listing and `404`s by id, so a "total users" counter
+built on this listing does not over-report the platform.
+
+### Filtering and pagination
+
+| Parameter | Meaning |
+| --- | --- |
+| `limit` | Page size, 1–100. **Omit it and every matching user is returned**, with `nextCursor: null`. |
+| `cursor` | Opaque cursor from the previous page. `400` without a `limit`. |
+| `q` | Case-insensitive search over `username` and `kitEmail`, max 200 characters |
+| `status` | `ACTIVE`, `INACTIVE` or `BLOCKED`. `DELETED` is a `400`. |
+| `role` | `STUDENT` or `ADMIN`, resolved from `admins` membership |
+| `sort` | `newest` (default) or `oldest` |
+
+Pagination is opt-in so that a caller which has not been taught to follow cursors is not
+silently truncated to one page. Filters apply either way.
+
+**The two modes order differently, and they have to.** An unparameterised call keeps the
+existing order — administrators first, then newest-joined — which is computed in Java because
+role is not a column and so cannot be an `ORDER BY`. A call with `limit` orders strictly by
+`(createdAt DESC, id DESC)`, the keyset the cursor resumes from.
+
+Bad parameters answer `400` with a specific message rather than a generic failure:
+`Limit must be an integer between 1 and 100`, `Invalid user cursor`,
+`A cursor requires a limit`, `Deleted users are not listed`, `Invalid user status`,
+`Invalid user role`, `Invalid user sort`, `User search is too long`.
+
+For dashboard counters, prefer `GET /system/status` — its `counts` block already carries
+users, active users, admins, lectures, comments, answers, ratings, open reports and audit
+events, and `counts.users` excludes soft-deleted accounts. Polling the full user listing for
+a handful of numbers is a full-table read per poll.
 
 Mutation endpoints:
 
@@ -144,7 +195,7 @@ Mutation endpoints:
 | `DELETE /users/{id}` | none | `Deleted user successfully` |
 | `PATCH /users/{id}/block` | none | `Student blocked successfully` |
 | `PATCH /users/{id}/unblock` | none | `Student unblocked successfully` |
-| `POST /users/{id}/warnings` | `{"userID":"ignored","message":"Reason","createdFrom":{"id":"ignored"}}` | `Student warned successfully` |
+| `POST /users/{id}/warnings` | `{"message":"Reason"}` | `Student warned successfully` |
 | `PATCH /users/{id}/warnings/{warningId}` | `{"message":"Corrected reason"}` | `Updated warning successfully` |
 | `DELETE /users/{id}/warnings/{warningId}` | none | `Deleted warning successfully` |
 
@@ -189,17 +240,31 @@ warning addressed under the wrong student is `404`.
   "message":"Successfully found warnings for student",
   "success":true,
   "warnings":[{
+    "id":"warning-uuid",
     "userID":"target-user-uuid",
     "message":"Reason",
     "createdAt":"2026-07-23T10:00:00.000Z",
     "createdFrom":{
       "id":"admin-user-uuid",
-      "student":null,
-      "createdAt":"2026-07-23T09:00:00.000Z"
+      "name":"Administrator",
+      "createdAt":"2026-07-23T10:00:00.000Z"
     }
   }]
 }
 ```
+
+`id` is the warning's own id and is what `PATCH`/`DELETE /users/{id}/warnings/{warningId}`
+address.
+
+`createdFrom` identifies the issuing admin. `id` is that admin's **student** id — the same
+value `GET /auth/me` returns as `user.id`, so a client can tell whether it issued a warning
+itself by comparing the two. `name` is the admin's display name. `createdFrom.createdAt` is
+when the warning was issued and therefore repeats the outer `createdAt`.
+
+**The issuer is always taken from the auth token.** A client does not get to choose who a
+warning is attributed to, and the request body carries only `message`. The `userID` and
+`createdFrom` fields this endpoint used to accept were read nowhere; they have been removed,
+and a caller still sending them is unaffected because unknown JSON fields are ignored.
 
 ## Comments
 
@@ -247,10 +312,11 @@ app while keeping its history. Returns
 
 ```json
 {
-  "message":"Successfully found all reported comments",
+  "message":"Success",
   "success":true,
   "comments":[{
     "id":"report-uuid",
+    "commentId":"comment-uuid",
     "commentContent":"Reported comment",
     "postContext":"CS101 — Algorithms",
     "reportText":"",
@@ -262,6 +328,12 @@ app while keeping its history. Returns
   }]
 }
 ```
+
+`id` is the **report's** id, which the status and withdrawal routes below address.
+`commentId` is the reported comment itself, which is what opening, hiding, editing or
+deleting the content the report is about addresses — without it the reports tab can only
+change a report's status, and acting on the content means finding it by eye in the content
+tab.
 
 `PATCH /comments/reported/{id}` accepts a `ReportStatus`:
 
@@ -320,6 +392,8 @@ Mirrors comment reports for answers.
   "success":true,
   "answers":[{
     "id":"report-uuid",
+    "answerId":"answer-uuid",
+    "commentId":"parent-comment-uuid",
     "answerContent":"Reported answer",
     "commentContent":"The comment it answers",
     "postContext":"CS101 — Algorithms",
@@ -332,6 +406,10 @@ Mirrors comment reports for answers.
   }]
 }
 ```
+
+As with comment reports, `id` is the report's id; `answerId` is the reported answer and
+`commentId` is the thread it sits in, so both the content and its context can be opened
+directly.
 
 `PATCH /answers/reported/{id}` accepts `{"status":"<ReportStatus>"}` and
 `DELETE /answers/reported/{id}` withdraws the report — both behave exactly like the
@@ -353,9 +431,16 @@ average — this is what a bogus rating gets identified and deleted by id from:
     "lectureId":"lecture-uuid",
     "topics":[{"category":"LECTURE_UNDERSTANDABILITY","value":4.5}],
     "createdAt":"2026-07-23T10:00:00.000Z"
-  }]
+  }],
+  "nextCursor":null
 }
 ```
+
+Accepts `limit` (1–100), `cursor` and `lectureId`, with the same opt-in pagination as
+`GET /users`: no `limit` returns every rating and a null cursor. `lectureId` is a query
+parameter rather than a path segment because `GET /ratings/{lectureId}` is the public
+per-lecture averages read on the same base path. A malformed `lectureId` is
+`400 Invalid lecture id`; a malformed cursor is `400 Invalid rating cursor`.
 
 `category` is a `RatingCategory` (see `LectureType` below for which categories a given
 lecture offers); `value` is the score the student gave that category.
@@ -425,9 +510,20 @@ rewrite ratings already submitted — they keep the categories they were given.
   "lastName":"Doe",
   "active":true,
   "averageRating":4.2,
-  "ratingCount":12
+  "ratingCount":12,
+  "lectureIds":["lecture-uuid"]
 }
 ```
+
+`lectureIds` is the professor's own view of the assignment that `PATCH /data/professor/{id}`
+writes. Read it from here rather than reverse-indexing it out of `GET /data/lectures`: the
+lecture listing is the other direction of the same relation, and reverse-indexing it returns
+partial results the moment that listing is filtered or paginated — a professor would appear
+to have stopped teaching the lectures that fell outside the page.
+
+`GET /data/professor/{id}` returns `{"message":"...","success":true,"professor":{...}}`.
+Its `success` was previously hard-coded `false` on the success path, so a client that
+trusted the flag treated every found professor as a miss.
 
 `PATCH /data/lectures/{id}` and `PATCH /data/professor/{id}` validate names and years
 the same way `PATCH /users/{id}` validates a username: trimmed, non-empty,
@@ -449,10 +545,15 @@ wholesale — pass `[]` to clear it — and a `404` if any id in the list does n
     "severity":"HIGH",
     "status":"OPEN",
     "reporterName":"Student",
-    "reportedAt":"2026-07-23T10:00:00.000Z"
+    "reportedAt":"2026-07-23T10:00:00.000Z",
+    "issueUrl":null,
+    "issueState":"NONE"
   }]
 }
 ```
+
+`issueState` is `NONE`, `CREATED` or `FAILED`, and with `issueUrl` is what decides whether a
+client shows a link to the tracker issue, an action to open one, or a retry.
 
 `PATCH /reports/{id}` accepts any subset of `{"status","severity","title","description"}`,
 at least one required:
@@ -469,7 +570,42 @@ Only changed fields are persisted. A request changing several fields creates one
 Returns `{"message":"Deleted bug report successfully","success":true}` and a
 `BUG_REPORT_DELETED` audit event.
 
-`POST /reports` remains the legacy authenticated-student submission endpoint.
+`POST /reports` remains the legacy authenticated-student submission endpoint, and stays open
+to students.
+
+### `POST /reports/{id}/gitlab-issue`
+
+Admin only. Opens a GitLab issue for the bug report and stores where it landed.
+
+```json
+{
+  "message":"Created GitLab issue",
+  "success":true,
+  "issueUrl":"https://gitlab.example/group/project/-/issues/42",
+  "issueIid":42,
+  "issueState":"CREATED"
+}
+```
+
+**Idempotent.** A report that already has an issue is answered with that issue, with
+`message` reading `Bug report already has a GitLab issue` and GitLab not contacted at all.
+The row is locked for the duration of the call, so a double-clicked button, two admins
+working the same queue, and a retry after a timeout cannot open duplicate issues.
+
+**Admin-triggered, not automatic on submission.** Creating an issue for every report as it
+arrives would make student-facing bug reporting depend on GitLab being reachable, and would
+file the duplicates and the spam into the tracker alongside the real bugs.
+
+- `503 GitLab integration is not configured` when the credentials are unset. Read
+  `gitlabEnabled` from `GET /system/status` to hide the action rather than discover this by
+  pressing it.
+- `502` when GitLab refuses or cannot be reached. The report is left at `issueState:"FAILED"`
+  so the attempt is visible and can be retried by calling again.
+- `BUG_REPORT_ISSUE_CREATED` audit event on success.
+
+The API token is read from the environment, sent only as a `PRIVATE-TOKEN` request header,
+and never logged or returned by any endpoint. That is why issue creation lives in the backend
+at all: a token that reaches the browser is a leaked token.
 
 ## Audit
 
@@ -492,11 +628,62 @@ snapshotted actor name/email and target label case-insensitively.
     "actor":{"type":"ADMIN","id":"uuid","name":"Administrator","email":"admin@student.kit.edu","role":"ADMIN"},
     "target":{"type":"USER","id":"uuid","label":"Student (student@student.kit.edu)"},
     "changes":{"status":{"before":"ACTIVE","after":"BLOCKED"}},
-    "metadata":{}
+    "metadata":{},
+    "revertible":true,
+    "revertBlockedReason":null,
+    "revertedByAuditId":null
   }],
   "nextCursor":null
 }
 ```
+
+### Reverting an entry
+
+`revertible` is computed by the server on every read, so a client never reimplements the
+window or the staleness rule — two copies of that rule would drift apart. When it is false,
+`revertBlockedReason` says why, using the same vocabulary the refusal below uses, so one
+explanation covers both the hidden control and the control clicked after the entry went
+stale. `revertedByAuditId` names the entry that already reversed this one.
+
+`POST /audit-logs/{id}/revert` applies the inverse of one entry. Admin only.
+
+```json
+{"message":"Reverted USER_UPDATED","success":true}
+```
+
+The reversal is written as **its own** audit event — the entry being reversed is never
+modified — and it is applied by calling the same service the panel calls, so it inherits
+every guard that path enforces. An entry is revertible when all of the following hold:
+
+- its action is a field edit: `USER_UPDATED`, `USER_BLOCKED`, `USER_UNBLOCKED`,
+  `USER_WARNING_UPDATED`, `COMMENT_UPDATED`, `ANSWER_UPDATED`, `LECTURE_UPDATED`,
+  `PROFESSOR_UPDATED`, `BUG_REPORT_UPDATED`, `COMMENT_REPORT_STATUS_CHANGED`,
+  `ANSWER_REPORT_STATUS_CHANGED`;
+- it is inside the revert window (`AUDIT_REVERT_WINDOW`, default 7 days);
+- every field's current value still equals the `after` this entry recorded;
+- the record it is about still exists, and no entry has already reversed it.
+
+Otherwise it answers `409` with a machine-readable `reason`:
+
+```json
+{"message":"The value changed after this entry, so reverting would discard that change",
+ "success":false,
+ "reason":"VALUE_CHANGED"}
+```
+
+| `reason` | Meaning |
+| --- | --- |
+| `ACTION_NOT_REVERTIBLE` | Not a field edit — a creation, a deletion, a session event or a refusal |
+| `WINDOW_EXPIRED` | Older than the revert window |
+| `VALUE_CHANGED` | Something changed the field afterwards; reverting would discard it |
+| `ALREADY_REVERTED` | A later entry already reversed this one |
+| `TARGET_MISSING` | The record the entry is about no longer exists |
+
+**Deletions cannot be reversed and refuse rather than half-applying.** `USER_DELETED`
+anonymises the account and `LECTURE_DELETED` takes its comments, answers and ratings with it;
+nothing in the log carries the removed data, so there is nothing to restore from. `reason` is
+the only field added to any error body in this API, and it is omitted entirely when absent, so
+every other error response is unchanged.
 
 `GET /audit-logs/meta` returns actor snapshots plus these enums:
 
@@ -507,8 +694,8 @@ snapshotted actor name/email and target label case-insensitively.
   `COMMENT_DELETED`, `ANSWER_UPDATED`, `ANSWER_DELETED`, `RATING_DELETED`,
   `COMMENT_REPORT_STATUS_CHANGED`, `COMMENT_REPORT_DELETED`,
   `ANSWER_REPORT_STATUS_CHANGED`, `ANSWER_REPORT_DELETED`, `BUG_REPORT_UPDATED`,
-  `BUG_REPORT_DELETED`, `LECTURE_UPDATED`, `LECTURE_DELETED`, `PROFESSOR_UPDATED`,
-  `PROFESSOR_DELETED`
+  `BUG_REPORT_ISSUE_CREATED`, `BUG_REPORT_DELETED`, `LECTURE_UPDATED`, `LECTURE_DELETED`,
+  `PROFESSOR_UPDATED`, `PROFESSOR_DELETED`
 - Student activity: `USER_LOGIN`, `USER_LOGOUT`, `COMMENT_CREATED`, `ANSWER_CREATED`,
   `RATING_SUBMITTED`, `COMMENT_REPORT_CREATED`, `ANSWER_REPORT_CREATED`,
   `BUG_REPORT_CREATED`
@@ -589,6 +776,7 @@ itself fails.
   "database":{"reachable":true,"latencyMs":3,"error":null},
   "counts":{
     "users":42,
+    "activeUsers":37,
     "admins":6,
     "lectures":12,
     "comments":83,
@@ -603,9 +791,13 @@ itself fails.
     "ageSeconds":12,
     "action":"USER_BLOCKED",
     "actorName":"Administrator"
-  }
+  },
+  "gitlabEnabled":false
 }
 ```
+
+`gitlabEnabled` reports whether the GitLab issue integration is configured, so a client can
+hide the "create issue" action instead of discovering it is unavailable by pressing it.
 
 `status` is one of:
 
@@ -615,8 +807,20 @@ itself fails.
 - `DOWN` — the database is unreachable; `database.error` names the failure class and
   `counts`/`lastWrite` are `null`
 
-`counts.users` excludes soft-deleted accounts, matching `GET /users`. `lastWrite` is the
-newest audit event and is absent when nothing has been recorded yet; it is what answers
+`counts.users` excludes soft-deleted accounts, matching `GET /users`, and
+`counts.activeUsers` narrows that to `status == ACTIVE`; the two differ by the `INACTIVE`
+and `BLOCKED` accounts, so a dashboard can show both without reading the user listing.
+
+`counts.admins` counts the accounts that hold the administrator role — the rows `GET /users`
+returns with `role: "ADMIN"` — and not `ADMIN_BOOTSTRAP_EMAILS`. The two overlap without
+being the same. A bootstrap address counts without anyone having signed in, because the
+startup runner creates and promotes those accounts. An account promoted through
+`PATCH /users/{id}` counts from that moment, configured or not. And a demotion that leaves
+the address in `ADMIN_BOOTSTRAP_EMAILS` is undone by the next restart or that account's next
+sign-in, either of which re-promotes it, so the count climbs back on its own — removing the
+address from the configuration is what makes a demotion stick.
+
+`lastWrite` is the newest audit event and is absent when nothing has been recorded yet; it is what answers
 whether an action taken in the panel actually reached the database.
 
 ## Health
@@ -658,6 +862,20 @@ curl -i -X POST -H "Origin: <panel origin>" -H "Content-Type: application/json" 
 
 `400 Invalid KIT email` means the origin is accepted and the request reached the
 controller. `403 Invalid CORS request` means it did not.
+
+### Optional integrations
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `GITLAB_BASE_URL` | unset | GitLab instance, e.g. `https://gitlab.example`. Unset disables issue creation. |
+| `GITLAB_PROJECT_ID` | unset | Numeric id or URL-encoded path of the project issues are filed in |
+| `GITLAB_TOKEN` | unset | API token with permission to create issues. Never leaves the backend. |
+| `GITLAB_TIMEOUT` | `PT10S` | Connect and read timeout for the GitLab call |
+| `AUDIT_REVERT_WINDOW` | `P7D` | How long an administrative field edit stays reversible |
+
+With any of the three GitLab values unset the integration reports itself as disabled:
+`GET /system/status` returns `gitlabEnabled:false` and `POST /reports/{id}/gitlab-issue`
+answers `503`. Everything else works unchanged.
 
 The Admin Web setting is:
 
