@@ -415,8 +415,7 @@ refresh, and watch the count move.
 ## Known Backend Gaps
 
 Nearly all of what this section used to list was **closed by the backend change of
-2026-08-20**. That change is not deployed yet, so the panel still runs against the old
-contract until it lands; the table below is what remains after it does.
+2026-08-20**, which is now **deployed**. The table below is what remains.
 
 Resolved by that change: each warning now carries its own `id` and its issuer's `name`; the
 issuer is derived from the auth token, so the panel stops sending it; `/comments/reported` and
@@ -438,6 +437,8 @@ leaves that configuration. And `POST /users/{id}/warnings` accepts the old `user
 | A session that ends on **TTL expiry** writes no `ADMIN_LOGOUT` | The pair closes on an explicit sign-out — the panel calls `POST /auth/logout` — and a session the backend revokes itself is recorded on the action that caused it (`USER_UPDATED` with `metadata.sessionsRevoked`). Pure TTL expiry has no actor and no request, so nothing is written. A missing `ADMIN_LOGOUT` is normal and does **not** mean the session is still live. |
 | `GET /users` orders differently with and without parameters | Unparameterised it is admins first, then newest. Any paginated call is strictly newest-first, because role is not a column it can sort on. The Users page changes order the moment it paginates. |
 | GitLab issue creation is inert until it is configured | Without `GITLAB_BASE_URL`, `GITLAB_PROJECT_ID` and `GITLAB_TOKEN` the backend reports `gitlabEnabled: false` and the endpoint answers `503`. The panel hides the control rather than offering one that cannot work. |
+| `/system/status` has **no total bug report counter** | `counts.openBugReports` is the open ones only. The dashboard's "of N bug reports" sub-line and its "Reports handled" percentage were removed rather than kept by reading the whole `/reports` table on a timer. Requested as F1 in `BACKEND-TASKS.md`. |
+| `/system/status` has **no blocked account counter** | `counts` carries `users`, `activeUsers` and `admins`; `users - activeUsers` is blocked *plus* inactive, so blocked cannot be derived. With the Users table paginated it cannot be counted on screen either, so that stat card is not shown. Requested as F2. |
 
 ## Audit Log Design
 
