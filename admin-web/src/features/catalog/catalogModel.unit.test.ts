@@ -1,26 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAverageRating, lectureIdsByProfessor } from './catalogModel'
-import type { Lecture } from '../../api/CatalogService'
-
-function lecture(id: string, professorIds: string[]): Lecture {
-  return {
-    id,
-    name: `Lecture ${id}`,
-    code: id.toUpperCase(),
-    semesterYear: 2026,
-    semesterSeason: 'WINTER',
-    active: true,
-    lectureType: 'LECTURE_ONLY',
-    professors: professorIds.map((professorId) => ({
-      id: professorId,
-      firstName: 'First',
-      lastName: 'Last',
-      active: true,
-    })),
-    commentCount: 0,
-    ratingCount: 0,
-  }
-}
+import { formatAverageRating } from './catalogModel'
 
 describe('formatAverageRating', () => {
   it('renders a real average to one decimal', () => {
@@ -40,15 +19,3 @@ describe('formatAverageRating', () => {
   })
 })
 
-describe('lectureIdsByProfessor', () => {
-  it('reverses the lecture-to-professor assignment', () => {
-    const index = lectureIdsByProfessor([
-      lecture('l1', ['p1', 'p2']),
-      lecture('l2', ['p2']),
-    ])
-
-    expect(index.get('p1')).toEqual(['l1'])
-    expect(index.get('p2')).toEqual(['l1', 'l2'])
-    expect(index.get('p3')).toBeUndefined()
-  })
-})

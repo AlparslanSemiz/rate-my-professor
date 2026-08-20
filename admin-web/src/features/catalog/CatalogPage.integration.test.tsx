@@ -44,9 +44,9 @@ const lectures: Lecture[] = [
 ]
 
 const professors: Professor[] = [
-  { id: 'prof-1', firstName: 'Ada', lastName: 'Lovelace', active: true, averageRating: 4.2, ratingCount: 30 },
+  { id: 'prof-1', firstName: 'Ada', lastName: 'Lovelace', active: true, averageRating: 4.2, ratingCount: 30, lectureIds: ['lecture-1'] },
   // The backend sends 0 rather than null for a professor nobody has rated.
-  { id: 'prof-2', firstName: 'Alan', lastName: 'Turing', active: false, averageRating: 0, ratingCount: 0 },
+  { id: 'prof-2', firstName: 'Alan', lastName: 'Turing', active: false, averageRating: 0, ratingCount: 0, lectureIds: [] },
 ]
 
 function renderCatalog() {
@@ -121,7 +121,7 @@ describe('Catalogue page', () => {
     await waitFor(() => expect(catalogService.deleteLecture).toHaveBeenCalledWith('lecture-1'))
   })
 
-  it('derives which lectures a professor teaches from the lecture list', async () => {
+  it('shows the lectures the backend says a professor teaches', async () => {
     const user = userEvent.setup()
     renderCatalog()
 

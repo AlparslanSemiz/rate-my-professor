@@ -36,7 +36,6 @@ interface ProfessorsTableProps {
   search: string
   mutating: boolean
   lecturesById: Map<string, Lecture>
-  assignedLectureIds: Map<string, string[]>
   onSearchChange: (value: string) => void
   onEdit: (professor: Professor) => void
   onDelete: (professor: Professor) => void
@@ -48,7 +47,6 @@ export default function ProfessorsTable({
   search,
   mutating,
   lecturesById,
-  assignedLectureIds,
   onSearchChange,
   onEdit,
   onDelete,
@@ -95,7 +93,7 @@ export default function ProfessorsTable({
               </tr>
             ) : (
               professors.map((professor, index) => {
-                const assigned = (assignedLectureIds.get(professor.id) ?? [])
+                const assigned = professor.lectureIds
                   .map((id) => lecturesById.get(id))
                   .filter((lecture): lecture is Lecture => lecture !== undefined)
 

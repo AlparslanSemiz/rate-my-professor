@@ -26,6 +26,8 @@ export interface Professor {
   firstName: string
   lastName: string
   active: boolean
+  /** The lectures this professor teaches, as the backend records them. */
+  lectureIds: string[]
   /**
    * `0` rather than `null` when nobody has rated the professor, so `ratingCount` is what
    * separates "rated badly" from "not rated". `null` is still accepted defensively.

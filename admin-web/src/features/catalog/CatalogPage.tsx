@@ -8,7 +8,7 @@ import LoadError from '../../components/LoadError'
 import PageHeader from '../../components/PageHeader'
 import PageLoader from '../../components/PageLoader'
 import { indexById } from '../../utils/collection'
-import { lectureIdsByProfessor, lectureLabel, professorName } from './catalogModel'
+import { lectureLabel, professorName } from './catalogModel'
 import CatalogStats from './components/CatalogStats'
 import LectureEditModal from './components/LectureEditModal'
 import LecturesTable from './components/LecturesTable'
@@ -27,7 +27,6 @@ export default function CatalogPage() {
 
   const lectures = catalog.lectures
   const lecturesById = useMemo(() => indexById(lectures), [lectures])
-  const assignedLectureIds = useMemo(() => lectureIdsByProfessor(lectures), [lectures])
 
   if (catalog.loading) return <PageLoader />
   if (catalog.loadError) return <LoadError message={catalog.loadError} onRetry={catalog.retry} />
@@ -70,7 +69,6 @@ export default function CatalogPage() {
             search={catalog.professorSearch}
             mutating={catalog.mutating}
             lecturesById={lecturesById}
-            assignedLectureIds={assignedLectureIds}
             onSearchChange={catalog.setProfessorSearch}
             onEdit={setEditingProfessor}
             onDelete={setDeletingProfessor}
@@ -88,9 +86,7 @@ export default function CatalogPage() {
       <ProfessorEditModal
         professor={editingProfessor}
         lectures={catalog.lectures}
-        assignedLectureIds={
-          editingProfessor ? (assignedLectureIds.get(editingProfessor.id) ?? NO_LECTURES) : NO_LECTURES
-        }
+        assignedLectureIds={editingProfessor?.lectureIds ?? NO_LECTURES}
         onClose={() => setEditingProfessor(null)}
         onSubmit={catalog.updateProfessor}
       />

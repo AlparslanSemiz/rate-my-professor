@@ -18,18 +18,6 @@ export function lectureTerm(lecture: Lecture) {
  * but the lecture endpoint lists each lecture's professors, so the reverse index is built from
  * the lectures the panel already loaded.
  */
-export function lectureIdsByProfessor(lectures: Lecture[]): Map<string, string[]> {
-  const index = new Map<string, string[]>()
-  for (const lecture of lectures) {
-    for (const professor of lecture.professors) {
-      const assigned = index.get(professor.id)
-      if (assigned) assigned.push(lecture.id)
-      else index.set(professor.id, [lecture.id])
-    }
-  }
-  return index
-}
-
 export function matchesLectureQuery(lecture: Lecture, query: string) {
   return (
     lecture.name.toLowerCase().includes(query) ||
