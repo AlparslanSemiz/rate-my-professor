@@ -27,6 +27,7 @@ const newestMember: User = {
   biography: '',
   warnings: 0,
   reports: 0,
+  credibilityScore: 100,
 }
 
 const status: SystemStatus = {

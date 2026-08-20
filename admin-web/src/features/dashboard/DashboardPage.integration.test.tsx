@@ -39,6 +39,7 @@ const users: User[] = [
     biography: '',
     warnings: 0,
     reports: 0,
+    credibilityScore: 100,
   },
   {
     id: 'user-1',
@@ -51,6 +52,7 @@ const users: User[] = [
     biography: '',
     warnings: 0,
     reports: 0,
+    credibilityScore: 100,
   },
   {
     id: 'user-2',
@@ -63,6 +65,7 @@ const users: User[] = [
     biography: '',
     warnings: 3,
     reports: 1,
+    credibilityScore: 100,
   },
 ]
 

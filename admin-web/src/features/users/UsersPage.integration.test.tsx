@@ -65,6 +65,7 @@ const users: User[] = [
     biography: 'Platform administrator.',
     warnings: 0,
     reports: 0,
+    credibilityScore: 100,
   },
   {
     id: 'user-2',
@@ -77,6 +78,7 @@ const users: User[] = [
     biography: 'Computer Science student.',
     warnings: 0,
     reports: 0,
+    credibilityScore: 100,
   },
 ]
 

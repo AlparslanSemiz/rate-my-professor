@@ -49,6 +49,7 @@ const adminAccount: User = {
   biography: 'Platform administrator.',
   warnings: 0,
   reports: 0,
+  credibilityScore: 100,
 }
 
 const adminUser = {
