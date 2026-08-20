@@ -54,7 +54,12 @@ export const HELP_SECTIONS: HelpSection[] = [
         heading: 'What the cards mean',
         rows: [
           { value: 'Total users', color: 'blue', meaning: 'Every account the backend returned.' },
-          { value: 'Active users', color: 'green', meaning: 'Accounts whose status is Active.' },
+          {
+            value: 'Not blocked',
+            color: 'green',
+            meaning:
+              'Accounts whose status is Active. Not a count of who is online right now.',
+          },
           { value: 'Admin accounts', color: 'yellow', meaning: 'Accounts whose role is Admin.' },
           {
             value: 'Open reports',

@@ -49,7 +49,7 @@ export default function DashboardHero({
   lastUpdated,
 }: DashboardHeroProps) {
   const metrics = [
-    { label: 'Members active', value: `${activeRate}%` },
+    { label: 'Accounts not blocked', value: `${activeRate}%` },
     { label: 'Reports waiting', value: String(stats.openReports) },
     {
       label: 'Updated',

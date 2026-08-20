@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Badge, Box, Group, Text, UnstyledButton, type CSSProperties } from '@mantine/core'
 import type { User } from '../../../api/UsersService'
 import Panel from '../../../components/Panel'
@@ -5,6 +6,22 @@ import { roleColor } from '../../../constants/colors'
 import { enumLabel } from '../../../utils/enumLabel'
 
 const panelStyle: CSSProperties = { padding: '20px 24px' }
+const RECENT_COUNT = 4
+
+/**
+ * `/users` promises no ordering, so "newest" has to be established here rather than assumed
+ * from the position of a row in the response. An unparseable date sorts last instead of
+ * poisoning the comparison with NaN.
+ */
+function joinedAt(user: User): number {
+  const time = new Date(user.joined).getTime()
+  return Number.isNaN(time) ? 0 : time
+}
+
+function newestFirst(users: User[]): User[] {
+  return [...users].sort((left, right) => joinedAt(right) - joinedAt(left)).slice(0, RECENT_COUNT)
+}
+
 const rowStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -19,6 +36,8 @@ export default function RecentRegistrations({
   users: User[]
   onViewAll: () => void
 }) {
+  const newest = useMemo(() => newestFirst(users), [users])
+
   return (
     <Panel style={panelStyle}>
       <Group justify="space-between" mb={4}>
@@ -41,7 +60,7 @@ export default function RecentRegistrations({
           </Text>
         </Box>
       ) : (
-        users.slice(0, 4).map((user) => (
+        newest.map((user) => (
           <Box key={user.id} mb={12} style={rowStyle}>
             <div style={{ minWidth: 0 }}>
               <Text size="sm" fw={500} c="#d1d5db" truncate>

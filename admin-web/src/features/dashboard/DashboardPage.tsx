@@ -1,7 +1,11 @@
 import { SimpleGrid } from '@mantine/core'
 import { useNavigate } from 'react-router-dom'
+import ErrorAlert from '../../components/ErrorAlert'
+import LoadError from '../../components/LoadError'
+import PageLoader from '../../components/PageLoader'
 import { twoColumnGridCols } from '../../constants/layout'
 import { routes } from '../../constants/routes'
+import { STALE_READING_SUFFIX } from '../system-status/systemStatusModel'
 import DashboardHeader from './components/DashboardHeader'
 import DashboardHero from './components/DashboardHero'
 import DashboardStatGrid from './components/DashboardStatGrid'
@@ -12,11 +16,26 @@ import { useDashboardData } from './hooks/useDashboardData'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const { users, stats, activeRate, lastUpdated } = useDashboardData()
+  const { users, stats, activeRate, lastUpdated, loading, error, hasData, retry } =
+    useDashboardData()
+
+  // Zeros are indistinguishable from a real empty platform, so nothing is claimed until
+  // something has actually been read.
+  if (loading && !hasData) return <PageLoader />
+
+  if (!hasData) {
+    return (
+      <>
+        <DashboardHeader />
+        <LoadError message={error} onRetry={retry} />
+      </>
+    )
+  }
 
   return (
     <>
       <DashboardHeader />
+      <ErrorAlert message={error ? `${error} ${STALE_READING_SUFFIX}` : ''} />
       <DashboardHero stats={stats} activeRate={activeRate} lastUpdated={lastUpdated} />
       <DashboardStatGrid stats={stats} />
       <SimpleGrid cols={twoColumnGridCols} spacing={16} mb={28}>

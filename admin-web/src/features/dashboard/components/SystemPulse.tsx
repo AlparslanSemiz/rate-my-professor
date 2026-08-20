@@ -12,11 +12,15 @@ export default function SystemPulse({
   activeRate: number
 }) {
   const adminShare = stats.total ? Math.round((stats.admins / stats.total) * 100) : 0
-  const queueCleared = stats.openReports === 0 ? 100 : Math.max(0, 100 - stats.openReports * 10)
+  // The share of bug reports that have been moved off OPEN. Every figure here is a real
+  // ratio of counts the backend returned, not a score derived from one of them.
+  const reportsHandled = stats.totalReports
+    ? Math.round(((stats.totalReports - stats.openReports) / stats.totalReports) * 100)
+    : 100
   const metrics = [
-    { label: 'Members active', value: activeRate, color: '#3b82f6' },
-    { label: 'Admin coverage', value: adminShare, color: '#22c55e' },
-    { label: 'Queue cleared', value: queueCleared, color: '#f97316' },
+    { label: 'Accounts not blocked', value: activeRate, color: '#3b82f6' },
+    { label: 'Admin share of accounts', value: adminShare, color: '#22c55e' },
+    { label: 'Reports handled', value: reportsHandled, color: '#f97316' },
   ]
 
   return (

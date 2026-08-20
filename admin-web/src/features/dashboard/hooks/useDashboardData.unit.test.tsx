@@ -78,12 +78,15 @@ describe('useDashboardData', () => {
       active: 1,
       admins: 1,
       openReports: 1,
+      totalReports: 2,
     })
     expect(result.current.activeRate).toBe(50)
     expect(result.current.lastUpdated).toBeInstanceOf(Date)
+    expect(result.current.error).toBe('')
+    expect(result.current.hasData).toBe(true)
   })
 
-  it('keeps available data when one overview request fails', async () => {
+  it('keeps the half that loaded and reports the half that did not', async () => {
     vi.mocked(feedbackService.getReports).mockRejectedValue(new Error('Unavailable'))
 
     const { result } = renderHook(() => useDashboardData())
@@ -91,6 +94,22 @@ describe('useDashboardData', () => {
     await waitFor(() => expect(result.current.stats.total).toBe(2))
 
     expect(result.current.stats.openReports).toBe(0)
-    expect(result.current.lastUpdated).toBeInstanceOf(Date)
+    expect(result.current.error).toBe('Unavailable')
+    expect(result.current.hasData).toBe(true)
+    // The timestamp vouches for a complete reading, so a partial one must not move it.
+    expect(result.current.lastUpdated).toBeNull()
+  })
+
+  it('reports an error without claiming the platform is empty when everything fails', async () => {
+    vi.mocked(usersService.getAll).mockRejectedValue(new Error('Backend unavailable'))
+    vi.mocked(feedbackService.getReports).mockRejectedValue(new Error('Backend unavailable'))
+
+    const { result } = renderHook(() => useDashboardData())
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.error).toBe('Backend unavailable')
+    expect(result.current.hasData).toBe(false)
+    expect(result.current.lastUpdated).toBeNull()
   })
 })
