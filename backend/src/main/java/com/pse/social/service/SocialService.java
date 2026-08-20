@@ -495,7 +495,7 @@ public class SocialService {
             }
 
             answerResponses.add(new AnswerResponse(
-                    answer.getComment().getId(),
+                    answer.getId(),
                     answer.getContent(),
                     answer.getStatus(),
                     answer.getStudent().getUsername(),
