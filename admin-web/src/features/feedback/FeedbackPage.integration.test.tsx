@@ -42,9 +42,20 @@ function renderFeedback() {
 }
 
 describe('Feedback page', () => {
+  // The backend owns the result of an edit and the page only shows what it re-read, so the
+  // fixture records what the backend now holds and `getReports` serves a copy of that.
+  let queue: BugReport[]
+
   beforeEach(() => {
-    vi.mocked(feedbackService.getReports).mockResolvedValue(reports)
-    vi.mocked(feedbackService.updateReport).mockResolvedValue({ success: true, message: 'Updated' })
+    queue = reports.map((report) => ({ ...report }))
+    vi.mocked(feedbackService.getReports).mockImplementation(async () =>
+      queue.map((report) => ({ ...report }))
+    )
+    vi.mocked(feedbackService.updateReport).mockImplementation(async (id, update) => {
+      const stored = queue.find((report) => report.id === id)
+      if (stored) Object.assign(stored, update)
+      return { success: true, message: 'Updated' }
+    })
   })
 
   it('opens the report detail modal when a row is clicked', async () => {
@@ -130,5 +141,24 @@ describe('Feedback page', () => {
     // change is never applied locally unless the backend confirms it.
     expect(dialog.getByText('Open')).toBeInTheDocument()
     expect(dialog.queryByText('Action Taken')).not.toBeInTheDocument()
+  })
+
+  it('reports a change the backend accepted as saved, even when the re-read fails', async () => {
+    const user = userEvent.setup()
+    renderFeedback()
+
+    await user.click(await screen.findByText('Crash on login'))
+    const dialog = within(await screen.findByRole('dialog'))
+    // The write lands; only the read that follows it does not.
+    vi.mocked(feedbackService.getReports).mockRejectedValueOnce(new Error('Database unavailable'))
+
+    await user.click(dialog.getByLabelText('Status'))
+    fireEvent.click(await screen.findByRole('option', { name: 'Action Taken', hidden: true }))
+
+    await waitFor(() => expect(feedbackService.updateReport).toHaveBeenCalledWith('report-1', { status: 'ACTION_TAKEN' }))
+
+    // Not "the change was not saved" — it was. The view is what is out of date.
+    expect(await screen.findByText(/reading it back failed/)).toHaveTextContent('Database unavailable')
+    expect(screen.queryByText(/The change was not saved/)).not.toBeInTheDocument()
   })
 })

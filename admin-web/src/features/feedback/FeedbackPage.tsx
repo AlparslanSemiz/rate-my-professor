@@ -6,14 +6,14 @@ import PageHeader from '../../components/PageHeader'
 import PageLoader from '../../components/PageLoader'
 import { useAsyncData } from '../../hooks/useAsyncData'
 import { useSelectedId } from '../../hooks/useSelectedId'
-import { updateById } from '../../utils/collection'
-import { getErrorMessage } from '../../utils/getErrorMessage'
+import { getErrorMessage, getStaleAfterWriteMessage } from '../../utils/getErrorMessage'
 import BugReportModal from './components/BugReportModal'
 import FeedbackStats from './components/FeedbackStats'
 import ReportQueue from './components/ReportQueue'
 
 const LOAD_ERROR_MESSAGE = 'Failed to load bug reports'
 const UPDATE_ERROR_MESSAGE = 'Failed to update the report. The change was not saved.'
+const RE_READ_ERROR_FALLBACK = 'the report queue could not be read back'
 const EMPTY_REPORTS: BugReport[] = []
 
 function loadReports() {
@@ -43,15 +43,30 @@ export default function FeedbackPage() {
     setUpdateError('')
   }
 
+  /**
+   * Writes the edit, then shows what the backend now holds rather than what was sent: it is
+   * free to trim a title or reject part of an update, and merging the request locally would
+   * put a value on screen that nobody confirmed. There is no read for a single report, so the
+   * queue is re-read whole.
+   *
+   * A failed re-read does not fail the action — the write already succeeded. The report stays
+   * as last read and the modal says the view may be out of date.
+   */
   async function applyUpdate(id: string, update: BugReportUpdate) {
     setReportUpdating(true)
     setUpdateError('')
     try {
       await feedbackService.updateReport(id, update)
-      setReports((current) => updateById(current, id, (report) => ({ ...report, ...update })))
     } catch (updateFailure: unknown) {
       setUpdateError(getErrorMessage(updateFailure, UPDATE_ERROR_MESSAGE))
+      setReportUpdating(false)
       throw updateFailure
+    }
+
+    try {
+      setReports(await feedbackService.getReports())
+    } catch (readFailure: unknown) {
+      setUpdateError(getStaleAfterWriteMessage(readFailure, RE_READ_ERROR_FALLBACK))
     } finally {
       setReportUpdating(false)
     }
