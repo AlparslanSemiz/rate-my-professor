@@ -8,9 +8,11 @@ import type { ReportStatus } from '../../../domain/moderation'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
 import {
   ALL_FILTERS,
+  findContent,
   matchesReportFilters,
   matchesReportQuery,
   narrowContent,
+  type ContentRef,
   type ContentStatusFilter,
   type ModeratedItem,
   type ReasonFilter,
@@ -27,8 +29,8 @@ import {
 export interface ModerationApi {
   loadContent: () => Promise<ModeratedItem[]>
   loadReports: () => Promise<ReportItem[]>
-  updateContent: (item: ModeratedItem, update: ContentUpdate) => Promise<BasicResponse>
-  deleteContent: (item: ModeratedItem) => Promise<BasicResponse>
+  updateContent: (item: ContentRef, update: ContentUpdate) => Promise<BasicResponse>
+  deleteContent: (item: ContentRef) => Promise<BasicResponse>
   updateReportStatus: (report: ReportItem, status: ReportStatus) => Promise<BasicResponse>
   deleteReport: (report: ReportItem) => Promise<BasicResponse>
 }
@@ -140,6 +142,16 @@ export function useModerationPage({
     [api, refreshBoth, run],
   )
 
+  /**
+   * The content a report is about. Both lists are already loaded, so the reports tab can act
+   * on the real comment — with its real visibility — instead of on a guess assembled from
+   * the report.
+   */
+  const contentFor = useCallback(
+    (report: ReportItem) => findContent(content.data, { id: report.contentId, kind: report.kind }),
+    [content.data],
+  )
+
   const withdrawReport = useCallback(
     (report: ReportItem) =>
       run(() => api.deleteReport(report), refreshReports, 'The report could not be withdrawn.'),
@@ -174,6 +186,7 @@ export function useModerationPage({
     profile,
     editContent,
     deleteContent,
+    contentFor,
     changeReportStatus,
     withdrawReport,
   }

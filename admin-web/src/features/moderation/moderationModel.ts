@@ -20,6 +20,12 @@ export type StatusFilter = typeof ALL_FILTERS | ReportStatus
 export type ReasonFilter = typeof ALL_FILTERS | ReportReason
 export type ContentStatusFilter = typeof ALL_FILTERS | ContentStatus
 
+/** Everything a mutation needs to address a comment or an answer: which one, and of which kind. */
+export interface ContentRef {
+  id: string
+  kind: 'comment' | 'answer'
+}
+
 /**
  * A comment or an answer, flattened to what the moderation table renders. Both endpoints
  * return the same fields under different names, and the extra one each carries — the answer
@@ -29,9 +35,7 @@ export type ContentStatusFilter = typeof ALL_FILTERS | ContentStatus
  * populated on a comment: the answers nested under it in the table, fetched and attached by
  * the comments page itself.
  */
-export interface ModeratedItem {
-  id: string
-  kind: 'comment' | 'answer'
+export interface ModeratedItem extends ContentRef {
   content: string
   status: ContentStatus
   author: UserReference
@@ -45,8 +49,11 @@ export interface ModeratedItem {
 
 /** A report against a comment or an answer, flattened the same way. */
 export interface ReportItem {
+  /** The report's id. Addresses the report itself — its status, and withdrawing it. */
   id: string
   kind: 'comment' | 'answer'
+  /** The id of the content the report is about. A different address from `id`. */
+  contentId: string
   content: string
   /** The parent comment of a reported answer; absent for a reported comment. */
   parentContent: string | null
@@ -102,10 +109,27 @@ export function attachReplies(comments: ManagedComment[], answers: ManagedAnswer
   }))
 }
 
+/**
+ * The comment or answer a report is about, looked up in the content that is already loaded —
+ * answers included, which live nested under their comment. Returns null when the content is
+ * gone, which is possible: a report outlives nothing, but the two lists are read separately.
+ */
+export function findContent(items: ModeratedItem[], ref: ContentRef): ModeratedItem | null {
+  for (const item of items) {
+    if (item.kind === ref.kind && item.id === ref.id) return item
+    const nested = item.replies?.find(
+      (reply) => reply.kind === ref.kind && reply.id === ref.id,
+    )
+    if (nested) return nested
+  }
+  return null
+}
+
 export function toCommentReport(report: ReportedComment): ReportItem {
   return {
     id: report.id,
     kind: 'comment',
+    contentId: report.commentId,
     content: report.commentContent,
     parentContent: null,
     postContext: report.postContext,
@@ -122,6 +146,7 @@ export function toAnswerReport(report: ReportedAnswer): ReportItem {
   return {
     id: report.id,
     kind: 'answer',
+    contentId: report.answerId,
     content: report.answerContent,
     parentContent: report.commentContent,
     postContext: report.postContext,

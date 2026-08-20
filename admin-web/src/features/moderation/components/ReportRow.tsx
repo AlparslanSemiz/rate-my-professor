@@ -1,11 +1,11 @@
-import { ActionIcon, Badge, Text, Tooltip, type CSSProperties } from '@mantine/core'
-import { IconTrash } from '@tabler/icons-react'
+import { ActionIcon, Badge, Group, Text, Tooltip, type CSSProperties } from '@mantine/core'
+import { IconPencil, IconTrash, IconTrashX } from '@tabler/icons-react'
 import UserChip from '../../../components/UserChip'
 import { reportReasonColor } from '../../../constants/colors'
 import type { ReportStatus } from '../../../domain/moderation'
 import { enumLabel } from '../../../utils/enumLabel'
 import { formatDate } from '../../../utils/formatDate'
-import type { ReportItem } from '../moderationModel'
+import type { ModeratedItem, ReportItem } from '../moderationModel'
 import ReportedContentPreview from './ReportedContentPreview'
 import ReportStatusSelect from './ReportStatusSelect'
 
@@ -20,19 +20,26 @@ function rowStyle(isLast: boolean): CSSProperties {
 
 interface ReportRowProps {
   report: ReportItem
+  /** The content the report is about, or null when it is no longer in the list. */
+  content: ModeratedItem | null
   isLast: boolean
   updating: boolean
   onOpenProfile: (userId: string) => void
   onStatusChange: (report: ReportItem, status: ReportStatus) => void
+  onEditContent: (item: ModeratedItem) => void
+  onDeleteContent: (item: ModeratedItem) => void
   onWithdraw: (report: ReportItem) => void
 }
 
 export default function ReportRow({
   report,
+  content,
   isLast,
   updating,
   onOpenProfile,
   onStatusChange,
+  onEditContent,
+  onDeleteContent,
   onWithdraw,
 }: ReportRowProps) {
   return (
@@ -82,18 +89,47 @@ export default function ReportRow({
         <ReportStatusSelect report={report} updating={updating} onStatusChange={onStatusChange} />
       </td>
       <td style={cellStyle}>
-        <Tooltip label="Withdraw this report — the content is left as it is" withArrow>
-          <ActionIcon
-            variant="subtle"
-            color="red"
-            size="sm"
-            disabled={updating}
-            aria-label={`Withdraw report by ${report.reporter.name}`}
-            onClick={() => onWithdraw(report)}
-          >
-            <IconTrash size={15} />
-          </ActionIcon>
-        </Tooltip>
+        <Group gap={2} wrap="nowrap">
+          {/* Acting on the reported content itself, without hunting for it in the other tab.
+              Both are disabled when the content is not in the loaded list — deleted, most
+              likely, in which case there is nothing left to moderate. */}
+          <Tooltip label={`Edit or hide the reported ${report.kind}`} withArrow>
+            <ActionIcon
+              variant="subtle"
+              color="blue"
+              size="sm"
+              disabled={updating || content === null}
+              aria-label={`Edit the reported ${report.kind} by ${report.reportedUser.name}`}
+              onClick={() => content && onEditContent(content)}
+            >
+              <IconPencil size={15} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label={`Delete the reported ${report.kind}`} withArrow>
+            <ActionIcon
+              variant="subtle"
+              color="red"
+              size="sm"
+              disabled={updating || content === null}
+              aria-label={`Delete the reported ${report.kind} by ${report.reportedUser.name}`}
+              onClick={() => content && onDeleteContent(content)}
+            >
+              <IconTrashX size={15} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Withdraw this report — the content is left as it is" withArrow>
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="sm"
+              disabled={updating}
+              aria-label={`Withdraw report by ${report.reporter.name}`}
+              onClick={() => onWithdraw(report)}
+            >
+              <IconTrash size={15} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
       </td>
     </tr>
   )

@@ -3,7 +3,7 @@ import { IconMessageReport } from '@tabler/icons-react'
 import Panel from '../../../components/Panel'
 import TableHeaderRow from '../../../components/TableHeaderRow'
 import type { ReportStatus } from '../../../domain/moderation'
-import type { ReportItem } from '../moderationModel'
+import type { ModeratedItem, ReportItem } from '../moderationModel'
 import ReportRow from './ReportRow'
 
 const TABLE_COLUMNS = [
@@ -25,16 +25,23 @@ const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse', m
 interface ReportsTableProps {
   reports: ReportItem[]
   updating: boolean
+  /** Resolves the content a report is about, so a row can act on it. */
+  contentFor: (report: ReportItem) => ModeratedItem | null
   onOpenProfile: (userId: string) => void
   onStatusChange: (report: ReportItem, status: ReportStatus) => void
+  onEditContent: (item: ModeratedItem) => void
+  onDeleteContent: (item: ModeratedItem) => void
   onWithdraw: (report: ReportItem) => void
 }
 
 export default function ReportsTable({
   reports,
   updating,
+  contentFor,
   onOpenProfile,
   onStatusChange,
+  onEditContent,
+  onDeleteContent,
   onWithdraw,
 }: ReportsTableProps) {
   return (
@@ -64,10 +71,13 @@ export default function ReportsTable({
                 <ReportRow
                   key={report.id}
                   report={report}
+                  content={contentFor(report)}
                   isLast={index === reports.length - 1}
                   updating={updating}
                   onOpenProfile={onOpenProfile}
                   onStatusChange={onStatusChange}
+                  onEditContent={onEditContent}
+                  onDeleteContent={onDeleteContent}
                   onWithdraw={onWithdraw}
                 />
               ))}

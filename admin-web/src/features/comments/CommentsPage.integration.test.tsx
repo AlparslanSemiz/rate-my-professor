@@ -102,6 +102,8 @@ const answers: ManagedAnswer[] = [
 const answerReports: ReportedAnswer[] = [
   {
     id: 'answer-report-1',
+    answerId: 'answer-1',
+    commentId: 'comment-1',
     answerContent: 'I had the same issue',
     commentContent: 'Reported text',
     postContext: 'CS101 — Algorithms',
@@ -117,6 +119,7 @@ const answerReports: ReportedAnswer[] = [
 const reports: ReportedComment[] = [
   {
     id: 'report-1',
+    commentId: 'comment-1',
     commentContent: 'Reported text',
     postContext: 'CS101 — Algorithms',
     reportText: 'Harassment report',
@@ -128,6 +131,7 @@ const reports: ReportedComment[] = [
   },
   {
     id: 'report-2',
+    commentId: 'comment-2',
     commentContent: 'Unrelated comment',
     postContext: 'CS102 — Databases',
     reportText: 'Looks like spam',
@@ -350,6 +354,51 @@ describe('Comments page', () => {
 
     await waitFor(() => expect(commentsService.deleteReport).toHaveBeenCalledWith('report-1'))
     expect(commentsService.update).not.toHaveBeenCalled()
+  })
+
+  it('edits the reported comment from the reports tab', async () => {
+    const user = userEvent.setup()
+    renderComments()
+    await openReportsTab(user)
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Edit the reported comment by Alice Smith' }),
+    )
+
+    // The real comment, with the visibility the backend reports — not a stand-in assembled
+    // from the report, which carries the text but not the status.
+    const dialog = within(await screen.findByRole('dialog'))
+    expect(dialog.getByRole('textbox', { name: 'Text' })).toHaveValue('Reported text')
+    // The comment's real visibility, which only the content list knows — the report carries
+    // the text and nothing about the state of the thing it is about.
+    expect(dialog.getByRole('combobox', { name: 'Visibility' })).toHaveValue('Visible')
+
+    await user.clear(dialog.getByRole('textbox', { name: 'Text' }))
+    await user.type(dialog.getByRole('textbox', { name: 'Text' }), 'Rewritten by an admin')
+    await user.click(dialog.getByRole('button', { name: 'Save changes' }))
+
+    // Addressed by the comment's id, which is not the report's id.
+    await waitFor(() =>
+      expect(commentsService.update).toHaveBeenCalledWith('comment-1', {
+        content: 'Rewritten by an admin',
+      }),
+    )
+  })
+
+  it('deletes the reported answer from the reports tab', async () => {
+    const user = userEvent.setup()
+    renderComments()
+    await openReportsTab(user)
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Delete the reported answer by Erin Lee' }),
+    )
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Delete permanently' }))
+
+    await waitFor(() => expect(answersService.delete).toHaveBeenCalledWith('answer-1'))
+    // The content was deleted, not the report withdrawn — different addresses, different acts.
+    expect(answersService.deleteReport).not.toHaveBeenCalled()
   })
 
   it('shows a load error and retries the request', async () => {

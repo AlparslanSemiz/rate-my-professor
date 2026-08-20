@@ -24,7 +24,12 @@ export interface ManagedAnswer {
 
 /** A report against an answer. Mirrors a comment report, with the parent comment as context. */
 export interface ReportedAnswer {
+  /** The **report's** id — what the status and withdrawal routes address. */
   id: string
+  /** The reported answer's own id, which is what moderating the content addresses. */
+  answerId: string
+  /** The answer's parent comment, for context rather than for moderating. */
+  commentId: string
   answerContent: string
   commentContent: string
   postContext: string

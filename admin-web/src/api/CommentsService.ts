@@ -29,7 +29,10 @@ export interface ManagedComment {
 }
 
 export interface ReportedComment {
+  /** The **report's** id — what the status and withdrawal routes address. */
   id: string
+  /** The reported comment's own id, which is what moderating the content addresses. */
+  commentId: string
   commentContent: string
   postContext: string
   reportText: string

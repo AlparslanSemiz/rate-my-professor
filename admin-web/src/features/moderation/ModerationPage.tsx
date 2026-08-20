@@ -97,8 +97,11 @@ export default function ModerationPage({
           <ReportsTable
             reports={page.filteredReports}
             updating={page.mutating}
+            contentFor={page.contentFor}
             onOpenProfile={page.profile.open}
             onStatusChange={page.changeReportStatus}
+            onEditContent={setEditing}
+            onDeleteContent={setDeleting}
             onWithdraw={setWithdrawing}
           />
         </Tabs.Panel>
