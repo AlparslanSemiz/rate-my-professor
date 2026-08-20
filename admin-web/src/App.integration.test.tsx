@@ -159,6 +159,27 @@ describe('App routing and authentication', () => {
     expect(screen.queryByPlaceholderText('Code from your email')).not.toBeInTheDocument()
   })
 
+  it('tells the operator to wait when the code was requested too often', async () => {
+    const user = userEvent.setup()
+    vi.mocked(authService.requestLoginCode).mockRejectedValue(
+      new ApiError(429, 'Request to /auth/request-login failed with status 429'),
+    )
+    window.history.pushState({}, '', '/login')
+
+    render(<App />)
+
+    await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), adminUser.email)
+    await user.click(screen.getByRole('button', { name: 'Send me a code' }))
+
+    expect(
+      await screen.findByText(
+        'Too many login codes have been requested. Wait a minute, then ask for a new one.',
+      ),
+    ).toBeInTheDocument()
+    // No code was sent, so the form stays on the email step rather than asking for one.
+    expect(screen.queryByPlaceholderText('Code from your email')).not.toBeInTheDocument()
+  })
+
   it('greets the signed-in admin by name', async () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(adminUser))

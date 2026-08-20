@@ -67,6 +67,22 @@ async function resolveAdminUser(email: string): Promise<AuthUser> {
   return adminUser
 }
 
+/** Shown when the backend rate-limits the login code request. */
+export const CODE_RATE_LIMITED_ERROR =
+  'Too many login codes have been requested. Wait a minute, then ask for a new one.'
+
+/**
+ * A refused code request. `429` is worth its own wording: the backend does not promise a
+ * message here, so without this the operator is told "Request to /auth/request-login failed
+ * with status 429" — which reads as a broken panel rather than as "you asked too often".
+ */
+export function getRequestCodeErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError && error.status === 429) {
+    return CODE_RATE_LIMITED_ERROR
+  }
+  return getErrorMessage(error, fallback)
+}
+
 /**
  * A 403 is the backend refusing this account the admin panel, which is the one case where
  * "not authorized" is the right thing to say. Every other failure keeps its own message:

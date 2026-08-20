@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../../api/ApiClient'
 import { authService } from '../../api/AuthService'
 import { usersService, type User } from '../../api/UsersService'
-import { authenticateAdmin, NOT_AN_ADMIN_ERROR } from './authenticateAdmin'
+import {
+  authenticateAdmin,
+  CODE_RATE_LIMITED_ERROR,
+  getRequestCodeErrorMessage,
+  NOT_AN_ADMIN_ERROR,
+} from './authenticateAdmin'
 
 vi.mock('../../api/AuthService', () => ({
   authService: {
@@ -89,5 +95,23 @@ describe('authenticateAdmin', () => {
       NOT_AN_ADMIN_ERROR,
     )
     expect(authService.login).not.toHaveBeenCalled()
+  })
+})
+
+describe('getRequestCodeErrorMessage', () => {
+  const FALLBACK = 'Could not send login code'
+
+  it('says to wait when the request was rate-limited', () => {
+    // What the client produces for a 429 with no message of its own — it names our endpoint
+    // and a status, which tells the operator nothing about what to do next.
+    const rateLimited = new ApiError(429, 'Request to /auth/request-login failed with status 429')
+
+    expect(getRequestCodeErrorMessage(rateLimited, FALLBACK)).toBe(CODE_RATE_LIMITED_ERROR)
+  })
+
+  it('keeps every other refusal as the backend worded it', () => {
+    const refused = new ApiError(400, 'That address is not a KIT address.')
+
+    expect(getRequestCodeErrorMessage(refused, FALLBACK)).toBe('That address is not a KIT address.')
   })
 })

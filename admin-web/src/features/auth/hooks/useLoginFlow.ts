@@ -5,10 +5,10 @@ import { authService } from '../../../api/AuthService'
 import { routes } from '../../../constants/routes'
 import { useAuth } from '../../../context/useAuth'
 import { isRequiredAdminEmail } from '../../../utils/adminAccess'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
 import {
   authenticateAdmin,
   getLoginErrorMessage,
+  getRequestCodeErrorMessage,
   NOT_AN_ADMIN_ERROR,
 } from '../authenticateAdmin'
 
@@ -59,7 +59,7 @@ export function useLoginFlow() {
       setEmail(trimmedEmail)
       setStep('code')
     } catch (requestError: unknown) {
-      setError(getErrorMessage(requestError, REQUEST_CODE_ERROR_FALLBACK))
+      setError(getRequestCodeErrorMessage(requestError, REQUEST_CODE_ERROR_FALLBACK))
     } finally {
       setLoading(false)
     }
