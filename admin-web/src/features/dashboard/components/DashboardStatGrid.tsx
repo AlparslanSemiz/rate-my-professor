@@ -15,12 +15,14 @@ export default function DashboardStatGrid({ stats }: { stats: DashboardStats }) 
   return (
     <SimpleGrid cols={statGridCols} spacing={16} mb={28}>
       <StatCardDetailed label="Total users" value={stats.total} sub={`${stats.active} active`} icon={IconUsers} accent={moduleAccent[routes.users]} />
-      {/* Counts accounts whose status is ACTIVE. An INACTIVE account is neither active nor
-          blocked, so this is not "everyone who is not blocked". It is also not a measure of
-          who is online: nothing /users returns reports that. */}
+      {/* `counts.activeUsers`: accounts whose status is ACTIVE. An INACTIVE account is
+          neither active nor blocked, so this is not "everyone who is not blocked". It is also
+          not a measure of who is online — the backend counts no such thing. */}
       <StatCardDetailed label="Active accounts" value={stats.active} sub="Accounts in good standing" icon={IconUserCheck} accent={ACTIVE_ACCENT} />
       <StatCardDetailed label="Admin accounts" value={stats.admins} sub="Privileged accounts" icon={IconShieldCheck} accent={ADMIN_ACCENT} />
-      <StatCardDetailed label="Open reports" value={stats.openReports} sub={`of ${stats.totalReports} bug reports`} icon={IconBug} accent={moduleAccent[routes.feedback]} />
+      {/* No sub-line: /system/status counts the open ones, and there is no counter for how
+          many bug reports exist in total. */}
+      <StatCardDetailed label="Open reports" value={stats.openReports} sub="Bug reports waiting" icon={IconBug} accent={moduleAccent[routes.feedback]} />
     </SimpleGrid>
   )
 }

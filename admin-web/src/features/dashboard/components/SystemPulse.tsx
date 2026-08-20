@@ -12,15 +12,12 @@ export default function SystemPulse({
   activeRate: number
 }) {
   const adminShare = stats.total ? Math.round((stats.admins / stats.total) * 100) : 0
-  // The share of bug reports that have been moved off OPEN. Every figure here is a real
-  // ratio of counts the backend returned, not a score derived from one of them.
-  const reportsHandled = stats.totalReports
-    ? Math.round(((stats.totalReports - stats.openReports) / stats.totalReports) * 100)
-    : 100
+  // Both figures are real ratios of counts the backend returned, not scores derived from one
+  // of them. "Reports handled" used to sit here as well; it needed the total number of bug
+  // reports, and /system/status counts only the open ones.
   const metrics = [
     { label: 'Active accounts', value: activeRate, color: '#3b82f6' },
     { label: 'Admin share of accounts', value: adminShare, color: '#22c55e' },
-    { label: 'Reports handled', value: reportsHandled, color: '#f97316' },
   ]
 
   return (

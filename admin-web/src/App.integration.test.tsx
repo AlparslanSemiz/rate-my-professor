@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { User } from './api/UsersService'
 import { ApiError, apiClient } from './api/ApiClient'
 import { authService } from './api/AuthService'
-import { feedbackService } from './api/FeedbackService'
 import { usersService } from './api/UsersService'
 import { auditLogsService } from './api/AuditLogsService'
+import { systemStatusService, type SystemStatus } from './api/SystemStatusService'
 import App from './App'
 import { SESSION_EXPIRED_MESSAGE } from './features/auth/hooks/useLoginFlow'
 
@@ -18,15 +18,16 @@ vi.mock('./api/AuthService', () => ({
   },
 }))
 
-vi.mock('./api/FeedbackService', () => ({
-  feedbackService: {
-    getReports: vi.fn(),
+vi.mock('./api/SystemStatusService', () => ({
+  systemStatusService: {
+    getStatus: vi.fn(),
   },
 }))
 
 vi.mock('./api/UsersService', () => ({
   usersService: {
     getAll: vi.fn(),
+    list: vi.fn(),
   },
 }))
 
@@ -72,6 +73,17 @@ const requiredAdminUser = {
   role: 'ADMIN',
 }
 
+const systemStatus: SystemStatus = {
+  status: 'OK',
+  checkedAt: '2026-06-11T18:30:00Z',
+  startedAt: '2026-06-01T00:00:00Z',
+  uptimeSeconds: 900,
+  database: { reachable: true, latencyMs: 3, error: null },
+  counts: { users: 1, activeUsers: 1, admins: 1, openBugReports: 0, comments: 0 },
+  lastWrite: null,
+  gitlabEnabled: false,
+}
+
 describe('App routing and authentication', () => {
   beforeEach(() => {
     apiClient.setToken(null)
@@ -84,7 +96,8 @@ describe('App routing and authentication', () => {
       user: adminUser,
     })
     vi.mocked(usersService.getAll).mockResolvedValue([adminAccount])
-    vi.mocked(feedbackService.getReports).mockResolvedValue([])
+    vi.mocked(usersService.list).mockResolvedValue({ users: [adminAccount], nextCursor: null })
+    vi.mocked(systemStatusService.getStatus).mockResolvedValue(systemStatus)
     vi.mocked(auditLogsService.getLogs).mockResolvedValue({ auditLogs: [], nextCursor: null })
     vi.mocked(auditLogsService.getMeta).mockResolvedValue({
       actors: [],

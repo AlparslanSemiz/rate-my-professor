@@ -46,6 +46,9 @@ describe('SystemStatusService', () => {
         action: 'USER_BLOCKED',
         actorName: 'Administrator',
       },
+      // Absent from this response: an integration the backend has not been given credentials
+      // for is the same to the panel as one it has never heard of.
+      gitlabEnabled: false,
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -89,6 +92,7 @@ describe('SystemStatusService', () => {
       uptimeSeconds: null,
       counts: null,
       lastWrite: null,
+      gitlabEnabled: false,
     })
   })
 

@@ -41,6 +41,12 @@ export interface SystemStatus {
   database: DatabaseStatus
   counts: Record<string, number> | null
   lastWrite: LastWrite | null
+  /**
+   * Whether the backend holds GitLab credentials. False until the operator supplies them,
+   * and the issue endpoint answers `503` while it is — so the control is hidden on this flag
+   * rather than discovered by pressing it.
+   */
+  gitlabEnabled: boolean
 }
 
 interface SystemStatusResponse extends BasicResponse, SystemStatus {}
@@ -62,6 +68,7 @@ export class SystemStatusService {
       database: response.database,
       counts: response.counts ?? null,
       lastWrite: response.lastWrite ?? null,
+      gitlabEnabled: response.gitlabEnabled ?? false,
     }
   }
 }

@@ -43,6 +43,29 @@ export interface User {
 
 interface UserListResponse extends BasicResponse {
   users: User[]
+  nextCursor?: string | null
+}
+
+export type UserSort = 'newest' | 'oldest'
+
+/**
+ * What `GET /users` accepts. Passing any of it switches the listing to strictly newest-first
+ * — the "administrators first" ordering only happens on a call with no parameters at all,
+ * because role is not a column the backend can order by.
+ */
+export interface UserQuery {
+  limit?: number
+  cursor?: string | null
+  q?: string
+  status?: UserStatus
+  role?: UserRole
+  sort?: UserSort
+}
+
+export interface UserPage {
+  users: User[]
+  /** Null on the last page, and always null when no `limit` was passed. */
+  nextCursor: string | null
 }
 
 interface WarningHistoryResponse extends BasicResponse {
@@ -93,9 +116,29 @@ export class UsersService {
     this.client = client
   }
 
+  /**
+   * One page of the listing. A bad parameter is answered with a `400` carrying a usable
+   * message — `A cursor requires a limit`, `Invalid user status` — which the client turns
+   * into an `ApiError`, so callers should show it rather than a fallback of their own.
+   */
+  async list(query: UserQuery = {}): Promise<UserPage> {
+    const response = await this.client.get<UserListResponse>('/users', {
+      limit: query.limit,
+      cursor: query.cursor,
+      q: query.q?.trim(),
+      status: query.status,
+      role: query.role,
+      sort: query.sort,
+    })
+    return {
+      users: expectArray<User>(response, 'users', 'GET /users').map(withRequiredAdminRole),
+      nextCursor: response.nextCursor ?? null,
+    }
+  }
+
+  /** Every account in one read, in the backend's default administrators-first order. */
   async getAll(): Promise<User[]> {
-    const response = await this.client.get<UserListResponse>('/users')
-    return expectArray<User>(response, 'users', 'GET /users').map(withRequiredAdminRole)
+    return (await this.list()).users
   }
 
   async getById(id: string): Promise<User> {

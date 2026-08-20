@@ -29,6 +29,7 @@ const healthyStatus: SystemStatus = {
     action: 'USER_BLOCKED',
     actorName: 'Admin User',
   },
+  gitlabEnabled: false,
 }
 
 function renderSystemStatus() {

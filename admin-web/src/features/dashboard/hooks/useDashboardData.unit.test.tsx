@@ -1,108 +1,96 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { feedbackService } from '../../../api/FeedbackService'
+import { systemStatusService, type SystemStatus } from '../../../api/SystemStatusService'
 import { usersService, type User } from '../../../api/UsersService'
 import { useDashboardData } from './useDashboardData'
 
-vi.mock('../../../api/FeedbackService', () => ({
-  feedbackService: {
-    getReports: vi.fn(),
+vi.mock('../../../api/SystemStatusService', () => ({
+  systemStatusService: {
+    getStatus: vi.fn(),
   },
 }))
 
 vi.mock('../../../api/UsersService', () => ({
   usersService: {
-    getAll: vi.fn(),
+    list: vi.fn(),
   },
 }))
 
-const users: User[] = [
-  {
-    id: 'admin-1',
-    username: 'Admin User',
-    kitEmail: 'admin@student.kit.edu',
-    role: 'ADMIN',
-    status: 'ACTIVE',
-    joined: '2025-01-10',
-    lastOnline: '2026-06-11T18:30:00Z',
-    biography: '',
-    warnings: 0,
-    reports: 0,
-  },
-  {
-    id: 'user-1',
-    username: 'Inactive User',
-    kitEmail: 'inactive@student.kit.edu',
-    role: 'STUDENT',
-    status: 'INACTIVE',
-    joined: '2025-02-10',
-    lastOnline: '2026-06-10T18:30:00Z',
-    biography: '',
-    warnings: 0,
-    reports: 0,
-  },
-]
+const newestMember: User = {
+  id: 'user-1',
+  username: 'Newest Member',
+  kitEmail: 'newest@student.kit.edu',
+  role: 'STUDENT',
+  status: 'ACTIVE',
+  joined: '2026-06-01',
+  lastOnline: '2026-06-11T18:30:00Z',
+  biography: '',
+  warnings: 0,
+  reports: 0,
+}
+
+const status: SystemStatus = {
+  status: 'OK',
+  checkedAt: '2026-06-11T18:30:00Z',
+  startedAt: '2026-06-01T00:00:00Z',
+  uptimeSeconds: 900,
+  database: { reachable: true, latencyMs: 3, error: null },
+  counts: { users: 42, activeUsers: 37, admins: 6, openBugReports: 2, comments: 83 },
+  lastWrite: null,
+  gitlabEnabled: false,
+}
 
 describe('useDashboardData', () => {
   beforeEach(() => {
-    vi.mocked(usersService.getAll).mockResolvedValue(users)
-    vi.mocked(feedbackService.getReports).mockResolvedValue([
-      {
-        id: 'report-1',
-        title: 'Open report',
-        description: '',
-        severity: 'HIGH',
-        status: 'OPEN',
-        reporterName: 'Reporter',
-        reportedAt: '2026-06-11T18:30:00Z',
-      },
-      {
-        id: 'report-2',
-        title: 'Reviewed report',
-        description: '',
-        severity: 'LOW',
-        status: 'REVIEWED',
-        reporterName: 'Reporter',
-        reportedAt: '2026-06-10T18:30:00Z',
-      },
-    ])
+    vi.mocked(systemStatusService.getStatus).mockResolvedValue(status)
+    vi.mocked(usersService.list).mockResolvedValue({ users: [newestMember], nextCursor: null })
   })
 
-  it('derives dashboard totals and rates from users and reports', async () => {
+  it('takes its totals from the backend counters rather than counting rows itself', async () => {
     const { result } = renderHook(() => useDashboardData())
 
-    await waitFor(() => expect(result.current.stats.total).toBe(2))
+    await waitFor(() => expect(result.current.stats.total).toBe(42))
 
-    expect(result.current.stats).toEqual({
-      total: 2,
-      active: 1,
-      admins: 1,
-      openReports: 1,
-      totalReports: 2,
-    })
-    expect(result.current.activeRate).toBe(50)
+    expect(result.current.stats).toEqual({ total: 42, active: 37, admins: 6, openReports: 2 })
+    expect(result.current.activeRate).toBe(88)
+    expect(result.current.users).toEqual([newestMember])
+    // Only the newest few are read; the whole table is never fetched to fill a panel of four.
+    expect(usersService.list).toHaveBeenCalledWith({ limit: 4, sort: 'newest' })
     expect(result.current.lastUpdated).toBeInstanceOf(Date)
     expect(result.current.error).toBe('')
     expect(result.current.hasData).toBe(true)
   })
 
   it('keeps the half that loaded and reports the half that did not', async () => {
-    vi.mocked(feedbackService.getReports).mockRejectedValue(new Error('Unavailable'))
+    vi.mocked(usersService.list).mockRejectedValue(new Error('Unavailable'))
 
     const { result } = renderHook(() => useDashboardData())
 
-    await waitFor(() => expect(result.current.stats.total).toBe(2))
+    await waitFor(() => expect(result.current.stats.total).toBe(42))
 
-    expect(result.current.stats.openReports).toBe(0)
+    expect(result.current.users).toEqual([])
     expect(result.current.error).toBe('Unavailable')
     expect(result.current.hasData).toBe(true)
     // The timestamp vouches for a complete reading, so a partial one must not move it.
     expect(result.current.lastUpdated).toBeNull()
   })
 
+  /** A degraded database answers the request and carries no counters at all. */
+  it('does not read missing counters as zeros', async () => {
+    vi.mocked(systemStatusService.getStatus).mockResolvedValue({ ...status, counts: null })
+
+    const { result } = renderHook(() => useDashboardData())
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.stats.total).toBe(0)
+    expect(result.current.error).toMatch(/counters are unavailable/)
+    expect(result.current.lastUpdated).toBeNull()
+  })
+
   it('reports an error without claiming the platform is empty when everything fails', async () => {
-    vi.mocked(usersService.getAll).mockRejectedValue(new Error('Backend unavailable'))
-    vi.mocked(feedbackService.getReports).mockRejectedValue(new Error('Backend unavailable'))
+    vi.mocked(systemStatusService.getStatus).mockRejectedValue(new Error('Backend unavailable'))
+    vi.mocked(usersService.list).mockRejectedValue(new Error('Backend unavailable'))
 
     const { result } = renderHook(() => useDashboardData())
 
