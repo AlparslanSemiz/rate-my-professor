@@ -1,13 +1,7 @@
 import { ApiError, apiClient } from '../../api/ApiClient'
 import { authService, type AuthUser } from '../../api/AuthService'
 import { usersService, type User } from '../../api/UsersService'
-import {
-  getRequiredAdminUser,
-  hasAdminAccess,
-  isRequiredAdminEmail,
-  normalizeEmail,
-  withRequiredAdminRole,
-} from '../../utils/adminAccess'
+import { isRequiredAdminEmail, normalizeEmail, withRequiredAdminRole } from '../../utils/adminAccess'
 import { getErrorMessage } from '../../utils/getErrorMessage'
 
 const LOGIN_ERROR_FALLBACK = 'Login failed'
@@ -16,6 +10,9 @@ export const ADMIN_ACCESS_ERROR = 'Login succeeded, but this account is not auth
 /** Shown to an address that is not on the admin list, before any code is requested. */
 export const NOT_AN_ADMIN_ERROR =
   'You do not have access to this panel. It is limited to the admin team, so no login code was sent.'
+
+const IDENTITY_ERROR =
+  'Signed in, but your admin account could not be read. Try again in a moment.'
 
 function findUserByEmail(users: User[], email: string) {
   const normalizedEmail = normalizeEmail(email)
@@ -31,27 +28,43 @@ function toAuthUser(user: User): AuthUser {
   }
 }
 
-async function resolveAdminUser(email: string): Promise<AuthUser> {
-  const requiredAdminUser = getRequiredAdminUser(email)
-  let users: User[] = []
-
+/**
+ * The signed-in admin as the backend knows them. `/auth/me` is asked first because it answers
+ * with the real account id — the one that appears as the actor on audit entries, and the one
+ * sent as the issuer of every warning.
+ */
+async function identityFromSession(): Promise<AuthUser | null> {
   try {
-    users = await usersService.getAll()
-  } catch (error: unknown) {
-    if (!requiredAdminUser) throw error
+    const session = await authService.me()
+    const user = session.user
+    if (!user || typeof user.id !== 'string' || !user.id.trim()) return null
+    return withRequiredAdminRole(user)
+  } catch {
+    // Whether `/auth/me` returns the user is not settled yet, so a failure here is not a
+    // failure to log in: the account is looked up in the user list instead.
+    return null
   }
+}
 
-  const currentUser = findUserByEmail(users, email)
-  if (!currentUser && requiredAdminUser) return requiredAdminUser
-  if (!currentUser) {
-    throw new Error('Logged in, but could not find your admin account')
+/** Fallback for a backend whose `/auth/me` reports only whether the token is still good. */
+async function identityFromUserList(email: string): Promise<AuthUser | null> {
+  try {
+    const currentUser = findUserByEmail(await usersService.getAll(), email)
+    return currentUser ? toAuthUser(withRequiredAdminRole(currentUser)) : null
+  } catch {
+    return null
   }
+}
 
-  const adminUser = withRequiredAdminRole(currentUser)
-  if (!hasAdminAccess(adminUser)) {
-    throw new Error(ADMIN_ACCESS_ERROR)
-  }
-  return toAuthUser(adminUser)
+/**
+ * Never invents an identity. An id the backend did not issue used to reach it right back as
+ * the author of a warning, so failing the login is the honest outcome when neither source
+ * can say who this is.
+ */
+async function resolveAdminUser(email: string): Promise<AuthUser> {
+  const adminUser = (await identityFromSession()) ?? (await identityFromUserList(email))
+  if (!adminUser) throw new Error(IDENTITY_ERROR)
+  return adminUser
 }
 
 /**

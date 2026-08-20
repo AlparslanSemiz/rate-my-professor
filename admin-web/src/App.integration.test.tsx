@@ -71,13 +71,6 @@ const requiredAdminUser = {
   role: 'ADMIN',
 }
 
-const requiredAdminFallbackUser = {
-  id: requiredAdminAccount.kitEmail,
-  name: 'Alparslan',
-  email: requiredAdminAccount.kitEmail,
-  role: 'ADMIN',
-}
-
 describe('App routing and authentication', () => {
   beforeEach(() => {
     apiClient.setToken(null)
@@ -192,20 +185,37 @@ describe('App routing and authentication', () => {
     expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(requiredAdminUser)
   })
 
-  it('logs in the required admin email when the backend user list is unavailable', async () => {
+  it('refuses the login when no source can say who the admin is', async () => {
     const user = userEvent.setup()
-    vi.mocked(usersService.getAll).mockRejectedValueOnce(new Error('The server returned an empty response.'))
+    // Neither `/auth/me` nor `/users` yields an identity. The panel used to invent one whose
+    // id was the email address, and then send it back as the issuer of every warning.
+    vi.mocked(usersService.getAll).mockRejectedValue(new Error('The server returned an empty response.'))
     window.history.pushState({}, '', '/login')
 
     render(<App />)
 
-    await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), requiredAdminFallbackUser.email)
+    await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), requiredAdminUser.email)
     await user.click(screen.getByRole('button', { name: 'Send me a code' }))
     await user.type(await screen.findByPlaceholderText('Code from your email'), '123456')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
-    await waitFor(() => expect(authService.login).toHaveBeenCalledWith(requiredAdminFallbackUser.email, '123456'))
+    expect(await screen.findByText(/your admin account could not be read/)).toBeInTheDocument()
+    expect(localStorage.getItem('user')).toBeNull()
+  })
+
+  it('takes the admin identity from /auth/me without reading the whole user list', async () => {
+    const user = userEvent.setup()
+    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'Signed in', user: adminUser })
+    window.history.pushState({}, '', '/login')
+
+    render(<App />)
+
+    await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), adminUser.email)
+    await user.click(screen.getByRole('button', { name: 'Send me a code' }))
+    await user.type(await screen.findByPlaceholderText('Code from your email'), '123456')
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
     expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(requiredAdminFallbackUser)
+    expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(adminUser)
   })
 })
