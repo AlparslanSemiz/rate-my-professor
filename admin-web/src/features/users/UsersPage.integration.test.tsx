@@ -378,4 +378,26 @@ describe('Users page', () => {
     expect(screen.getAllByText('Bob Johnson').length).toBeGreaterThan(0)
   })
 
+  it('reports a block the backend accepted as done, even when the re-read fails', async () => {
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Bob Johnson'))
+    await screen.findByText('User Profile')
+    // The block lands; only the read that follows it does not.
+    vi.mocked(usersService.getById).mockRejectedValueOnce(new ApiError(500, 'Database unavailable'))
+
+    await user.click(await screen.findByRole('button', { name: 'Block' }))
+    await user.click(await screen.findByRole('button', { name: 'Block user' }))
+
+    await waitFor(() => expect(usersService.block).toHaveBeenCalledWith('user-2'))
+
+    // The confirmation closes: telling the operator nothing was saved would be untrue. What
+    // is reported instead is that the profile shown is the last one that could be read.
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Block user' })).not.toBeInTheDocument()
+    )
+    expect(await screen.findByText(/reading it back failed/)).toHaveTextContent('Database unavailable')
+    expect(screen.getByRole('button', { name: 'Block' })).toBeInTheDocument()
+  })
 })

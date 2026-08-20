@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Center, Loader, Modal, Text } from '@mantine/core'
 import type { Warning } from '../../../api/UsersService'
 import ConfirmModal from '../../../components/ConfirmModal'
+import ErrorAlert from '../../../components/ErrorAlert'
 import LoadError from '../../../components/LoadError'
 import { darkModalStyles } from '../../../constants/modalStyles'
 import { useAuth } from '../../../context/useAuth'
@@ -88,6 +89,8 @@ export default function UserProfileModal({
           </Center>
         ) : (
           <>
+            {/* The action happened; only the read after it did not. */}
+            <ErrorAlert message={profile.staleMessage} />
             <ProfileSummary user={profile.user} />
             <ProfileActions
               user={profile.user}

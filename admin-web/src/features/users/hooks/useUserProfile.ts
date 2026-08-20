@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { usersService, type User, type UserUpdate, type Warning } from '../../../api/UsersService'
 import { useAuth } from '../../../context/useAuth'
+import { getStaleAfterWriteMessage } from '../../../utils/getErrorMessage'
 import { useLoadedProfile } from './useLoadedProfile'
 
 /**
@@ -13,6 +14,8 @@ export type UserChange =
   | { type: 'warnings-changed'; warnings: number }
   | { type: 'deleted' }
 
+const RE_READ_ERROR_FALLBACK = 'the account could not be read back'
+
 export function useUserProfile(
   userId: string | null,
   opened: boolean,
@@ -23,6 +26,24 @@ export function useUserProfile(
   const [warnLoading, setWarnLoading] = useState(false)
   const [editLoading, setEditLoading] = useState(false)
   const [warningBusy, setWarningBusy] = useState(false)
+  const [staleMessage, setStaleMessage] = useState('')
+
+  /**
+   * Re-reads what the backend now holds after a write it already accepted.
+   *
+   * A failed read does **not** fail the action: the write succeeded, and reporting it as
+   * refused would tell the operator nothing was saved. The screen keeps the last reading and
+   * says so, and `onUserChanged` stays silent — a list row may only be replaced by a value
+   * the backend actually reported.
+   */
+  async function readBack(read: () => Promise<void>) {
+    try {
+      await read()
+      setStaleMessage('')
+    } catch (readError: unknown) {
+      setStaleMessage(getStaleAfterWriteMessage(readError, RE_READ_ERROR_FALLBACK))
+    }
+  }
 
   /** Reports the history the backend now holds, so neither the modal nor the list counts by hand. */
   function applyWarnings(id: string, refreshedWarnings: Warning[]) {
@@ -34,6 +55,11 @@ export function useUserProfile(
     onUserChanged?.(id, { type: 'warnings-changed', warnings: refreshedWarnings.length })
   }
 
+  function applyAccount(id: string, refreshed: User) {
+    profile.updateUser(id, () => refreshed)
+    onUserChanged?.(id, { type: 'refreshed', user: refreshed })
+  }
+
   async function warn(message: string) {
     const trimmedMessage = message.trim()
     if (!profile.user || !trimmedMessage || !currentAdmin) return
@@ -42,7 +68,7 @@ export function useUserProfile(
     setWarnLoading(true)
     try {
       await usersService.warn(id, trimmedMessage, currentAdmin.id)
-      applyWarnings(id, await usersService.getWarnings(id))
+      await readBack(async () => applyWarnings(id, await usersService.getWarnings(id)))
     } finally {
       setWarnLoading(false)
     }
@@ -59,9 +85,7 @@ export function useUserProfile(
     setEditLoading(true)
     try {
       await usersService.update(id, nextUpdate)
-      const refreshed = await usersService.getById(id)
-      profile.updateUser(id, () => refreshed)
-      onUserChanged?.(id, { type: 'refreshed', user: refreshed })
+      await readBack(async () => applyAccount(id, await usersService.getById(id)))
     } finally {
       setEditLoading(false)
     }
@@ -75,7 +99,7 @@ export function useUserProfile(
     setWarningBusy(true)
     try {
       await change()
-      applyWarnings(id, await usersService.getWarnings(id))
+      await readBack(async () => applyWarnings(id, await usersService.getWarnings(id)))
     } finally {
       setWarningBusy(false)
     }
@@ -99,9 +123,7 @@ export function useUserProfile(
 
     const id = profile.user.id
     await request(id)
-    const refreshed = await usersService.getById(id)
-    profile.updateUser(id, () => refreshed)
-    onUserChanged?.(id, { type: 'refreshed', user: refreshed })
+    await readBack(async () => applyAccount(id, await usersService.getById(id)))
   }
 
   async function remove() {
@@ -110,16 +132,23 @@ export function useUserProfile(
     onUserChanged?.(profile.user.id, { type: 'deleted' })
   }
 
+  function reset() {
+    setStaleMessage('')
+    profile.reset()
+  }
+
   return {
     user: profile.user,
     warnings: profile.warnings,
     loading: profile.loading,
     error: profile.error,
+    /** Set when a write succeeded but the read after it did not; the action still happened. */
+    staleMessage,
     retry: profile.retry,
     warnLoading,
     editLoading,
     warningBusy,
-    reset: profile.reset,
+    reset,
     warn,
     update,
     editWarning,
