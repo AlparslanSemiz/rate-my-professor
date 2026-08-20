@@ -19,6 +19,12 @@ export const MAIN_NAV_ITEMS = [
     icon: IconLayoutDashboard,
   },
   {
+    label: 'Catalogue',
+    sublabel: 'Lectures & staff',
+    path: routes.catalog,
+    icon: IconSchool,
+  },
+  {
     label: 'Users',
     sublabel: 'People & profiles',
     path: routes.users,
@@ -29,12 +35,6 @@ export const MAIN_NAV_ITEMS = [
     sublabel: 'Posts, answers & reports',
     path: routes.comments,
     icon: IconMessage,
-  },
-  {
-    label: 'Catalogue',
-    sublabel: 'Lectures & staff',
-    path: routes.catalog,
-    icon: IconSchool,
   },
   {
     label: 'Bug Reports',

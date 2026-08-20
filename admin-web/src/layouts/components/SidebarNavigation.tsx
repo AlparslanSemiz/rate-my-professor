@@ -60,7 +60,7 @@ export default function SidebarNavigation({
   onNavigate: (path: string) => void
 }) {
   return (
-    <Stack gap={2} p={12}>
+    <Stack component="nav" aria-label="Main navigation" gap={2} p={12}>
       {MAIN_NAV_ITEMS.map((item) => (
         <SidebarNavButton
           key={item.path}

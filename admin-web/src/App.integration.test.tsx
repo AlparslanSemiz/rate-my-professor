@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { User } from './api/UsersService'
@@ -107,6 +107,22 @@ describe('App routing and authentication', () => {
 
     expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
     expect(screen.getAllByText(adminUser.email).length).toBeGreaterThan(0)
+  })
+
+  it('lists the catalogue directly under the dashboard', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(adminUser))
+    window.history.pushState({}, '', '/dashboard')
+
+    render(<App />)
+
+    const mainNavigation = await screen.findByRole('navigation', { name: 'Main navigation' })
+    const order = within(mainNavigation)
+      .getAllByRole('button')
+      .map((button) => button.textContent ?? '')
+
+    expect(order[0]).toMatch(/^Dashboard/)
+    expect(order[1]).toMatch(/^Catalogue/)
   })
 
   it('routes authenticated admins to the Audit Logs page', async () => {
