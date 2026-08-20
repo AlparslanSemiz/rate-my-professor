@@ -56,7 +56,11 @@ export default function DashboardHero({
     { label: 'Reports waiting', value: String(stats.openReports) },
     {
       label: 'Updated',
-      value: lastUpdated ? formatDate(lastUpdated.toISOString(), { withTime: true }) : '—',
+      // With seconds: the dashboard re-reads every 15 seconds, and a stamp that stops at
+      // the minute makes a working refresh look stuck.
+      value: lastUpdated
+        ? formatDate(lastUpdated.toISOString(), { withTime: true, withSeconds: true })
+        : '—',
     },
   ]
 
