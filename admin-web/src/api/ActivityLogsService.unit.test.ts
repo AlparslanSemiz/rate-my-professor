@@ -29,6 +29,19 @@ function createService() {
   return new ActivityLogsService(new ApiClient(TEST_API_BASE_URL))
 }
 
+/**
+ * The panel sends the operator's local day, so the expected bounds are derived the same way
+ * rather than hard-coded — otherwise the test only passes in the timezone it was written in.
+ */
+function localDayRange(from: string, to: string) {
+  const [fromYear, fromMonth, fromDay] = from.split('-').map(Number)
+  const [toYear, toMonth, toDay] = to.split('-').map(Number)
+  return {
+    from: new Date(fromYear, fromMonth - 1, fromDay, 0, 0, 0, 0).toISOString(),
+    to: new Date(toYear, toMonth - 1, toDay, 23, 59, 59, 999).toISOString(),
+  }
+}
+
 describe('ActivityLogsService', () => {
   beforeEach(() => {
     fetchMock.mockReset()
@@ -56,8 +69,9 @@ describe('ActivityLogsService', () => {
       nextCursor: 'next-page',
     })
 
+    const range = localDayRange('2026-07-01', '2026-07-23')
     expect(fetchMock).toHaveBeenCalledWith(
-      `${TEST_API_BASE_URL}/activity-logs?limit=50&cursor=current-page&q=Mira&actorId=user-1&actorType=USER&action=COMMENT_CREATED&targetType=COMMENT&from=2026-07-01T00%3A00%3A00.000Z&to=2026-07-23T23%3A59%3A59.999Z`,
+      `${TEST_API_BASE_URL}/activity-logs?limit=50&cursor=current-page&q=Mira&actorId=user-1&actorType=USER&action=COMMENT_CREATED&targetType=COMMENT&from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`,
       expect.objectContaining({ method: 'GET' })
     )
   })

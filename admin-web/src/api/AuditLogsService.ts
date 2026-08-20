@@ -1,9 +1,9 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, expectArray, type ApiClient, type BasicResponse } from './ApiClient'
 import {
   ADMINISTRATIVE_ACTIONS,
   LOG_TARGET_TYPES,
-  endOfUtcDay,
-  startOfUtcDay,
+  endOfDay,
+  startOfDay,
   type LogActor,
   type LogActorType,
   type LogChange,
@@ -55,21 +55,21 @@ export class AuditLogsService {
       actorType: filters.actorType,
       action: filters.action,
       targetType: filters.targetType,
-      from: startOfUtcDay(filters.from),
-      to: endOfUtcDay(filters.to),
+      from: startOfDay(filters.from),
+      to: endOfDay(filters.to),
     })
     return {
-      auditLogs: response.auditLogs,
-      nextCursor: response.nextCursor,
+      auditLogs: expectArray<AuditLog>(response, 'auditLogs', 'GET /audit-logs'),
+      nextCursor: response.nextCursor ?? null,
     }
   }
 
   async getMeta(): Promise<AuditMeta> {
     const response = await this.client.get<AuditMetaResponse>('/audit-logs/meta')
     return {
-      actors: response.actors,
-      actions: response.actions,
-      targetTypes: response.targetTypes,
+      actors: expectArray<AuditMeta['actors'][number]>(response, 'actors', 'GET /audit-logs/meta'),
+      actions: expectArray<AuditAction>(response, 'actions', 'GET /audit-logs/meta'),
+      targetTypes: expectArray<AuditTargetType>(response, 'targetTypes', 'GET /audit-logs/meta'),
       actorTypes: response.actorTypes ?? [],
     }
   }

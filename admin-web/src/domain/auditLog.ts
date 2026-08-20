@@ -137,11 +137,29 @@ export function isLogActorType(value: string | null): value is LogActorType {
   return value === 'ADMIN' || value === 'USER'
 }
 
-/** The backend takes inclusive ISO date-times; the filter form supplies `yyyy-mm-dd`. */
-export function startOfUtcDay(value?: string) {
-  return value ? `${value}T00:00:00.000Z` : undefined
+/**
+ * The backend takes inclusive ISO date-times; the filter form supplies `yyyy-mm-dd`, picked
+ * on the operator's own calendar. Reading that as a UTC day shifts the window by the local
+ * offset — in CEST, choosing "20 Aug" dropped everything logged in the first two hours of
+ * the 20th and pulled in the first two hours of the 21st. The bounds are built from the
+ * local day instead, so the range covers exactly the day that was chosen.
+ */
+function dayBoundary(value: string | undefined, endOfDay: boolean): string | undefined {
+  if (!value) return undefined
+
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) return undefined
+
+  const date = endOfDay
+    ? new Date(year, month - 1, day, 23, 59, 59, 999)
+    : new Date(year, month - 1, day, 0, 0, 0, 0)
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
 }
 
-export function endOfUtcDay(value?: string) {
-  return value ? `${value}T23:59:59.999Z` : undefined
+export function startOfDay(value?: string) {
+  return dayBoundary(value, false)
+}
+
+export function endOfDay(value?: string) {
+  return dayBoundary(value, true)
 }

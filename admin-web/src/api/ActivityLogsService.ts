@@ -1,9 +1,9 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, expectArray, type ApiClient, type BasicResponse } from './ApiClient'
 import {
   ACTIVITY_ACTIONS,
   LOG_TARGET_TYPES,
-  endOfUtcDay,
-  startOfUtcDay,
+  endOfDay,
+  startOfDay,
   type LogActor,
   type LogActorType,
   type LogChange,
@@ -63,21 +63,21 @@ export class ActivityLogsService {
       actorType: filters.actorType,
       action: filters.action,
       targetType: filters.targetType,
-      from: startOfUtcDay(filters.from),
-      to: endOfUtcDay(filters.to),
+      from: startOfDay(filters.from),
+      to: endOfDay(filters.to),
     })
     return {
-      activityLogs: response.activityLogs,
-      nextCursor: response.nextCursor,
+      activityLogs: expectArray<ActivityLog>(response, 'activityLogs', 'GET /activity-logs'),
+      nextCursor: response.nextCursor ?? null,
     }
   }
 
   async getMeta(): Promise<ActivityMeta> {
     const response = await this.client.get<ActivityMetaResponse>('/activity-logs/meta')
     return {
-      actors: response.actors,
-      actions: response.actions,
-      targetTypes: response.targetTypes,
+      actors: expectArray<ActivityMeta['actors'][number]>(response, 'actors', 'GET /activity-logs/meta'),
+      actions: expectArray<ActivityAction>(response, 'actions', 'GET /activity-logs/meta'),
+      targetTypes: expectArray<ActivityTargetType>(response, 'targetTypes', 'GET /activity-logs/meta'),
       actorTypes: response.actorTypes ?? [],
     }
   }
