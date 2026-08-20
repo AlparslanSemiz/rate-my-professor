@@ -2,9 +2,16 @@ import { MantineProvider } from '@mantine/core'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../../api/ApiClient'
 import { usersService, type User } from '../../api/UsersService'
 import { AuthProvider } from '../../context/AuthContext'
 import UsersPage from './UsersPage'
+
+vi.mock('../../api/AuthService', () => ({
+  authService: {
+    me: vi.fn().mockResolvedValue({ success: true, message: 'Signed in' }),
+  },
+}))
 
 vi.mock('../../api/UsersService', () => ({
   usersService: {
@@ -142,6 +149,58 @@ describe('Users page', () => {
     expect(await screen.findByText('Deletion rejected')).toBeInTheDocument()
     expect(screen.getAllByText('Bob Johnson')).not.toHaveLength(0)
     expect(screen.getByRole('button', { name: 'Delete permanently' })).toBeInTheDocument()
+  })
+
+  it('reports a refused warning correction and keeps the editor open', async () => {
+    vi.mocked(usersService.getWarnings).mockResolvedValue([
+      {
+        id: 'warning-1',
+        userID: 'user-2',
+        message: 'Original wording',
+        createdAt: '2026-06-01T10:00:00Z',
+        issuedBy: 'admin-1',
+      },
+    ])
+    vi.mocked(usersService.updateWarning).mockRejectedValue(
+      new ApiError(409, 'This warning can no longer be corrected.')
+    )
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Bob Johnson'))
+    await user.click(await screen.findByRole('button', { name: 'Edit warning' }))
+
+    const editor = await screen.findByLabelText('Warning message')
+    await user.clear(editor)
+    await user.type(editor, 'Corrected wording')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('This warning can no longer be corrected.')).toBeInTheDocument()
+    // The typed correction must survive the refusal, not vanish with it.
+    expect(screen.getByLabelText('Warning message')).toHaveValue('Corrected wording')
+  })
+
+  it('offers a retry when a profile cannot be read, rather than reporting it as missing', async () => {
+    vi.mocked(usersService.getById).mockRejectedValue(new ApiError(500, 'Database unavailable'))
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Bob Johnson'))
+
+    expect(await screen.findByText('Database unavailable')).toBeInTheDocument()
+    expect(screen.queryByText('User not found.')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+
+  it('still reports a genuinely missing account as missing', async () => {
+    vi.mocked(usersService.getById).mockRejectedValue(new ApiError(404, 'No such user'))
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Bob Johnson'))
+
+    expect(await screen.findByText('User not found.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
   })
 
   it('does not offer moderation actions on an admin account', async () => {

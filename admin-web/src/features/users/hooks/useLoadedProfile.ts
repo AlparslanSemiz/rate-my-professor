@@ -1,21 +1,25 @@
 import { useEffect, useState } from 'react'
+import { ApiError } from '../../../api/ApiClient'
 import { usersService, type User, type Warning } from '../../../api/UsersService'
+import { getErrorMessage } from '../../../utils/getErrorMessage'
+
+const LOAD_ERROR_FALLBACK = 'This profile could not be loaded.'
 
 interface LoadedProfile {
   userId: string
   user: User | null
   warnings: Warning[]
-}
-
-function emptyProfile(userId: string): LoadedProfile {
-  return { userId, user: null, warnings: [] }
+  /** Empty when the account genuinely does not exist, so the two cases stay distinguishable. */
+  error: string
 }
 
 export function useLoadedProfile(userId: string | null, opened: boolean) {
   const [profile, setProfile] = useState<LoadedProfile | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
   const isLoadedProfile = profile?.userId === userId
   const user = isLoadedProfile ? profile.user : null
   const warnings = isLoadedProfile ? profile.warnings : []
+  const error = isLoadedProfile ? profile.error : ''
   const loading = opened && userId !== null && !isLoadedProfile
 
   useEffect(() => {
@@ -35,11 +39,21 @@ export function useLoadedProfile(userId: string | null, opened: boolean) {
             userId: requestedUserId,
             user: loadedUser,
             warnings: loadedWarnings,
+            error: '',
           })
         }
-      } catch {
+      } catch (loadError: unknown) {
+        // A 404 is the one case where "this account is gone" is the truth. A dropped
+        // connection or a 500 is a failure to read the account, and reporting either as
+        // "not found" tells the admin something that is not so.
+        const notFound = loadError instanceof ApiError && loadError.status === 404
         if (!cancelled) {
-          setProfile(emptyProfile(requestedUserId))
+          setProfile({
+            userId: requestedUserId,
+            user: null,
+            warnings: [],
+            error: notFound ? '' : getErrorMessage(loadError, LOAD_ERROR_FALLBACK),
+          })
         }
       }
     }
@@ -48,10 +62,16 @@ export function useLoadedProfile(userId: string | null, opened: boolean) {
     return () => {
       cancelled = true
     }
-  }, [opened, userId])
+  }, [opened, userId, reloadKey])
 
   function reset() {
     setProfile(null)
+  }
+
+  /** Drops the failed read and re-runs it; the modal stays on the same account. */
+  function retry() {
+    setProfile(null)
+    setReloadKey((key) => key + 1)
   }
 
   function updateUser(id: string, update: (user: User) => User, nextWarnings?: Warning[]) {
@@ -65,5 +85,5 @@ export function useLoadedProfile(userId: string | null, opened: boolean) {
     })
   }
 
-  return { user, warnings, loading, reset, updateUser }
+  return { user, warnings, loading, error, reset, retry, updateUser }
 }

@@ -11,8 +11,10 @@ import {
 } from '@mantine/core'
 import { IconCheck, IconClock, IconPencil, IconTrash, IconUser, IconX } from '@tabler/icons-react'
 import type { Warning } from '../../../api/UsersService'
+import ErrorAlert from '../../../components/ErrorAlert'
 import { darkInputStyles } from '../../../constants/inputStyles'
 import { formatDate } from '../../../utils/formatDate'
+import { getErrorMessage } from '../../../utils/getErrorMessage'
 
 const sectionTitleStyle: CSSProperties = { letterSpacing: '0.05em' }
 const emptyWarningsStyle: CSSProperties = {
@@ -54,15 +56,18 @@ export default function WarningHistory({
 }: WarningHistoryProps) {
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
+  const [error, setError] = useState('')
 
   function startEditing(warning: Warning) {
     setEditingKey(warningKey(warning))
     setDraft(warning.message)
+    setError('')
   }
 
   function stopEditing() {
     setEditingKey(null)
     setDraft('')
+    setError('')
   }
 
   async function save(warning: Warning) {
@@ -71,8 +76,16 @@ export default function WarningHistory({
       stopEditing()
       return
     }
-    await onEdit(warning, message)
-    stopEditing()
+
+    setError('')
+    try {
+      await onEdit(warning, message)
+      stopEditing()
+    } catch (saveError: unknown) {
+      // The editor stays open with the text still in it, so a refused correction is
+      // reported rather than silently discarded along with what was typed.
+      setError(getErrorMessage(saveError, 'The correction could not be saved.'))
+    }
   }
 
   return (
@@ -109,6 +122,7 @@ export default function WarningHistory({
                       aria-label="Warning message"
                       styles={darkInputStyles}
                     />
+                    <ErrorAlert message={error} mb={8} />
                     <Group gap={6} justify="flex-end">
                       <Button
                         size="compact-xs"

@@ -110,6 +110,8 @@ export function useUserProfile(
     user: profile.user,
     warnings: profile.warnings,
     loading: profile.loading,
+    error: profile.error,
+    retry: profile.retry,
     warnLoading,
     editLoading,
     warningBusy,

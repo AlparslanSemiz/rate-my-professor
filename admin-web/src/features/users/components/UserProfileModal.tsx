@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Center, Loader, Modal, Text } from '@mantine/core'
 import type { User, Warning } from '../../../api/UsersService'
 import ConfirmModal from '../../../components/ConfirmModal'
+import LoadError from '../../../components/LoadError'
 import { darkModalStyles } from '../../../constants/modalStyles'
 import { useAuth } from '../../../context/useAuth'
 import { useUserProfile, type UserChange } from '../hooks/useUserProfile'
@@ -77,6 +78,8 @@ export default function UserProfileModal({
           <Center h={160}>
             <Loader color="green" size="sm" />
           </Center>
+        ) : profile.error ? (
+          <LoadError message={profile.error} onRetry={profile.retry} />
         ) : !profile.user ? (
           <Center h={120}>
             <Text c="#4b5563" size="sm">
