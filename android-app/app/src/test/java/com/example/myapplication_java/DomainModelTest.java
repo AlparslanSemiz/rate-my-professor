@@ -129,6 +129,7 @@ public class DomainModelTest {
                 ContentStatus.VISIBLE,
                 "user123",
                 "lecture-1",
+                null,
                 LocalDateTime.now(),
                 0, 0,
                 new ArrayList<>()
