@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Tabs } from '@mantine/core'
-import { IconSchool, IconUserStar } from '@tabler/icons-react'
+import { IconSchool, IconStar, IconUserStar } from '@tabler/icons-react'
 import type { Lecture, Professor } from '../../api/CatalogService'
+import type { Rating } from '../../api/RatingsService'
 import ConfirmModal from '../../components/ConfirmModal'
 import ErrorAlert from '../../components/ErrorAlert'
 import LoadError from '../../components/LoadError'
@@ -14,12 +15,16 @@ import LectureEditModal from './components/LectureEditModal'
 import LecturesTable from './components/LecturesTable'
 import ProfessorEditModal from './components/ProfessorEditModal'
 import ProfessorsTable from './components/ProfessorsTable'
+import RatingsTable from './components/RatingsTable'
 import { useCatalog } from './hooks/useCatalog'
+import { useRatings } from './hooks/useRatings'
 
 const NO_LECTURES: string[] = []
 
 export default function CatalogPage() {
   const catalog = useCatalog()
+  const ratings = useRatings()
+  const [deletingRating, setDeletingRating] = useState<Rating | null>(null)
   const [editingLecture, setEditingLecture] = useState<Lecture | null>(null)
   const [deletingLecture, setDeletingLecture] = useState<Lecture | null>(null)
   const [editingProfessor, setEditingProfessor] = useState<Professor | null>(null)
@@ -37,7 +42,7 @@ export default function CatalogPage() {
         title="Catalogue"
         description="The lectures students rate and the professors who teach them — names, terms and assignments."
       />
-      <ErrorAlert message={catalog.actionError} />
+      <ErrorAlert message={catalog.actionError || ratings.actionError || ratings.loadError} />
       <CatalogStats lectures={catalog.lectures} professors={catalog.professors} />
 
       <Tabs defaultValue="lectures" keepMounted={false}>
@@ -47,6 +52,9 @@ export default function CatalogPage() {
           </Tabs.Tab>
           <Tabs.Tab value="professors" leftSection={<IconUserStar size={14} />}>
             Professors ({catalog.professors.length})
+          </Tabs.Tab>
+          <Tabs.Tab value="ratings" leftSection={<IconStar size={14} />}>
+            Ratings
           </Tabs.Tab>
         </Tabs.List>
 
@@ -74,7 +82,35 @@ export default function CatalogPage() {
             onDelete={setDeletingProfessor}
           />
         </Tabs.Panel>
+        <Tabs.Panel value="ratings">
+          <RatingsTable
+            ratings={ratings.ratings}
+            lectures={catalog.lectures}
+            lecturesById={lecturesById}
+            lectureId={ratings.lectureId}
+            nextCursor={ratings.nextCursor}
+            busy={ratings.busy || ratings.loading}
+            onFilterByLecture={ratings.filterByLecture}
+            onLoadMore={ratings.loadMore}
+            onDelete={setDeletingRating}
+          />
+        </Tabs.Panel>
       </Tabs>
+
+      {deletingRating && (
+        <ConfirmModal
+          opened
+          title="Delete rating"
+          description={`Remove this rating by ${deletingRating.authorName}? A rating is someone's own assessment, so this cannot be undone.`}
+          confirmLabel="Delete rating"
+          confirmColor="red"
+          onConfirm={async () => {
+            await ratings.remove(deletingRating.id)
+            setDeletingRating(null)
+          }}
+          onClose={() => setDeletingRating(null)}
+        />
+      )}
 
       <LectureEditModal
         lecture={editingLecture}

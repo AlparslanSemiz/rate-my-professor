@@ -1,9 +1,17 @@
 import { MantineProvider } from '@mantine/core'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { catalogService, type Lecture, type Professor } from '../../api/CatalogService'
+import { ratingsService, type Rating } from '../../api/RatingsService'
 import CatalogPage from './CatalogPage'
+
+vi.mock('../../api/RatingsService', () => ({
+  ratingsService: {
+    list: vi.fn(),
+    delete: vi.fn(),
+  },
+}))
 
 vi.mock('../../api/CatalogService', () => ({
   catalogService: {
@@ -49,6 +57,16 @@ const professors: Professor[] = [
   { id: 'prof-2', firstName: 'Alan', lastName: 'Turing', active: false, averageRating: 0, ratingCount: 0, lectureIds: [] },
 ]
 
+const ratings: Rating[] = [
+  {
+    id: 'rating-1',
+    lectureId: 'lecture-1',
+    authorName: 'Alice Smith',
+    createdAt: '2026-06-01T10:00:00Z',
+    scores: { CONTENT: 5, DIFFICULTY: 3 },
+  },
+]
+
 function renderCatalog() {
   return render(
     <MantineProvider>
@@ -59,6 +77,8 @@ function renderCatalog() {
 
 describe('Catalogue page', () => {
   beforeEach(() => {
+    vi.mocked(ratingsService.list).mockResolvedValue({ ratings, nextCursor: null })
+    vi.mocked(ratingsService.delete).mockResolvedValue({ success: true, message: 'Deleted' })
     vi.mocked(catalogService.getLectures).mockResolvedValue(lectures)
     vi.mocked(catalogService.getProfessors).mockResolvedValue(professors)
     vi.mocked(catalogService.updateLecture).mockResolvedValue({ success: true, message: 'Updated' })
@@ -164,4 +184,38 @@ describe('Catalogue page', () => {
 
     expect(await screen.findByText('Algorithms')).toBeInTheDocument()
   })
+  it('lists ratings and filters them by lecture', async () => {
+    const user = userEvent.setup()
+    renderCatalog()
+
+    await user.click(await screen.findByRole('tab', { name: /Ratings/ }))
+
+    expect(await screen.findByText('Alice Smith')).toBeInTheDocument()
+    expect(screen.getByText('Content 5 · Difficulty 3')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('combobox', { name: 'Filter ratings by lecture' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'CS101 — Algorithms', hidden: true }))
+
+    await waitFor(() =>
+      expect(ratingsService.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ lectureId: 'lecture-1' }),
+      ),
+    )
+  })
+
+  it('removes a rating and re-reads the list', async () => {
+    const user = userEvent.setup()
+    renderCatalog()
+
+    await user.click(await screen.findByRole('tab', { name: /Ratings/ }))
+    await user.click(await screen.findByRole('button', { name: 'Delete rating by Alice Smith' }))
+
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Delete rating' }))
+
+    await waitFor(() => expect(ratingsService.delete).toHaveBeenCalledWith('rating-1'))
+    // What is left is what the backend serves, not what the screen removed from its own list.
+    await waitFor(() => expect(ratingsService.list).toHaveBeenCalledTimes(2))
+  })
+
 })
