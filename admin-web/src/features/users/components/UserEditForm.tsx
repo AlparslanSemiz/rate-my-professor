@@ -55,7 +55,7 @@ export default function UserEditForm({
   const [biography, setBiography] = useState(user.biography)
   const [status, setStatus] = useState(user.status === 'BLOCKED' ? 'BLOCKED' : 'ACTIVE')
   const [role, setRole] = useState<string>(user.role)
-  const [credibilityScore, setCredibilityScore] = useState<number | null>(null)
+  const [credibilityScore, setCredibilityScore] = useState<number | null>(user.credibilityScore ?? null)
   const [error, setError] = useState('')
 
   const trimmedUsername = username.trim()
@@ -68,7 +68,18 @@ export default function UserEditForm({
     update.status = status
   }
   if (!isSelf && isRole(role) && role !== user.role) update.role = role
-  if (!accessLocked && credibilityScore !== null) update.credibilityScore = credibilityScore
+  // Compared against the seeded value so re-entering the stored number is not sent as an edit.
+  if (!accessLocked && credibilityScore !== null && credibilityScore !== user.credibilityScore) {
+    update.credibilityScore = credibilityScore
+  }
+
+  // The backend may not report the current score. When it does not, saving overwrites a number
+  // the operator has never been shown, so the input says so instead of just looking empty.
+  const credibilityDescription = accessLocked
+    ? 'Admin accounts are protected here.'
+    : user.credibilityScore === undefined
+      ? 'Not reported by the server; saving overwrites the stored value.'
+      : undefined
 
   const canSave = trimmedUsername.length > 0 && Object.keys(update).length > 0
 
@@ -158,7 +169,7 @@ export default function UserEditForm({
           onChange={(value) => setCredibilityScore(typeof value === 'number' ? value : null)}
           allowDecimal={false}
           disabled={accessLocked}
-          description={accessLocked ? 'Admin accounts are protected here.' : undefined}
+          description={credibilityDescription}
           size="sm"
           styles={darkInputStyles}
         />

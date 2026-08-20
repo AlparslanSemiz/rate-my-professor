@@ -28,6 +28,11 @@ export interface User {
   biography: string
   warnings: number
   reports: number
+  /**
+   * Optional because it is unconfirmed whether the backend serves it on the user reads: the
+   * panel accepts `PATCH`-ing it, so it renders and seeds from it the moment it arrives.
+   */
+  credibilityScore?: number
 }
 
 interface UserListResponse extends BasicResponse {

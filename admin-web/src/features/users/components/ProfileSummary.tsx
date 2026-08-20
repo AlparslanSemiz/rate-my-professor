@@ -39,6 +39,10 @@ function profileFields(user: User) {
     { label: 'Last seen', value: formatDate(user.lastOnline, { withTime: true }) },
     { label: 'Reports received', value: user.reports > 0 ? `${user.reports} times` : 'None' },
     { label: 'User ID', value: `#${user.id.slice(0, 8)}` },
+    // Only shown when the backend reports it; the panel can write this field either way.
+    ...(user.credibilityScore === undefined
+      ? []
+      : [{ label: 'Credibility', value: String(user.credibilityScore) }]),
   ]
 }
 

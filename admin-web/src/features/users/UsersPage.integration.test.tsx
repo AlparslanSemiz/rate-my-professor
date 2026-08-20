@@ -1,9 +1,9 @@
 import { MantineProvider } from '@mantine/core'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../api/ApiClient'
-import { usersService, type User } from '../../api/UsersService'
+import { usersService, type User, type Warning } from '../../api/UsersService'
 import { AuthProvider } from '../../context/AuthContext'
 import UsersPage from './UsersPage'
 
@@ -76,17 +76,30 @@ function renderUsers() {
 }
 
 describe('Users page', () => {
+  // The backend owns the result of every mutation, so the fixtures record what it now holds
+  // and `getById` serves a copy of that — a screen may only show what it re-read.
+  let accounts: User[]
+
+  function accountById(id: string) {
+    const account = accounts.find((candidate) => candidate.id === id)
+    if (!account) throw new ApiError(404, 'No such user')
+    return account
+  }
+
   beforeEach(() => {
-    vi.mocked(usersService.getAll).mockResolvedValue(users)
-    vi.mocked(usersService.getById).mockImplementation(async (id) => {
-      const user = users.find((candidate) => candidate.id === id)
-      if (!user) throw new Error('User not found')
-      return user
-    })
+    accounts = users.map((user) => ({ ...user }))
+    vi.mocked(usersService.getAll).mockImplementation(async () => accounts.map((user) => ({ ...user })))
+    vi.mocked(usersService.getById).mockImplementation(async (id) => ({ ...accountById(id) }))
     vi.mocked(usersService.getWarnings).mockResolvedValue([])
     vi.mocked(usersService.delete).mockResolvedValue({ success: true, message: 'Deleted' })
-    vi.mocked(usersService.block).mockResolvedValue({ success: true, message: 'Blocked' })
-    vi.mocked(usersService.unblock).mockResolvedValue({ success: true, message: 'Unblocked' })
+    vi.mocked(usersService.block).mockImplementation(async (id) => {
+      accountById(id).status = 'BLOCKED'
+      return { success: true, message: 'Blocked' }
+    })
+    vi.mocked(usersService.unblock).mockImplementation(async (id) => {
+      accountById(id).status = 'ACTIVE'
+      return { success: true, message: 'Unblocked' }
+    })
     vi.mocked(usersService.warn).mockResolvedValue({ success: true, message: 'Warned' })
   })
 
@@ -275,5 +288,59 @@ describe('Users page', () => {
 
     expect(await screen.findByText('Warning rejected')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Describe the reason for this warning...')).toHaveValue('Test warning')
+  })
+
+  it('lowers the table count when a warning is withdrawn', async () => {
+    accounts[1].warnings = 2
+    const history: Warning[] = [
+      { id: 'warning-1', userID: 'user-2', message: 'First', createdAt: '2026-06-01T10:00:00Z', issuedBy: 'admin-1' },
+      { id: 'warning-2', userID: 'user-2', message: 'Second', createdAt: '2026-06-02T10:00:00Z', issuedBy: 'admin-1' },
+    ]
+    vi.mocked(usersService.getWarnings).mockImplementation(async () => [...history])
+    vi.mocked(usersService.deleteWarning).mockImplementation(async () => {
+      history.pop()
+      return { success: true, message: 'Withdrawn' }
+    })
+    const user = userEvent.setup()
+    renderUsers()
+
+    const row = (await screen.findByText('Bob Johnson')).closest('tr') as HTMLElement
+    expect(within(row).getByText('2')).toBeInTheDocument()
+
+    await user.click(screen.getByText('Bob Johnson'))
+    const withdrawControls = await screen.findAllByRole('button', { name: 'Withdraw warning' })
+    await user.click(withdrawControls[1])
+
+    // The row control and the confirmation share a name, so the click has to go to the dialog.
+    const confirmation = await screen.findByRole('dialog', { name: 'Withdraw warning' })
+    await user.click(within(confirmation).getByRole('button', { name: 'Withdraw warning' }))
+
+    await waitFor(() => expect(usersService.deleteWarning).toHaveBeenCalledWith('user-2', 'warning-2'))
+    // The count the backend now reports, not the one the page guessed at: withdrawing used to
+    // report itself as a new warning and push the row up to 3.
+    await waitFor(() => expect(within(row).getByText('1')).toBeInTheDocument())
+  })
+
+  it('shows the credibility score and leaves it out of an edit that did not touch it', async () => {
+    accounts[1].credibilityScore = 42
+    vi.mocked(usersService.update).mockResolvedValue({ success: true, message: 'Updated' })
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Bob Johnson'))
+    expect(await screen.findByText('Credibility')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(await screen.findByLabelText('Credibility score')).toHaveValue('42')
+
+    const usernameInput = screen.getByRole('textbox', { name: 'Username' })
+    await user.clear(usernameInput)
+    await user.type(usernameInput, 'Robert Johnson')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    // Re-sending the stored score would write an audit event whose before and after match.
+    await waitFor(() => {
+      expect(usersService.update).toHaveBeenCalledWith('user-2', { username: 'Robert Johnson' })
+    })
   })
 })

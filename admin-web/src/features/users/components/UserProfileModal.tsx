@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Center, Loader, Modal, Text } from '@mantine/core'
-import type { User, Warning } from '../../../api/UsersService'
+import type { Warning } from '../../../api/UsersService'
 import ConfirmModal from '../../../components/ConfirmModal'
 import LoadError from '../../../components/LoadError'
 import { darkModalStyles } from '../../../constants/modalStyles'
@@ -17,8 +17,8 @@ interface UserProfileModalProps {
   userId: string | null
   opened: boolean
   onClose: () => void
-  /** `user` carries the re-read account for an `updated` change, so a list row can be replaced. */
-  onUserChanged?: (id: string, change: UserChange, user?: User) => void
+  /** Carries what the backend now reports, so a list row can be replaced rather than guessed at. */
+  onUserChanged?: (id: string, change: UserChange) => void
 }
 
 export default function UserProfileModal({

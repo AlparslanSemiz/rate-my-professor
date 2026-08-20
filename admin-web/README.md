@@ -425,6 +425,10 @@ release of its own where noted.
 | No admin listing of individual ratings | `RatingsService.delete` has no screen: the public read returns category averages without rating ids, so there is nothing to take an id from. |
 | `GET /users` has no pagination, filtering or sorting | The panel loads every user and filters client-side, and the dashboard refetches the whole list on each refresh. |
 | `GET /data/professor` omits `lectureIds` | Which lectures a professor teaches is reverse-indexed from the lecture list. Correct today; it breaks if lectures are ever paginated. |
+| The report endpoints omit the reported content's id | `/comments/reported` and `/answers/reported` carry the comment or answer as text only, so `ReportItem.id` is the *report's* id. From the reports tab an operator cannot open, edit or delete the content a report is about. |
+| `credibilityScore` may not be returned by the user reads | `PATCH /users/{id}` accepts it, so the panel can write it. It is typed optional on `User`: the profile shows it and the edit form seeds from it the moment it arrives, and until then the input says the stored value is unknown. |
+| `GET /users/{id}` is assumed to return the user **flat** | Every other endpoint wraps its payload. If this one wraps too, `getById` returns an object with no `id` and the profile fails blankly. Unconfirmed — the unit test codifies the panel's assumption, not the backend's behaviour. |
+| Unclear whether `GET /users` excludes soft-deleted accounts | `DELETE /users/{id}` anonymises rather than removes. If those rows still come back, "Total users" over-counts on the dashboard and the Users page. The panel does not filter them out, because doing so would diverge from `/system/status`. |
 
 ## Audit Log Design
 

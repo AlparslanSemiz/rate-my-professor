@@ -33,29 +33,23 @@ export default function UsersPage() {
   const profile = useSelectedId()
   const { search, setSearch, filtered } = useSearch(users, matchesQuery)
 
-  function handleUserChanged(id: string, change: UserChange, updated?: User) {
-    const userUpdates: Partial<Record<UserChange, (user: User) => User>> = {
-      blocked: (user) => ({ ...user, status: 'BLOCKED' }),
-      unblocked: (user) => ({ ...user, status: 'ACTIVE' }),
-      warned: (user) => ({ ...user, warnings: user.warnings + 1 }),
-    }
-
-    if (change === 'deleted') {
+  function handleUserChanged(id: string, change: UserChange) {
+    if (change.type === 'deleted') {
       setUsers((current) => current.filter((user) => user.id !== id))
       profile.close()
       return
     }
 
-    // An edit can change any field, so the row is replaced with what the backend now reports.
-    if (change === 'updated') {
-      if (updated) setUsers((current) => updateById(current, id, () => updated))
+    // An edit, a block and an unblock can each change any field, so the row is replaced with
+    // what the backend now reports rather than patched with what was asked for.
+    if (change.type === 'refreshed') {
+      setUsers((current) => updateById(current, id, () => change.user))
       return
     }
 
-    const update = userUpdates[change]
-    if (update) {
-      setUsers((current) => updateById(current, id, update))
-    }
+    setUsers((current) =>
+      updateById(current, id, (user) => ({ ...user, warnings: change.warnings })),
+    )
   }
 
   if (loading) return <PageLoader />

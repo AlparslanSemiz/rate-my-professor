@@ -3,13 +3,20 @@ import { usersService, type User, type UserUpdate, type Warning } from '../../..
 import { useAuth } from '../../../context/useAuth'
 import { useLoadedProfile } from './useLoadedProfile'
 
-export type UserChange = 'warned' | 'blocked' | 'unblocked' | 'deleted' | 'updated'
-type ModerationStatus = Extract<User['status'], 'ACTIVE' | 'BLOCKED'>
+/**
+ * What a profile action changed, carrying the value the backend reported rather than leaving
+ * the list to guess at it: an edit, a block and an unblock all report the re-read account, and
+ * a warning change reports the length of the re-read history.
+ */
+export type UserChange =
+  | { type: 'refreshed'; user: User }
+  | { type: 'warnings-changed'; warnings: number }
+  | { type: 'deleted' }
 
 export function useUserProfile(
   userId: string | null,
   opened: boolean,
-  onUserChanged?: (id: string, change: UserChange, user?: User) => void,
+  onUserChanged?: (id: string, change: UserChange) => void,
 ) {
   const { user: currentAdmin } = useAuth()
   const profile = useLoadedProfile(userId, opened)
@@ -17,20 +24,25 @@ export function useUserProfile(
   const [editLoading, setEditLoading] = useState(false)
   const [warningBusy, setWarningBusy] = useState(false)
 
+  /** Reports the history the backend now holds, so neither the modal nor the list counts by hand. */
+  function applyWarnings(id: string, refreshedWarnings: Warning[]) {
+    profile.updateUser(
+      id,
+      (currentUser) => ({ ...currentUser, warnings: refreshedWarnings.length }),
+      refreshedWarnings,
+    )
+    onUserChanged?.(id, { type: 'warnings-changed', warnings: refreshedWarnings.length })
+  }
+
   async function warn(message: string) {
     const trimmedMessage = message.trim()
     if (!profile.user || !trimmedMessage || !currentAdmin) return
 
+    const id = profile.user.id
     setWarnLoading(true)
     try {
-      await usersService.warn(profile.user.id, trimmedMessage, currentAdmin.id)
-      const refreshedWarnings = await usersService.getWarnings(profile.user.id)
-      profile.updateUser(
-        profile.user.id,
-        (currentUser) => ({ ...currentUser, warnings: currentUser.warnings + 1 }),
-        refreshedWarnings,
-      )
-      onUserChanged?.(profile.user.id, 'warned')
+      await usersService.warn(id, trimmedMessage, currentAdmin.id)
+      applyWarnings(id, await usersService.getWarnings(id))
     } finally {
       setWarnLoading(false)
     }
@@ -49,7 +61,7 @@ export function useUserProfile(
       await usersService.update(id, nextUpdate)
       const refreshed = await usersService.getById(id)
       profile.updateUser(id, () => refreshed)
-      onUserChanged?.(id, 'updated', refreshed)
+      onUserChanged?.(id, { type: 'refreshed', user: refreshed })
     } finally {
       setEditLoading(false)
     }
@@ -63,13 +75,7 @@ export function useUserProfile(
     setWarningBusy(true)
     try {
       await change()
-      const refreshedWarnings = await usersService.getWarnings(id)
-      profile.updateUser(
-        id,
-        (currentUser) => ({ ...currentUser, warnings: refreshedWarnings.length }),
-        refreshedWarnings,
-      )
-      onUserChanged?.(id, 'warned')
+      applyWarnings(id, await usersService.getWarnings(id))
     } finally {
       setWarningBusy(false)
     }
@@ -87,23 +93,21 @@ export function useUserProfile(
     await runWarningChange(() => usersService.deleteWarning(warning.userID, warningId))
   }
 
-  async function changeStatus(
-    request: (id: string) => Promise<unknown>,
-    status: ModerationStatus,
-    change: Extract<UserChange, 'blocked' | 'unblocked'>,
-  ) {
+  /** Re-reads the account for the same reason `update` does: the backend decides the result. */
+  async function changeStatus(request: (id: string) => Promise<unknown>) {
     if (!profile.user) return
 
     const id = profile.user.id
     await request(id)
-    profile.updateUser(id, (currentUser) => ({ ...currentUser, status }))
-    onUserChanged?.(id, change)
+    const refreshed = await usersService.getById(id)
+    profile.updateUser(id, () => refreshed)
+    onUserChanged?.(id, { type: 'refreshed', user: refreshed })
   }
 
   async function remove() {
     if (!profile.user) return
     await usersService.delete(profile.user.id)
-    onUserChanged?.(profile.user.id, 'deleted')
+    onUserChanged?.(profile.user.id, { type: 'deleted' })
   }
 
   return {
@@ -120,8 +124,8 @@ export function useUserProfile(
     update,
     editWarning,
     withdrawWarning,
-    block: () => changeStatus((id) => usersService.block(id), 'BLOCKED', 'blocked'),
-    unblock: () => changeStatus((id) => usersService.unblock(id), 'ACTIVE', 'unblocked'),
+    block: () => changeStatus((id) => usersService.block(id)),
+    unblock: () => changeStatus((id) => usersService.unblock(id)),
     remove,
   }
 }
