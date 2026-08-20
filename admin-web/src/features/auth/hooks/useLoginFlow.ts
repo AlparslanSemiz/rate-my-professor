@@ -36,6 +36,12 @@ export function useLoginFlow() {
   const { login, sessionExpired, acknowledgeExpiry } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  /**
+   * Where a successful sign-in lands. Read once here rather than at the call site, because
+   * two things navigate away from this screen — the verified code below, and the page's own
+   * guard for an admin who is already signed in — and they must agree on the destination.
+   */
+  const redirectTo = attemptedPath(location.state) ?? routes.dashboard
 
   async function requestCode() {
     const trimmedEmail = email.trim()
@@ -79,7 +85,7 @@ export function useLoginFlow() {
     try {
       const authenticated = await authenticateAdmin(trimmedEmail, trimmedCode)
       login(authenticated.token, authenticated.user)
-      navigate(attemptedPath(location.state) ?? routes.dashboard, { replace: true })
+      navigate(redirectTo, { replace: true })
     } catch (verificationError: unknown) {
       setError(getLoginErrorMessage(verificationError))
       apiClient.setToken(null)
@@ -100,6 +106,7 @@ export function useLoginFlow() {
     step,
     email,
     code,
+    redirectTo,
     error: error || (sessionExpired ? SESSION_EXPIRED_MESSAGE : ''),
     loading,
     setEmail,

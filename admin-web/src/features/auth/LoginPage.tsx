@@ -1,6 +1,8 @@
 import { Box, type CSSProperties } from '@mantine/core'
+import { Navigate } from 'react-router-dom'
 import ErrorAlert from '../../components/ErrorAlert'
 import Panel from '../../components/Panel'
+import { useAuth } from '../../context/useAuth'
 import LoginCardHeader from './components/LoginCardHeader'
 import LoginForms from './components/LoginForms'
 import { useLoginFlow } from './hooks/useLoginFlow'
@@ -19,7 +21,16 @@ const cardStyle: CSSProperties = {
 }
 
 export default function LoginPage() {
+  const { isAuthenticated } = useAuth()
   const login = useLoginFlow()
+
+  /*
+   * A signed-in admin has nothing to log into here. Leaving the form reachable let a second
+   * sign-in run against a live session: a refused code clears the client's token while the
+   * stored session stays, so the next request went out unauthenticated, came back 401, and
+   * threw the admin out saying their session had ended — which was never true.
+   */
+  if (isAuthenticated) return <Navigate to={login.redirectTo} replace />
 
   return (
     <Box style={pageStyle}>

@@ -109,6 +109,18 @@ describe('App routing and authentication', () => {
     expect(screen.getAllByText(adminUser.email).length).toBeGreaterThan(0)
   })
 
+  it('sends a signed-in admin away from the login screen', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(adminUser))
+    window.history.pushState({}, '', '/login')
+
+    render(<App />)
+
+    expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/dashboard')
+    expect(screen.queryByPlaceholderText('admin@student.kit.edu')).not.toBeInTheDocument()
+  })
+
   it('lists the catalogue directly under the dashboard', async () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(adminUser))
