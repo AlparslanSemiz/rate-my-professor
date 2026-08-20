@@ -65,6 +65,10 @@ public class SecurityConfig {
                         // since the public catalogue reads filter to active = true.
                         .requestMatchers(HttpMethod.GET, "/data/lectures/all", "/data/professor/all")
                         .hasRole("ADMIN")
+                        // Ahead of the student submission route below: POST /reports is how a
+                        // student files a bug and must stay open, but opening a tracker issue
+                        // for one is an administrative action.
+                        .requestMatchers(HttpMethod.POST, "/reports/*/gitlab-issue").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/reports", "/reports/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/reports/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/reports/**").hasRole("ADMIN")

@@ -9,6 +9,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import com.pse.shared.enums.ReportStatus;
 import com.pse.shared.enums.BugSeverity;
+import com.pse.shared.enums.IssueState;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -58,4 +59,19 @@ public class BugReport {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    /**
+     * Where the tracker issue for this report lives, once one has been opened. Null until
+     * then, which is what tells the panel to offer "create issue" instead of a link.
+     */
+    @Column(name = "issue_url")
+    private String issueUrl;
+
+    /** The project-scoped issue number, for display. */
+    @Column(name = "issue_iid")
+    private Integer issueIid;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "issue_state", nullable = false)
+    private IssueState issueState = IssueState.NONE;
 }

@@ -4,6 +4,7 @@ import com.pse.auth.dto.response.BasicResponse;
 import com.pse.moderation.dto.request.BugReportRequest;
 import com.pse.moderation.dto.request.BugReportUpdateRequest;
 import com.pse.moderation.dto.response.BugReportsResponse;
+import com.pse.moderation.dto.response.GitLabIssueResponse;
 import com.pse.moderation.service.ModerationBugReportService;
 import com.pse.security.AuthenticatedUser;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -49,6 +50,19 @@ public class ModerationBugReportController {
             @PathVariable UUID id
     ) {
         return service.deleteBugReport(principal, id);
+    }
+
+    /**
+     * Opens a GitLab issue for this report, or returns the one it already has. Admin-only,
+     * and matched explicitly in the security chain — {@code POST /reports} itself is the
+     * student submission endpoint and stays open.
+     */
+    @PostMapping("/{id}/gitlab-issue")
+    public GitLabIssueResponse createGitLabIssue(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @PathVariable UUID id
+    ) {
+        return service.createIssue(principal, id);
     }
 
     @PostMapping

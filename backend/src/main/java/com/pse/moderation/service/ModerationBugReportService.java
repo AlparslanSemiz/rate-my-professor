@@ -9,10 +9,12 @@ import com.pse.moderation.dto.request.BugReportRequest;
 import com.pse.moderation.dto.request.BugReportUpdateRequest;
 import com.pse.moderation.dto.response.BugReportResponse;
 import com.pse.moderation.dto.response.BugReportsResponse;
+import com.pse.moderation.dto.response.GitLabIssueResponse;
 import com.pse.moderation.model.BugReport;
 import com.pse.moderation.repository.BugReportRepository;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.enums.ReportStatus;
+import com.pse.shared.enums.IssueState;
 import com.pse.shared.error.ApiException;
 import com.pse.shared.util.UtcDates;
 import com.pse.user.model.Student;
@@ -31,15 +33,21 @@ public class ModerationBugReportService {
     private final BugReportRepository repository;
     private final AuthService authService;
     private final AuditWriter auditWriter;
+    private final GitLabClient gitLabClient;
+    private final BugReportIssueTransactions issueTransactions;
 
     public ModerationBugReportService(
             BugReportRepository repository,
             AuthService authService,
-            AuditWriter auditWriter
+            AuditWriter auditWriter,
+            GitLabClient gitLabClient,
+            BugReportIssueTransactions issueTransactions
     ) {
         this.repository = repository;
         this.authService = authService;
         this.auditWriter = auditWriter;
+        this.gitLabClient = gitLabClient;
+        this.issueTransactions = issueTransactions;
     }
 
     @Transactional(readOnly = true)
@@ -180,7 +188,49 @@ public class ModerationBugReportService {
                 report.getSeverity(),
                 report.getStatus(),
                 report.getReporter() == null ? "Unknown" : report.getReporter().getUsername(),
-                UtcDates.format(report.getCreatedAt())
+                UtcDates.format(report.getCreatedAt()),
+                report.getIssueUrl(),
+                report.getIssueState()
+        );
+    }
+
+    /**
+     * Opens a tracker issue for a bug report, or hands back the one it already has.
+     *
+     * <p>Idempotent on purpose. A double-clicked button, two admins triaging the same queue
+     * and a retry after a timeout must not each open an issue.
+     *
+     * <p>Admin-triggered rather than automatic on submission. Creating an issue for every
+     * report as it arrives would make student-facing bug reporting depend on GitLab being
+     * reachable, and would file the duplicates and the spam alongside the real bugs.
+     *
+     * <p>Deliberately not transactional: the failure path has to persist a marker that the
+     * failing transaction would otherwise roll back. See {@link BugReportIssueTransactions}.
+     */
+    public GitLabIssueResponse createIssue(AuthenticatedUser principal, UUID reportId) {
+        if (!gitLabClient.isEnabled()) {
+            throw new ApiException(
+                    HttpStatus.SERVICE_UNAVAILABLE, "GitLab integration is not configured");
+        }
+
+        BugReportIssueTransactions.Attempt attempt;
+        try {
+            attempt = issueTransactions.createOrReturnExisting(principal, reportId);
+        } catch (ApiException exception) {
+            // A missing report is not a failed attempt, and marking one would invent state
+            // for a row that does not exist.
+            if (exception.getStatus() != HttpStatus.NOT_FOUND) {
+                issueTransactions.markFailed(reportId);
+            }
+            throw exception;
+        }
+
+        return new GitLabIssueResponse(
+                attempt.existing() ? "Bug report already has a GitLab issue" : "Created GitLab issue",
+                true,
+                attempt.url(),
+                attempt.iid(),
+                IssueState.CREATED
         );
     }
 
