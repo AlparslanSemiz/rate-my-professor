@@ -21,6 +21,7 @@ that.
 - [Project Structure](#project-structure)
 - [Authentication and Authorization](#authentication-and-authorization)
 - [API Reference](#api-reference)
+- [Known Backend Gaps](#known-backend-gaps)
 - [Audit Log Design](#audit-log-design)
 - [Lazy Loading and Code Splitting](#lazy-loading-and-code-splitting)
 - [Quality Assurance](#quality-assurance)
@@ -80,10 +81,14 @@ build.
 └──────────────────────────────────────────────────────────┘
 ```
 
-In development, Vite serves the frontend and the browser calls the backend at
-`VITE_API_BASE_URL`. In production, Nginx serves the static build under
-`VITE_BASE_PATH` with no API proxy — the browser calls the backend directly
-(same-origin; see "Deploying the production image").
+In development, Vite serves the frontend and proxies `/api` to the backend, so
+the browser only ever talks to `localhost:5173`. In production, Nginx serves the
+static build under `VITE_BASE_PATH` with no API proxy — the browser calls the
+backend directly (same-origin; see "Deploying the production image").
+
+Both arrangements are same-origin from the browser's point of view, which is
+deliberate: development exercises the same request topology as production
+instead of a second one that only exists on developer machines.
 
 ## Quick Start
 
@@ -100,10 +105,12 @@ Install the dependencies once:
 npm ci
 ```
 
-Point the frontend at your backend in `.env`:
+Point the dev proxy at your backend in `.env`. The panel calls `/api`, and the
+dev server forwards that to `VITE_API_TARGET`:
 
 ```env
-VITE_API_BASE_URL=https://your-backend.example.org
+VITE_API_BASE_URL=/api
+VITE_API_TARGET=https://your-backend.example.org
 ```
 
 Start the development server:
@@ -116,9 +123,12 @@ Open [http://localhost:5173](http://localhost:5173) and sign in with one of the
 admin addresses (see "Authentication and Authorization"). The backend emails a
 six-character login code, which expires after five minutes.
 
-If the backend rejects the request with `403 Invalid CORS request`, add the
-panel's origin (`http://localhost:5173`) to the backend's
-`ADMIN_FRONTEND_ORIGINS`.
+Because the dev server proxies the API, the browser makes same-origin requests
+and CORS never enters into it. If you would rather point `VITE_API_BASE_URL`
+straight at an absolute backend URL, add the panel's origin
+(`http://localhost:5173`) to the backend's `ADMIN_FRONTEND_ORIGINS` first —
+without it the backend answers `403 Invalid CORS request` to the preflight and
+no request reaches a controller.
 
 ## Walkthrough
 
@@ -145,15 +155,27 @@ the data model.
 ### Frontend API URL
 
 Vite reads `VITE_API_BASE_URL` when the development server starts or the
-production bundle is built.
+production bundle is built. It is the path or URL the panel calls; `/api` means
+"whatever is serving this page", which is what keeps requests same-origin.
 
 ```env
-VITE_API_BASE_URL=https://your-backend.example.org
+VITE_API_BASE_URL=/api
+VITE_API_TARGET=https://your-backend.example.org
 ```
 
-`.env` is the only environment file: it is what `npm run dev` reads. For a
-reverse proxy that exposes the backend under `/api`, use
-`VITE_API_BASE_URL=/api` — that is a proxy prefix, not a backend route prefix.
+| Variable | Read by | Purpose |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | The bundle | Path or URL every request is prefixed with |
+| `VITE_API_TARGET` | The dev server only | Backend the `/api` proxy forwards to |
+
+`VITE_API_TARGET` never reaches the browser — it configures the proxy in
+`vite.config.ts` and has no effect on a production build. Point it at a locally
+running backend when you have one.
+
+`.env` is the only environment file: it is what `npm run dev` reads. A real
+environment variable takes precedence over it, which is how the Docker build
+and the CI pipeline bake an absolute `VITE_API_BASE_URL` into the production
+bundle without editing `.env`.
 
 Environment values are read at startup/build time. Restart the Vite server
 after changing them.
@@ -205,6 +227,18 @@ sends the token on protected requests:
 ```http
 Authorization: Bearer <authToken>
 ```
+
+A stored token is a claim, not proof — it can be revoked while the tab is
+closed — so on load the panel confirms it with `GET /auth/me` before treating
+the session as valid, and holds protected routes on a loading state until it
+answers. A `401` from any request ends the session and returns to the login
+screen, which says the session expired rather than presenting a bare form. The
+path that was being visited travels with the redirect, so signing in again
+returns there instead of the dashboard.
+
+A backend that is merely unreachable does **not** end the session: being unable
+to confirm a token says nothing about whether it is still good, and signing an
+admin out over a dropped connection would lose their place for no reason.
 
 ### Who may sign in
 
@@ -302,9 +336,16 @@ content in the database — deleting does not.
 | `DELETE` | `/data/professor/:id` | Delete the professor; the lectures stay |
 
 `professorIds` and `lectureIds` replace an assignment wholesale — send `[]` to
-clear it. The catalogue reads do not report a lecture's `lectureType` or a
-professor's `active` flag, so the panel sends those only when explicitly
-picked and leaves them untouched otherwise.
+clear it. The catalogue reads report a lecture's `lectureType` and a
+professor's `active` flag, so both are shown with their current value and sent
+only when actually changed.
+
+`averageRating` comes back as `0` rather than `null` for a professor nobody has
+rated, so `ratingCount` is what separates "rated badly" from "not rated"; the
+panel shows a dash for the latter.
+
+`GET /data/professor` does not report which lectures a professor teaches, so the
+panel builds that index from the lecture list it already loaded.
 
 ### Ratings
 
@@ -370,6 +411,20 @@ show "the API is up but the database is not" cannot do that if the request
 itself fails. `counts` and `lastWrite` are `null` unless the database answered.
 The counters are what confirm an action reached the database: block a user,
 refresh, and watch the count move.
+
+## Known Backend Gaps
+
+Features whose frontend is written and inert because the API does not carry
+what they need. Each is a backend change; the panel picks them up with no
+release of its own where noted.
+
+| Gap | Effect on the panel |
+| --- | --- |
+| `GET /users/:id/warnings` omits each warning's `id` | Correct/withdraw controls stay hidden. `updateWarning` and `deleteWarning` are implemented and light up as soon as the field appears. |
+| A warning's `createdFrom` carries only an `id`, not a name | The history cannot say who issued a warning, so it does not show an issuer at all. |
+| No admin listing of individual ratings | `RatingsService.delete` has no screen: the public read returns category averages without rating ids, so there is nothing to take an id from. |
+| `GET /users` has no pagination, filtering or sorting | The panel loads every user and filters client-side, and the dashboard refetches the whole list on each refresh. |
+| `GET /data/professor` omits `lectureIds` | Which lectures a professor teaches is reverse-indexed from the lecture list. Correct today; it breaks if lectures are ever paginated. |
 
 ## Audit Log Design
 
@@ -512,6 +567,9 @@ changed afterwards without rebuilding:
 | `VITE_API_BASE_URL` | Backend the panel calls | `/api` |
 | `VITE_BASE_PATH` | URL path the panel is served from | `/admin/` for builds, `/` for the dev server |
 
+`VITE_API_TARGET` is not in this table because it is not embedded in anything:
+it only configures the development proxy.
+
 The repository's multi-stage `Dockerfile` builds one runtime target,
 `web-prod`: the compiled frontend served under `VITE_BASE_PATH` with no
 upstream dependency. This is the deployable image.
@@ -578,8 +636,10 @@ development server — the value is read at startup.
 
 ### `403 Invalid CORS request` when requesting a login code
 
-The backend answers this before the request reaches a controller when the
-panel's origin is not in its `ADMIN_FRONTEND_ORIGINS`. The origin has to be
+This should not happen through the dev proxy, which makes requests same-origin.
+It appears when `VITE_API_BASE_URL` points straight at an absolute backend URL
+and the panel's origin is not in the backend's `ADMIN_FRONTEND_ORIGINS`. The
+backend answers before the request reaches a controller. The origin has to be
 listed even when the panel and the API share a host, because the browser sends
 `Origin` on every non-`GET` request. Confirm with:
 
