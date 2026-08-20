@@ -33,6 +33,8 @@ public interface StudentRepository
 
     long countByStatusNot(UserStatus status);
 
+    long countByStatus(UserStatus status);
+
     Optional<Student> findByIdAndStatusNot(UUID id, UserStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

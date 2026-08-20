@@ -14,6 +14,9 @@ package com.pse.system.dto;
  * @param uptimeSeconds  seconds since {@code startedAt}
  * @param counts         table counts, {@code null} when they could not be read
  * @param lastWrite      newest audit event, {@code null} when there is none
+ * @param gitlabEnabled  whether the GitLab issue integration is configured. The panel
+ *                       hides the "create issue" action when it is not, rather than
+ *                       discovering it by pressing the button and getting a 503.
  */
 public record SystemStatusResponse(
         String message,
@@ -24,6 +27,7 @@ public record SystemStatusResponse(
         long uptimeSeconds,
         SystemDatabaseResponse database,
         SystemCountsResponse counts,
-        SystemLastWriteResponse lastWrite
+        SystemLastWriteResponse lastWrite,
+        boolean gitlabEnabled
 ) {
 }

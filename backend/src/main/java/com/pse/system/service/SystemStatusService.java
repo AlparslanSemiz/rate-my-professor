@@ -8,6 +8,7 @@ import com.pse.moderation.repository.BugReportRepository;
 import com.pse.rating.repository.RatingRepository;
 import com.pse.shared.enums.ReportStatus;
 import com.pse.shared.enums.UserStatus;
+import com.pse.moderation.service.GitLabClient;
 import com.pse.shared.util.UtcDates;
 import com.pse.social.repository.AnswerRepository;
 import com.pse.social.repository.CommentReportRepository;
@@ -50,6 +51,7 @@ public class SystemStatusService {
     private final CommentReportRepository commentReportRepository;
     private final BugReportRepository bugReportRepository;
     private final AuditLogRepository auditLogRepository;
+    private final GitLabClient gitLabClient;
 
     public SystemStatusService(
             JdbcTemplate jdbcTemplate,
@@ -63,7 +65,8 @@ public class SystemStatusService {
             RatingRepository ratingRepository,
             CommentReportRepository commentReportRepository,
             BugReportRepository bugReportRepository,
-            AuditLogRepository auditLogRepository
+            AuditLogRepository auditLogRepository,
+            GitLabClient gitLabClient
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.applicationContext = applicationContext;
@@ -77,6 +80,7 @@ public class SystemStatusService {
         this.commentReportRepository = commentReportRepository;
         this.bugReportRepository = bugReportRepository;
         this.auditLogRepository = auditLogRepository;
+        this.gitLabClient = gitLabClient;
     }
 
     /**
@@ -123,6 +127,7 @@ public class SystemStatusService {
     private SystemCountsResponse readCounts() {
         return new SystemCountsResponse(
                 studentRepository.countByStatusNot(UserStatus.DELETED),
+                studentRepository.countByStatus(UserStatus.ACTIVE),
                 adminRepository.count(),
                 lectureRepository.count(),
                 commentRepository.count(),
@@ -165,7 +170,8 @@ public class SystemStatusService {
                 Math.max(0, Duration.between(startedAt, now).toSeconds()),
                 database,
                 counts,
-                lastWrite
+                lastWrite,
+                gitLabClient.isEnabled()
         );
     }
 }
