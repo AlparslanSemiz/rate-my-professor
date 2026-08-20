@@ -35,3 +35,8 @@ dist-ssr
 # Local GitLab Wiki draft (publish when the project is final)
 docs/gitlab-wiki/
 docs/gitlab-wiki-publishing.md
+TODO.md
+
+# Local working notes for AI agents (see CLAUDE.md); kept out of history on purpose
+CLAUDE.md
+STATUS.md
