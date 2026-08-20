@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { feedbackService, type BugReport } from '../../../api/FeedbackService'
 import { usersService, type User } from '../../../api/UsersService'
+import { useVisibleInterval } from '../../../hooks/useVisibleInterval'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
 
 export interface DashboardStats {
@@ -55,41 +56,37 @@ export function useDashboardData() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  // Which read is allowed to write to the screen. Every read bumps it as it starts, so when
+  // a retry or a poll fires while the previous one is still in flight, the older response is
+  // discarded instead of landing on top of the newer one.
+  const latestRead = useRef(0)
 
-  useEffect(() => {
-    let cancelled = false
+  const refresh = useCallback(async () => {
+    const read = ++latestRead.current
+    const results = await Promise.allSettled([
+      usersService.getAll(),
+      feedbackService.getReports(),
+    ])
+    if (read !== latestRead.current) return
 
-    async function refresh() {
-      const results = await Promise.allSettled([
-        usersService.getAll(),
-        feedbackService.getReports(),
-      ])
-      if (cancelled) return
-
-      const [usersResult, reportsResult] = results
-      if (usersResult.status === 'fulfilled') setUsers(usersResult.value)
-      if (reportsResult.status === 'fulfilled') setReports(reportsResult.value)
-      if (usersResult.status === 'fulfilled' || reportsResult.status === 'fulfilled') {
-        setHasData(true)
-      }
-
-      const failure = firstFailure(results)
-      if (failure === null) {
-        setLastUpdated(new Date())
-        setError('')
-      } else {
-        setError(getErrorMessage(failure, LOAD_ERROR_FALLBACK))
-      }
-      setLoading(false)
+    const [usersResult, reportsResult] = results
+    if (usersResult.status === 'fulfilled') setUsers(usersResult.value)
+    if (reportsResult.status === 'fulfilled') setReports(reportsResult.value)
+    if (usersResult.status === 'fulfilled' || reportsResult.status === 'fulfilled') {
+      setHasData(true)
     }
 
-    void refresh()
-    const interval = setInterval(() => void refresh(), REFRESH_INTERVAL_MS)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
+    const failure = firstFailure(results)
+    if (failure === null) {
+      setLastUpdated(new Date())
+      setError('')
+    } else {
+      setError(getErrorMessage(failure, LOAD_ERROR_FALLBACK))
     }
-  }, [reloadKey])
+    setLoading(false)
+  }, [])
+
+  useVisibleInterval(() => void refresh(), REFRESH_INTERVAL_MS, reloadKey)
 
   const retry = useCallback(() => {
     setLoading(true)
