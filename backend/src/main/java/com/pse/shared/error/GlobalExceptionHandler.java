@@ -68,6 +68,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<BasicResponse> handleConflict(DataIntegrityViolationException exception) {
+        LOGGER.error("State conflict", exception);
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new BasicResponse("State conflict", false));
     }
