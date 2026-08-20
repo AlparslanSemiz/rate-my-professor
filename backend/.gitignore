@@ -1,5 +1,6 @@
 HELP.md
 target/
+*.class
 .m2/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -41,4 +42,4 @@ node_modules/
 CLAUDE.md
 STATUS.md
 TODO.md
-FRONTEND-TASKS.md
+ADMIN-PANEL-TASKS.md
