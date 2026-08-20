@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { MantineProvider } from '@mantine/core'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import ErrorBoundary from './components/ErrorBoundary'
 import PageLoader from './components/PageLoader'
 import ProtectedRoute from './components/ProtectedRoute'
 import { theme } from './theme'
@@ -20,23 +21,31 @@ const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '') || undefined
 export default function App() {
   return (
     <MantineProvider theme={theme} defaultColorScheme="dark">
-      <AuthProvider>
-        <BrowserRouter basename={routerBasename}>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path={routes.login} element={<LoginPage />} />
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <AdminLayout />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </AuthProvider>
+      {/* Last line of defence. Without it a render error anywhere below leaves the operator
+          looking at a blank page with nothing to act on. */}
+      <ErrorBoundary
+        message="The panel hit an unexpected error and could not finish rendering."
+        retryLabel="Reload the panel"
+        onReset={() => window.location.reload()}
+      >
+        <AuthProvider>
+          <BrowserRouter basename={routerBasename}>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path={routes.login} element={<LoginPage />} />
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </AuthProvider>
+      </ErrorBoundary>
     </MantineProvider>
   )
 }

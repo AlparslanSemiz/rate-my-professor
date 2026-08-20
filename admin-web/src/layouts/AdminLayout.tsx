@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { AppShell } from '@mantine/core'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import ErrorBoundary from '../components/ErrorBoundary'
 import PageLoader from '../components/PageLoader'
 import Sidebar from './components/Sidebar'
 import { routes } from '../constants/routes'
@@ -37,20 +38,24 @@ export default function AdminLayout() {
       </AppShell.Navbar>
       <AppShell.Main>
         <div style={{ padding: 'clamp(16px, 4vw, 32px)', minHeight: '100vh' }}>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path={routes.dashboard} element={<DashboardPage />} />
-              <Route path={routes.users} element={<UsersPage />} />
-              <Route path={routes.feedback} element={<FeedbackPage />} />
-              <Route path={routes.comments} element={<CommentsPage />} />
-              <Route path={routes.catalog} element={<CatalogPage />} />
-              <Route path={routes.auditLogs} element={<AuditLogsPage />} />
-              <Route path={routes.activityLogs} element={<ActivityLogsPage />} />
-              <Route path={routes.systemStatus} element={<SystemStatusPage />} />
-              <Route path={routes.help} element={<HelpPage />} />
-              <Route path="*" element={<Navigate to={routes.dashboard} replace />} />
-            </Routes>
-          </Suspense>
+          {/* Scoped to the routed page so one broken screen keeps the sidebar and the sign-out
+              control reachable. */}
+          <ErrorBoundary message="This page could not be displayed." retryLabel="Try again">
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path={routes.dashboard} element={<DashboardPage />} />
+                <Route path={routes.users} element={<UsersPage />} />
+                <Route path={routes.feedback} element={<FeedbackPage />} />
+                <Route path={routes.comments} element={<CommentsPage />} />
+                <Route path={routes.catalog} element={<CatalogPage />} />
+                <Route path={routes.auditLogs} element={<AuditLogsPage />} />
+                <Route path={routes.activityLogs} element={<ActivityLogsPage />} />
+                <Route path={routes.systemStatus} element={<SystemStatusPage />} />
+                <Route path={routes.help} element={<HelpPage />} />
+                <Route path="*" element={<Navigate to={routes.dashboard} replace />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </AppShell.Main>
     </AppShell>
