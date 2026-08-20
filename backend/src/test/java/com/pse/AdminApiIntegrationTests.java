@@ -1188,7 +1188,7 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.ratings[0].lectureLabel").value("CS101 — Algorithms"))
                 .andExpect(jsonPath("$.ratings[0].lectureId").value(lecture.getId().toString()))
                 .andExpect(jsonPath("$.ratings[0].student.name").value("rater"))
-                .andExpect(jsonPath("$.ratings[0].topics", hasSize(1)))
+                .andExpect(jsonPath("$.ratings[0].topics", hasSize(2)))
                 .andExpect(jsonPath("$.ratings[0].topics[0].category").value("ORGANIZATION"))
                 .andExpect(jsonPath("$.ratings[0].topics[0].value").value(4.0));
     }
@@ -1355,6 +1355,48 @@ class AdminApiIntegrationTests {
     }
 
     @Test
+    void auditWriterCoversAdminRefusalAndNullPayloadBranches() {
+        Session admin = createSession("coverage-admin@student.kit.edu", true);
+        Session student = createSession("coverage-student@student.kit.edu", false);
+
+        AuditLog adminRefusal = auditWriter.writeRefusal(
+                admin.student(),
+                true,
+                AuditAction.ACCESS_REFUSED,
+                AuditTargetType.ENDPOINT,
+                null,
+                "PATCH /users/{id}/block",
+                Map.of("path", "/users/coverage/block")
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.ADMIN, adminRefusal.getActorType());
+        org.junit.jupiter.api.Assertions.assertEquals("ADMIN", adminRefusal.getActorRole());
+
+        AuditLog studentRefusal = auditWriter.writeRefusal(
+                student.student(),
+                false,
+                AuditAction.ACCESS_REFUSED,
+                AuditTargetType.ENDPOINT,
+                null,
+                "GET /users",
+                Map.of("path", "/users")
+        );
+        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.USER, studentRefusal.getActorType());
+        org.junit.jupiter.api.Assertions.assertEquals("STUDENT", studentRefusal.getActorRole());
+
+        AuditLog nullPayloads = auditWriter.write(
+                admin.admin(),
+                AuditAction.USER_BLOCKED,
+                AuditTargetType.USER,
+                student.student().getId(),
+                "coverage-student",
+                null,
+                null
+        );
+        org.junit.jupiter.api.Assertions.assertTrue(nullPayloads.getChanges().isEmpty());
+        org.junit.jupiter.api.Assertions.assertTrue(nullPayloads.getMetadata().isEmpty());
+    }
+
+    @Test
     void auditFailureRollsBackDomainMutation() throws Exception {
         Session admin = createSession("admin@student.kit.edu", true);
         Session target = createSession("rollback@student.kit.edu", false);
@@ -1465,12 +1507,12 @@ class AdminApiIntegrationTests {
         // The student is told, with the reason, through their own feed. The payload
         // key is "answers" for historical reasons; renaming it would break the
         // student app, so the new entries ride along in the same list.
-        mockMvc.perform(get("/social/notifications/")
+        mockMvc.perform(get("/social/notifications")
                         .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.answers", hasSize(1)))
-                .andExpect(jsonPath("$.answers[0].type").value("WARNING"))
-                .andExpect(jsonPath("$.answers[0].message")
+                .andExpect(jsonPath("$.notifications", hasSize(1)))
+                .andExpect(jsonPath("$.notifications[0].type").value("WARNING"))
+                .andExpect(jsonPath("$.notifications[0].message")
                         .value("Repeated harassment after prior warning"));
 
         // A warning is a disciplinary record, not a restriction: the account keeps
@@ -1726,6 +1768,60 @@ class AdminApiIntegrationTests {
         );
     }
 
+    @Test
+    void ownRatingCategoriesAndOverwriteAreCovered() throws Exception {
+        Session student = createSession("edit-rating@student.kit.edu", false);
+        Lecture lecture = createLecture();
+
+        // Rating existiert noch nicht
+        mockMvc.perform(get("/ratings/own/{lectureId}", lecture.getId())
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false));
+
+        // Lecture existiert nicht
+        mockMvc.perform(get("/ratings/own/{lectureId}", UUID.randomUUID())
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false));
+
+        // Rating erstmals erstellen
+        mockMvc.perform(post("/ratings/rate")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {"lectureId":"%s","topics":[{"category":"ORGANIZATION","value":4}]}
+                            """.formatted(lecture.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // Eigenes Rating lesen
+        mockMvc.perform(get("/ratings/own/{lectureId}", lecture.getId())
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.ratings", hasSize(2)));
+
+        // Rating-Kategorien lesen
+        mockMvc.perform(get("/ratings/{lectureId}/categories", lecture.getId())
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.categories").isArray());
+
+        // Gleiche Lecture erneut bewerten -> EDIT/OVERWRITE-Zweig
+        mockMvc.perform(post("/ratings/rate")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {"lectureId":"%s","topics":[{"category":"ORGANIZATION","value":2}]}
+                            """.formatted(lecture.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, ratingRepository.count());
+    }
+
     private void requestCode(String email) throws Exception {
         mockMvc.perform(post("/auth/request-login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -1820,3 +1916,4 @@ class AdminApiIntegrationTests {
     private record Session(Student student, Admin admin, Token token, String rawToken) {
     }
 }
+

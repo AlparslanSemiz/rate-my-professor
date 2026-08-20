@@ -73,6 +73,7 @@ class AccountControllerTests {
                         "Error, cannot authenticate user",
                         false,
                         null,
+                        null,
                         0,
                         0,
                         0,
@@ -94,6 +95,7 @@ class AccountControllerTests {
                 .thenReturn(new StudentProfileResponse(
                         "Error, cannot authenticate user",
                         false,
+                        null,
                         null,
                         0,
                         0,
@@ -117,6 +119,7 @@ class AccountControllerTests {
                         "Success",
                         true,
                         "SchnellerFuchs1234",
+                        "https://api.dicebear.com/10.x/thumbs/svg?eyesProbability=100&eyesVariant=variant02,variant03,variant04,variant05,variant06,variant07,variant08&seed=e7e9f5bb-c638-4901-ab16-816064183886",
                         4.5,
                         0,
                         0,

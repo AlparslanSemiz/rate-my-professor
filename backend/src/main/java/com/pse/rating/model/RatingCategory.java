@@ -2,6 +2,7 @@ package com.pse.rating.model;
 
 public enum RatingCategory {
 
+    OVERALL("Overall", 0),
 
     // Generell
     ROOM("Raum", 0.5),
@@ -41,9 +42,6 @@ public enum RatingCategory {
     TUTOR_MOTIVATION("Motivation", 1.0),
     TUTOR_FRIENDLINESS("Freundlichkeit", 1.0),
     TUTOR_FEEDBACK("Feedback", 1.0);
-
-
-
 
 
     private final String displayName;

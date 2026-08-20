@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.pse.shared.util.ProfilePictureGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -198,6 +199,7 @@ public class SocialService {
                     comment.getContent(),
                     comment.getStatus(),
                     comment.getStudent().getUsername(),
+                    ProfilePictureGenerator.generateProfilePicture(comment.getStudent()),
                     comment.getLecture().getId(),
                     comment.getCreatedAt(),
                     commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
@@ -465,6 +467,7 @@ public class SocialService {
                     comment.getContent(),
                     comment.getStatus(),
                     comment.getStudent().getUsername(),
+                    ProfilePictureGenerator.generateProfilePicture(comment.getStudent()),
                     comment.getLecture().getId(),
                     comment.getCreatedAt(),
                     commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
@@ -496,6 +499,7 @@ public class SocialService {
                     answer.getContent(),
                     answer.getStatus(),
                     answer.getStudent().getUsername(),
+                    ProfilePictureGenerator.generateProfilePicture(answer.getStudent()),
                     answer.getCreatedAt(),
                     answerVoteRepository.countByAnswerAndVote(answer, VoteType.DOWN),
                     answerVoteRepository.countByAnswerAndVote(answer, VoteType.UP)
