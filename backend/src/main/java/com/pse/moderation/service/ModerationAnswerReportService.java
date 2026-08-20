@@ -154,6 +154,8 @@ public class ModerationAnswerReportService {
     private ReportedAnswerResponse toResponse(AnswerReport report) {
         return new ReportedAnswerResponse(
                 report.getId(),
+                report.getAnswer().getId(),
+                report.getAnswer().getComment().getId(),
                 report.getAnswer().getContent(),
                 report.getAnswer().getComment().getContent(),
                 postContext(report),

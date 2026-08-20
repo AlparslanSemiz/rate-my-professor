@@ -157,6 +157,7 @@ public class ModerationCommentService {
     private ReportedCommentResponse toResponse(CommentReport report) {
         return new ReportedCommentResponse(
                 report.getId(),
+                report.getComment().getId(),
                 report.getComment().getContent(),
                 postContext(report),
                 report.getExplanation() == null ? "" : report.getExplanation(),
