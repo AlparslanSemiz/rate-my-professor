@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.pse.user.model.Student;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.pse.shared.enums.ReportStatus;
@@ -71,7 +72,16 @@ public class BugReport {
     @Column(name = "issue_iid")
     private Integer issueIid;
 
+    /**
+     * Carries a database-level default, which the other columns here do not need. Production
+     * runs {@code ddl-auto=update} against a populated {@code bug_reports}, and Postgres
+     * refuses to add a NOT NULL column unless the rows already there have something to take.
+     * The Java initialiser only covers rows this application creates, so without the default
+     * the column is never added — and a failed schema update is logged, not fatal, so the
+     * application would come up and fail on the first read instead.
+     */
     @Enumerated(EnumType.STRING)
+    @ColumnDefault("'NONE'")
     @Column(name = "issue_state", nullable = false)
     private IssueState issueState = IssueState.NONE;
 }
