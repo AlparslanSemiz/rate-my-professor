@@ -18,7 +18,7 @@ export default function SystemPulse({
     ? Math.round(((stats.totalReports - stats.openReports) / stats.totalReports) * 100)
     : 100
   const metrics = [
-    { label: 'Accounts not blocked', value: activeRate, color: '#3b82f6' },
+    { label: 'Active accounts', value: activeRate, color: '#3b82f6' },
     { label: 'Admin share of accounts', value: adminShare, color: '#22c55e' },
     { label: 'Reports handled', value: reportsHandled, color: '#f97316' },
   ]
