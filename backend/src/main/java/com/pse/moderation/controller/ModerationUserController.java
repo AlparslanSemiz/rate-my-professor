@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -30,9 +31,21 @@ public class ModerationUserController {
         this.service = service;
     }
 
+    /**
+     * Every parameter is declared as a String and parsed in the service, the same way
+     * {@code AuditLogController} does it, so a bad value answers with a specific message
+     * instead of Spring's generic type-mismatch failure.
+     */
     @GetMapping
-    public UserListResponse getStudents() {
-        return service.getStudents();
+    public UserListResponse getStudents(
+            @RequestParam(required = false) String limit,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String sort
+    ) {
+        return service.getStudents(limit, cursor, q, status, role, sort);
     }
 
     @GetMapping("/{id}")

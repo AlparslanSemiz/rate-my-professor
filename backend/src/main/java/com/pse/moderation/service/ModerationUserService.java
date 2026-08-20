@@ -23,18 +23,27 @@ import com.pse.shared.enums.NotificationType;
 import com.pse.shared.enums.UserRole;
 import com.pse.shared.enums.UserStatus;
 import com.pse.shared.error.ApiException;
+import com.pse.shared.util.KeysetCursorCodec;
+import com.pse.shared.util.SqlLike;
 import com.pse.shared.util.UtcDates;
 import com.pse.social.model.Notification;
 import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.NotificationRepository;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -59,6 +68,7 @@ public class ModerationUserService {
     private final TokenRepository tokenRepository;
     private final AuditWriter auditWriter;
     private final AuthService authService;
+    private final KeysetCursorCodec cursorCodec;
     private final Clock clock;
 
     public ModerationUserService(
@@ -70,6 +80,7 @@ public class ModerationUserService {
             TokenRepository tokenRepository,
             AuditWriter auditWriter,
             AuthService authService,
+            KeysetCursorCodec cursorCodec,
             Clock clock
     ) {
         this.studentRepository = studentRepository;
@@ -80,6 +91,7 @@ public class ModerationUserService {
         this.tokenRepository = tokenRepository;
         this.auditWriter = auditWriter;
         this.authService = authService;
+        this.cursorCodec = cursorCodec;
         this.clock = clock;
     }
 
@@ -92,34 +104,229 @@ public class ModerationUserService {
         return adminRepository.existsByStudent(student);
     }
 
+    /**
+     * Lists users, with filtering always available and pagination opt-in.
+     *
+     * <p>Passing no {@code limit} returns every matching user and a {@code null} cursor,
+     * which is what this endpoint has always done — a caller that has not been taught to
+     * follow cursors is not silently truncated to one page. Passing {@code limit} switches
+     * on keyset pagination.
+     *
+     * <p>The two modes order differently, and they have to. The unparameterised listing puts
+     * administrators first and then newest-joined, an ordering computed in Java because role
+     * is not a column and so cannot be an ORDER BY. Keyset pagination needs an ordering the
+     * database can express and resume from, so a paginated read orders strictly by
+     * {@code (createdAt, id)} — the "newest first" the panel asked for.
+     */
     @Transactional(readOnly = true)
-    public UserListResponse getStudents() {
-        // Three batch queries instead of three per student. The role is resolved
-        // in Java rather than SQL, so it cannot be an ORDER BY and the ordering
-        // has to happen here too.
+    public UserListResponse getStudents(
+            String rawLimit,
+            String rawCursor,
+            String q,
+            String rawStatus,
+            String rawRole,
+            String rawSort
+    ) {
+        Integer limit = parseUserLimit(rawLimit);
+        UserStatus status = parseStatusFilter(rawStatus);
+        UserRole role = parseUserRole(rawRole);
+        boolean newestFirst = parseNewestFirst(rawSort);
+        boolean hasCursor = rawCursor != null && !rawCursor.isBlank();
+        // A cursor with no limit has no page size to resume with. Answering it by returning
+        // everything from that point would quietly ignore half of what was asked. Checked
+        // before the cursor is decoded, because how the request is formed is the more
+        // fundamental complaint than what the cursor happens to contain.
+        if (hasCursor && limit == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "A cursor requires a limit");
+        }
+        KeysetCursorCodec.Cursor cursor = hasCursor
+                ? cursorCodec.decode(rawCursor, "Invalid user cursor")
+                : null;
+        String search = q == null ? "" : q.trim();
+        if (search.length() > 200) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "User search is too long");
+        }
+
+        // Three batch queries instead of three per student.
         Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
         Map<UUID, Integer> warningCounts = toCountMap(warningRepository.countGroupedByStudent());
         Map<UUID, Integer> reportCounts =
                 toCountMap(commentReportRepository.countGroupedByCommentStudent());
 
-        List<UserResponse> users = studentRepository
-                .findAllByStatusNotOrderByCreatedAtDesc(UserStatus.DELETED)
-                .stream()
+        Specification<Student> specification = (root, query, builder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            // Soft-deleted accounts are anonymised and are never listed, whatever else was
+            // asked for. Returning them would over-report the size of the platform.
+            predicates.add(builder.notEqual(root.get("status"), UserStatus.DELETED));
+            if (status != null) {
+                predicates.add(builder.equal(root.get("status"), status));
+            }
+            if (role != null) {
+                predicates.add(rolePredicate(builder, root, adminIds, role));
+            }
+            if (!search.isEmpty()) {
+                String pattern = "%" + SqlLike.escape(search.toLowerCase(Locale.ROOT)) + "%";
+                predicates.add(builder.or(
+                        builder.like(builder.lower(root.get("username")), pattern, SqlLike.ESCAPE),
+                        builder.like(builder.lower(root.get("kitEmail")), pattern, SqlLike.ESCAPE)
+                ));
+            }
+            if (cursor != null) {
+                predicates.add(cursorPredicate(builder, root, cursor, newestFirst));
+            }
+            return builder.and(predicates.toArray(Predicate[]::new));
+        };
+
+        if (limit == null) {
+            List<UserResponse> users = studentRepository.findAll(specification).stream()
+                    .map(student -> toUserResponse(
+                            student,
+                            adminIds.contains(student.getId()),
+                            warningCounts.getOrDefault(student.getId(), 0),
+                            reportCounts.getOrDefault(student.getId(), 0)
+                    ))
+                    // Administrators first, then newest joined first. The id is the
+                    // final tiebreaker so the order is stable across calls even when
+                    // two accounts share a joined timestamp.
+                    .sorted(Comparator
+                            .comparing((UserResponse user) -> user.role() == UserRole.ADMIN ? 0 : 1)
+                            .thenComparing(UserResponse::joined, Comparator.reverseOrder())
+                            .thenComparing(user -> user.id().toString()))
+                    .toList();
+            return new UserListResponse("Success", true, users, null);
+        }
+
+        Sort.Direction direction = newestFirst ? Sort.Direction.DESC : Sort.Direction.ASC;
+        // One row more than asked for: its presence is what says there is a next page,
+        // without a second count query that could disagree with this one.
+        List<Student> fetched = studentRepository.findAll(
+                specification,
+                PageRequest.of(
+                        0,
+                        limit + 1,
+                        Sort.by(
+                                new Sort.Order(direction, "createdAt"),
+                                new Sort.Order(direction, "id")
+                        )
+                )
+        ).getContent();
+        boolean hasNext = fetched.size() > limit;
+        List<Student> page = hasNext ? fetched.subList(0, limit) : fetched;
+        String nextCursor = hasNext && !page.isEmpty()
+                ? cursorCodec.encode(page.getLast().getCreatedAt(), page.getLast().getId())
+                : null;
+
+        List<UserResponse> users = page.stream()
                 .map(student -> toUserResponse(
                         student,
                         adminIds.contains(student.getId()),
                         warningCounts.getOrDefault(student.getId(), 0),
                         reportCounts.getOrDefault(student.getId(), 0)
                 ))
-                // Administrators first, then newest joined first. The id is the
-                // final tiebreaker so the order is stable across calls even when
-                // two accounts share a joined timestamp.
-                .sorted(Comparator
-                        .comparing((UserResponse user) -> user.role() == UserRole.ADMIN ? 0 : 1)
-                        .thenComparing(UserResponse::joined, Comparator.reverseOrder())
-                        .thenComparing(user -> user.id().toString()))
                 .toList();
-        return new UserListResponse("Success", true, users);
+        return new UserListResponse("Success", true, users, nextCursor);
+    }
+
+    /**
+     * Role is membership of the {@code admins} table rather than a column on the student, so
+     * it filters as an id set. The empty set still has to produce a valid predicate:
+     * {@code IN ()} is not legal SQL, so both degenerate cases are answered directly.
+     */
+    private static Predicate rolePredicate(
+            CriteriaBuilder builder,
+            Root<Student> root,
+            Set<UUID> adminIds,
+            UserRole role
+    ) {
+        if (adminIds.isEmpty()) {
+            return role == UserRole.ADMIN ? builder.disjunction() : builder.conjunction();
+        }
+        Predicate isAdmin = root.get("id").in(adminIds);
+        return role == UserRole.ADMIN ? isAdmin : builder.not(isAdmin);
+    }
+
+    /** Resumes the {@code (createdAt, id)} ordering strictly after the cursor's row. */
+    private static Predicate cursorPredicate(
+            CriteriaBuilder builder,
+            Root<Student> root,
+            KeysetCursorCodec.Cursor cursor,
+            boolean newestFirst
+    ) {
+        LocalDateTime at = cursor.createdAtLocal();
+        if (newestFirst) {
+            return builder.or(
+                    builder.lessThan(root.get("createdAt"), at),
+                    builder.and(
+                            builder.equal(root.get("createdAt"), at),
+                            builder.lessThan(root.get("id"), cursor.id())
+                    )
+            );
+        }
+        return builder.or(
+                builder.greaterThan(root.get("createdAt"), at),
+                builder.and(
+                        builder.equal(root.get("createdAt"), at),
+                        builder.greaterThan(root.get("id"), cursor.id())
+                )
+        );
+    }
+
+    /** Absent means "do not paginate", which is not the same as a default page size. */
+    private static Integer parseUserLimit(String rawLimit) {
+        if (rawLimit == null || rawLimit.isBlank()) {
+            return null;
+        }
+        int limit;
+        try {
+            limit = Integer.parseInt(rawLimit.trim());
+        } catch (NumberFormatException exception) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST, "Limit must be an integer between 1 and 100");
+        }
+        if (limit < 1 || limit > 100) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST, "Limit must be an integer between 1 and 100");
+        }
+        return limit;
+    }
+
+    private static UserStatus parseStatusFilter(String rawStatus) {
+        if (rawStatus == null || rawStatus.isBlank()) {
+            return null;
+        }
+        UserStatus status;
+        try {
+            status = UserStatus.valueOf(rawStatus.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid user status");
+        }
+        // Filtering for DELETED can only ever return nothing, because deleted accounts are
+        // excluded unconditionally. An empty page would read as "no deleted accounts exist".
+        if (status == UserStatus.DELETED) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Deleted users are not listed");
+        }
+        return status;
+    }
+
+    private static UserRole parseUserRole(String rawRole) {
+        if (rawRole == null || rawRole.isBlank()) {
+            return null;
+        }
+        try {
+            return UserRole.valueOf(rawRole.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid user role");
+        }
+    }
+
+    private static boolean parseNewestFirst(String rawSort) {
+        if (rawSort == null || rawSort.isBlank() || rawSort.trim().equalsIgnoreCase("newest")) {
+            return true;
+        }
+        if (rawSort.trim().equalsIgnoreCase("oldest")) {
+            return false;
+        }
+        throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid user sort");
     }
 
     @Transactional(readOnly = true)
@@ -254,6 +461,12 @@ public class ModerationUserService {
                 Admin admin = new Admin();
                 admin.setStudent(target);
                 adminRepository.save(admin);
+                // Promoting revokes the sessions for the same reason demoting does, plus
+                // one of its own: admin membership is resolved per request, so a live
+                // student token would silently become an admin session that no ADMIN_LOGIN
+                // ever recorded, and its eventual logout would write an ADMIN_LOGOUT with
+                // no matching login. A fresh sign-in produces a real pair.
+                sessionsRevoked = true;
             } else {
                 Admin admin = adminRepository.findByStudent(target).orElseThrow(
                         () -> new ApiException(HttpStatus.CONFLICT, "User is not an administrator")
@@ -596,7 +809,8 @@ public class ModerationUserService {
                 UtcDates.format(lastOnline),
                 student.getBiography() == null ? "" : student.getBiography(),
                 warnings,
-                reports
+                reports,
+                student.getCredibilityScore()
         );
     }
 
@@ -609,7 +823,7 @@ public class ModerationUserService {
                 ? null
                 : new WarningIssuerResponse(
                         issuer.getStudent().getId(),
-                        null,
+                        issuer.getStudent().getUsername(),
                         UtcDates.format(warning.getCreatedAt())
                 );
         return new WarningResponse(

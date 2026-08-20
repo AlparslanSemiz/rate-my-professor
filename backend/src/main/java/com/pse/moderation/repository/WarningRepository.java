@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.pse.moderation.model.Warning;
 import com.pse.user.model.Student;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -16,6 +17,12 @@ public interface WarningRepository extends JpaRepository<Warning, UUID> {
 
     List<Warning> findByStudent(Student student);
 
+    /**
+     * The warning history as the panel reads it. The issuing admin and the student behind
+     * it are fetched with the warnings because the response names the issuer; without the
+     * graph that name costs two extra queries per warning.
+     */
+    @EntityGraph(attributePaths = {"admin", "admin.student"})
     List<Warning> findByStudentOrderByCreatedAtDesc(Student student);
 
     long countByStudent(Student student);
