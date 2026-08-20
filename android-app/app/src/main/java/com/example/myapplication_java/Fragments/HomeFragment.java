@@ -60,6 +60,7 @@ public class HomeFragment extends Fragment {
         setStatsAndUsername(binding);
 
         binding.notifications.setOnClickListener(v -> openNotifications());
+        binding.listOfMyRatingsButton.setOnClickListener(v -> openListOfMyRatings());
         return binding.getRoot();
     }
 
@@ -152,6 +153,18 @@ public class HomeFragment extends Fragment {
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
                 .replace(R.id.fragment_container, new NotificationFragment())
+                .addToBackStack(null)
+                .commit();
+    }
+
+    /**
+     * Opens the List Of My Ratings-screen.
+     * <p>Unlike the bottom navigation tabs this goes on the back stack, so its back button can
+     * return here.</p>
+     */
+    private void openListOfMyRatings() {
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction().replace(R.id.fragment_container, new ListOfMyRatingsFragment())
                 .addToBackStack(null)
                 .commit();
     }

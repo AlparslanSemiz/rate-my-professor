@@ -21,7 +21,7 @@
         app:layout_constraintTop_toTopOf="@+id/semester" />
 
     <TextView
-        android:id="@+id/averageRatingBackground"
+        android:id="@+id/averageRatingGiven"
         android:layout_width="wrap_content"
         android:layout_height="0dp"
         android:layout_marginEnd="8dp"
@@ -49,9 +49,9 @@
         android:text="WS 23/24"
         android:textColor="@color/text_primary"
         android:textSize="30sp"
-        app:layout_constraintEnd_toStartOf="@+id/averageRatingBackground"
+        app:layout_constraintEnd_toStartOf="@+id/averageRatingGiven"
         app:layout_constraintStart_toStartOf="@+id/header_background"
-        app:layout_constraintTop_toTopOf="@+id/averageRatingBackground" />
+        app:layout_constraintTop_toTopOf="@+id/averageRatingGiven" />
 
     <TextView
         android:id="@+id/lecture_name"
@@ -63,7 +63,7 @@
         android:text="Lecture Name Zeilenumbruchstest"
         android:textColor="@color/text_primary"
         android:textSize="30sp"
-        app:layout_constraintEnd_toStartOf="@+id/averageRatingBackground"
+        app:layout_constraintEnd_toStartOf="@+id/averageRatingGiven"
         app:layout_constraintStart_toStartOf="@+id/header_background"
         app:layout_constraintTop_toBottomOf="@+id/semester" />
 </androidx.constraintlayout.widget.ConstraintLayout>
