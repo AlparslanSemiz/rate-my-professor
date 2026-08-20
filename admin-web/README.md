@@ -414,21 +414,30 @@ refresh, and watch the count move.
 
 ## Known Backend Gaps
 
-Features whose frontend is written and inert because the API does not carry
-what they need. Each is a backend change; the panel picks them up with no
-release of its own where noted.
+Nearly all of what this section used to list was **closed by the backend change of
+2026-08-20**. That change is not deployed yet, so the panel still runs against the old
+contract until it lands; the table below is what remains after it does.
+
+Resolved by that change: each warning now carries its own `id` and its issuer's `name`; the
+issuer is derived from the auth token, so the panel stops sending it; `/comments/reported` and
+`/answers/reported` carry `commentId` / `answerId`; `GET /data/professor` carries `lectureIds`;
+`GET /users` takes `limit`, `cursor`, `q`, `status`, `role` and `sort` and returns
+`nextCursor`; `GET /ratings` lists individual ratings with ids; `/auth/me` returns the admin's
+real id; `GET /users/{id}` is flat, as the panel assumed; soft-deleted accounts are excluded
+from both user reads; `credibilityScore` is returned by both; and `/system/status` carries
+`counts.activeUsers` alongside `counts.users`.
+
+Two contract details worth knowing rather than rediscovering: `counts.admins` counts accounts
+holding the role, not the allowlist — an address in the backend's bootstrap list is re-promoted
+on the next restart or sign-in, so demoting it in the panel does not stick until the address
+leaves that configuration. And `POST /users/{id}/warnings` accepts the old `userID` +
+`createdFrom` body permanently, not as a temporary shim, so the two repos deploy in any order.
 
 | Gap | Effect on the panel |
 | --- | --- |
-| `GET /users/:id/warnings` omits each warning's `id` | Correct/withdraw controls stay hidden. `updateWarning` and `deleteWarning` are implemented and light up as soon as the field appears. |
-| A warning's `createdFrom` carries only an `id`, not a name | The history cannot say who issued a warning, so it does not show an issuer at all. |
-| No admin listing of individual ratings | `RatingsService.delete` has no screen: the public read returns category averages without rating ids, so there is nothing to take an id from. |
-| `GET /users` has no pagination, filtering or sorting | The panel loads every user and filters client-side, and the dashboard refetches the whole list on each refresh. |
-| `GET /data/professor` omits `lectureIds` | Which lectures a professor teaches is reverse-indexed from the lecture list. Correct today; it breaks if lectures are ever paginated. |
-| The report endpoints omit the reported content's id | `/comments/reported` and `/answers/reported` carry the comment or answer as text only, so `ReportItem.id` is the *report's* id. From the reports tab an operator cannot open, edit or delete the content a report is about. |
-| `credibilityScore` may not be returned by the user reads | `PATCH /users/{id}` accepts it, so the panel can write it. It is typed optional on `User`: the profile shows it and the edit form seeds from it the moment it arrives, and until then the input says the stored value is unknown. |
-| `GET /users/{id}` is assumed to return the user **flat** | Every other endpoint wraps its payload. If this one wraps too, `getById` returns an object with no `id` and the profile fails blankly. Unconfirmed — the unit test codifies the panel's assumption, not the backend's behaviour. |
-| Unclear whether `GET /users` excludes soft-deleted accounts | `DELETE /users/{id}` anonymises rather than removes. If those rows still come back, "Total users" over-counts on the dashboard and the Users page. The panel does not filter them out, because doing so would diverge from `/system/status`. |
+| A session that ends on **TTL expiry** writes no `ADMIN_LOGOUT` | The pair closes on an explicit sign-out — the panel calls `POST /auth/logout` — and a session the backend revokes itself is recorded on the action that caused it (`USER_UPDATED` with `metadata.sessionsRevoked`). Pure TTL expiry has no actor and no request, so nothing is written. A missing `ADMIN_LOGOUT` is normal and does **not** mean the session is still live. |
+| `GET /users` orders differently with and without parameters | Unparameterised it is admins first, then newest. Any paginated call is strictly newest-first, because role is not a column it can sort on. The Users page changes order the moment it paginates. |
+| GitLab issue creation is inert until it is configured | Without `GITLAB_BASE_URL`, `GITLAB_PROJECT_ID` and `GITLAB_TOKEN` the backend reports `gitlabEnabled: false` and the endpoint answers `503`. The panel hides the control rather than offering one that cannot work. |
 
 ## Audit Log Design
 
