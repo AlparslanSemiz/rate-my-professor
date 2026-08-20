@@ -10,6 +10,7 @@ import { jsonResponse } from '../test/http'
 vi.mock('../api/AuthService', () => ({
   authService: {
     logout: vi.fn(),
+    me: vi.fn(),
   },
 }))
 
@@ -51,6 +52,7 @@ function renderAuthHarness() {
 describe('AuthProvider', () => {
   beforeEach(() => {
     vi.mocked(authService.logout).mockResolvedValue({ success: true, message: 'Logged out' })
+    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'Signed in' })
   })
 
   it('hydrates auth state from localStorage', () => {

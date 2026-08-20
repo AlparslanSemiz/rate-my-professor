@@ -1,4 +1,4 @@
-import { ApiError, apiClient, EMPTY_RESPONSE_MESSAGE } from '../../api/ApiClient'
+import { ApiError, apiClient } from '../../api/ApiClient'
 import { authService, type AuthUser } from '../../api/AuthService'
 import { usersService, type User } from '../../api/UsersService'
 import {
@@ -54,8 +54,14 @@ async function resolveAdminUser(email: string): Promise<AuthUser> {
   return toAuthUser(adminUser)
 }
 
+/**
+ * A 403 is the backend refusing this account the admin panel, which is the one case where
+ * "not authorized" is the right thing to say. Every other failure keeps its own message:
+ * deciding authorization by matching on an error string reported the wrong reason whenever
+ * an unrelated call in the login path happened to fail the same way.
+ */
 export function getLoginErrorMessage(error: unknown) {
-  if (error instanceof ApiError && error.message === EMPTY_RESPONSE_MESSAGE) {
+  if (error instanceof ApiError && error.status === 403) {
     return ADMIN_ACCESS_ERROR
   }
   return getErrorMessage(error, LOGIN_ERROR_FALLBACK)

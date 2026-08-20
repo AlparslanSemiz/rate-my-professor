@@ -13,6 +13,7 @@ vi.mock('./api/AuthService', () => ({
   authService: {
     requestLoginCode: vi.fn(),
     login: vi.fn(),
+    me: vi.fn(),
   },
 }))
 
@@ -82,6 +83,7 @@ describe('App routing and authentication', () => {
     apiClient.setToken(null)
     vi.mocked(authService.requestLoginCode).mockResolvedValue({ success: true, message: 'Code sent' })
     vi.mocked(authService.login).mockResolvedValue({ token: 'mock-token-1' })
+    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'Signed in' })
     vi.mocked(usersService.getAll).mockResolvedValue([adminAccount])
     vi.mocked(feedbackService.getReports).mockResolvedValue([])
     vi.mocked(auditLogsService.getLogs).mockResolvedValue({ auditLogs: [], nextCursor: null })
