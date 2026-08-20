@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { usersService, type User, type UserUpdate, type Warning } from '../../../api/UsersService'
-import { useAuth } from '../../../context/useAuth'
 import { getStaleAfterWriteMessage } from '../../../utils/getErrorMessage'
 import { useLoadedProfile } from './useLoadedProfile'
 
@@ -21,7 +20,6 @@ export function useUserProfile(
   opened: boolean,
   onUserChanged?: (id: string, change: UserChange) => void,
 ) {
-  const { user: currentAdmin } = useAuth()
   const profile = useLoadedProfile(userId, opened)
   const [warnLoading, setWarnLoading] = useState(false)
   const [editLoading, setEditLoading] = useState(false)
@@ -62,12 +60,12 @@ export function useUserProfile(
 
   async function warn(message: string) {
     const trimmedMessage = message.trim()
-    if (!profile.user || !trimmedMessage || !currentAdmin) return
+    if (!profile.user || !trimmedMessage) return
 
     const id = profile.user.id
     setWarnLoading(true)
     try {
-      await usersService.warn(id, trimmedMessage, currentAdmin.id)
+      await usersService.warn(id, trimmedMessage)
       await readBack(async () => applyWarnings(id, await usersService.getWarnings(id)))
     } finally {
       setWarnLoading(false)

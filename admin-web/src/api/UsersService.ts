@@ -6,15 +6,21 @@ export type { UserRole, UserStatus }
 
 export interface Warning {
   /**
-   * Address of the warning, needed to correct or withdraw it. The backend's warning history
-   * does not carry it yet, so it is absent on every warning served today and the panel hides
-   * the edit and withdraw controls when it is missing.
+   * Address of the warning, needed to correct or withdraw it. Served since the 2026-08-20
+   * release; the null case is kept only so an older deployment hides those controls instead
+   * of offering an action with nothing to address.
    */
   id: string | null
   userID: string
   message: string
   createdAt: string
+  /**
+   * The issuing admin's **student** id — the same value `/auth/me` reports — so "did I issue
+   * this?" is answered without a second lookup.
+   */
   issuedBy: string
+  /** The issuing admin as the operator knows them, for the history line. */
+  issuedByName: string
 }
 
 export interface User {
@@ -48,8 +54,10 @@ interface BackendWarning {
   userID: string
   message: string
   createdAt: string
-  createdFrom: { id: string; student?: unknown; createdAt: string } | null
+  createdFrom: { id: string; name?: string; createdAt: string } | null
 }
+
+const UNKNOWN_ISSUER = 'Unknown'
 
 function toWarning(w: BackendWarning): Warning {
   return {
@@ -57,7 +65,8 @@ function toWarning(w: BackendWarning): Warning {
     userID: w.userID,
     message: w.message,
     createdAt: w.createdAt,
-    issuedBy: w.createdFrom?.id ?? 'Unknown',
+    issuedBy: w.createdFrom?.id ?? '',
+    issuedByName: w.createdFrom?.name?.trim() || UNKNOWN_ISSUER,
   }
 }
 
@@ -111,16 +120,12 @@ export class UsersService {
   }
 
   /**
-   * The backend expects the issuing admin's id nested as `createdFrom.id` — it does not
-   * derive this from the auth token. `adminId` should be the id of the currently logged-in
-   * admin. `id`/`createdAt` are omitted: the backend generates both itself.
+   * The target comes from the path and the issuer from the auth token, so the body is the
+   * message and nothing else. The panel used to send `userID` and `createdFrom` as well; the
+   * backend ignored both, and still accepts them.
    */
-  warn(id: string, message: string, adminId: string): Promise<BasicResponse> {
-    return this.client.post<BasicResponse>(`/users/${id}/warnings`, {
-      userID: id,
-      message,
-      createdFrom: { id: adminId },
-    })
+  warn(id: string, message: string): Promise<BasicResponse> {
+    return this.client.post<BasicResponse>(`/users/${id}/warnings`, { message })
   }
 
   async getWarnings(id: string): Promise<Warning[]> {

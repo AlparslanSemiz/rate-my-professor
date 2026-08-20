@@ -172,6 +172,7 @@ describe('Users page', () => {
         message: 'Original wording',
         createdAt: '2026-06-01T10:00:00Z',
         issuedBy: 'admin-1',
+        issuedByName: 'Alparslan',
       },
     ])
     vi.mocked(usersService.updateWarning).mockRejectedValue(
@@ -276,6 +277,31 @@ describe('Users page', () => {
     expect(await screen.findAllByText('Robert Johnson')).not.toHaveLength(0)
   })
 
+  it('names the admin who issued each warning and lets the backend name the issuer', async () => {
+    vi.mocked(usersService.getWarnings).mockResolvedValue([
+      {
+        id: 'warning-1',
+        userID: 'user-2',
+        message: 'Original wording',
+        createdAt: '2026-06-01T10:00:00Z',
+        issuedBy: 'admin-1',
+        issuedByName: 'Alparslan',
+      },
+    ])
+    const user = userEvent.setup()
+    renderUsers()
+
+    await user.click(await screen.findByText('Bob Johnson'))
+    expect(await screen.findByText(/Issued by Alparslan/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Warn' }))
+    await user.type(screen.getByPlaceholderText('Describe the reason for this warning...'), 'Test warning')
+    await user.click(screen.getByRole('button', { name: 'Send warning' }))
+
+    // The issuer travels in the token, so the panel no longer says who it thinks it is.
+    await waitFor(() => expect(usersService.warn).toHaveBeenCalledWith('user-2', 'Test warning'))
+  })
+
   it('keeps the warning form open and shows an error when warning fails', async () => {
     vi.mocked(usersService.warn).mockRejectedValue(new Error('Warning rejected'))
     const user = userEvent.setup()
@@ -293,8 +319,8 @@ describe('Users page', () => {
   it('lowers the table count when a warning is withdrawn', async () => {
     accounts[1].warnings = 2
     const history: Warning[] = [
-      { id: 'warning-1', userID: 'user-2', message: 'First', createdAt: '2026-06-01T10:00:00Z', issuedBy: 'admin-1' },
-      { id: 'warning-2', userID: 'user-2', message: 'Second', createdAt: '2026-06-02T10:00:00Z', issuedBy: 'admin-1' },
+      { id: 'warning-1', userID: 'user-2', message: 'First', createdAt: '2026-06-01T10:00:00Z', issuedBy: 'admin-1', issuedByName: 'Alparslan' },
+      { id: 'warning-2', userID: 'user-2', message: 'Second', createdAt: '2026-06-02T10:00:00Z', issuedBy: 'admin-1', issuedByName: 'Alparslan' },
     ]
     vi.mocked(usersService.getWarnings).mockImplementation(async () => [...history])
     vi.mocked(usersService.deleteWarning).mockImplementation(async () => {

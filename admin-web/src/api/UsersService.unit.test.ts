@@ -108,7 +108,7 @@ describe('UsersService', () => {
           userID: 'user-1',
           message: 'Inappropriate language.',
           createdAt: '2026-05-10T14:22:00Z',
-          createdFrom: { id: 'admin-1', createdAt: '2026-05-10T14:20:00Z' },
+          createdFrom: { id: 'admin-1', name: 'Alparslan', createdAt: '2026-05-10T14:20:00Z' },
         },
       ],
     }))
@@ -120,8 +120,32 @@ describe('UsersService', () => {
         userID: 'user-1',
         message: 'Inappropriate language.',
         createdAt: '2026-05-10T14:22:00Z',
+        // The issuer's student id, which is also what /auth/me reports for the signed-in
+        // admin, and their display name for the history line.
         issuedBy: 'admin-1',
+        issuedByName: 'Alparslan',
       },
+    ])
+  })
+
+  it('names an issuer the backend did not name', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      success: true,
+      message: 'OK',
+      warnings: [
+        {
+          id: 'warning-1',
+          userID: 'user-1',
+          message: 'Inappropriate language.',
+          createdAt: '2026-05-10T14:22:00Z',
+          createdFrom: null,
+        },
+      ],
+    }))
+    const service = createUsersService()
+
+    await expect(service.getWarnings('user-1')).resolves.toMatchObject([
+      { issuedBy: '', issuedByName: 'Unknown' },
     ])
   })
 
@@ -198,20 +222,18 @@ describe('UsersService', () => {
     )
   })
 
-  it('sends warnings with the issuing admin id expected by the backend', async () => {
+  it('sends nothing but the message when issuing a warning', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'Warning created' }))
     const service = createUsersService()
 
-    await service.warn('user-1', 'Bad behavior', 'admin-1')
+    await service.warn('user-1', 'Bad behavior')
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toBe(`${TEST_API_BASE_URL}/users/user-1/warnings`)
     expect(init.method).toBe('POST')
-    expect(JSON.parse(init.body as string)).toEqual({
-      userID: 'user-1',
-      message: 'Bad behavior',
-      createdFrom: { id: 'admin-1' },
-    })
+    // The target is in the path and the issuer comes from the token, so neither belongs in
+    // the body — sending an issuer is what let the panel name the wrong one.
+    expect(JSON.parse(init.body as string)).toEqual({ message: 'Bad behavior' })
   })
   it('soft-deletes a user account by id', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'Deleted user successfully' }))
