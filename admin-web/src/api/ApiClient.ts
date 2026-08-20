@@ -17,13 +17,42 @@ type QueryMethod = 'POST' | 'PATCH'
 type QueryParam = string | number | boolean | null | undefined
 
 const DEFAULT_API_BASE_URL = 'http://localhost:8080'
-const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Check your connection and try again.'
+/**
+ * A rejected origin and an unreachable host are the same `TypeError` to `fetch` — the
+ * browser refuses to say which — so the message has to name both rather than blame the
+ * connection for what is usually a CORS allowlist.
+ */
+const NETWORK_ERROR_MESSAGE =
+  'Could not reach the server. It may be down, or it may be refusing requests from this origin.'
 export const EMPTY_RESPONSE_MESSAGE = 'The server returned an empty response.'
 const INVALID_RESPONSE_MESSAGE = 'The server returned an invalid JSON response.'
+const REFUSED_MESSAGE = 'The server refused the request.'
 
 function hasErrorMessage(body: unknown): body is { message: string } {
   if (!body || typeof body !== 'object' || !('message' in body)) return false
   return typeof body.message === 'string' && body.message.trim().length > 0
+}
+
+/** A 2xx body that reports `success: false` — the request was served but refused. */
+function isRefusal(body: unknown): boolean {
+  if (!body || typeof body !== 'object' || !('success' in body)) return false
+  return body.success === false
+}
+
+/**
+ * Reads a list out of a response body. Without this the services call `.map` straight on a
+ * field that may not be there, and the resulting `TypeError` surfaces to the operator as
+ * though it were the backend's own explanation.
+ */
+export function expectArray<T>(body: unknown, key: string, context: string): T[] {
+  const value = (body as Record<string, unknown> | null | undefined)?.[key]
+  if (!Array.isArray(value)) {
+    throw new ApiError(
+      0,
+      `${context} did not return a "${key}" list. The response did not match what this panel expects.`,
+    )
+  }
+  return value as T[]
 }
 
 export class ApiClient {
@@ -85,7 +114,7 @@ export class ApiClient {
   private async fetchResponse(path: string, init: RequestInit): Promise<Response> {
     let response: Response
     try {
-      response = await fetch(`${this.baseUrl}${path}`, { ...init, headers: this.headers() })
+      response = await fetch(`${this.baseUrl}${path}`, { ...init, headers: this.headers(init) })
     } catch {
       throw new ApiError(0, NETWORK_ERROR_MESSAGE)
     }
@@ -100,15 +129,29 @@ export class ApiClient {
       throw new ApiError(response.status, EMPTY_RESPONSE_MESSAGE)
     }
 
+    let body: unknown
     try {
-      return JSON.parse(text) as T
+      body = JSON.parse(text)
     } catch {
       throw new ApiError(response.status, INVALID_RESPONSE_MESSAGE)
     }
+
+    // Every response in this API carries `success`. A 2xx that reports `success: false` is a
+    // refusal the operator has to be told about, not a write that quietly did nothing.
+    if (isRefusal(body)) {
+      throw new ApiError(
+        response.status,
+        hasErrorMessage(body) ? body.message : REFUSED_MESSAGE,
+      )
+    }
+
+    return body as T
   }
 
-  private headers(): Record<string, string> {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  /** `Content-Type` is only true of a request that carries a body, so it is only sent then. */
+  private headers(init: RequestInit): Record<string, string> {
+    const headers: Record<string, string> = {}
+    if (init.body !== undefined) headers['Content-Type'] = 'application/json'
     if (this.token) headers.Authorization = `Bearer ${this.token}`
     return headers
   }

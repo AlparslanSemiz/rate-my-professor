@@ -13,4 +13,9 @@ describe('getErrorMessage', () => {
   it('uses the fallback for non-Error values', () => {
     expect(getErrorMessage({ message: 'Untrusted shape' }, 'Fallback')).toBe('Fallback')
   })
+
+  it('uses the fallback for internal runtime errors rather than leaking them', () => {
+    const bug = new TypeError("Cannot read properties of undefined (reading 'map')")
+    expect(getErrorMessage(bug, 'Failed to load users')).toBe('Failed to load users')
+  })
 })

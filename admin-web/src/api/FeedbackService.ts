@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, expectArray, type ApiClient, type BasicResponse } from './ApiClient'
 import type { ReportStatus, Severity } from '../domain/moderation'
 
 export type { ReportStatus, Severity }
@@ -38,7 +38,7 @@ export class FeedbackService {
 
   async getReports(): Promise<BugReport[]> {
     const response = await this.client.get<BugReportsResponse>('/reports')
-    return response.bugReports
+    return expectArray<BugReport>(response, 'bugReports', 'GET /reports')
   }
 
   updateReport(id: string, update: BugReportUpdate): Promise<BasicResponse> {

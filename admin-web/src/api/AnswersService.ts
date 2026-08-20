@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, expectArray, type ApiClient, type BasicResponse } from './ApiClient'
 import type { ContentUpdate } from './CommentsService'
 import type { UserReference } from '../domain/user'
 import type { ContentStatus, ReportReason, ReportStatus } from '../domain/moderation'
@@ -53,12 +53,12 @@ export class AnswersService {
 
   async getAll(): Promise<ManagedAnswer[]> {
     const response = await this.client.get<ManagedAnswersResponse>('/answers')
-    return response.answers
+    return expectArray<ManagedAnswer>(response, 'answers', 'GET /answers')
   }
 
   async getReported(): Promise<ReportedAnswer[]> {
     const response = await this.client.get<ReportedAnswersResponse>('/answers/reported')
-    return response.answers
+    return expectArray<ReportedAnswer>(response, 'answers', 'GET /answers/reported')
   }
 
   /** Edits the text or the visibility of an answer, independently of any report. */

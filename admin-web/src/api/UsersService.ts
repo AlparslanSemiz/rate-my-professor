@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, expectArray, type ApiClient, type BasicResponse } from './ApiClient'
 import { withRequiredAdminRole } from '../utils/adminAccess'
 import type { UserRole, UserStatus } from '../domain/user'
 
@@ -81,7 +81,7 @@ export class UsersService {
 
   async getAll(): Promise<User[]> {
     const response = await this.client.get<UserListResponse>('/users')
-    return response.users.map(withRequiredAdminRole)
+    return expectArray<User>(response, 'users', 'GET /users').map(withRequiredAdminRole)
   }
 
   async getById(id: string): Promise<User> {
@@ -120,7 +120,7 @@ export class UsersService {
 
   async getWarnings(id: string): Promise<Warning[]> {
     const response = await this.client.get<WarningHistoryResponse>(`/users/${id}/warnings`)
-    return response.warnings.map(toWarning)
+    return expectArray<BackendWarning>(response, 'warnings', 'GET /users/{id}/warnings').map(toWarning)
   }
 
   /**

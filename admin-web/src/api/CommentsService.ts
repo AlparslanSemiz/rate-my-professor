@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, expectArray, type ApiClient, type BasicResponse } from './ApiClient'
 import type { UserReference, UserRole, UserStatus } from '../domain/user'
 import type {
   ContentStatus,
@@ -63,12 +63,12 @@ export class CommentsService {
 
   async getAll(): Promise<ManagedComment[]> {
     const response = await this.client.get<ManagedCommentsResponse>('/comments')
-    return response.comments
+    return expectArray<ManagedComment>(response, 'comments', 'GET /comments')
   }
 
   async getReported(): Promise<ReportedComment[]> {
     const response = await this.client.get<ReportedCommentsResponse>('/comments/reported')
-    return response.comments
+    return expectArray<ReportedComment>(response, 'comments', 'GET /comments/reported')
   }
 
   /** Edits the text or the visibility of a comment, independently of any report. */
