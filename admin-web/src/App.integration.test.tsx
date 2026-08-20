@@ -77,7 +77,12 @@ describe('App routing and authentication', () => {
     apiClient.setToken(null)
     vi.mocked(authService.requestLoginCode).mockResolvedValue({ success: true, message: 'Code sent' })
     vi.mocked(authService.login).mockResolvedValue({ token: 'mock-token-1' })
-    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'Signed in' })
+    // `/auth/me` reports the signed-in account, which is where the panel's identity comes from.
+    vi.mocked(authService.me).mockResolvedValue({
+      success: true,
+      message: 'Signed in',
+      user: adminUser,
+    })
     vi.mocked(usersService.getAll).mockResolvedValue([adminAccount])
     vi.mocked(feedbackService.getReports).mockResolvedValue([])
     vi.mocked(auditLogsService.getLogs).mockResolvedValue({ auditLogs: [], nextCursor: null })
@@ -256,7 +261,11 @@ describe('App routing and authentication', () => {
 
   it('logs in the required admin email as admin even when the backend user role is student', async () => {
     const user = userEvent.setup()
-    vi.mocked(usersService.getAll).mockResolvedValue([requiredAdminAccount])
+    vi.mocked(authService.me).mockResolvedValue({
+      success: true,
+      message: 'Signed in',
+      user: { ...requiredAdminUser, role: 'STUDENT' },
+    })
     window.history.pushState({}, '', '/login')
 
     render(<App />)
@@ -271,11 +280,11 @@ describe('App routing and authentication', () => {
     expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(requiredAdminUser)
   })
 
-  it('refuses the login when no source can say who the admin is', async () => {
+  it('refuses the login when the session cannot say who the admin is', async () => {
     const user = userEvent.setup()
-    // Neither `/auth/me` nor `/users` yields an identity. The panel used to invent one whose
-    // id was the email address, and then send it back as the issuer of every warning.
-    vi.mocked(usersService.getAll).mockRejectedValue(new Error('The server returned an empty response.'))
+    // `/auth/me` is the only source of an id the backend actually issued. The panel used to
+    // invent one from the email address and send it back as the issuer of every warning.
+    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'Signed in' })
     window.history.pushState({}, '', '/login')
 
     render(<App />)
@@ -289,7 +298,7 @@ describe('App routing and authentication', () => {
     expect(localStorage.getItem('user')).toBeNull()
   })
 
-  it('takes the admin identity from /auth/me without reading the whole user list', async () => {
+  it('takes the admin identity from /auth/me and never reads the user list', async () => {
     const user = userEvent.setup()
     vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'Signed in', user: adminUser })
     window.history.pushState({}, '', '/login')

@@ -1,7 +1,6 @@
 import { ApiError, apiClient } from '../../api/ApiClient'
 import { authService, type AuthUser } from '../../api/AuthService'
-import { usersService, type User } from '../../api/UsersService'
-import { isRequiredAdminEmail, normalizeEmail, withRequiredAdminRole } from '../../utils/adminAccess'
+import { isRequiredAdminEmail, withRequiredAdminRole } from '../../utils/adminAccess'
 import { getErrorMessage } from '../../utils/getErrorMessage'
 
 const LOGIN_ERROR_FALLBACK = 'Login failed'
@@ -14,57 +13,31 @@ export const NOT_AN_ADMIN_ERROR =
 const IDENTITY_ERROR =
   'Signed in, but your admin account could not be read. Try again in a moment.'
 
-function findUserByEmail(users: User[], email: string) {
-  const normalizedEmail = normalizeEmail(email)
-  return users.find((user) => normalizeEmail(user.kitEmail) === normalizedEmail)
-}
-
-function toAuthUser(user: User): AuthUser {
-  return {
-    id: user.id,
-    name: user.username,
-    email: user.kitEmail,
-    role: user.role,
-  }
-}
-
 /**
- * The signed-in admin as the backend knows them. `/auth/me` is asked first because it answers
- * with the real account id — the one that appears as the actor on audit entries, and the one
- * sent as the issuer of every warning.
+ * The signed-in admin as the backend knows them. `/auth/me` is the only source: it answers
+ * with the real account id — the one that appears as the actor on audit entries — and the
+ * panel has no other way to learn an id the backend actually issued.
+ *
+ * Never invents an identity. An id the backend did not issue used to reach it right back as
+ * the author of a warning, so failing the login is the honest outcome when the session
+ * cannot say who this is.
  */
-async function identityFromSession(): Promise<AuthUser | null> {
+async function resolveAdminUser(): Promise<AuthUser> {
+  const user = await readSessionUser()
+  if (!user) throw new Error(IDENTITY_ERROR)
+  return withRequiredAdminRole(user)
+}
+
+async function readSessionUser(): Promise<AuthUser | null> {
   try {
     const session = await authService.me()
     const user = session.user
-    if (!user || typeof user.id !== 'string' || !user.id.trim()) return null
-    return withRequiredAdminRole(user)
+    return user && typeof user.id === 'string' && user.id.trim() ? user : null
   } catch {
-    // Whether `/auth/me` returns the user is not settled yet, so a failure here is not a
-    // failure to log in: the account is looked up in the user list instead.
+    // The sign-in itself succeeded; only this read failed. Passing its own message on would
+    // describe the login as the thing that went wrong.
     return null
   }
-}
-
-/** Fallback for a backend whose `/auth/me` reports only whether the token is still good. */
-async function identityFromUserList(email: string): Promise<AuthUser | null> {
-  try {
-    const currentUser = findUserByEmail(await usersService.getAll(), email)
-    return currentUser ? toAuthUser(withRequiredAdminRole(currentUser)) : null
-  } catch {
-    return null
-  }
-}
-
-/**
- * Never invents an identity. An id the backend did not issue used to reach it right back as
- * the author of a warning, so failing the login is the honest outcome when neither source
- * can say who this is.
- */
-async function resolveAdminUser(email: string): Promise<AuthUser> {
-  const adminUser = (await identityFromSession()) ?? (await identityFromUserList(email))
-  if (!adminUser) throw new Error(IDENTITY_ERROR)
-  return adminUser
 }
 
 /** Shown when the backend rate-limits the login code request. */
@@ -106,5 +79,5 @@ export async function authenticateAdmin(email: string, code: string): Promise<{ 
   const { token } = await authService.login(email, code)
 
   apiClient.setToken(token)
-  return { token, user: await resolveAdminUser(email) }
+  return { token, user: await resolveAdminUser() }
 }
