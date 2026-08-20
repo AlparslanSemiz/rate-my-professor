@@ -27,6 +27,7 @@ import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.MyApplication;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.Responses.BasicResponse;
@@ -252,41 +253,45 @@ public class SettingsFragment extends Fragment {
         APIService apiService = createApiService();
         Call<BasicResponse> call = apiService.logoutAllDevices(session.bearerToken());
 
-        call.enqueue(new Callback<>() {
-            /**
-             * Handles the logout response from the backend.
-             */
-            @Override
-            public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
-                // The answer can arrive after the user left the settings screen, in which case
-                // there is no context left to show a toast with.
-                if (!isAdded()) {
-                    return;
+        if (!NetworkUtils.isInternetAvailable(getContext())) {
+            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        } else {
+            call.enqueue(new Callback<>() {
+                /**
+                 * Handles the logout response from the backend.
+                 */
+                @Override
+                public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
+                    // The answer can arrive after the user left the settings screen, in which case
+                    // there is no context left to show a toast with.
+                    if (!isAdded()) {
+                        return;
+                    }
+
+                    BasicResponse responseBody = response.body();
+                    if (!response.isSuccessful() || responseBody == null || !responseBody.success()) {
+                        Toast.makeText(requireContext(), R.string.logout_all_devices_failed, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    session.clear();
+                    Toast.makeText(requireContext(), R.string.logout_all_devices_success, Toast.LENGTH_LONG).show();
+                    openLoginScreen();
                 }
 
-                BasicResponse responseBody = response.body();
-                if (!response.isSuccessful() || responseBody == null || !responseBody.success()) {
+                /**
+                 * Handles network failures while logging out on all devices.
+                 */
+                @Override
+                public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {
+                    if (!isAdded()) {
+                        return;
+                    }
+
                     Toast.makeText(requireContext(), R.string.logout_all_devices_failed, Toast.LENGTH_LONG).show();
-                    return;
                 }
-
-                session.clear();
-                Toast.makeText(requireContext(), R.string.logout_all_devices_success, Toast.LENGTH_LONG).show();
-                openLoginScreen();
-            }
-
-            /**
-             * Handles network failures while logging out on all devices.
-             */
-            @Override
-            public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {
-                if (!isAdded()) {
-                    return;
-                }
-
-                Toast.makeText(requireContext(), R.string.logout_all_devices_failed, Toast.LENGTH_LONG).show();
-            }
-        });
+            });
+        }
     }
 
     /**
@@ -316,41 +321,45 @@ public class SettingsFragment extends Fragment {
         APIService apiService = createApiService();
         Call<BasicResponse> call = apiService.deleteAccount(session.bearerToken());
 
-        call.enqueue(new Callback<>() {
-            /**
-             * Handles the delete-account response from the backend.
-             */
-            @Override
-            public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
-                // The answer can arrive after the user left the settings screen, in which case
-                // there is no context left to show a toast with.
-                if (!isAdded()) {
-                    return;
+        if (!NetworkUtils.isInternetAvailable(getContext())) {
+            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        } else {
+            call.enqueue(new Callback<>() {
+                /**
+                 * Handles the delete-account response from the backend.
+                 */
+                @Override
+                public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
+                    // The answer can arrive after the user left the settings screen, in which case
+                    // there is no context left to show a toast with.
+                    if (!isAdded()) {
+                        return;
+                    }
+
+                    BasicResponse responseBody = response.body();
+                    if (!response.isSuccessful() || responseBody == null || !responseBody.success()) {
+                        Toast.makeText(requireContext(), R.string.delete_account_failed, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    session.clear();
+                    Toast.makeText(requireContext(), R.string.delete_account_success, Toast.LENGTH_LONG).show();
+                    openLoginScreen();
                 }
 
-                BasicResponse responseBody = response.body();
-                if (!response.isSuccessful() || responseBody == null || !responseBody.success()) {
+                /**
+                 * Handles network failures during account deletion.
+                 */
+                @Override
+                public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {
+                    if (!isAdded()) {
+                        return;
+                    }
+
                     Toast.makeText(requireContext(), R.string.delete_account_failed, Toast.LENGTH_LONG).show();
-                    return;
                 }
-
-                session.clear();
-                Toast.makeText(requireContext(), R.string.delete_account_success, Toast.LENGTH_LONG).show();
-                openLoginScreen();
-            }
-
-            /**
-             * Handles network failures during account deletion.
-             */
-            @Override
-            public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {
-                if (!isAdded()) {
-                    return;
-                }
-
-                Toast.makeText(requireContext(), R.string.delete_account_failed, Toast.LENGTH_LONG).show();
-            }
-        });
+            });
+        }
     }
 
     /**

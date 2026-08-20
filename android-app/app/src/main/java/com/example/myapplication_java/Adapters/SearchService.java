@@ -144,4 +144,11 @@ public interface SearchService {
 
     @Query("DELETE FROM comments")
     void deleteComments();
+
+    @Query("SELECT * FROM comments WHERE lectureID = :lectureId ORDER BY upVotes DESC")
+    List<CommentModel> getComments(String lectureId);
+
+    @Query("SELECT * FROM comments WHERE parentID = :parentId ORDER BY upVotes DESC")
+    List<CommentModel> getReplies(String parentId);
+
 }

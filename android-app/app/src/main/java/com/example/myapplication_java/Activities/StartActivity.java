@@ -3,10 +3,12 @@ package com.example.myapplication_java.Activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
@@ -38,12 +40,18 @@ public class StartActivity extends AppCompatActivity {
         //debug
         Log.d(TAG, "mail :" + session.mailAddress() + " otp: " + session.loginToken());
 
-        if (!session.isLoggedIn()) {
-            openScreen(LoginActivity.class);
-            return;
-        }
+        if (!NetworkUtils.isInternetAvailable(this)) {
+            Toast.makeText(this, "You are currently offline. If you want to use the online mode " +
+                    "make sure that there is an internet connection and then log in.", Toast.LENGTH_LONG).show();
+            openScreen(MainActivity.class);
+        } else {
+            if (!session.isLoggedIn()) {
+                openScreen(LoginActivity.class);
+                return;
+            }
 
-        validateSavedLogin(session);
+            validateSavedLogin(session);
+        }
     }
 
     /**
