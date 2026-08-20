@@ -2,12 +2,13 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { User } from './api/UsersService'
-import { apiClient } from './api/ApiClient'
+import { ApiError, apiClient } from './api/ApiClient'
 import { authService } from './api/AuthService'
 import { feedbackService } from './api/FeedbackService'
 import { usersService } from './api/UsersService'
 import { auditLogsService } from './api/AuditLogsService'
 import App from './App'
+import { SESSION_EXPIRED_MESSAGE } from './features/auth/hooks/useLoginFlow'
 
 vi.mock('./api/AuthService', () => ({
   authService: {
@@ -217,5 +218,54 @@ describe('App routing and authentication', () => {
 
     expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(adminUser)
+  })
+  it('sends an expired session back to the login screen and says why', async () => {
+    // The stored token is a claim, not proof. A backend that refuses it ends the session.
+    vi.mocked(authService.me).mockRejectedValueOnce(new ApiError(401, 'Token expired'))
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(adminUser))
+    window.history.pushState({}, '', '/audit-logs')
+
+    render(<App />)
+
+    expect(await screen.findByText(SESSION_EXPIRED_MESSAGE)).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/login')
+    expect(localStorage.getItem('token')).toBeNull()
+  })
+
+  it('returns to the page the expired session was thrown out of', async () => {
+    const user = userEvent.setup()
+    vi.mocked(authService.me).mockRejectedValueOnce(new ApiError(401, 'Token expired'))
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(adminUser))
+    window.history.pushState({}, '', '/audit-logs')
+
+    render(<App />)
+    await screen.findByText(SESSION_EXPIRED_MESSAGE)
+
+    await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), adminUser.email)
+    await user.click(screen.getByRole('button', { name: 'Send me a code' }))
+    await user.type(await screen.findByPlaceholderText('Code from your email'), '123456')
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    // Not the dashboard: the attempted path travelled with the redirect in `location.state`.
+    expect(await screen.findByRole('heading', { name: 'Audit Logs' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/audit-logs')
+  })
+
+  it('keeps the session when the backend is merely unreachable', async () => {
+    // Deliberate asymmetry: only a refusal ends a session. A network failure says nothing
+    // about whether the token is still good, and signing the admin out over a blip would
+    // lose their place for no reason. One careless refactor turns this into the opposite.
+    vi.mocked(authService.me).mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(adminUser))
+    window.history.pushState({}, '', '/audit-logs')
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Audit Logs' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/audit-logs')
+    expect(localStorage.getItem('token')).toBe('stored-token')
   })
 })
