@@ -106,6 +106,25 @@ class LazyLoadingRegressionTests {
     }
 
     @Test
+    void professorEndpointsSurviveAProfessorWithLectures() throws Exception {
+        Student student = createStudent("lazy-professor@student.kit.edu");
+        Lecture lecture = createLecture(student);
+        Professor professor = lecture.getProfessors().getFirst();
+
+        // ProfessorResponse carries lectureIds, and Professor.lectures is the lazy inverse
+        // side of the many-to-many. Without a transaction boundary and a fetch graph on the
+        // read, this is a LazyInitializationException the catch-all turns into an opaque 500.
+        mockMvc.perform(get("/data/professor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.professors[0].lectureIds[0]")
+                        .value(lecture.getId().toString()));
+
+        mockMvc.perform(get("/data/professor/" + professor.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.professor.lectureIds[0]").value(lecture.getId().toString()));
+    }
+
+    @Test
     void ratingsEndpointSurvivesALectureWithRatings() throws Exception {
         Student student = createStudent("lazy-rating@student.kit.edu");
         Lecture lecture = createLecture(student);
