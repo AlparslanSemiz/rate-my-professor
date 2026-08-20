@@ -129,6 +129,9 @@ public class AuditWriter {
         log.setTargetLabel(targetLabel);
         log.setChanges(changes == null ? new LinkedHashMap<>() : new LinkedHashMap<>(changes));
         log.setMetadata(metadata == null ? new LinkedHashMap<>() : new LinkedHashMap<>(metadata));
+        // Stamped when this write is the reversal of an earlier entry. The reversal is
+        // recorded as its own event; the entry it undoes is never modified.
+        log.setRevertsAuditId(AuditRevertContext.get());
         return repository.saveAndFlush(log);
     }
 

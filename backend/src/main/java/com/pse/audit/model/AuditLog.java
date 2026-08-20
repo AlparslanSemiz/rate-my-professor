@@ -76,6 +76,14 @@ public class AuditLog implements Persistable<UUID> {
     @Column(nullable = false)
     private Map<String, Object> metadata = new LinkedHashMap<>();
 
+    /**
+     * Set on the event a reversal writes, pointing at the entry it reversed. The reversal is
+     * its own record and the original is never touched: this is what lets a read tell that an
+     * entry has already been undone without the log having to be rewritten to say so.
+     */
+    @Column(name = "reverts_audit_id")
+    private UUID revertsAuditId;
+
     @Override
     public boolean isNew() {
         return newEntity;

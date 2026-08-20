@@ -41,4 +41,18 @@ public interface AuditLogRepository
             @Param("actions") Collection<AuditAction> actions,
             Pageable pageable
     );
+
+    /**
+     * For each of {@code ids} that a later entry has already reversed, the pair
+     * {@code [revertedId, reversalId]}. One query for a whole page rather than one per row,
+     * and it carries the reversal's id so reporting who undid what costs nothing extra.
+     */
+    @Query("""
+        SELECT log.revertsAuditId, log.id
+        FROM AuditLog log
+        WHERE log.revertsAuditId IN :ids
+    """)
+    List<Object[]> findReversalsOf(@Param("ids") Collection<UUID> ids);
+
+    Optional<AuditLog> findFirstByRevertsAuditId(UUID revertsAuditId);
 }

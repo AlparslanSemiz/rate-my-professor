@@ -3,11 +3,19 @@ package com.pse.audit.controller;
 import com.pse.audit.dto.AuditLogPageResponse;
 import com.pse.audit.dto.AuditMetaResponse;
 import com.pse.audit.model.AuditActionScope;
+import com.pse.audit.revert.AuditRevertService;
 import com.pse.audit.service.AuditLogService;
+import com.pse.auth.dto.response.BasicResponse;
+import com.pse.security.AuthenticatedUser;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 /**
  * The administrative record: what admins did through the panel. Student activity and
@@ -18,9 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuditLogController {
 
     private final AuditLogService service;
+    private final AuditRevertService revertService;
 
-    public AuditLogController(AuditLogService service) {
+    public AuditLogController(AuditLogService service, AuditRevertService revertService) {
         this.service = service;
+        this.revertService = revertService;
     }
 
     @GetMapping
@@ -52,5 +62,21 @@ public class AuditLogController {
     @GetMapping("/meta")
     public AuditMetaResponse getMeta() {
         return service.getMeta(AuditActionScope.ADMINISTRATIVE);
+    }
+
+    /**
+     * Reverses the field edit one entry recorded.
+     *
+     * <p>Refuses rather than half-applies: an entry that is not a field edit, is outside the
+     * revert window, has already been reversed, or whose value has changed since answers
+     * {@code 409} with a {@code reason} the caller can branch on. The reversal is written as
+     * its own audit event — the entry being reversed is never rewritten.
+     */
+    @PostMapping("/{id}/revert")
+    public BasicResponse revert(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @PathVariable UUID id
+    ) {
+        return revertService.revert(principal, id);
     }
 }

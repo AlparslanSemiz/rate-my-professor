@@ -12,6 +12,7 @@ import com.pse.audit.model.AuditActorType;
 import com.pse.audit.model.AuditLog;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.repository.AuditLogRepository;
+import com.pse.audit.revert.AuditRevertService;
 import com.pse.shared.error.ApiException;
 import com.pse.shared.util.KeysetCursorCodec;
 import com.pse.shared.util.SqlLike;
@@ -47,10 +48,16 @@ public class AuditLogService {
 
     private final AuditLogRepository repository;
     private final AuditCursorCodec cursorCodec;
+    private final AuditRevertService revertService;
 
-    public AuditLogService(AuditLogRepository repository, AuditCursorCodec cursorCodec) {
+    public AuditLogService(
+            AuditLogRepository repository,
+            AuditCursorCodec cursorCodec,
+            AuditRevertService revertService
+    ) {
         this.repository = repository;
         this.cursorCodec = cursorCodec;
+        this.revertService = revertService;
     }
 
     @Transactional(readOnly = true)
@@ -146,10 +153,13 @@ public class AuditLogService {
                 ? cursorCodec.encode(page.getLast().getCreatedAt(), page.getLast().getId())
                 : null;
 
+        // One pass for the whole page rather than a check per row: the staleness rule has to
+        // read each entry's target, and that is only affordable batched.
+        Map<UUID, AuditRevertService.Revertability> verdicts = revertService.describe(page);
         return new AuditLogPageResponse(
                 "Success",
                 true,
-                page.stream().map(this::toResponse).toList(),
+                page.stream().map(log -> toResponse(log, verdicts.get(log.getId()))).toList(),
                 nextCursor
         );
     }
@@ -181,7 +191,7 @@ public class AuditLogService {
         );
     }
 
-    private AuditLogResponse toResponse(AuditLog log) {
+    private AuditLogResponse toResponse(AuditLog log, AuditRevertService.Revertability verdict) {
         AuditTargetResponse target = log.getTargetType() == null
                 ? null
                 : new AuditTargetResponse(
@@ -202,7 +212,10 @@ public class AuditLogService {
                 ),
                 target,
                 log.getChanges(),
-                log.getMetadata()
+                log.getMetadata(),
+                verdict.revertible(),
+                verdict.reason() == null ? null : verdict.reason().name(),
+                verdict.revertedByAuditId()
         );
     }
 
