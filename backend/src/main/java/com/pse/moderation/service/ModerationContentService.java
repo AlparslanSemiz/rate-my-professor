@@ -21,6 +21,7 @@ import com.pse.security.AuthenticatedUser;
 import com.pse.shared.enums.ContentStatus;
 import com.pse.shared.enums.UserRole;
 import com.pse.shared.error.ApiException;
+import com.pse.shared.util.KeysetCursorCodec;
 import com.pse.shared.util.UtcDates;
 import com.pse.social.model.Answer;
 import com.pse.social.model.Comment;
@@ -31,10 +32,16 @@ import com.pse.social.repository.CommentRepository;
 import com.pse.social.service.AnswerCleanup;
 import com.pse.lecture.model.Lecture;
 import com.pse.user.model.Student;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -62,6 +69,7 @@ public class ModerationContentService {
     private final WarningRepository warningRepository;
     private final AdminRepository adminRepository;
     private final AuditWriter auditWriter;
+    private final KeysetCursorCodec cursorCodec;
 
     public ModerationContentService(
             CommentRepository commentRepository,
@@ -72,7 +80,8 @@ public class ModerationContentService {
             RatingRepository ratingRepository,
             WarningRepository warningRepository,
             AdminRepository adminRepository,
-            AuditWriter auditWriter
+            AuditWriter auditWriter,
+            KeysetCursorCodec cursorCodec
     ) {
         this.commentRepository = commentRepository;
         this.answerRepository = answerRepository;
@@ -83,6 +92,7 @@ public class ModerationContentService {
         this.warningRepository = warningRepository;
         this.adminRepository = adminRepository;
         this.auditWriter = auditWriter;
+        this.cursorCodec = cursorCodec;
     }
 
     @Transactional(readOnly = true)
@@ -259,14 +269,73 @@ public class ModerationContentService {
         return new BasicResponse("Deleted answer successfully", true);
     }
 
+    /**
+     * Every rating individually, which is what a bogus one gets identified and deleted by id
+     * from. Filtering by lecture is a query parameter rather than a path segment because the
+     * public per-lecture averages already own {@code GET /ratings/{lectureId}}.
+     *
+     * <p>Pagination is opt-in in the same way {@code GET /users} is: no {@code limit} returns
+     * everything and a null cursor, so a caller that has not learned to follow cursors is not
+     * silently truncated.
+     */
     @Transactional(readOnly = true)
-    public ManagedRatingsResponse getRatings() {
+    public ManagedRatingsResponse getRatings(String rawLimit, String rawCursor, String rawLectureId) {
+        Integer limit = parseRatingLimit(rawLimit);
+        UUID lectureId = parseLectureId(rawLectureId);
+        boolean hasCursor = rawCursor != null && !rawCursor.isBlank();
+        if (hasCursor && limit == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "A cursor requires a limit");
+        }
+        KeysetCursorCodec.Cursor cursor = hasCursor
+                ? cursorCodec.decode(rawCursor, "Invalid rating cursor")
+                : null;
+
         Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
         Map<UUID, Integer> warningCounts = toCountMap(warningRepository.countGroupedByStudent());
 
-        List<ManagedRatingResponse> ratings = ratingRepository
-                .findAllByOrderByCreatedAtDesc()
-                .stream()
+        Specification<Rating> specification = (root, query, builder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (lectureId != null) {
+                predicates.add(builder.equal(root.get("lecture").get("id"), lectureId));
+            }
+            if (cursor != null) {
+                LocalDateTime at = cursor.createdAtLocal();
+                predicates.add(builder.or(
+                        builder.lessThan(root.get("createdAt"), at),
+                        builder.and(
+                                builder.equal(root.get("createdAt"), at),
+                                builder.lessThan(root.get("id"), cursor.id())
+                        )
+                ));
+            }
+            return builder.and(predicates.toArray(Predicate[]::new));
+        };
+
+        List<Rating> page;
+        String nextCursor = null;
+        if (limit == null) {
+            page = ratingRepository.findAll(
+                    specification,
+                    Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
+            );
+        } else {
+            // One row more than asked for: its presence is what says there is a next page.
+            List<Rating> fetched = ratingRepository.findAll(
+                    specification,
+                    PageRequest.of(
+                            0,
+                            limit + 1,
+                            Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
+                    )
+            ).getContent();
+            boolean hasNext = fetched.size() > limit;
+            page = hasNext ? fetched.subList(0, limit) : fetched;
+            nextCursor = hasNext && !page.isEmpty()
+                    ? cursorCodec.encode(page.getLast().getCreatedAt(), page.getLast().getId())
+                    : null;
+        }
+
+        List<ManagedRatingResponse> ratings = page.stream()
                 .map(rating -> new ManagedRatingResponse(
                         rating.getId(),
                         toUserReference(rating.getStudent(), adminIds, warningCounts),
@@ -281,7 +350,37 @@ public class ModerationContentService {
                         UtcDates.format(rating.getCreatedAt())
                 ))
                 .toList();
-        return new ManagedRatingsResponse("Successfully found all ratings", true, ratings);
+        return new ManagedRatingsResponse(
+                "Successfully found all ratings", true, ratings, nextCursor);
+    }
+
+    private static Integer parseRatingLimit(String rawLimit) {
+        if (rawLimit == null || rawLimit.isBlank()) {
+            return null;
+        }
+        int limit;
+        try {
+            limit = Integer.parseInt(rawLimit.trim());
+        } catch (NumberFormatException exception) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST, "Limit must be an integer between 1 and 100");
+        }
+        if (limit < 1 || limit > 100) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST, "Limit must be an integer between 1 and 100");
+        }
+        return limit;
+    }
+
+    private static UUID parseLectureId(String rawLectureId) {
+        if (rawLectureId == null || rawLectureId.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(rawLectureId.trim());
+        } catch (IllegalArgumentException exception) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid lecture id");
+        }
     }
 
     /**
