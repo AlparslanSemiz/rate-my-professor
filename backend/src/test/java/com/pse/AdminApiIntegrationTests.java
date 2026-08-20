@@ -57,6 +57,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 
 import java.time.Instant;
+import com.pse.rating.model.Rating;
+import com.pse.rating.model.RatingCategory;
+import com.pse.rating.model.RatingTopic;
+import com.pse.social.model.Answer;
+import com.pse.social.model.AnswerReport;
+
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
@@ -80,7 +86,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(TestDeliveryConfig.class)
+@Import({TestDeliveryConfig.class, com.pse.support.TestGitLabConfig.class})
 class AdminApiIntegrationTests {
 
     @Autowired MockMvc mockMvc;
@@ -103,6 +109,7 @@ class AdminApiIntegrationTests {
     @Autowired AnswerVoteRepository answerVoteRepository;
     @Autowired RatingRepository ratingRepository;
     @MockitoSpyBean AuditWriter auditWriter;
+    @Autowired com.pse.support.TestGitLabConfig.RecordingGitLabClient gitLabClient;
 
     @BeforeEach
     void cleanDatabase() {
@@ -124,6 +131,7 @@ class AdminApiIntegrationTests {
         professorRepository.deleteAll();
         studentRepository.deleteAll();
         codeDelivery.clear();
+        gitLabClient.reset();
         reset(auditWriter);
     }
 
@@ -776,6 +784,9 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.database.latencyMs").isNumber())
                 .andExpect(jsonPath("$.database.error").doesNotExist())
                 .andExpect(jsonPath("$.counts.users").value(2))
+                // The blocked target is still a user and no longer an active one, which is
+                // the whole reason the dashboard needs both numbers.
+                .andExpect(jsonPath("$.counts.activeUsers").value(1))
                 .andExpect(jsonPath("$.counts.admins").value(1))
                 .andExpect(jsonPath("$.counts.lectures").value(1))
                 .andExpect(jsonPath("$.counts.auditEvents").value(1))
@@ -1820,6 +1831,610 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.success").value(true));
 
         org.junit.jupiter.api.Assertions.assertEquals(1, ratingRepository.count());
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Fields the admin panel reads. Each of these switches on a control that is inert
+    // without it, so the assertion is on the field being present and correct, not on the
+    // request succeeding.
+    // ---------------------------------------------------------------------------------
+
+    @Test
+    void warningHistoryNamesTheIssuingAdminAndIsAddressableById() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session target = createSession("student@student.kit.edu", false);
+
+        mockMvc.perform(post("/users/{id}/warnings", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Be civil\"}"))
+                .andExpect(status().isOk());
+
+        String history = mockMvc.perform(get("/users/{id}/warnings", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warnings[0].id").isString())
+                // The issuer is named, not just referenced: a moderation record that cannot
+                // say who warned someone is most of the point of the record missing.
+                .andExpect(jsonPath("$.warnings[0].createdFrom.name").value("admin"))
+                // and the id is the admin's student id, the same one /auth/me returns.
+                .andExpect(jsonPath("$.warnings[0].createdFrom.id")
+                        .value(admin.student().getId().toString()))
+                .andReturn().getResponse().getContentAsString();
+
+        String warningId = com.jayway.jsonpath.JsonPath.read(history, "$.warnings[0].id");
+
+        // The id the history hands out is the one the correct/withdraw routes accept.
+        mockMvc.perform(patch("/users/{id}/warnings/{warningId}",
+                        target.student().getId(), warningId)
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Please be civil\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete("/users/{id}/warnings/{warningId}",
+                        target.student().getId(), warningId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertEquals(0, warningRepository.count());
+    }
+
+    @Test
+    void reportedContentCarriesTheIdOfTheContentItIsAbout() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session author = createSession("author@student.kit.edu", false);
+        Session reporter = createSession("reporter@student.kit.edu", false);
+        Lecture lecture = createLecture();
+
+        Comment comment = new Comment();
+        comment.setContent("Reported comment");
+        comment.setStudent(author.student());
+        comment.setLecture(lecture);
+        comment = commentRepository.saveAndFlush(comment);
+
+        CommentReport commentReport = new CommentReport();
+        commentReport.setComment(comment);
+        commentReport.setReporter(reporter.student());
+        commentReport.setReason(ReportReason.SPAM);
+        commentReport = commentReportRepository.saveAndFlush(commentReport);
+
+        Answer answer = new Answer();
+        answer.setContent("Reported answer");
+        answer.setStudent(author.student());
+        answer.setComment(comment);
+        answer = answerRepository.saveAndFlush(answer);
+
+        AnswerReport answerReport = new AnswerReport();
+        answerReport.setAnswer(answer);
+        answerReport.setReporter(reporter.student());
+        answerReport.setReason(ReportReason.SPAM);
+        answerReportRepository.saveAndFlush(answerReport);
+
+        // id stays the report's; commentId is the content the report is about, which is what
+        // lets the reports tab act on the comment without hunting for it in the content tab.
+        mockMvc.perform(get("/comments/reported").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments[0].id").value(commentReport.getId().toString()))
+                .andExpect(jsonPath("$.comments[0].commentId").value(comment.getId().toString()));
+
+        mockMvc.perform(get("/answers/reported").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answers[0].id").value(answerReport.getId().toString()))
+                .andExpect(jsonPath("$.answers[0].answerId").value(answer.getId().toString()))
+                // the parent thread, so the answer can be opened in context
+                .andExpect(jsonPath("$.answers[0].commentId").value(comment.getId().toString()));
+    }
+
+    @Test
+    void professorsReportTheirOwnLectureAssignment() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Lecture lecture = createLecture();
+        Professor professor = new Professor();
+        professor.setFirstName("Ada");
+        professor.setLastName("Lovelace");
+        professor.setActive(true);
+        professor = professorRepository.saveAndFlush(professor);
+
+        mockMvc.perform(patch("/data/professor/{id}", professor.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"lectureIds\":[\"%s\"]}".formatted(lecture.getId())))
+                .andExpect(status().isOk());
+
+        // Read back from the professor rather than reverse-indexed from the lecture list,
+        // which is what stops the two directions disagreeing once lectures are paginated.
+        mockMvc.perform(get("/data/professor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.professors[0].lectureIds", hasSize(1)))
+                .andExpect(jsonPath("$.professors[0].lectureIds[0]")
+                        .value(lecture.getId().toString()));
+
+        mockMvc.perform(get("/data/professor/{id}", professor.getId()))
+                .andExpect(status().isOk())
+                // success was hard-coded false on this path, so a client trusting the flag
+                // treated every found professor as a miss.
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.professor.lectureIds[0]").value(lecture.getId().toString()));
+    }
+
+    @Test
+    void credibilityScoreIsReadableFromBothUserReads() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session target = createSession("student@student.kit.edu", false);
+
+        mockMvc.perform(patch("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"credibilityScore\":7}"))
+                .andExpect(status().isOk());
+
+        // Written through PATCH and now readable back, so the edit form can seed its input
+        // instead of telling the operator the stored value is unknown.
+        mockMvc.perform(get("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.credibilityScore").value(7))
+                // and GET /users/{id} is still flat, with no envelope
+                .andExpect(jsonPath("$.success").doesNotExist());
+
+        mockMvc.perform(get("/users").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users[?(@.username == 'student')].credibilityScore")
+                        .value(hasSize(1)));
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Listing parameters
+    // ---------------------------------------------------------------------------------
+
+    @Test
+    void userListingFiltersSortsAndPaginatesWithoutTruncatingUnparameterisedCallers() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        createSession("ada@student.kit.edu", false);
+        createSession("grace@student.kit.edu", false);
+
+        // No limit: everything, and no cursor. A caller that has not been taught to follow
+        // cursors is not silently cut down to one page.
+        mockMvc.perform(get("/users").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users", hasSize(3)))
+                .andExpect(jsonPath("$.nextCursor").doesNotExist());
+
+        String firstPage = mockMvc.perform(get("/users?limit=2")
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users", hasSize(2)))
+                .andExpect(jsonPath("$.nextCursor").isString())
+                .andReturn().getResponse().getContentAsString();
+        String cursor = com.jayway.jsonpath.JsonPath.read(firstPage, "$.nextCursor");
+
+        mockMvc.perform(get("/users?limit=2&cursor={cursor}", cursor)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users", hasSize(1)))
+                .andExpect(jsonPath("$.nextCursor").doesNotExist());
+
+        mockMvc.perform(get("/users?q=ada").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users", hasSize(1)))
+                .andExpect(jsonPath("$.users[0].username").value("ada"));
+
+        mockMvc.perform(get("/users?role=ADMIN").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users", hasSize(1)))
+                .andExpect(jsonPath("$.users[0].username").value("admin"));
+
+        mockMvc.perform(get("/users?status=ACTIVE").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users", hasSize(3)));
+    }
+
+    @Test
+    void userListingRejectsBadParametersWithASpecificReason() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+
+        mockMvc.perform(get("/users?limit=0").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Limit must be an integer between 1 and 100"));
+        mockMvc.perform(get("/users?limit=notanumber")
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isBadRequest());
+        // A malformed cursor is a 400 with a reason, never a 500.
+        mockMvc.perform(get("/users?limit=5&cursor=not-a-cursor")
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid user cursor"));
+        mockMvc.perform(get("/users?cursor=anything")
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("A cursor requires a limit"));
+        // Soft-deleted accounts are excluded unconditionally, so asking for them is an
+        // error rather than an empty page that reads as "there are none".
+        mockMvc.perform(get("/users?status=DELETED")
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Deleted users are not listed"));
+        mockMvc.perform(get("/users?role=WIZARD").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid user role"));
+    }
+
+    @Test
+    void deletedAccountsAreExcludedFromTheListingAndItsCount() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session target = createSession("student@student.kit.edu", false);
+
+        mockMvc.perform(delete("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+
+        // Counting a soft-deleted account would over-report the size of the platform.
+        mockMvc.perform(get("/users").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users", hasSize(1)))
+                .andExpect(jsonPath("$.users[0].username").value("admin"));
+        mockMvc.perform(get("/users?limit=50").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users", hasSize(1)));
+    }
+
+    @Test
+    void ratingListingFiltersByLectureAndPaginates() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session author = createSession("student@student.kit.edu", false);
+        Lecture first = createLecture();
+        Lecture second = new Lecture();
+        second.setName("Databases");
+        second.setCode("CS102");
+        second.setSemesterYear(2026);
+        second.setSemesterSeason(SemesterSeason.SUMMER);
+        second.setActive(true);
+        second = lectureRepository.saveAndFlush(second);
+
+        saveRating(author.student(), first);
+        saveRating(author.student(), second);
+
+        mockMvc.perform(get("/ratings").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ratings", hasSize(2)))
+                .andExpect(jsonPath("$.nextCursor").doesNotExist());
+
+        mockMvc.perform(get("/ratings?lectureId={id}", first.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ratings", hasSize(1)))
+                .andExpect(jsonPath("$.ratings[0].lectureId").value(first.getId().toString()));
+
+        mockMvc.perform(get("/ratings?limit=1").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ratings", hasSize(1)))
+                .andExpect(jsonPath("$.nextCursor").isString());
+
+        mockMvc.perform(get("/ratings?lectureId=nonsense")
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid lecture id"));
+    }
+
+    // ---------------------------------------------------------------------------------
+    // ADMIN_LOGIN / ADMIN_LOGOUT pairing
+    // ---------------------------------------------------------------------------------
+
+    @Test
+    void promotingAStudentEndsItsSessionSoLogoutCannotOrphanAnAdminEvent() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session target = createSession("student@student.kit.edu", false);
+
+        mockMvc.perform(patch("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isOk());
+
+        // Admin membership is resolved per request, so without this the promoted student's
+        // live token would silently become an admin session that no ADMIN_LOGIN recorded,
+        // and logging out would write an ADMIN_LOGOUT with no matching login.
+        mockMvc.perform(post("/auth/logout").header("Authorization", bearer(target.rawToken())))
+                .andExpect(status().isUnauthorized());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                0,
+                auditLogRepository.findAll().stream()
+                        .filter(log -> log.getAction() == AuditAction.ADMIN_LOGOUT)
+                        .count(),
+                "no ADMIN_LOGOUT without a matching ADMIN_LOGIN"
+        );
+        org.junit.jupiter.api.Assertions.assertTrue(
+                auditOf(AuditAction.USER_UPDATED).getMetadata().containsKey("sessionsRevoked")
+        );
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Reverting an administrative edit
+    // ---------------------------------------------------------------------------------
+
+    @Test
+    void aFieldEditIsRevertibleAndTheReversalIsItsOwnAuditEvent() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session target = createSession("student@student.kit.edu", false);
+
+        mockMvc.perform(patch("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"biography\":\"edited by mistake\"}"))
+                .andExpect(status().isOk());
+        UUID editId = auditOf(AuditAction.USER_UPDATED).getId();
+
+        // The server decides revertibility and says so on the entry, so the panel never
+        // reimplements the window or the staleness rule.
+        mockMvc.perform(get("/audit-logs").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.auditLogs[0].revertible").value(true))
+                .andExpect(jsonPath("$.auditLogs[0].revertBlockedReason").doesNotExist());
+
+        mockMvc.perform(post("/audit-logs/{id}/revert", editId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // The field is back...
+        mockMvc.perform(get("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.biography").value(""));
+
+        // ...through a new event, with the original left exactly as it was recorded.
+        AuditLog reversal = auditLogRepository.findFirstByRevertsAuditId(editId).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(AuditAction.USER_UPDATED, reversal.getAction());
+        org.junit.jupiter.api.Assertions.assertNotEquals(editId, reversal.getId());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "edited by mistake",
+                ((Map<?, ?>) auditLogRepository.findById(editId).orElseThrow()
+                        .getChanges().get("biography")).get("after")
+        );
+
+        // A second attempt is refused by cause, not by a generic failure.
+        mockMvc.perform(post("/audit-logs/{id}/revert", editId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.reason").value("ALREADY_REVERTED"));
+    }
+
+    @Test
+    void everyRevertibleTargetTypeHasARegisteredHandler() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session author = createSession("author@student.kit.edu", false);
+        Lecture lecture = createLecture();
+        Comment comment = new Comment();
+        comment.setContent("original");
+        comment.setStudent(author.student());
+        comment.setLecture(lecture);
+        comment = commentRepository.saveAndFlush(comment);
+
+        mockMvc.perform(patch("/comments/{id}", comment.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"edited\"}"))
+                .andExpect(status().isOk());
+
+        // Most handlers are nested static @Component classes. If component scanning missed
+        // them the registry would simply be smaller, with no startup error and every one of
+        // their target types silently reporting ACTION_NOT_REVERTIBLE — so this reverts
+        // through a nested handler rather than the top-level user one.
+        UUID editId = auditOf(AuditAction.COMMENT_UPDATED).getId();
+        mockMvc.perform(post("/audit-logs/{id}/revert", editId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "original",
+                commentRepository.findById(comment.getId()).orElseThrow().getContent()
+        );
+        org.junit.jupiter.api.Assertions.assertTrue(
+                auditLogRepository.findFirstByRevertsAuditId(editId).isPresent(),
+                "the reversal is recorded as its own event"
+        );
+    }
+
+    @Test
+    void revertRefusalsNameTheirCause() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session target = createSession("student@student.kit.edu", false);
+
+        // A deletion cannot be inverted: USER_DELETED anonymises the row and the log does
+        // not carry what was removed.
+        mockMvc.perform(delete("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        UUID deleteId = auditOf(AuditAction.USER_DELETED).getId();
+        mockMvc.perform(post("/audit-logs/{id}/revert", deleteId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.reason").value("ACTION_NOT_REVERTIBLE"))
+                .andExpect(jsonPath("$.success").value(false));
+        mockMvc.perform(get("/audit-logs").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.auditLogs[?(@.action == 'USER_DELETED')].revertible")
+                        .value(hasSize(1)))
+                .andExpect(jsonPath("$.auditLogs[?(@.action == 'USER_DELETED')].revertBlockedReason")
+                        .value(org.hamcrest.Matchers.hasItem("ACTION_NOT_REVERTIBLE")));
+
+        Session second = createSession("other@student.kit.edu", false);
+        mockMvc.perform(patch("/users/{id}", second.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"biography\":\"first\"}"))
+                .andExpect(status().isOk());
+        UUID firstEdit = auditLogRepository.findAll().stream()
+                .filter(log -> log.getAction() == AuditAction.USER_UPDATED)
+                .findFirst().orElseThrow().getId();
+
+        // Something changed the field afterwards, so reverting would discard that change.
+        mockMvc.perform(patch("/users/{id}", second.student().getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"biography\":\"second\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/audit-logs/{id}/revert", firstEdit)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.reason").value("VALUE_CHANGED"));
+
+        mockMvc.perform(post("/audit-logs/{id}/revert", UUID.randomUUID())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void blockingIsRevertibleAndAnOrdinaryErrorStillCarriesNoReason() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session target = createSession("student@student.kit.edu", false);
+
+        mockMvc.perform(patch("/users/{id}/block", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        UUID blockId = auditOf(AuditAction.USER_BLOCKED).getId();
+
+        mockMvc.perform(post("/audit-logs/{id}/revert", blockId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/users/{id}", target.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+
+        // Errors that carry no reason code are shaped exactly as they were before, with no
+        // null field appearing in the body.
+        mockMvc.perform(get("/users/{id}", UUID.randomUUID())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("User not found"))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.reason").doesNotExist());
+    }
+
+    // ---------------------------------------------------------------------------------
+    // GitLab issues
+    // ---------------------------------------------------------------------------------
+
+    @Test
+    void gitLabIssueCreationIsIdempotentAndRecorded() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        BugReport report = new BugReport();
+        report.setTitle("Profile upload fails");
+        report.setDescription("Uploading a picture returns 500");
+        report.setSeverity(BugSeverity.HIGH);
+        report.setStatus(ReportStatus.OPEN);
+        report.setReporter(admin.student());
+        report = bugReportRepository.saveAndFlush(report);
+
+        gitLabClient.enable();
+
+        mockMvc.perform(get("/reports").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bugReports[0].issueState").value("NONE"))
+                .andExpect(jsonPath("$.bugReports[0].issueUrl").doesNotExist());
+
+        mockMvc.perform(post("/reports/{id}/gitlab-issue", report.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.issueUrl").value("https://gitlab.example/issues/1"))
+                .andExpect(jsonPath("$.issueState").value("CREATED"));
+
+        // A double-click, a second admin, or a retry must not open another issue.
+        mockMvc.perform(post("/reports/{id}/gitlab-issue", report.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.issueUrl").value("https://gitlab.example/issues/1"));
+        org.junit.jupiter.api.Assertions.assertEquals(1, gitLabClient.calls());
+
+        mockMvc.perform(get("/reports").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bugReports[0].issueState").value("CREATED"))
+                .andExpect(jsonPath("$.bugReports[0].issueUrl")
+                        .value("https://gitlab.example/issues/1"));
+
+        AuditLog recorded = auditOf(AuditAction.BUG_REPORT_ISSUE_CREATED);
+        org.junit.jupiter.api.Assertions.assertEquals(
+                admin.student().getId(), recorded.getActorId());
+        org.junit.jupiter.api.Assertions.assertEquals(report.getId(), recorded.getTargetId());
+    }
+
+    @Test
+    void gitLabIssueCreationIsAdminOnlyAndDisabledWhenUnconfigured() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session student = createSession("student@student.kit.edu", false);
+        BugReport report = new BugReport();
+        report.setTitle("Broken");
+        report.setDescription("Details");
+        report.setSeverity(BugSeverity.LOW);
+        report.setStatus(ReportStatus.OPEN);
+        report.setReporter(student.student());
+        report = bugReportRepository.saveAndFlush(report);
+
+        gitLabClient.disable();
+
+        // Unconfigured is a clear 503, and the panel is told up front so it can hide the
+        // action rather than discover this by pressing it.
+        mockMvc.perform(post("/reports/{id}/gitlab-issue", report.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("GitLab integration is not configured"));
+        mockMvc.perform(get("/system/status").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gitlabEnabled").value(false));
+
+        // Opening an issue is administrative; filing a bug report is not, and POST /reports
+        // itself has to stay open to students.
+        gitLabClient.enable();
+        mockMvc.perform(post("/reports/{id}/gitlab-issue", report.getId())
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/reports")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Still open\",\"description\":\"d\",\"severity\":\"LOW\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void gitLabFailureIsRecordedAsRetryableRatherThanSilent() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        BugReport report = new BugReport();
+        report.setTitle("Broken");
+        report.setDescription("Details");
+        report.setSeverity(BugSeverity.LOW);
+        report.setStatus(ReportStatus.OPEN);
+        report.setReporter(admin.student());
+        report = bugReportRepository.saveAndFlush(report);
+
+        gitLabClient.enable();
+        gitLabClient.failNext();
+
+        mockMvc.perform(post("/reports/{id}/gitlab-issue", report.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isBadGateway());
+
+        // The attempt is visible, so the panel can offer a retry instead of the failure
+        // being invisible until someone clicks again.
+        mockMvc.perform(get("/reports").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bugReports[0].issueState").value("FAILED"));
+
+        mockMvc.perform(post("/reports/{id}/gitlab-issue", report.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.issueState").value("CREATED"));
+    }
+
+    private void saveRating(Student student, Lecture lecture) {
+        Rating rating = new Rating();
+        rating.setStudent(student);
+        rating.setLecture(lecture);
+        RatingTopic topic = new RatingTopic();
+        topic.setCategory(RatingCategory.OVERALL);
+        topic.setValue(4);
+        topic.setRating(rating);
+        rating.getTopics().add(topic);
+        ratingRepository.saveAndFlush(rating);
     }
 
     private void requestCode(String email) throws Exception {
