@@ -11,6 +11,7 @@ import {
   getRequestCodeErrorMessage,
   NOT_AN_ADMIN_ERROR,
 } from '../authenticateAdmin'
+import { isCompleteLoginCode } from '../loginModel'
 
 export type LoginStep = 'email' | 'code'
 
@@ -68,7 +69,9 @@ export function useLoginFlow() {
   async function verifyCode() {
     const trimmedEmail = email.trim()
     const trimmedCode = code.trim()
-    if (!trimmedEmail || !trimmedCode) return
+    // The form disables the button on the same check, so this only catches a submit that
+    // reached the hook another way — an Enter press, or a caller that is not the form.
+    if (!trimmedEmail || !isCompleteLoginCode(trimmedCode)) return
 
     acknowledgeExpiry()
     setError('')

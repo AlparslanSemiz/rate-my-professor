@@ -159,6 +159,27 @@ describe('App routing and authentication', () => {
     expect(screen.queryByPlaceholderText('Code from your email')).not.toBeInTheDocument()
   })
 
+  it('does not submit a code that is too short to be one', async () => {
+    const user = userEvent.setup()
+    window.history.pushState({}, '', '/login')
+
+    render(<App />)
+
+    await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), adminUser.email)
+    await user.click(screen.getByRole('button', { name: 'Send me a code' }))
+
+    const codeInput = await screen.findByPlaceholderText('Code from your email')
+    await user.type(codeInput, '12345')
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled()
+
+    // The field refuses the seventh character, so a mistyped code cannot be sent either.
+    await user.type(codeInput, '67')
+    expect(codeInput).toHaveValue('123456')
+
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+    await waitFor(() => expect(authService.login).toHaveBeenCalledWith(adminUser.email, '123456'))
+  })
+
   it('tells the operator to wait when the code was requested too often', async () => {
     const user = userEvent.setup()
     vi.mocked(authService.requestLoginCode).mockRejectedValue(
