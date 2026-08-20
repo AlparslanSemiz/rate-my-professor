@@ -17,6 +17,7 @@ vi.mock('../../api/AuditLogsService', async (importOriginal) => {
     auditLogsService: {
       getLogs: vi.fn(),
       getMeta: vi.fn(),
+      revert: vi.fn(),
     },
   }
 })
@@ -55,6 +56,9 @@ const firstLog: AuditLog = {
   metadata: {
     reason: 'Repeated abuse',
   },
+  revertible: true,
+  revertBlockedReason: null,
+  revertedByAuditId: null,
 }
 
 const secondLog: AuditLog = {
@@ -72,6 +76,10 @@ const secondLog: AuditLog = {
   metadata: {
     method: 'EMAIL_OTP',
   },
+  // A sign-in is not a field edit, so there is nothing to put back.
+  revertible: false,
+  revertBlockedReason: 'ACTION_NOT_REVERTIBLE',
+  revertedByAuditId: null,
 }
 
 function renderAuditLogs() {
@@ -168,4 +176,58 @@ describe('Audit Logs page', () => {
     )).toBeInTheDocument()
     expect(screen.queryByText('Not found')).not.toBeInTheDocument()
   })
+  it('offers undo only where the backend says the entry can be undone', async () => {
+    vi.mocked(auditLogsService.getLogs).mockResolvedValue({
+      auditLogs: [firstLog, secondLog],
+      nextCursor: null,
+    })
+    const user = userEvent.setup()
+    renderAuditLogs()
+
+    await user.click(await screen.findByRole('row', {
+      name: 'Open audit event Admin Login by Admin User',
+    }))
+
+    const dialog = within(await screen.findByRole('dialog'))
+    expect(dialog.queryByRole('button', { name: 'Undo this change' })).not.toBeInTheDocument()
+    // The backend's reason, in words an operator can act on.
+    expect(dialog.getByText(/not a field edit/)).toBeInTheDocument()
+  })
+
+  it('undoes a change and re-reads the log afterwards', async () => {
+    vi.mocked(auditLogsService.revert).mockResolvedValue({ success: true, message: 'Reverted' })
+    const user = userEvent.setup()
+    renderAuditLogs()
+
+    await user.click(await screen.findByRole('row', {
+      name: 'Open audit event User Blocked by Admin User',
+    }))
+    await user.click(await screen.findByRole('button', { name: 'Undo this change' }))
+
+    const confirmation = await screen.findByRole('dialog', { name: 'Undo this change' })
+    await user.click(within(confirmation).getByRole('button', { name: 'Undo the change' }))
+
+    await waitFor(() => expect(auditLogsService.revert).toHaveBeenCalledWith('audit-1'))
+    // The response carries nothing but a message, so the list is the only place the result
+    // of the undo can be read from.
+    await waitFor(() => expect(auditLogsService.getLogs).toHaveBeenCalledTimes(2))
+  })
+
+  it('explains a refused undo instead of reporting a generic failure', async () => {
+    vi.mocked(auditLogsService.revert).mockRejectedValue(
+      new ApiError(409, 'The value changed after this entry', 'VALUE_CHANGED'),
+    )
+    const user = userEvent.setup()
+    renderAuditLogs()
+
+    await user.click(await screen.findByRole('row', {
+      name: 'Open audit event User Blocked by Admin User',
+    }))
+    await user.click(await screen.findByRole('button', { name: 'Undo this change' }))
+    const confirmation = await screen.findByRole('dialog', { name: 'Undo this change' })
+    await user.click(within(confirmation).getByRole('button', { name: 'Undo the change' }))
+
+    expect(await screen.findByText(/would discard that later change/)).toBeInTheDocument()
+  })
+
 })

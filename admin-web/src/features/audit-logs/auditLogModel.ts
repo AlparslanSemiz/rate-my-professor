@@ -6,7 +6,7 @@ import type {
   AuditTargetType,
   AuditValue,
 } from '../../api/AuditLogsService'
-import { EMPTY_LOG_META } from '../../domain/auditLog'
+import { EMPTY_LOG_META, type RevertBlockedReason } from '../../domain/auditLog'
 import { validateDateRange } from '../../utils/dateRange'
 import { getErrorMessage } from '../../utils/getErrorMessage'
 
@@ -63,6 +63,40 @@ export function formatAuditValue(value: AuditValue): string {
   if (value === null) return '—'
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
   return String(value)
+}
+
+/**
+ * The five reasons a change cannot be undone, in the operator's words. The backend uses the
+ * same vocabulary for a button it says to hide and for a revert it refuses, so both are
+ * explained from here rather than from two lists that drift.
+ */
+const REVERT_REFUSALS: Record<RevertBlockedReason, string> = {
+  ACTION_NOT_REVERTIBLE:
+    'This entry is not a field edit, so there is nothing to put back. Creations, deletions and sign-ins cannot be undone.',
+  WINDOW_EXPIRED: 'This change is too old to undo.',
+  VALUE_CHANGED:
+    'The value changed again after this entry, so undoing it would discard that later change.',
+  ALREADY_REVERTED: 'This change has already been undone.',
+  TARGET_MISSING: 'The record this entry is about no longer exists.',
+}
+
+const UNKNOWN_REVERT_REFUSAL = 'This change cannot be undone.'
+
+export function revertRefusalMessage(reason: string | null): string {
+  if (reason && reason in REVERT_REFUSALS) {
+    return REVERT_REFUSALS[reason as RevertBlockedReason]
+  }
+  return UNKNOWN_REVERT_REFUSAL
+}
+
+/**
+ * A refused revert is a `409` carrying one of those reasons; anything else keeps its own
+ * message. The fallback is deliberately not "the change may or may not have been undone" —
+ * a refusal is a refusal, and the list is re-read either way.
+ */
+export function getRevertErrorMessage(error: unknown) {
+  if (error instanceof ApiError && error.status === 409) return revertRefusalMessage(error.reason)
+  return getErrorMessage(error, 'The change could not be undone.')
 }
 
 export function getAuditErrorMessage(error: unknown, fallback: string) {

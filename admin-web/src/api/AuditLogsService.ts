@@ -7,12 +7,12 @@ import {
   type LogActor,
   type LogActorType,
   type LogChange,
-  type LogEntry,
   type LogFilters,
   type LogMeta,
   type LogTarget,
   type LogTargetType,
   type LogValue,
+  type RevertableLogEntry,
 } from '../domain/auditLog'
 
 export const AUDIT_ACTIONS = ADMINISTRATIVE_ACTIONS
@@ -25,7 +25,7 @@ export type AuditValue = LogValue
 export type AuditActor = LogActor
 export type AuditTarget = LogTarget
 export type AuditChange = LogChange
-export type AuditLog = LogEntry
+export type AuditLog = RevertableLogEntry
 export type AuditLogFilters = LogFilters
 export type AuditMeta = LogMeta
 
@@ -34,7 +34,27 @@ export interface AuditLogPage {
   nextCursor: string | null
 }
 
-interface AuditLogResponse extends BasicResponse, AuditLogPage {}
+/**
+ * As the entries arrive. The three revert fields are optional here and required on `AuditLog`:
+ * a backend without them serves an entry that simply cannot be undone, rather than one whose
+ * button is drawn from `undefined`.
+ */
+type BackendAuditLog = Omit<AuditLog, 'revertible' | 'revertBlockedReason' | 'revertedByAuditId'> &
+  Partial<Pick<AuditLog, 'revertible' | 'revertBlockedReason' | 'revertedByAuditId'>>
+
+function toAuditLog(entry: BackendAuditLog): AuditLog {
+  return {
+    ...entry,
+    revertible: entry.revertible ?? false,
+    revertBlockedReason: entry.revertBlockedReason ?? null,
+    revertedByAuditId: entry.revertedByAuditId ?? null,
+  }
+}
+
+interface AuditLogResponse extends BasicResponse {
+  auditLogs: BackendAuditLog[]
+  nextCursor?: string | null
+}
 interface AuditMetaResponse extends BasicResponse, AuditMeta {}
 
 const PAGE_SIZE = 50
@@ -59,9 +79,22 @@ export class AuditLogsService {
       to: endOfDay(filters.to),
     })
     return {
-      auditLogs: expectArray<AuditLog>(response, 'auditLogs', 'GET /audit-logs'),
+      auditLogs: expectArray<BackendAuditLog>(response, 'auditLogs', 'GET /audit-logs').map(toAuditLog),
       nextCursor: response.nextCursor ?? null,
     }
+  }
+
+  /**
+   * Undoes the field edit an entry recorded. The response is `{success, message}` and nothing
+   * else — no updated target, no id for the reversal — so the caller **must** re-read the log
+   * afterwards: that is where the reversal's own entry appears, and where this entry starts
+   * carrying `revertedByAuditId`.
+   *
+   * A refusal is a `409` whose `reason` says which of the five it is; it reaches the caller as
+   * an `ApiError` carrying that reason.
+   */
+  revert(id: string): Promise<BasicResponse> {
+    return this.client.post<BasicResponse>(`/audit-logs/${id}/revert`)
   }
 
   async getMeta(): Promise<AuditMeta> {

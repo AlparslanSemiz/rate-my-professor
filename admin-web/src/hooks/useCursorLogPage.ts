@@ -110,6 +110,24 @@ export function useCursorLogPage<TItem, TMeta, TDraft, TFilters>({
     }
   }
 
+  /**
+   * Re-reads the first page under the filters already in force. For a screen that changed
+   * something the list shows and has to see the backend's version of it.
+   */
+  async function reload() {
+    setLoading(true)
+    setTableError('')
+    try {
+      const page = await fetchPage(activeFilters)
+      setItems(page.items)
+      setNextCursor(page.nextCursor)
+    } catch (loadError: unknown) {
+      setTableError(getErrorMessage(loadError, filterErrorFallback))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   function clearFilters() {
     setDraft(emptyDraft)
     void applyFilters(emptyDraft)
@@ -148,6 +166,7 @@ export function useCursorLogPage<TItem, TMeta, TDraft, TFilters>({
     initialError,
     tableError,
     retryInitialLoad,
+    reload,
     applyFilters,
     clearFilters,
     loadMore,

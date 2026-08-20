@@ -100,6 +100,33 @@ export interface LogEntry {
   metadata: Record<string, LogValue>
 }
 
+/**
+ * An administrative entry, which the backend also says something about undoing. Only the
+ * audit log carries these: what a student did in the app is not the panel's to reverse.
+ */
+export interface RevertableLogEntry extends LogEntry {
+  /** Whether this entry can be undone right now. Only field edits ever can. */
+  revertible: boolean
+  /**
+   * Why it cannot, in the same vocabulary a refused revert answers with, so the hidden button
+   * and the button pressed a minute too late explain themselves the same way.
+   */
+  revertBlockedReason: string | null
+  /** The entry recording the reversal, once this one has been undone. */
+  revertedByAuditId: string | null
+}
+
+/** Why an entry cannot be reverted. The backend's vocabulary, used on reads and on refusals. */
+export const REVERT_BLOCKED_REASONS = [
+  'ACTION_NOT_REVERTIBLE',
+  'WINDOW_EXPIRED',
+  'VALUE_CHANGED',
+  'ALREADY_REVERTED',
+  'TARGET_MISSING',
+] as const
+
+export type RevertBlockedReason = (typeof REVERT_BLOCKED_REASONS)[number]
+
 export interface LogFilters {
   q?: string
   actorId?: string

@@ -25,6 +25,9 @@ const auditLog: AuditLog = {
     status: { before: 'ACTIVE', after: 'BLOCKED' },
   },
   metadata: {},
+  revertible: true,
+  revertBlockedReason: null,
+  revertedByAuditId: null,
 }
 
 function createService() {
@@ -111,4 +114,49 @@ describe('AuditLogsService', () => {
 
     await expect(createService().getLogs({}, 'bad-cursor')).rejects.toThrow('Invalid audit cursor')
   })
+  it('reverts an entry by its own id', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'Reverted USER_UPDATED' }))
+
+    await expect(createService().revert('audit-1')).resolves.toMatchObject({ success: true })
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe(`${TEST_API_BASE_URL}/audit-logs/audit-1/revert`)
+    expect(init.method).toBe('POST')
+  })
+
+  it('carries the refusal reason of a rejected revert', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      success: false,
+      message: 'The value changed after this entry, so reverting would discard that change',
+      reason: 'VALUE_CHANGED',
+    }, 409))
+
+    // The reason is what the panel branches on; the message is what it would otherwise have
+    // to pattern-match.
+    await expect(createService().revert('audit-1')).rejects.toMatchObject({
+      status: 409,
+      reason: 'VALUE_CHANGED',
+    })
+  })
+
+  it('reads an entry from a backend that says nothing about reverting as not revertible', async () => {
+    const { revertible, revertBlockedReason, revertedByAuditId, ...withoutRevertFields } = auditLog
+    void revertible
+    void revertBlockedReason
+    void revertedByAuditId
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      success: true,
+      message: 'OK',
+      auditLogs: [withoutRevertFields],
+    }))
+
+    const page = await createService().getLogs()
+
+    expect(page.auditLogs[0]).toMatchObject({
+      revertible: false,
+      revertBlockedReason: null,
+      revertedByAuditId: null,
+    })
+  })
+
 })
