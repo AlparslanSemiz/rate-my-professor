@@ -24,7 +24,8 @@ const lectures: Lecture[] = [
     semesterYear: 2026,
     semesterSeason: 'WINTER',
     active: true,
-    professors: [{ id: 'prof-1', firstName: 'Ada', lastName: 'Lovelace' }],
+    lectureType: 'LECTURE_AND_EXERCISE',
+    professors: [{ id: 'prof-1', firstName: 'Ada', lastName: 'Lovelace', active: true }],
     commentCount: 12,
     ratingCount: 30,
   },
@@ -35,6 +36,7 @@ const lectures: Lecture[] = [
     semesterYear: 2026,
     semesterSeason: 'SUMMER',
     active: false,
+    lectureType: 'LECTURE_ONLY',
     professors: [],
     commentCount: 3,
     ratingCount: 7,
@@ -42,8 +44,9 @@ const lectures: Lecture[] = [
 ]
 
 const professors: Professor[] = [
-  { id: 'prof-1', firstName: 'Ada', lastName: 'Lovelace', averageRating: 4.2, ratingCount: 30 },
-  { id: 'prof-2', firstName: 'Alan', lastName: 'Turing', averageRating: null, ratingCount: 0 },
+  { id: 'prof-1', firstName: 'Ada', lastName: 'Lovelace', active: true, averageRating: 4.2, ratingCount: 30 },
+  // The backend sends 0 rather than null for a professor nobody has rated.
+  { id: 'prof-2', firstName: 'Alan', lastName: 'Turing', active: false, averageRating: 0, ratingCount: 0 },
 ]
 
 function renderCatalog() {

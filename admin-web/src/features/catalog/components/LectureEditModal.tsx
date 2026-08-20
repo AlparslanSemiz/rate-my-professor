@@ -83,7 +83,7 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
   const [year, setYear] = useState(lecture.semesterYear)
   const [season, setSeason] = useState<SemesterSeason>(lecture.semesterSeason)
   const [active, setActive] = useState(lecture.active)
-  const [lectureType, setLectureType] = useState<LectureType | null>(null)
+  const [lectureType, setLectureType] = useState<LectureType>(lecture.lectureType)
   const [professorIds, setProfessorIds] = useState<string[]>(
     lecture.professors.map((professor) => professor.id),
   )
@@ -99,8 +99,7 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
   if (year !== lecture.semesterYear) update.semesterYear = year
   if (season !== lecture.semesterSeason) update.semesterSeason = season
   if (active !== lecture.active) update.active = active
-  // The catalogue read does not report the current type, so it is sent only when picked.
-  if (lectureType !== null) update.lectureType = lectureType
+  if (lectureType !== lecture.lectureType) update.lectureType = lectureType
   if (!sameIdSet(professorIds, lecture.professors.map((professor) => professor.id))) {
     update.professorIds = professorIds
   }
@@ -176,12 +175,13 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
         />
         <Select
           label="Lecture type"
-          description="Decides which categories future ratings can score. The catalogue does not report the current type, so this is only sent when you pick one."
-          placeholder="Leave unchanged"
+          description="Decides which categories future ratings can score. Ratings already submitted keep the categories they were given."
           data={lectureTypeOptions}
           value={lectureType}
-          onChange={(value) => setLectureType(isLectureType(value) ? value : null)}
-          clearable
+          onChange={(value) => {
+            if (isLectureType(value)) setLectureType(value)
+          }}
+          clearable={false}
           styles={darkInputStyles}
         />
         <Switch

@@ -42,6 +42,12 @@ export function matchesProfessorQuery(professor: Professor, query: string) {
   return professorName(professor).toLowerCase().includes(query)
 }
 
-export function formatAverageRating(value: number | null): string {
-  return value === null ? '—' : value.toFixed(1)
+/**
+ * A professor nobody has rated comes back as `0`, not `null`, so keying the dash off the
+ * value alone renders "0.0" — which reads as a terrible rating rather than as no data.
+ * `ratingCount` is what actually distinguishes the two.
+ */
+export function formatAverageRating(value: number | null, ratingCount: number): string {
+  if (value === null || ratingCount === 0) return '—'
+  return value.toFixed(1)
 }

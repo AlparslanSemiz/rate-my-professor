@@ -1,10 +1,11 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, expectArray, type ApiClient, type BasicResponse } from './ApiClient'
 import type { LectureType, SemesterSeason } from '../domain/catalog'
 
 export interface ProfessorRef {
   id: string
   firstName: string
   lastName: string
+  active: boolean
 }
 
 export interface Lecture {
@@ -14,6 +15,7 @@ export interface Lecture {
   semesterYear: number
   semesterSeason: SemesterSeason
   active: boolean
+  lectureType: LectureType
   professors: ProfessorRef[]
   commentCount: number
   ratingCount: number
@@ -23,6 +25,11 @@ export interface Professor {
   id: string
   firstName: string
   lastName: string
+  active: boolean
+  /**
+   * `0` rather than `null` when nobody has rated the professor, so `ratingCount` is what
+   * separates "rated badly" from "not rated". `null` is still accepted defensively.
+   */
   averageRating: number | null
   ratingCount: number
 }
@@ -32,8 +39,7 @@ export interface Professor {
  * `professorIds` replaces the assignment wholesale — pass `[]` to clear it.
  *
  * `lectureType` decides which rating categories the lecture offers, so changing it changes
- * what future ratings can score. It is write-only: the catalogue reads do not report the
- * lecture's current type, so the panel can set it but cannot show it.
+ * what future ratings can score.
  */
 export interface LectureUpdate {
   name?: string
@@ -47,8 +53,7 @@ export interface LectureUpdate {
 
 /**
  * Partial edit of a professor. `lectureIds` replaces the assignment wholesale — pass `[]` to
- * detach the professor from every lecture. `active` is write-only for the same reason
- * `lectureType` is on a lecture: the catalogue reads do not report it.
+ * detach the professor from every lecture.
  */
 export interface ProfessorUpdate {
   firstName?: string
@@ -78,12 +83,12 @@ export class CatalogService {
 
   async getLectures(): Promise<Lecture[]> {
     const response = await this.client.get<LecturesResponse>('/data/lectures')
-    return response.lectures
+    return expectArray<Lecture>(response, 'lectures', 'GET /data/lectures')
   }
 
   async getProfessors(): Promise<Professor[]> {
     const response = await this.client.get<ProfessorsResponse>('/data/professor')
-    return response.professors
+    return expectArray<Professor>(response, 'professors', 'GET /data/professor')
   }
 
   updateLecture(id: string, update: LectureUpdate): Promise<BasicResponse> {

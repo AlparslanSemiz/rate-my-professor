@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Button, Group, Modal, MultiSelect, Select, Stack, TextInput } from '@mantine/core'
+import { Button, Group, Modal, MultiSelect, Stack, Switch, TextInput } from '@mantine/core'
 import type { Lecture, Professor, ProfessorUpdate } from '../../../api/CatalogService'
 import ErrorAlert from '../../../components/ErrorAlert'
 import { darkInputStyles } from '../../../constants/inputStyles'
@@ -7,11 +7,6 @@ import { darkModalStyles } from '../../../constants/modalStyles'
 import { sameIdSet } from '../../../utils/collection'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
 import { lectureLabel } from '../catalogModel'
-
-const activeOptions = [
-  { value: 'true', label: 'Active' },
-  { value: 'false', label: 'Inactive' },
-]
 
 interface ProfessorEditModalProps {
   professor: Professor | null
@@ -71,7 +66,7 @@ function ProfessorEditForm({
 }: ProfessorEditFormProps) {
   const [firstName, setFirstName] = useState(professor.firstName)
   const [lastName, setLastName] = useState(professor.lastName)
-  const [active, setActive] = useState<string | null>(null)
+  const [active, setActive] = useState(professor.active)
   const [lectureIds, setLectureIds] = useState<string[]>(assignedLectureIds)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -82,9 +77,7 @@ function ProfessorEditForm({
   const update: ProfessorUpdate = {}
   if (trimmedFirstName !== professor.firstName) update.firstName = trimmedFirstName
   if (trimmedLastName !== professor.lastName) update.lastName = trimmedLastName
-  // The catalogue read does not report whether a professor is active, so it is sent only
-  // when explicitly picked.
-  if (active !== null) update.active = active === 'true'
+  if (active !== professor.active) update.active = active
   if (!sameIdSet(lectureIds, assignedLectureIds)) update.lectureIds = lectureIds
 
   const canSave =
@@ -136,15 +129,12 @@ function ProfessorEditForm({
           clearable
           styles={darkInputStyles}
         />
-        <Select
-          label="Status"
-          description="The catalogue does not report the current status, so this is only sent when you pick one."
-          placeholder="Leave unchanged"
-          data={activeOptions}
-          value={active}
-          onChange={setActive}
-          clearable
-          styles={darkInputStyles}
+        <Switch
+          label="Active"
+          description="Inactive professors stay in the catalogue but are no longer offered as teaching staff."
+          checked={active}
+          onChange={(event) => setActive(event.currentTarget.checked)}
+          color="green"
         />
         <ErrorAlert message={error} mb={0} />
         <Group justify="flex-end" gap={10}>

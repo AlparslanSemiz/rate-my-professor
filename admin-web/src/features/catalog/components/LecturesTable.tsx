@@ -13,15 +13,16 @@ import type { Lecture } from '../../../api/CatalogService'
 import Panel from '../../../components/Panel'
 import TableHeaderRow from '../../../components/TableHeaderRow'
 import { darkInputStyles } from '../../../constants/inputStyles'
+import { enumLabel } from '../../../utils/enumLabel'
 import { lectureLabel, lectureTerm, professorName } from '../catalogModel'
 
-const TABLE_COLUMNS = ['Lecture', 'Term', 'Professors', 'Status', 'Comments', 'Ratings', ''] as const
+const TABLE_COLUMNS = ['Lecture', 'Term', 'Type', 'Professors', 'Status', 'Comments', 'Ratings', ''] as const
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const headerStyle: CSSProperties = { borderBottom: '1px solid #21262d' }
 const searchInputStyle: CSSProperties = { flex: '1 1 240px', maxWidth: 320 }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
-const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse', minWidth: 900 }
+const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse', minWidth: 1000 }
 const cellStyle: CSSProperties = { padding: '14px 20px' }
 const nowrapCellStyle: CSSProperties = { ...cellStyle, whiteSpace: 'nowrap' }
 const emptyCellStyle: CSSProperties = { padding: '40px 20px', textAlign: 'center' }
@@ -103,6 +104,11 @@ export default function LecturesTable({
                   <td style={nowrapCellStyle}>
                     <Text size="sm" c="#9ca3af">
                       {lectureTerm(lecture)}
+                    </Text>
+                  </td>
+                  <td style={nowrapCellStyle}>
+                    <Text size="xs" c="#6b7280">
+                      {enumLabel(lecture.lectureType)}
                     </Text>
                   </td>
                   <td style={cellStyle}>

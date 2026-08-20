@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Badge,
   Box,
   Group,
   Text,
@@ -14,13 +15,13 @@ import TableHeaderRow from '../../../components/TableHeaderRow'
 import { darkInputStyles } from '../../../constants/inputStyles'
 import { formatAverageRating, lectureLabel, professorName } from '../catalogModel'
 
-const TABLE_COLUMNS = ['Professor', 'Lectures', 'Average rating', 'Ratings', ''] as const
+const TABLE_COLUMNS = ['Professor', 'Lectures', 'Status', 'Average rating', 'Ratings', ''] as const
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const headerStyle: CSSProperties = { borderBottom: '1px solid #21262d' }
 const searchInputStyle: CSSProperties = { flex: '1 1 240px', maxWidth: 320 }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
-const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse', minWidth: 760 }
+const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse', minWidth: 860 }
 const cellStyle: CSSProperties = { padding: '14px 20px' }
 const nowrapCellStyle: CSSProperties = { ...cellStyle, whiteSpace: 'nowrap' }
 const emptyCellStyle: CSSProperties = { padding: '40px 20px', textAlign: 'center' }
@@ -117,8 +118,13 @@ export default function ProfessorsTable({
                       )}
                     </td>
                     <td style={cellStyle}>
+                      <Badge color={professor.active ? 'green' : 'gray'} variant="light" size="sm">
+                        {professor.active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </td>
+                    <td style={cellStyle}>
                       <Text size="sm" c="#9ca3af">
-                        {formatAverageRating(professor.averageRating)}
+                        {formatAverageRating(professor.averageRating, professor.ratingCount)}
                       </Text>
                     </td>
                     <td style={cellStyle}>
