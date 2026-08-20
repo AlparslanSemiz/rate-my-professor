@@ -31,9 +31,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ApiException.class)
-    ResponseEntity<BasicResponse> handleApiException(ApiException exception) {
+    ResponseEntity<ApiErrorResponse> handleApiException(ApiException exception) {
         return ResponseEntity.status(exception.getStatus())
-                .body(new BasicResponse(exception.getMessage(), false));
+                .body(ApiErrorResponse.of(exception.getMessage(), exception.getCode()));
     }
 
     @ExceptionHandler({
