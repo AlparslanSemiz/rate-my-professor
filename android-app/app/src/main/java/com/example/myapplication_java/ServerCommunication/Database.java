@@ -11,7 +11,9 @@ import com.example.myapplication_java.Adapters.LocalDateTimeConverter;
 import com.example.myapplication_java.Adapters.SearchService;
 import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.CommentModel;
+import com.example.myapplication_java.DomainModel.Instructor;
 import com.example.myapplication_java.DomainModel.Lecture;
+import com.example.myapplication_java.DomainModel.LectureModel;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
@@ -25,7 +27,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import retrofit2.Call;
-import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
@@ -36,8 +37,8 @@ import retrofit2.Response;
  * and is meant to exist only once per process, so every screen shares the same instance.</p>
  */
 @androidx.room.Database(
-        entities = {Lecture.class, Professor.class, CommentModel.class},
-        version = 5
+        entities = {Lecture.class, Professor.class, CommentModel.class, Instructor.class},
+        version = 6
 )
 @TypeConverters(LocalDateTimeConverter.class)
 public abstract class Database extends RoomDatabase {
@@ -116,7 +117,7 @@ public abstract class Database extends RoomDatabase {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        service.fillMissingData();
+                        //service.fillMissingData();
                     }
                 });
             }
@@ -132,11 +133,17 @@ public abstract class Database extends RoomDatabase {
                 tableFinished
         );
 
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                service.deleteInstructors();
+            }
+        });
         refreshTable(
                 apiService.getLectures(),
                 LecturesResponse::lectures,
                 service::deleteLectures,
-                service::insertLecture,
+                this::insertLecture,
                 executor,
                 "lectures",
                 tableFinished
@@ -237,4 +244,14 @@ public abstract class Database extends RoomDatabase {
                 comment.createdAt(), comment.downVotes(), comment.upVotes());
     }
 
+    //
+    private void insertLecture(LectureModel model) {
+        SearchService searchService = searchService();
+        Lecture lecture = new Lecture(model.id(), model.name(), model.code(), model.semesterYear(),
+                model.semesterSeason(), model.active(), model.commentCount(), model.ratingCount());
+        searchService.insertLecture(lecture);
+        for (Professor professor : model.professors()) {
+            searchService.insertInstructor(new Instructor(model.id(), model.name(), professor.id));
+        }
+    }
 }

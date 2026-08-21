@@ -5,12 +5,11 @@ import androidx.room.Insert;
 import androidx.room.Query;
 
 import com.example.myapplication_java.DomainModel.CommentModel;
+import com.example.myapplication_java.DomainModel.Instructor;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
-
-import org.w3c.dom.Comment;
 
 import java.util.List;
 
@@ -84,7 +83,8 @@ public interface SearchService {
      * @param professorId the professor to look up
      * @return every offering held by that professor, sorted by name
      */
-    @Query("SELECT * FROM lectures WHERE professorId = :professorId ORDER BY name ASC")
+    @Query("SELECT lectures.* FROM instructors JOIN lectures ON instructors.lectureID = lectures.id " +
+            "WHERE instructors.professorID = :professorId ORDER BY name ASC")
     List<Lecture> getLecturesByProfessor(String professorId);
 
     /**
@@ -92,7 +92,8 @@ public interface SearchService {
      * @param lectureTitle the name of the lecture
      * @return every semester's offering of that lecture by that professor
      */
-    @Query("SELECT * FROM lectures WHERE professorId = :professorId AND name = :lectureTitle ORDER BY name ASC")
+    @Query("SELECT lectures.* FROM lectures JOIN instructors ON instructors.lectureID = lectures.id " +
+            "WHERE instructors.professorID = :professorId AND lectures.name = :lectureTitle ORDER BY name ASC")
     List<Lecture> getLecturesByProfessorAndLecture(String professorId, String lectureTitle);
 
     /**
@@ -105,14 +106,15 @@ public interface SearchService {
      * @param lectureTitle the name of the lecture
      * @return every professor who holds a lecture with that name
      */
-    @Query("SELECT professors.* FROM professors JOIN lectures ON professors.id = lectures.professorId WHERE lectures.name = :lectureTitle")
+    @Query("SELECT professors.* FROM professors JOIN instructors ON " +
+            "professors.id = instructors.professorId WHERE instructors.lectureTitle = :lectureTitle")
     List<Professor> getProfessorsByLectureTitle(String lectureTitle);
 
     /**
      * @param professorId the professor to look up
      * @return the name of every lecture held by that professor, each one only once
      */
-    @Query("SELECT DISTINCT name FROM lectures WHERE professorId = :professorId ORDER BY name ASC")
+    @Query("SELECT DISTINCT lectureTitle FROM instructors WHERE professorId = :professorId ORDER BY lectureTitle ASC")
     List<String> getLectureTitlesByProfessor(String professorId);
 
     /**
@@ -120,7 +122,8 @@ public interface SearchService {
      * @param lectureTitle the name of the lecture
      * @return every semester in which that professor held that lecture
      */
-    @Query("SELECT semesterYear, semesterSeason FROM lectures WHERE professorId = :professorId AND name = :lectureTitle")
+    @Query("SELECT semesterYear, semesterSeason FROM lectures JOIN instructors ON instructors.lectureID = lectures.id " +
+            "WHERE instructors.professorID = :professorId AND lectures.name = :lectureTitle")
     List<Semester> getSemestersByProfessorAndLectureTitle(String professorId, String lectureTitle);
 
     /**
@@ -132,12 +135,13 @@ public interface SearchService {
      * @param season       the term of the semester
      * @return the matching offering, or an empty list when there is none
      */
-    @Query("SELECT * FROM lectures WHERE professorId = :professorId AND name = :lectureTitle AND " +
-            "semesterYear = :semesterYear AND semesterSeason = :season")
+    @Query("SELECT * FROM lectures JOIN instructors ON instructors.lectureID = lectures.id " +
+            "WHERE instructors.professorId = :professorId AND lectures.name = :lectureTitle AND " +
+            "lectures.semesterYear = :semesterYear AND lectures.semesterSeason = :season")
     List<Lecture> getLecture(String professorId, String lectureTitle, int semesterYear, SemesterSeason season);
 
-    @Query("UPDATE lectures SET professorId = '748d6383-5dd6-42f1-a797-77f304beb3fb' WHERE id = 'bd9dd15d-bc13-4630-a2d1-ac76f542124d'")
-    void fillMissingData();
+    //@Query("UPDATE lectures SET professorId = '748d6383-5dd6-42f1-a797-77f304beb3fb' WHERE id = 'bd9dd15d-bc13-4630-a2d1-ac76f542124d'")
+    //void fillMissingData();
 
     @Insert
     void insertComment(CommentModel comment);
@@ -151,4 +155,9 @@ public interface SearchService {
     @Query("SELECT * FROM comments WHERE parentID = :parentId ORDER BY upVotes DESC")
     List<CommentModel> getReplies(String parentId);
 
+    @Insert
+    void insertInstructor(Instructor instructor);
+
+    @Query("DELETE FROM instructors")
+    void deleteInstructors();
 }
