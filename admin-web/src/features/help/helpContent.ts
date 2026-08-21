@@ -2,7 +2,6 @@ import type { ComponentType } from 'react'
 import {
   IconActivity,
   IconBug,
-  IconHeartRateMonitor,
   IconHistory,
   IconLayoutDashboard,
   IconMessage,
@@ -170,7 +169,7 @@ export const HELP_SECTIONS: HelpSection[] = [
   },
   {
     id: 'catalog',
-    title: 'Catalogue',
+    title: 'Lectures & Professors',
     icon: IconSchool,
     summary: 'The lectures students rate and the professors who teach them.',
     actions: [
@@ -232,11 +231,5 @@ export const HELP_SECTIONS: HelpSection[] = [
     icon: IconActivity,
     summary:
       'Everyone else’s activity: who signed in, what they posted or reported, and what was refused. The counterpart to Audit Logs, which only covers admins.',
-  },
-  {
-    id: 'system-status',
-    title: 'System Status',
-    icon: IconHeartRateMonitor,
-    summary: 'Whether the backend is healthy, and whether actions taken in this panel are actually reaching the database.',
   },
 ]

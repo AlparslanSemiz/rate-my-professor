@@ -1,7 +1,6 @@
 import {
   IconActivity,
   IconBug,
-  IconHeartRateMonitor,
   IconHelpCircle,
   IconHistory,
   IconLayoutDashboard,
@@ -19,8 +18,8 @@ export const MAIN_NAV_ITEMS = [
     icon: IconLayoutDashboard,
   },
   {
-    label: 'Catalogue',
-    sublabel: 'Lectures & staff',
+    label: 'Lectures & Professors',
+    sublabel: 'The catalogue',
     path: routes.catalog,
     icon: IconSchool,
   },
@@ -57,12 +56,6 @@ export const OVERSIGHT_NAV_ITEMS = [
     sublabel: 'Everyone else',
     path: routes.activityLogs,
     icon: IconActivity,
-  },
-  {
-    label: 'System Status',
-    sublabel: 'Backend health',
-    path: routes.systemStatus,
-    icon: IconHeartRateMonitor,
   },
   {
     label: 'Help',

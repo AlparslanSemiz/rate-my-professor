@@ -7,6 +7,5 @@ export const routes = {
   feedback: '/feedback',
   auditLogs: '/audit-logs',
   activityLogs: '/activity-logs',
-  systemStatus: '/system-status',
   help: '/help',
 } as const

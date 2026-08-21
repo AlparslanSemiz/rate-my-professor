@@ -3,7 +3,7 @@ import { systemStatusService } from '../../../api/SystemStatusService'
 import { usersService, type User } from '../../../api/UsersService'
 import { useVisibleInterval } from '../../../hooks/useVisibleInterval'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
-import { healthDescription } from '../../system-status/systemStatusModel'
+import { healthDescription } from '../dashboardModel'
 
 export interface DashboardStats {
   total: number

@@ -39,7 +39,7 @@ export default function CatalogPage() {
   return (
     <>
       <PageHeader
-        title="Catalogue"
+        title="Lectures & Professors"
         description="The lectures students rate and the professors who teach them — names, terms and assignments."
       />
       <ErrorAlert message={catalog.actionError || ratings.actionError || ratings.loadError} />

@@ -156,7 +156,7 @@ describe('App routing and authentication', () => {
       .map((button) => button.textContent ?? '')
 
     expect(order[0]).toMatch(/^Dashboard/)
-    expect(order[1]).toMatch(/^Catalogue/)
+    expect(order[1]).toMatch(/^Lectures & Professors/)
   })
 
   it('draws the active sidebar item in its own section colour', async () => {
@@ -189,7 +189,30 @@ describe('App routing and authentication', () => {
     expect(oversightNavigation).toHaveTextContent('Audit Logs')
     expect(oversightNavigation).toHaveTextContent('Admin activity')
     expect(oversightNavigation).toHaveTextContent('Activity Log')
-    expect(oversightNavigation).toHaveTextContent('System Status')
+    expect(oversightNavigation).toHaveTextContent('Help')
+    // Removed 2026-08-21. `/system/status` is still read by the dashboard, the Users stat
+    // cards and the GitLab button — it is the screen that went, not the endpoint.
+    expect(oversightNavigation).not.toHaveTextContent('System Status')
+  })
+
+  it('has no System Status route left — the path falls back to the dashboard', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(adminUser))
+    window.history.pushState({}, '', '/system-status')
+
+    render(<App />)
+
+    await waitFor(() => expect(window.location.pathname).toBe('/dashboard'))
+  })
+
+  it('names the product in the sidebar', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(adminUser))
+    window.history.pushState({}, '', '/dashboard')
+
+    render(<App />)
+
+    expect(await screen.findByAltText('RateMyProfessor Admin Panel')).toBeInTheDocument()
   })
 
   it('logs in with a valid one-time code and navigates to the dashboard', async () => {
