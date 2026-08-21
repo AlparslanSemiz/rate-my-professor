@@ -61,6 +61,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     authService
       .me()
+      .then((session) => {
+        // The stored user is a copy taken at sign-in. `/auth/me` has just reported the
+        // current one, so take it: a name or role changed since then would otherwise stay
+        // wrong in the sidebar for as long as the session lasts. Only replaced when the
+        // response actually names someone — an empty answer is not a correction.
+        const current = session.user
+        if (cancelled || !current) return
+        setAuth((previous) => {
+          if (!previous.token) return previous
+          storeSession(previous.token, current)
+          return { token: previous.token, user: current }
+        })
+      })
       .catch((error: unknown) => {
         // Only a refusal ends the session. A backend that is down or unreachable says
         // nothing about whether the token is still good, and signing the admin out over a

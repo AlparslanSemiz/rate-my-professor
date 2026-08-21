@@ -31,6 +31,7 @@ function AuthHarness() {
       </p>
       <p data-testid="token">{token ?? 'no-token'}</p>
       <p data-testid="user-email">{user?.email ?? 'no-user'}</p>
+      <p data-testid="user-name">{user?.name ?? 'no-user'}</p>
       <button type="button" onClick={() => login('test-token', testUser)}>
         Log in
       </button>
@@ -102,6 +103,32 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('token')).toHaveTextContent('no-token')
     expect(localStorage.getItem('token')).toBeNull()
     expect(localStorage.getItem('user')).toBeNull()
+  })
+
+  it('replaces the stored user with the one /auth/me reports', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(testUser))
+    // The account was renamed and promoted after this session was stored.
+    const current = { ...testUser, name: 'Renamed Admin', role: 'SUPERADMIN' }
+    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'ok', user: current })
+
+    renderAuthHarness()
+
+    await waitFor(() => expect(screen.getByTestId('user-name')).toHaveTextContent('Renamed Admin'))
+    // And persisted, so the next load starts from the corrected copy rather than the stale one.
+    expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(current)
+  })
+
+  it('keeps the stored user when /auth/me names nobody', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(testUser))
+    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'ok' })
+
+    renderAuthHarness()
+
+    // A response that carries no user is not a correction — the session stays as it was.
+    await waitFor(() => expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated'))
+    expect(screen.getByTestId('user-name')).toHaveTextContent(testUser.name)
   })
 
   it('persists login and clears state on logout', async () => {
