@@ -1,5 +1,6 @@
-import { Box, Text, type CSSProperties } from '@mantine/core'
-import { IconShield } from '@tabler/icons-react'
+import { Text, type CSSProperties } from '@mantine/core'
+import BrandMark from '../../../components/BrandMark'
+import { PANEL_NAME, PRODUCT_NAME } from '../../../constants/branding'
 import type { LoginStep } from '../hooks/useLoginFlow'
 
 const brandRowStyle: CSSProperties = {
@@ -7,15 +8,6 @@ const brandRowStyle: CSSProperties = {
   alignItems: 'center',
   gap: 10,
   marginBottom: 28,
-}
-const brandMarkStyle: CSSProperties = {
-  width: 36,
-  height: 36,
-  borderRadius: 9,
-  background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
 }
 const titleStyle: CSSProperties = { fontSize: 22 }
 
@@ -29,15 +21,13 @@ export default function LoginCardHeader({
   return (
     <>
       <div style={brandRowStyle}>
-        <Box style={brandMarkStyle}>
-          <IconShield size={20} color="white" />
-        </Box>
+        <BrandMark size={36} />
         <div>
           <Text fw={600} c="#f1f5f9" size="sm" lh={1.2}>
-            Admin Panel
+            {PRODUCT_NAME}
           </Text>
-          <Text size="xs" c="#4b5563" lh={1.2}>
-            Admin toolkit
+          <Text size="xs" c="#6b7280" lh={1.2}>
+            {PANEL_NAME}
           </Text>
         </div>
       </div>
