@@ -3,20 +3,51 @@ import type { UserRole, UserStatus } from '../domain/user'
 import { routes } from './routes'
 
 /**
+ * KIT's colours at the pastel end of the ramps defined in `src/theme.ts` — shade 3 of each.
+ *
+ * This is the palette for anything that takes a colour as a plain string rather than as a
+ * Mantine `color` prop: stat-card accents, severity bars, section colours, icon tints. Mantine
+ * components go through the theme instead, so the two stay the same colour by construction.
+ *
+ * Neutral chrome — panel backgrounds, borders, body text — is not here. It is not accent
+ * colour, and pulling it in would make every grey a decision.
+ */
+export const KIT = {
+  /** KIT-Grün. The panel's primary. */
+  green: '#66c0b4',
+  /** Maigrün. */
+  lime: '#adc766',
+  /** KIT-Blau. */
+  blue: '#90a2cc',
+  /** Lila. */
+  grape: '#c870b0',
+  /** Orange. */
+  orange: '#ecc376',
+  /** Gelb, pulled down from the published value so it reads as a warning, not a highlighter. */
+  yellow: '#e8dc66',
+  /** Rot. */
+  red: '#c77a7b',
+  /** Cyan-Blau. */
+  cyan: '#7bc7ec',
+  /** For a value that carries no state of its own. */
+  neutral: '#6b7482',
+} as const
+
+/**
  * The colour a section is drawn in, keyed by its route. The dashboard's module cards, its
  * stat cards and the sidebar all read it from here: they used to hold their own copies, so
  * the same section could be one colour on the dashboard and another in the navigation.
  */
 export const moduleAccent: Record<string, string> = {
-  [routes.dashboard]: '#22c55e',
-  [routes.catalog]: '#14b8a6',
-  [routes.users]: '#3b82f6',
-  [routes.comments]: '#8b5cf6',
-  [routes.feedback]: '#f97316',
+  [routes.dashboard]: KIT.green,
+  [routes.catalog]: KIT.lime,
+  [routes.users]: KIT.blue,
+  [routes.comments]: KIT.grape,
+  [routes.feedback]: KIT.orange,
 }
 
 /** For the oversight views, which are not modules and have no colour of their own. */
-export const DEFAULT_ACCENT = '#22c55e'
+export const DEFAULT_ACCENT = KIT.green
 
 export const roleColor: Record<UserRole, string> = {
   ADMIN: 'blue',
@@ -24,8 +55,8 @@ export const roleColor: Record<UserRole, string> = {
 }
 
 export const roleAccent: Record<UserRole, string> = {
-  ADMIN: '#3b82f6',
-  STUDENT: '#6b7280',
+  ADMIN: KIT.blue,
+  STUDENT: KIT.neutral,
 }
 
 export const userStatusColor: Record<UserStatus, string> = {
@@ -43,10 +74,10 @@ export const severityColor: Record<Severity, string> = {
 }
 
 export const severityAccent: Record<Severity, string> = {
-  LOW: '#6b7280',
-  MEDIUM: '#eab308',
-  HIGH: '#f97316',
-  CRITICAL: '#ef4444',
+  LOW: KIT.neutral,
+  MEDIUM: KIT.yellow,
+  HIGH: KIT.orange,
+  CRITICAL: KIT.red,
 }
 
 export const reportStatusColor: Record<ReportStatus, string> = {

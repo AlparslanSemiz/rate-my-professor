@@ -4,6 +4,7 @@ import StatCard from '../../../components/StatCard'
 import { statGridCols } from '../../../constants/layout'
 import { countByValue } from '../../../utils/collection'
 import { flattenContent, type ModeratedItem } from '../moderationModel'
+import { KIT } from '../../../constants/colors'
 
 interface ContentStatsProps {
   items: ModeratedItem[]
@@ -18,20 +19,20 @@ export default function ContentStats({ items, totalLabel }: ContentStatsProps) {
 
   return (
     <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
-      <StatCard label={totalLabel} value={all.length} icon={IconMessage} accent="#3b82f6" />
+      <StatCard label={totalLabel} value={all.length} icon={IconMessage} accent={KIT.blue} />
       <StatCard
         label="Visible"
         value={countByValue(all, 'status', 'VISIBLE')}
         icon={IconEye}
-        accent="#22c55e"
+        accent={KIT.green}
       />
       <StatCard
         label="Hidden"
         value={countByValue(all, 'status', 'HIDDEN')}
         icon={IconEyeOff}
-        accent="#f97316"
+        accent={KIT.orange}
       />
-      <StatCard label="With reports" value={reported} icon={IconFlag} accent="#ef4444" />
+      <StatCard label="With reports" value={reported} icon={IconFlag} accent={KIT.red} />
     </SimpleGrid>
   )
 }

@@ -7,6 +7,7 @@ import { darkModalStyles } from '../../../constants/modalStyles'
 import BugReportControls from './BugReportControls'
 import BugReportEditForm from './BugReportEditForm'
 import BugReportSummary from './BugReportSummary'
+import { KIT } from '../../../constants/colors'
 
 interface BugReportModalProps {
   report: BugReport | null
@@ -163,7 +164,7 @@ function IssueControl({
 }) {
   if (report.issueUrl) {
     return (
-      <Anchor href={report.issueUrl} target="_blank" rel="noreferrer" size="xs" c="#f97316">
+      <Anchor href={report.issueUrl} target="_blank" rel="noreferrer" size="xs" c={KIT.orange}>
         <Group gap={4} wrap="nowrap">
           <IconExternalLink size={13} />
           Open issue on GitLab

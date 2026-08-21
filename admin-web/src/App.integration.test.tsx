@@ -7,6 +7,9 @@ import { authService } from './api/AuthService'
 import { usersService } from './api/UsersService'
 import { auditLogsService } from './api/AuditLogsService'
 import { systemStatusService, type SystemStatus } from './api/SystemStatusService'
+import { moduleAccent } from './constants/colors'
+import { routes } from './constants/routes'
+import { withAlpha } from './utils/color'
 import App from './App'
 import { SESSION_EXPIRED_MESSAGE } from './features/auth/hooks/useLoginFlow'
 
@@ -166,9 +169,12 @@ describe('App routing and authentication', () => {
     const mainNavigation = await screen.findByRole('navigation', { name: 'Main navigation' })
     const active = within(mainNavigation).getByRole('button', { current: 'page' })
 
-    // The blue the dashboard's "People" module card and "Total users" stat card also use;
-    // before, every active item was the same green whatever section it led to.
-    expect(active.firstElementChild).toHaveStyle({ background: 'rgba(59, 130, 246, 0.18)' })
+    // The same colour the dashboard's "People" module card and "Total users" stat card use;
+    // before, every active item was the same green whatever section it led to. Asserted
+    // through the token rather than a literal, so moving the palette does not break this.
+    expect(active.firstElementChild).toHaveStyle({
+      background: withAlpha(moduleAccent[routes.users], 0.18),
+    })
   })
 
   it('routes authenticated admins to the Audit Logs page', async () => {

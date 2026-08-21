@@ -1,6 +1,7 @@
 import { Box, Group, Progress, Text, type CSSProperties } from '@mantine/core'
 import Panel from '../../../components/Panel'
 import type { DashboardStats } from '../hooks/useDashboardData'
+import { KIT } from '../../../constants/colors'
 
 const panelStyle: CSSProperties = { padding: '20px 24px' }
 
@@ -16,8 +17,8 @@ export default function SystemPulse({
   // of them. "Reports handled" used to sit here as well; it needed the total number of bug
   // reports, and /system/status counts only the open ones.
   const metrics = [
-    { label: 'Active accounts', value: activeRate, color: '#3b82f6' },
-    { label: 'Admin share of accounts', value: adminShare, color: '#22c55e' },
+    { label: 'Active accounts', value: activeRate, color: KIT.blue },
+    { label: 'Admin share of accounts', value: adminShare, color: KIT.green },
   ]
 
   return (

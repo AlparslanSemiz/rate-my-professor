@@ -1,12 +1,12 @@
 import { SimpleGrid } from '@mantine/core'
 import { IconShieldCheck, IconUserCheck, IconUsers } from '@tabler/icons-react'
 import StatCard from '../../../components/StatCard'
-import { moduleAccent } from '../../../constants/colors'
+import { KIT, moduleAccent } from '../../../constants/colors'
 import { statGridCols } from '../../../constants/layout'
 import { routes } from '../../../constants/routes'
 import type { UserCounts } from '../usersModel'
 
-const ACTIVE_ACCENT = '#22c55e'
+const ACTIVE_ACCENT = KIT.green
 const ADMIN_ACCENT = '#f59e0b'
 
 /** A counter the backend did not report is unknown, not zero. */

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Badge, Box, Group, Text, UnstyledButton, type CSSProperties } from '@mantine/core'
 import type { User } from '../../../api/UsersService'
 import Panel from '../../../components/Panel'
-import { roleColor } from '../../../constants/colors'
+import { KIT, roleColor } from '../../../constants/colors'
 import { enumLabel } from '../../../utils/enumLabel'
 
 const panelStyle: CSSProperties = { padding: '20px 24px' }
@@ -45,7 +45,7 @@ export default function RecentRegistrations({
           Newest members
         </Text>
         <UnstyledButton style={{ cursor: 'pointer' }} onClick={onViewAll}>
-          <Text size="xs" c="#22c55e">
+          <Text size="xs" c={KIT.green}>
             See everyone →
           </Text>
         </UnstyledButton>

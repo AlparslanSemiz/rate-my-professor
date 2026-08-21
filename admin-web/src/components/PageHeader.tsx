@@ -1,5 +1,7 @@
 import { Text } from '@mantine/core'
 import type { CSSProperties } from 'react'
+import { KIT } from '../constants/colors'
+import { withAlpha } from '../utils/color'
 
 interface PageHeaderProps {
   title: string
@@ -37,8 +39,8 @@ const accentBarStyle: CSSProperties = {
   width: 4,
   height: 26,
   borderRadius: 999,
-  background: 'linear-gradient(180deg, #34d17a, #16a34a)',
-  boxShadow: '0 0 12px rgba(34,197,94,0.5)',
+  background: `linear-gradient(180deg, ${KIT.green}, #009682)`,
+  boxShadow: `0 0 10px ${withAlpha(KIT.green, 0.35)}`,
   flexShrink: 0,
 }
 

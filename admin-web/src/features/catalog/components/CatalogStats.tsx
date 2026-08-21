@@ -3,6 +3,7 @@ import { IconMessage, IconSchool, IconStar, IconUserStar } from '@tabler/icons-r
 import type { Lecture, Professor } from '../../../api/CatalogService'
 import StatCard from '../../../components/StatCard'
 import { statGridCols } from '../../../constants/layout'
+import { KIT } from '../../../constants/colors'
 
 interface CatalogStatsProps {
   lectures: Lecture[]
@@ -15,14 +16,14 @@ export default function CatalogStats({ lectures, professors }: CatalogStatsProps
 
   return (
     <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
-      <StatCard label="Lectures" value={lectures.length} icon={IconSchool} accent="#3b82f6" />
+      <StatCard label="Lectures" value={lectures.length} icon={IconSchool} accent={KIT.blue} />
       <StatCard
         label="Professors"
         value={professors.length}
         icon={IconUserStar}
         accent="#a855f7"
       />
-      <StatCard label="Comments" value={comments} icon={IconMessage} accent="#22c55e" />
+      <StatCard label="Comments" value={comments} icon={IconMessage} accent={KIT.green} />
       <StatCard label="Ratings" value={ratings} icon={IconStar} accent="#f59e0b" />
     </SimpleGrid>
   )

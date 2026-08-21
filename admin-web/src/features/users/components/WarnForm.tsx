@@ -3,6 +3,7 @@ import { Box, Button, Group, Text, Textarea } from '@mantine/core'
 import ErrorAlert from '../../../components/ErrorAlert'
 import { darkInputStyles } from '../../../constants/inputStyles'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
+import { KIT } from '../../../constants/colors'
 
 interface WarnFormProps {
   userName: string
@@ -44,7 +45,7 @@ export default function WarnForm({
 
   return (
     <Box component="form" mb={20} style={warnFormStyle} onSubmit={handleSubmit}>
-      <Text size="xs" fw={600} c="#eab308" mb={8}>
+      <Text size="xs" fw={600} c={KIT.yellow} mb={8}>
         Issue a warning to {userName}
       </Text>
       <Textarea

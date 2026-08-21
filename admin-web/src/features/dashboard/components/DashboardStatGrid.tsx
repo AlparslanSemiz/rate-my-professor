@@ -1,14 +1,14 @@
 import { SimpleGrid } from '@mantine/core'
 import { IconBug, IconShieldCheck, IconUserCheck, IconUsers } from '@tabler/icons-react'
 import { StatCardDetailed } from '../../../components/StatCard'
-import { moduleAccent } from '../../../constants/colors'
+import { KIT, moduleAccent } from '../../../constants/colors'
 import { statGridCols } from '../../../constants/layout'
 import { routes } from '../../../constants/routes'
 import type { DashboardStats } from '../hooks/useDashboardData'
 
 // The two cards that stand for a section are drawn in that section's colour; the other two
 // describe a subset of the accounts rather than a place to go, so they keep their own.
-const ACTIVE_ACCENT = '#22c55e'
+const ACTIVE_ACCENT = KIT.green
 const ADMIN_ACCENT = '#f59e0b'
 
 export default function DashboardStatGrid({ stats }: { stats: DashboardStats }) {

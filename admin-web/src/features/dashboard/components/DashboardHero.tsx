@@ -2,6 +2,7 @@ import { Badge, Box, SimpleGrid, Text, type CSSProperties } from '@mantine/core'
 import { moduleGridCols } from '../../../constants/layout'
 import { formatDate } from '../../../utils/formatDate'
 import type { DashboardStats } from '../hooks/useDashboardData'
+import { KIT } from '../../../constants/colors'
 
 const heroStyle: CSSProperties = {
   background: 'linear-gradient(135deg, #0d1b12 0%, #111318 60%, #0f1117 100%)',
@@ -22,7 +23,7 @@ const heroGlowStyle: CSSProperties = {
 }
 const heroBadgeStyle: CSSProperties = {
   background: 'rgba(34,197,94,0.1)',
-  color: '#22c55e',
+  color: KIT.green,
   borderColor: 'rgba(34,197,94,0.2)',
   marginBottom: 14,
   fontWeight: 600,

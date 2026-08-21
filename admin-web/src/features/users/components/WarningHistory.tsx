@@ -15,6 +15,7 @@ import ErrorAlert from '../../../components/ErrorAlert'
 import { darkInputStyles } from '../../../constants/inputStyles'
 import { formatDate } from '../../../utils/formatDate'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
+import { KIT } from '../../../constants/colors'
 
 const sectionTitleStyle: CSSProperties = { letterSpacing: '0.05em' }
 const emptyWarningsStyle: CSSProperties = {
@@ -32,7 +33,7 @@ const warningListStyle: CSSProperties = {
 const warningItemStyle: CSSProperties = {
   background: '#0f1117',
   border: '1px solid rgba(234,179,8,0.15)',
-  borderLeft: '3px solid #eab308',
+  borderLeft: `3px solid ${KIT.yellow}`,
   borderRadius: 8,
   padding: '10px 14px',
 }

@@ -1,6 +1,6 @@
 import { Badge, Box, Divider, Group, Text, type CSSProperties } from '@mantine/core'
 import type { User } from '../../../api/UsersService'
-import { roleAccent, userStatusColor } from '../../../constants/colors'
+import { KIT, roleAccent, userStatusColor } from '../../../constants/colors'
 import { enumLabel } from '../../../utils/enumLabel'
 import { formatDate } from '../../../utils/formatDate'
 
@@ -100,7 +100,7 @@ export default function ProfileSummary({ user }: { user: User }) {
 function WarningSummary({ count }: { count: number }) {
   return (
     <Box style={warningSummaryStyle}>
-      <Text fw={700} c="#eab308" style={warningCountStyle}>
+      <Text fw={700} c={KIT.yellow} style={warningCountStyle}>
         {count}
       </Text>
       <Text size="xs" c="#92400e">

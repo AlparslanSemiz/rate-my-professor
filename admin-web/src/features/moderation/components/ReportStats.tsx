@@ -4,6 +4,7 @@ import StatCard from '../../../components/StatCard'
 import { statGridCols } from '../../../constants/layout'
 import { countByValue } from '../../../utils/collection'
 import type { ReportItem } from '../moderationModel'
+import { KIT } from '../../../constants/colors'
 
 export default function ReportStats({ reports }: { reports: ReportItem[] }) {
   return (
@@ -12,13 +13,13 @@ export default function ReportStats({ reports }: { reports: ReportItem[] }) {
         label="Open"
         value={countByValue(reports, 'status', 'OPEN')}
         icon={IconClock}
-        accent="#f97316"
+        accent={KIT.orange}
       />
       <StatCard
         label="Reviewed"
         value={countByValue(reports, 'status', 'REVIEWED')}
         icon={IconEye}
-        accent="#3b82f6"
+        accent={KIT.blue}
       />
       <StatCard
         label="Dismissed"
@@ -30,7 +31,7 @@ export default function ReportStats({ reports }: { reports: ReportItem[] }) {
         label="Action taken"
         value={countByValue(reports, 'status', 'ACTION_TAKEN')}
         icon={IconCheck}
-        accent="#ef4444"
+        accent={KIT.red}
       />
     </SimpleGrid>
   )
