@@ -50,11 +50,6 @@ public class Lecture {
     public boolean active;
 
     /**
-     * Id of the professor holding this offering.
-     */
-    public String professorId;
-
-    /**
      * How many comments were written for this offering.
      */
     public int commentCount;
@@ -65,14 +60,13 @@ public class Lecture {
     public int ratingCount;
 
     public Lecture(String id, String name, String code, int semesterYear, SemesterSeason semesterSeason,
-                   boolean active, String professorId, int commentCount, int ratingCount) {
+                   boolean active, int commentCount, int ratingCount) {
         this.name = name;
         this.code = code;
         this.id = id;
         this.semesterYear = semesterYear;
         this.semesterSeason = semesterSeason;
         this.active = active;
-        this.professorId = professorId;
         this.commentCount = commentCount;
         this.ratingCount = ratingCount;
     }
