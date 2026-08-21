@@ -3,6 +3,8 @@ package com.pse.auth.service;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -14,6 +16,8 @@ import org.springframework.web.util.HtmlUtils;
 
 @Service
 public class LoginLocationService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(LoginLocationService.class);
 
     private final RestClient ipInfoClient;
     private final String ipInfoToken;
@@ -64,12 +68,7 @@ public class LoginLocationService {
             return new LoginLocation(description, mapsUrl, response.loc());
 
         } catch (Exception exception) {
-            System.err.println(
-                    "Could not determine location for IP "
-                            + ip
-                            + ": "
-                            + exception.getMessage()
-            );
+            LOGGER.warn("Could not determine location for IP {}", ip, exception);
 
             return new LoginLocation("Unknown", null, null);
         }

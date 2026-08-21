@@ -4,6 +4,8 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -26,6 +28,8 @@ import jakarta.mail.internet.MimeMessage;
 @Service
 @Profile("!test")
 public class MailService implements LoginCodeDelivery, LoginSuccessDelivery {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MailService.class);
 
     private static final String LOGIN_EMAIL_SUBJECT = "Your Login Code for RateMyProfApp";
 
@@ -165,9 +169,7 @@ public class MailService implements LoginCodeDelivery, LoginSuccessDelivery {
         ClassPathResource logo = new ClassPathResource(LOGO_PATH);
 
         if (!logo.exists()) {
-            System.err.println(
-                    "Email logo could not be found: " + logo.getPath()
-            );
+            LOGGER.warn("Email logo could not be found: {}", logo.getPath());
 
             return;
         }
