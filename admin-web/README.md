@@ -38,11 +38,10 @@ that.
 | Users | Search, filter and page through accounts on the server; inspect profiles and warning history, edit account fields, warn, block, unblock, or delete |
 | Comments | Browse every comment, edit or hide its text, delete it, and work the report queue — acting on the reported content from the queue itself |
 | Answers | The same for replies posted under comments, with the parent thread as context |
-| Catalogue | Edit and remove lectures and professors, reassign who teaches what, and remove individual ratings |
+| Lectures & Professors | Edit and remove lectures and professors, reassign who teaches what, and remove individual ratings |
 | Bug Reports | Review submitted problems, rewrite the title or description, update status or severity, delete, and open a GitLab issue |
 | Audit Logs | Filter and inspect administrative actions, including before/after values, and undo a field edit |
 | Activity Log | Filter and inspect what users did in the student app, plus every refused request |
-| System Status | Watch backend health, live record counts, and when each admin action last reached the database |
 
 Additional engineering features include:
 
@@ -201,7 +200,6 @@ src/
 │   ├── dashboard/
 │   ├── feedback/
 │   ├── moderation/   Content and report screens shared by comments and answers
-│   ├── system-status/
 │   └── users/
 ├── hooks/        Reusable hooks without feature ownership
 ├── layouts/      Authenticated application shell and navigation
@@ -338,7 +336,7 @@ Report statuses are `OPEN`, `REVIEWED`, `DISMISSED`, and `ACTION_TAKEN`.
 is the only one that hides it; any other status puts it back. Hiding keeps the
 content in the database — deleting does not.
 
-### Catalogue
+### Lectures & Professors
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -365,7 +363,7 @@ panel shows a dash for the latter.
 | `GET` | `/ratings` | List individual ratings; takes `limit`, `cursor` and `lectureId` |
 | `DELETE` | `/ratings/:id` | Delete one rating |
 
-A rating is someone's actual opinion, so the Catalogue's Ratings tab is
+A rating is someone's actual opinion, so the Ratings tab is
 read-and-delete: there is no edit call, by design. `scores` is read as an open
 map, because which categories a rating carries depends on the lecture's type.
 
@@ -436,12 +434,15 @@ log — so `q` is what finds someone beyond the cap.
 | --- | --- | --- |
 | `GET` | `/system/status` | Backend health, live record counts, and the newest audit event |
 
+**There is no System Status screen.** It was removed on 2026-08-21: if the
+backend is down the panel cannot be reached either, so a page devoted to saying
+so answers a question nobody can ask. The endpoint itself stayed, because three
+screens depend on it.
+
 The endpoint answers `200` whenever the API is serving and reports a failing
-database in `status` (`OK`, `DEGRADED`, or `DOWN`) instead — a page that has to
-show "the API is up but the database is not" cannot do that if the request
-itself fails. `counts` and `lastWrite` are `null` unless the database answered.
-The counters are what confirm an action reached the database: block a user,
-refresh, and watch the count move.
+database in `status` (`OK`, `DEGRADED`, or `DOWN`) instead. `counts` and
+`lastWrite` are `null` unless the database answered; the dashboard treats that
+as a reading it does not have rather than as a reading of zero.
 
 `counts` is read as an open map, so a counter the backend adds renders without a
 frontend release. The panel reads `users`, `activeUsers`, `admins`,
@@ -478,6 +479,8 @@ leaves that configuration. And `POST /users/{id}/warnings` accepts the old `user
 | GitLab issue creation is inert until it is configured | Without `GITLAB_BASE_URL`, `GITLAB_PROJECT_ID` and `GITLAB_TOKEN` the backend reports `gitlabEnabled: false` and the endpoint answers `503`. The panel hides the control rather than offering one that cannot work. |
 | `/system/status` has **no total bug report counter** | `counts.openBugReports` is the open ones only. The dashboard's "of N bug reports" sub-line and its "Reports handled" percentage were removed rather than kept by reading the whole `/reports` table on a timer. Requested as F1 in `BACKEND-TASKS.md`. |
 | `/system/status` has **no blocked account counter** | `counts` carries `users`, `activeUsers` and `admins`; `users - activeUsers` is blocked *plus* inactive, so blocked cannot be derived. With the Users table paginated it cannot be counted on screen either, so that stat card is not shown. Requested as F2. |
+| The catalogue reads return **active records only** | `GET /data/lectures` and `GET /data/professor` filter on `active = true`, but both `PATCH` routes accept `active` — so switching a lecture or professor off from the panel removes it from the only list the panel can read, with no way back short of a database write. The edit forms warn before the switch is saved; an All/Active/Inactive filter waits on the backend. Requested as G1 in `BACKEND-TASKS.md`. |
+| A bug report has **no `statusChangedAt`** | It carries `reportedAt` only, so the Bug Reports History tab can show when a report was *filed* but not when it was closed. The subtitle says so rather than letting a filing date pass as a closing one. Requested as F3. |
 
 ## Audit Log Design
 
@@ -542,8 +545,8 @@ This project uses `React.lazy`, dynamic `import()`, and `Suspense` at route
 boundaries:
 
 - The login and authenticated application layout are separate chunks.
-- Dashboard, Users, Comments, Answers, Catalogue, Bug Reports, Audit Logs,
-  Activity Log, and System Status are separate page chunks.
+- Dashboard, Users, Comments, Answers, Lectures & Professors, Bug Reports, Audit Logs,
+  Activity Log and Help are separate page chunks.
 - `PageLoader` provides feedback while a requested chunk is loading.
 
 As a result, the initial production bundle contains only the application shell
