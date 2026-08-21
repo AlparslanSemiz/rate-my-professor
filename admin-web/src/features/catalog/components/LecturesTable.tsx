@@ -9,11 +9,13 @@ import {
   type CSSProperties,
 } from '@mantine/core'
 import { IconPencil, IconSchool, IconSearch, IconTrash } from '@tabler/icons-react'
+import type { MouseEvent } from 'react'
 import type { Lecture } from '../../../api/CatalogService'
 import Panel from '../../../components/Panel'
 import TableHeaderRow from '../../../components/TableHeaderRow'
 import { darkInputStyles } from '../../../constants/inputStyles'
 import { enumLabel } from '../../../utils/enumLabel'
+import { activateOnEnterOrSpace } from '../../../utils/keyboard'
 import { lectureLabel, lectureTerm, professorName } from '../catalogModel'
 
 const TABLE_COLUMNS = ['Lecture', 'Term', 'Type', 'Professors', 'Status', 'Comments', 'Ratings', ''] as const
@@ -29,6 +31,11 @@ const emptyCellStyle: CSSProperties = { padding: '40px 20px', textAlign: 'center
 
 function rowStyle(isLast: boolean): CSSProperties {
   return { borderBottom: isLast ? 'none' : '1px solid #1c2128' }
+}
+
+/** The action buttons are their own controls; a press on one must not also open the editor. */
+function keepFromRow(event: MouseEvent) {
+  event.stopPropagation()
 }
 
 interface LecturesTableProps {
@@ -92,7 +99,14 @@ export default function LecturesTable({
               </tr>
             ) : (
               lectures.map((lecture, index) => (
-                <tr key={lecture.id} style={rowStyle(index === lectures.length - 1)}>
+                <tr
+                  key={lecture.id}
+                  className="row-interactive row-clickable"
+                  style={rowStyle(index === lectures.length - 1)}
+                  onClick={() => onEdit(lecture)}
+                  onKeyDown={(event) => activateOnEnterOrSpace(event, () => onEdit(lecture))}
+                  tabIndex={0}
+                >
                   <td style={cellStyle}>
                     <Text size="sm" fw={500} c="#e2e8f0">
                       {lecture.name}
@@ -141,7 +155,7 @@ export default function LecturesTable({
                       {lecture.ratingCount}
                     </Text>
                   </td>
-                  <td style={nowrapCellStyle}>
+                  <td style={nowrapCellStyle} onClick={keepFromRow}>
                     <Group gap={4} wrap="nowrap">
                       <Tooltip label="Edit lecture" withArrow>
                         <ActionIcon

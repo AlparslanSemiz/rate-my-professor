@@ -1,9 +1,11 @@
 import { ActionIcon, Badge, Box, Group, Text, Tooltip, type CSSProperties } from '@mantine/core'
 import { IconChevronDown, IconChevronRight, IconPencil, IconTrash } from '@tabler/icons-react'
+import type { MouseEvent } from 'react'
 import UserChip from '../../../components/UserChip'
 import { contentStatusColor } from '../../../constants/colors'
 import { enumLabel } from '../../../utils/enumLabel'
 import { formatDate } from '../../../utils/formatDate'
+import { activateOnEnterOrSpace } from '../../../utils/keyboard'
 import type { ModeratedItem } from '../moderationModel'
 
 const TOOLTIP_THRESHOLD = 90
@@ -15,11 +17,8 @@ const breakWordStyle: CSSProperties = { wordBreak: 'break-word' }
 const replyIndentStyle: CSSProperties = { paddingLeft: 20 }
 const contentTextBoxStyle: CSSProperties = { flex: 1, minWidth: 0 }
 
-function rowStyle(isLast: boolean, isReply: boolean): CSSProperties {
-  return {
-    borderBottom: isLast ? 'none' : '1px solid #1c2128',
-    background: isReply ? 'rgba(255,255,255,0.015)' : undefined,
-  }
+function rowStyle(isLast: boolean): CSSProperties {
+  return { borderBottom: isLast ? 'none' : '1px solid #1c2128' }
 }
 
 interface ContentRowProps {
@@ -48,16 +47,23 @@ export default function ContentRow({
   onToggleExpand,
 }: ContentRowProps) {
   const hasTooltip = item.content.length > TOOLTIP_THRESHOLD
+  const openEditor = () => onEdit(item)
+
+  // Every control sitting inside the row has its own job; without this, pressing Delete or
+  // expanding a thread would also open the editor behind the dialog.
+  function keepFromRow(event: MouseEvent) {
+    event.stopPropagation()
+  }
 
   return (
     <tr
-      style={rowStyle(isLast, isReply)}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.background = '#1c2128'
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.background = isReply ? 'rgba(255,255,255,0.015)' : 'transparent'
-      }}
+      className={
+        isReply ? 'row-interactive row-clickable row-reply' : 'row-interactive row-clickable'
+      }
+      style={rowStyle(isLast)}
+      onClick={openEditor}
+      onKeyDown={(event) => activateOnEnterOrSpace(event, openEditor)}
+      tabIndex={0}
     >
       <td style={contentCellStyle}>
         <Group gap={6} wrap="nowrap" align="flex-start" style={isReply ? replyIndentStyle : undefined}>
@@ -67,7 +73,10 @@ export default function ContentRow({
               color="gray"
               size="sm"
               aria-label={expanded ? `Collapse answers under ${item.author.name}'s comment` : `Expand answers under ${item.author.name}'s comment`}
-              onClick={onToggleExpand}
+              onClick={(event) => {
+                keepFromRow(event)
+                onToggleExpand()
+              }}
             >
               {expanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
             </ActionIcon>
@@ -89,7 +98,7 @@ export default function ContentRow({
           </Box>
         </Group>
       </td>
-      <td style={nowrapCellStyle}>
+      <td style={nowrapCellStyle} onClick={keepFromRow}>
         <UserChip
           id={item.author.id}
           name={item.author.name}
@@ -125,7 +134,7 @@ export default function ContentRow({
           {formatDate(item.createdAt, { withTime: true })}
         </Text>
       </td>
-      <td style={nowrapCellStyle}>
+      <td style={nowrapCellStyle} onClick={keepFromRow}>
         <Group gap={4} wrap="nowrap">
           <Tooltip label="Edit text or visibility" withArrow>
             <ActionIcon

@@ -9,10 +9,12 @@ import {
   type CSSProperties,
 } from '@mantine/core'
 import { IconPencil, IconSearch, IconTrash, IconUserStar } from '@tabler/icons-react'
+import type { MouseEvent } from 'react'
 import type { Lecture, Professor } from '../../../api/CatalogService'
 import Panel from '../../../components/Panel'
 import TableHeaderRow from '../../../components/TableHeaderRow'
 import { darkInputStyles } from '../../../constants/inputStyles'
+import { activateOnEnterOrSpace } from '../../../utils/keyboard'
 import { formatAverageRating, lectureLabel, professorName } from '../catalogModel'
 
 const TABLE_COLUMNS = ['Professor', 'Lectures', 'Status', 'Average rating', 'Ratings', ''] as const
@@ -28,6 +30,11 @@ const emptyCellStyle: CSSProperties = { padding: '40px 20px', textAlign: 'center
 
 function rowStyle(isLast: boolean): CSSProperties {
   return { borderBottom: isLast ? 'none' : '1px solid #1c2128' }
+}
+
+/** The action buttons are their own controls; a press on one must not also open the editor. */
+function keepFromRow(event: MouseEvent) {
+  event.stopPropagation()
 }
 
 interface ProfessorsTableProps {
@@ -98,7 +105,14 @@ export default function ProfessorsTable({
                   .filter((lecture): lecture is Lecture => lecture !== undefined)
 
                 return (
-                  <tr key={professor.id} style={rowStyle(index === professors.length - 1)}>
+                  <tr
+                    key={professor.id}
+                    className="row-interactive row-clickable"
+                    style={rowStyle(index === professors.length - 1)}
+                    onClick={() => onEdit(professor)}
+                    onKeyDown={(event) => activateOnEnterOrSpace(event, () => onEdit(professor))}
+                    tabIndex={0}
+                  >
                     <td style={cellStyle}>
                       <Text size="sm" fw={500} c="#e2e8f0">
                         {professorName(professor)}
@@ -130,7 +144,7 @@ export default function ProfessorsTable({
                         {professor.ratingCount}
                       </Text>
                     </td>
-                    <td style={nowrapCellStyle}>
+                    <td style={nowrapCellStyle} onClick={keepFromRow}>
                       <Group gap={4} wrap="nowrap">
                         <Tooltip label="Edit professor" withArrow>
                           <ActionIcon
