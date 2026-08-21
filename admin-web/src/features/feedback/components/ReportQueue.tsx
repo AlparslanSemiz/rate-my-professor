@@ -11,23 +11,32 @@ const emptyIconStyle: CSSProperties = { marginBottom: 12 }
 
 interface ReportQueueProps {
   reports: BugReport[]
+  title: string
+  subtitle: string
+  emptyMessage: string
   onOpenReport: (id: string) => void
 }
 
-export default function ReportQueue({ reports, onOpenReport }: ReportQueueProps) {
+export default function ReportQueue({
+  reports,
+  title,
+  subtitle,
+  emptyMessage,
+  onOpenReport,
+}: ReportQueueProps) {
   return (
     <Panel style={panelStyle}>
       <Box px={20} py={16} style={panelHeaderStyle}>
         <Text fw={600} c="#e2e8f0" size="sm">
-          Report queue
+          {title}
         </Text>
         <Text size="xs" c="#4b5563">
-          Newest first · tap a report for the full story.
+          {subtitle}
         </Text>
       </Box>
 
       {reports.length === 0 ? (
-        <EmptyReportQueue />
+        <EmptyReportQueue message={emptyMessage} />
       ) : (
         reports.map((report, index) => (
           <ReportQueueItem
@@ -42,12 +51,12 @@ export default function ReportQueue({ reports, onOpenReport }: ReportQueueProps)
   )
 }
 
-function EmptyReportQueue() {
+function EmptyReportQueue({ message }: { message: string }) {
   return (
     <Box py={60} style={emptyStateStyle}>
       <IconBug size={32} color="#374151" style={emptyIconStyle} />
       <Text c="#4b5563" size="sm">
-        All quiet — no bug reports yet.
+        {message}
       </Text>
     </Box>
   )

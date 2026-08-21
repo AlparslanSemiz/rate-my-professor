@@ -133,6 +133,11 @@ describe('Feedback page', () => {
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 
+    // Acted on means finished, so it leaves the queue rather than sitting in it wearing a
+    // different badge. It is in History, with its new status.
+    await waitFor(() => expect(screen.queryByText('Crash on login')).toBeNull())
+    await user.click(screen.getByRole('tab', { name: /History/ }))
+    expect(await screen.findByText('Crash on login')).toBeInTheDocument()
     expect(screen.getAllByText('Action Taken')).not.toHaveLength(0)
   })
 
@@ -152,7 +157,31 @@ describe('Feedback page', () => {
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 
-    expect(screen.getAllByText('Critical')).not.toHaveLength(0)
+    expect(screen.getAllByText('Critical severity')).not.toHaveLength(0)
+  })
+
+  it('keeps open and reviewed reports in the queue and closed ones in history', async () => {
+    const user = userEvent.setup()
+    renderFeedback()
+
+    // OPEN and REVIEWED are both still work; only ACTION_TAKEN and DISMISSED are done.
+    expect(await screen.findByRole('tab', { name: 'Queue (2)' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'History (0)' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: /History/ }))
+    expect(await screen.findByText('Nothing here yet — no report has been closed.')).toBeInTheDocument()
+  })
+
+  it('files a dismissed report under history too', async () => {
+    queue[1] = { ...queue[1], status: 'DISMISSED' }
+    const user = userEvent.setup()
+    renderFeedback()
+
+    expect(await screen.findByRole('tab', { name: 'Queue (1)' })).toBeInTheDocument()
+    expect(screen.queryByText('Typo on profile page')).toBeNull()
+
+    await user.click(screen.getByRole('tab', { name: 'History (1)' }))
+    expect(await screen.findByText('Typo on profile page')).toBeInTheDocument()
   })
 
   it('shows an error and keeps the old status when the backend rejects the update', async () => {

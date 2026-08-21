@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { Tabs } from '@mantine/core'
+import { IconArchive, IconInbox } from '@tabler/icons-react'
 import { feedbackService, type BugReport, type BugReportUpdate } from '../../api/FeedbackService'
 import { systemStatusService } from '../../api/SystemStatusService'
 import ConfirmModal from '../../components/ConfirmModal'
@@ -11,6 +13,7 @@ import { getErrorMessage, getStaleAfterWriteMessage } from '../../utils/getError
 import BugReportModal from './components/BugReportModal'
 import FeedbackStats from './components/FeedbackStats'
 import ReportQueue from './components/ReportQueue'
+import { closedReports, openReports } from './feedbackModel'
 
 const LOAD_ERROR_MESSAGE = 'Failed to load bug reports'
 const UPDATE_ERROR_MESSAGE = 'Failed to update the report. The change was not saved.'
@@ -41,6 +44,8 @@ export default function FeedbackPage() {
   } = useAsyncData(loadReports, EMPTY_REPORTS, LOAD_ERROR_MESSAGE)
   const { data: gitlabEnabled } = useAsyncData(loadGitlabEnabled, false, '')
   const reportDetails = useSelectedId()
+  const queue = useMemo(() => openReports(reports), [reports])
+  const history = useMemo(() => closedReports(reports), [reports])
   const [reportUpdating, setReportUpdating] = useState(false)
   const [updateError, setUpdateError] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -125,7 +130,40 @@ export default function FeedbackPage() {
       />
 
       <FeedbackStats reports={reports} />
-      <ReportQueue reports={reports} onOpenReport={openReport} />
+
+      {/* A report that has been acted on or dismissed is finished, and finished work should
+          not sit in the queue competing for attention. It moves across on the re-read that
+          every write already performs. */}
+      <Tabs defaultValue="queue" keepMounted={false}>
+        <Tabs.List mb={20}>
+          <Tabs.Tab value="queue" leftSection={<IconInbox size={14} />}>
+            Queue ({queue.length})
+          </Tabs.Tab>
+          <Tabs.Tab value="history" leftSection={<IconArchive size={14} />}>
+            History ({history.length})
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="queue">
+          <ReportQueue
+            reports={queue}
+            title="Report queue"
+            subtitle="Open and reviewed, newest first — tap a report for the full story."
+            emptyMessage="All quiet — nothing waiting."
+            onOpenReport={openReport}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="history">
+          <ReportQueue
+            reports={history}
+            title="History"
+            subtitle="Acted on or dismissed. The date is when the report was filed — the backend does not record when it was closed."
+            emptyMessage="Nothing here yet — no report has been closed."
+            onOpenReport={openReport}
+          />
+        </Tabs.Panel>
+      </Tabs>
 
       <BugReportModal
         report={selectedReport}
