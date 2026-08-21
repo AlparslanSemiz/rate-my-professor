@@ -250,6 +250,45 @@ describe('Comments page', () => {
     await waitFor(() => expect(commentsService.delete).toHaveBeenCalledWith('comment-1'))
   })
 
+  it('opens the editor when the row itself is pressed', async () => {
+    const user = userEvent.setup()
+    renderComments()
+
+    await user.click(await screen.findByText('Reported text'))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('textbox', { name: 'Text' })).toHaveValue('Reported text')
+  })
+
+  it('does not open the editor when a control inside the row is pressed', async () => {
+    const user = userEvent.setup()
+    renderComments()
+
+    // Delete opens its own confirmation; expanding opens nothing. Neither may also fire the
+    // row's click and leave the edit form sitting behind the dialog.
+    await user.click(await screen.findByRole('button', { name: 'Delete content by Alice Smith' }))
+    expect(within(await screen.findByRole('dialog')).queryByRole('textbox', { name: 'Text' })).toBeNull()
+
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+    await user.click(screen.getByRole('button', { name: "Expand answers under Alice Smith's comment" }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('lays the content table out fixed so expanding a thread cannot shift the columns', async () => {
+    renderComments()
+
+    await screen.findByText('Reported text')
+    const table = document.querySelector('table')
+
+    // The reason the columns used to jump: automatic layout re-measured all seven every time
+    // an indented answer row appeared. jsdom has no layout engine, so this asserts the fix is
+    // still declared rather than observing the movement it prevents.
+    expect(table).toHaveStyle({ tableLayout: 'fixed' })
+    expect(table?.querySelectorAll('colgroup > col')).toHaveLength(7)
+  })
+
   it('nests an answer under its comment and reveals it on expand', async () => {
     const user = userEvent.setup()
     renderComments()

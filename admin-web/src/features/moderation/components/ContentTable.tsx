@@ -8,11 +8,29 @@ import ContentRow from './ContentRow'
 
 const TABLE_COLUMNS = ['Content', 'Author', 'Lecture', 'Visibility', 'Reports', 'Posted', ''] as const
 
+/**
+ * Widths for the seven columns above, in order.
+ *
+ * The table is laid out `fixed` and these are why. Under the browser's automatic layout every
+ * column is measured from its contents, so expanding a thread — which inserts indented answer
+ * rows with different text in them — re-measured all seven and shifted the whole table
+ * sideways under the operator's cursor. Fixed layout reads these widths once and never
+ * re-measures, so opening and closing a thread moves nothing.
+ */
+const COLUMN_WIDTHS = ['28%', '14%', '15%', '9%', '7%', '17%', '10%'] as const
+
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const panelHeaderStyle: CSSProperties = { borderBottom: '1px solid #21262d' }
 const emptyStateStyle: CSSProperties = { textAlign: 'center' }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
-const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse', minWidth: 960 }
+const tableStyle: CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  // Raised with the fixed layout: percentage columns no longer borrow space from each other,
+  // so every one of them has to hold its own contents at the narrowest the table can get.
+  minWidth: 1100,
+  tableLayout: 'fixed',
+}
 
 interface ContentTableProps {
   items: ModeratedItem[]
@@ -73,6 +91,11 @@ export default function ContentTable({
       ) : (
         <div style={tableScrollStyle}>
           <table style={tableStyle}>
+            <colgroup>
+              {COLUMN_WIDTHS.map((width, index) => (
+                <col key={index} style={{ width }} />
+              ))}
+            </colgroup>
             <TableHeaderRow columns={TABLE_COLUMNS} />
             <tbody>
               {items.map((item, index) => {
