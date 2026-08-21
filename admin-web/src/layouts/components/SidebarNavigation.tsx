@@ -7,7 +7,6 @@ import {
 } from './sidebarItems'
 
 const INACTIVE_ICON_COLOR = '#6b7280'
-const NAV_HOVER_BACKGROUND = 'rgba(255,255,255,0.04)'
 
 const buttonBaseStyle: CSSProperties = {
   display: 'flex',
@@ -23,9 +22,11 @@ const buttonBaseStyle: CSSProperties = {
 function navButtonStyle(active: boolean, accent: string): CSSProperties {
   return {
     ...buttonBaseStyle,
+    // Left undeclared when inactive: an inline `transparent` would beat `.nav-interactive`'s
+    // hover rule, which is what the old JavaScript handler existed to work around.
     background: active
       ? `linear-gradient(180deg, ${withAlpha(accent, 0.14)}, ${withAlpha(accent, 0.06)})`
-      : 'transparent',
+      : undefined,
     border: active ? `1px solid ${withAlpha(accent, 0.22)}` : '1px solid transparent',
     boxShadow: active
       ? `inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 14px ${withAlpha(accent, 0.1)}`
@@ -48,10 +49,6 @@ function navIconStyle(active: boolean, accent: string): CSSProperties {
     flexShrink: 0,
     transition: 'background 0.18s ease, box-shadow 0.18s ease',
   }
-}
-
-function setInactiveBackground(element: HTMLElement, active: boolean, background: string) {
-  if (!active) element.style.background = background
 }
 
 export default function SidebarNavigation({
@@ -93,11 +90,8 @@ export function SidebarNavButton({
     <UnstyledButton
       onClick={() => onNavigate(item.path)}
       aria-current={active ? 'page' : undefined}
+      className="nav-interactive"
       style={navButtonStyle(active, accent)}
-      onMouseEnter={(event) =>
-        setInactiveBackground(event.currentTarget, active, NAV_HOVER_BACKGROUND)
-      }
-      onMouseLeave={(event) => setInactiveBackground(event.currentTarget, active, 'transparent')}
     >
       <Box style={navIconStyle(active, accent)}>
         <Icon size={16} color={active ? accent : INACTIVE_ICON_COLOR} />

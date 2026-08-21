@@ -11,8 +11,6 @@ const dateTextStyle: CSSProperties = { whiteSpace: 'nowrap' }
 function rowStyle(isLast: boolean): CSSProperties {
   return {
     borderBottom: isLast ? 'none' : '1px solid #1c2128',
-    cursor: 'pointer',
-    transition: 'background 0.1s',
   }
 }
 
@@ -27,13 +25,8 @@ export default function UserTableRow({ user, isLast, onOpenProfile }: UserTableR
 
   return (
     <tr
+      className="row-interactive row-clickable"
       style={rowStyle(isLast)}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.background = '#1c2128'
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.background = 'transparent'
-      }}
       onClick={openProfile}
       onKeyDown={(event) => activateOnEnterOrSpace(event, openProfile)}
       tabIndex={0}

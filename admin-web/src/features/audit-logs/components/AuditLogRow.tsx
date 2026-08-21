@@ -11,8 +11,6 @@ const nowrapCellStyle: CSSProperties = { ...cellStyle, whiteSpace: 'nowrap' }
 function rowStyle(isLast: boolean): CSSProperties {
   return {
     borderBottom: isLast ? 'none' : '1px solid #1c2128',
-    cursor: 'pointer',
-    transition: 'background 0.1s',
   }
 }
 
@@ -28,15 +26,10 @@ export default function AuditLogRow({ log, isLast, onOpen }: AuditLogRowProps) {
 
   return (
     <tr
+      className="row-interactive row-clickable"
       style={rowStyle(isLast)}
       onClick={openDetails}
       onKeyDown={(event) => activateOnEnterOrSpace(event, openDetails)}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.background = '#1c2128'
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.background = 'transparent'
-      }}
       tabIndex={0}
       aria-label={`Open audit event ${enumLabel(log.action)} by ${log.actor.name}`}
     >

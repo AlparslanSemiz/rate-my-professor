@@ -44,13 +44,8 @@ export default function ReportRow({
 }: ReportRowProps) {
   return (
     <tr
+      className="row-interactive"
       style={rowStyle(isLast)}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.background = '#1c2128'
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.background = 'transparent'
-      }}
     >
       <td style={contentCellStyle}>
         <ReportedContentPreview report={report} />
