@@ -7,6 +7,7 @@ import { darkModalStyles } from '../../../constants/modalStyles'
 import { sameIdSet } from '../../../utils/collection'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
 import { lectureLabel } from '../catalogModel'
+import InactiveVisibilityNotice from './InactiveVisibilityNotice'
 
 interface ProfessorEditModalProps {
   professor: Professor | null
@@ -131,11 +132,11 @@ function ProfessorEditForm({
         />
         <Switch
           label="Active"
-          description="Inactive professors stay in the catalogue but are no longer offered as teaching staff."
           checked={active}
           onChange={(event) => setActive(event.currentTarget.checked)}
           color="green"
         />
+        {!active && <InactiveVisibilityNotice noun="professor" />}
         <ErrorAlert message={error} mb={0} />
         <Group justify="flex-end" gap={10}>
           <Button variant="subtle" color="gray" onClick={onClose} disabled={saving}>

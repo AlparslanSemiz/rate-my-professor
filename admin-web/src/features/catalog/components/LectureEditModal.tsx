@@ -26,6 +26,7 @@ import { sameIdSet } from '../../../utils/collection'
 import { enumLabel } from '../../../utils/enumLabel'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
 import { professorName } from '../catalogModel'
+import InactiveVisibilityNotice from './InactiveVisibilityNotice'
 
 const seasonOptions = SEMESTER_SEASONS.map((season) => ({
   value: season,
@@ -190,6 +191,7 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
           onChange={(event) => setActive(event.currentTarget.checked)}
           color="green"
         />
+        {!active && <InactiveVisibilityNotice noun="lecture" />}
         <ErrorAlert message={error} mb={0} />
         <Group justify="flex-end" gap={10}>
           <Button variant="subtle" color="gray" onClick={onClose} disabled={saving}>
