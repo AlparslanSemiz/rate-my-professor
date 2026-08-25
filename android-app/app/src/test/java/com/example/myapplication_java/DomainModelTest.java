@@ -53,7 +53,6 @@ public class DomainModelTest {
                 2026,
                 SemesterSeason.WINTER,
                 true,
-                "prof-1",
                 5,
                 10
         );
@@ -64,7 +63,6 @@ public class DomainModelTest {
         assertEquals(2026, lecture.semesterYear);
         assertEquals(SemesterSeason.WINTER, lecture.semesterSeason);
         assertTrue(lecture.active);
-        assertEquals("prof-1", lecture.professorId);
         assertEquals(5, lecture.commentCount);
         assertEquals(10, lecture.ratingCount);
     }
@@ -144,7 +142,7 @@ public class DomainModelTest {
 
     @Test
     public void lectureOfferingConstructorStoresFields() {
-        Lecture lecture = new Lecture("l1", "Algorithms", "c1", 2026, SemesterSeason.WINTER, true, "p1", 0, 0);
+        Lecture lecture = new Lecture("l1", "Algorithms", "c1", 2026, SemesterSeason.WINTER, true,  0, 0);
         Professor professor = new Professor("p1", "Ada", "Lovelace", 5.0f, 10);
         Semester semester = new Semester(2026, SemesterSeason.WINTER);
         
