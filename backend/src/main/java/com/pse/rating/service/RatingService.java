@@ -34,44 +34,26 @@ import com.pse.rating.dto.response.TopicAverageResponse;
 @Service
 public class RatingService {
 
-    private final StudentService studentService;
-    private final AuthService authService;
     private final LectureService lectureService;
 
 
     private final RatingRepository ratingRepository;
     private final AuditWriter auditWriter;
 
-    public RatingService(StudentService studentService, AuthService authService, LectureService lectureService, RatingRepository ratingRepository, AuditWriter auditWriter) {
-        this.studentService = studentService;
-        this.authService = authService;
+    public RatingService(LectureService lectureService, RatingRepository ratingRepository, AuditWriter auditWriter) {
         this.lectureService = lectureService;
         this.ratingRepository = ratingRepository;
         this.auditWriter = auditWriter;
     }
 
 
-    // Needs a transaction so that the rating and its activity-log entry commit together.
     @Transactional
-    public BasicResponse submitRating(String authHeader, RatingRequest request) {
-
-        Student student = authService.verifyUser(authHeader);
-
-        if(student == null) {
-            return new BasicResponse("Error, cannot authenticate user", false);
-        }
+    public BasicResponse submitRating(Student student, RatingRequest request) {
 
         Lecture lecture = lectureService.getById(request.lectureId());
 
         if (lecture == null) {
             return new BasicResponse("Error, cannot find lecture with id " + request.lectureId(), false);
-        }
-
-
-        student = studentService.findByKitEmail(student.getKitEmail());
-
-        if (student == null) {
-            return new BasicResponse("Error, cannot find student", false);
         }
 
         //Check if User already has Rating
@@ -89,10 +71,6 @@ public class RatingService {
         }
 
 
-        double weightedSum = 0.0;
-        double totalWeight = 0.0;
-
-
         for (RatingTopicRequest topicRequest : request.topics()) {
 
             // OVERALL shouldnt be set by client
@@ -108,27 +86,23 @@ public class RatingService {
 
             rating.getTopics().add(topic);
 
-            //for overall Rating
-            double weight = topicRequest.category().getDefaultWeight();
-
-            weightedSum += topicRequest.value() * weight;
-            totalWeight += weight;
         }
 
-        //Calculate Overall
-        if (totalWeight  > 0) {
+        //TODO: idk ob heir ein bug ensteht weil wir das rating objekt noch nicht gespeicehrt haben
 
-            double overall = weightedSum / totalWeight;
+        //Add overall Rating
+        double overallRating = calculateAverageScore(rating);
+        RatingTopic overallTopic = new RatingTopic();
+        overallTopic.setCategory(RatingCategory.OVERALL);
+        overallTopic.setValue(overallRating);
+        overallTopic.setRating(rating);
 
-            RatingTopic overallTopic = new RatingTopic();
-            overallTopic.setCategory(RatingCategory.OVERALL);
-            overallTopic.setValue(overall);
-            overallTopic.setRating(rating);
+        rating.getTopics().add(overallTopic);
 
-            rating.getTopics().add(overallTopic);
-        }
 
         ratingRepository.save(rating);
+
+
 
         String code = lecture.getCode();
         auditWriter.writeStudentAction(
@@ -148,9 +122,7 @@ public class RatingService {
     }
 
 
-    // Needs a transaction: open-in-view is disabled and this walks the lazy
-    // topics collection of every rating. Without it this endpoint fails with
-    // LazyInitializationException for any lecture that has ratings.
+
     @Transactional(readOnly = true)
     public RatingsAverageResponse getRatings(UUID lectureId) {
 
@@ -164,9 +136,7 @@ public class RatingService {
             for (RatingTopic topic : rating.getTopics()) {
 
                 RatingCategory category = topic.getCategory();
-
                 sums.put(category, sums.getOrDefault(category, 0.0) + topic.getValue());
-
                 counts.put(category, counts.getOrDefault(category, 0.0) + 1);
             }
         }
@@ -176,7 +146,7 @@ public class RatingService {
         for (RatingCategory category : sums.keySet()) {
 
             double average = (double) sums.get(category) / counts.get(category);
-            
+
             result.add(new TopicAverageResponse(category, average));
         }
 
@@ -185,13 +155,7 @@ public class RatingService {
     }
 
     @Transactional
-    public RatingsAverageResponse getOwnRating(String authHeader, UUID lectureId) {
-
-        Student student = authService.verifyUser(authHeader);
-
-        if(student == null) {
-            return new RatingsAverageResponse("Error, cannot authenticate user", false, null);
-        }
+    public RatingsAverageResponse getOwnRating(Student student, UUID lectureId) {
 
         Lecture lecture = lectureService.getById(lectureId);
 
@@ -199,17 +163,13 @@ public class RatingService {
             return new RatingsAverageResponse("Error, cannot find lecture with id " + lectureId, false, null);
         }
 
-
         Rating rating = ratingRepository.findByStudentIdAndLectureId(student.getId(), lectureId).orElse(null);
 
         if (rating == null) {
             return new RatingsAverageResponse("Error, couldnt find rating for Lecture: " + lectureId, false, null);
         }
 
-
-
         List<TopicAverageResponse> topics = new ArrayList<>();
-
 
         for (RatingTopic topic : rating.getTopics()) {
             topics.add(new TopicAverageResponse(topic.getCategory(), topic.getValue()));
@@ -239,6 +199,9 @@ public class RatingService {
         return new RatingCategoriesResponse("Found " + responses.size() + " categories", true, responses);
     }
 
+
+
+    //TODO: Ich bin mir unsicher, eig haben wir ja eine OVERALL kategorie, also müsssen das nicht jedes mal berechnen
     public static double calculateAverageScore(Rating rating){
 
         // Overall Rating berechnen
@@ -253,8 +216,6 @@ public class RatingService {
             totalWeight += weight;
         }
 
-        double overallRating;
-
         if (totalWeight == 0) {
             return 0;
         }
@@ -264,9 +225,7 @@ public class RatingService {
                 .setScale(2, RoundingMode.HALF_UP)
                 .doubleValue();
 
-
     }
-
 
 
 }

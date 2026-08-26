@@ -48,6 +48,8 @@ public class SecurityConfig {
                                 "/social/comments/report",
                                 "/social/answers/report"
                         ).authenticated()
+                        .requestMatchers(HttpMethod.POST, "/ratings/rate").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/ratings/own/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout-all").authenticated()
                         .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()

@@ -34,7 +34,6 @@ public final class HashGenerator {
     private static final Argon2PasswordEncoder ENCODER = new Argon2PasswordEncoder(16, 32, 1, 32768, 3);;
 
 
-
     private HashGenerator() {
         //
     }

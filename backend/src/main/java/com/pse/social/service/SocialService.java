@@ -293,7 +293,7 @@ public class SocialService {
     public BasicResponse submitAnswerReport(Student student, AnswerReportRequest request) {
 
         if(!submitAnswerReport(student, request.answerID(), request.reportReason(), request.explanation())){
-            return new BasicResponse("Error, couldnt finde answer",false);
+            return new BasicResponse("Error, couldnt find answer",false);
         }
 
         return new BasicResponse("Answer Report submitted successfully",true);
