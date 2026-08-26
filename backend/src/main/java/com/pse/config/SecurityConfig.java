@@ -36,6 +36,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/auth/request-login", "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/health").permitAll()
+                        .requestMatchers("/account/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/data/lectures").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout-all").authenticated()
                         .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()

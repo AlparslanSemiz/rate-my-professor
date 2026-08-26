@@ -1,12 +1,13 @@
 package com.pse.user.controller;
 
 
+import com.pse.security.AuthenticatedUser;
 import com.pse.user.service.AccountService;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,78 +32,56 @@ public class AccountController {
     }
 
     /**
-     * Returns information about the User
-     * Used for the HomePage of the App
+     * Returns profile information for the authenticated user.
      *
-     * Request:
-     *  - auth Token in Header
+     * @param principal the authenticated user
+     * @return the user's profile information
      */
     @GetMapping("/information")
-    public StudentProfileResponse getUserInformation(@RequestHeader("Authorization") String authHeader) {
-
-        return accountService.getUserInformation(authHeader);
-
+    public StudentProfileResponse getUserInformation(
+            @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        return accountService.getUserInformation(principal.student());
     }
 
     /**
-     * Returns all the Ratings of the User
-     * Used for the Homepage of the App
+     * Returns all ratings submitted by the authenticated user.
      *
-     *
-     *
-     //Was wir zurückgeben wollen
-
-     //Rating #1:
-     //Lineare Algebra 1, Kühnlein (SS24)
-     //Bewertung Overall: 9/10
-
-     //Rating #1:
-     //TGI, Müller Quade (SS25)
-     //Bewertung Overall: 8/10
-
-     *
-     * Request:
-     *  - email
-     *  - (auth Token in Header)
+     * @param principal the authenticated user
+     * @return the user's ratings
      */
     @GetMapping("/ratings")
-    public UserRatingResponse getUserRatings(@RequestHeader("Authorization") String authHeader) {
-
-        return accountService.getUserRatings(authHeader);
-
+    public UserRatingResponse getUserRatings(
+            @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        return accountService.getUserRatings(principal.student());
     }
 
-
-
     /**
-     * Invalidates all auth-Tokens related to User in Database
+     * Invalidates all authentication tokens belonging to the authenticated user.
      *
-     * Request:
-     *  - email
-     *  - (auth Token in Header)
+     * @param principal the authenticated user
+     * @return a response indicating whether the logout was successful
      */
     @PostMapping("/logout")
-    public BasicResponse requestLogout(@RequestHeader("Authorization") String authHeader) {
-
-        return accountService.requestLogout(authHeader);
-
+    public BasicResponse requestLogout(
+            @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        return accountService.requestLogout(principal.student());
     }
-
 
     /**
-     * Invalidates the Student in the Database by setting flag.
+     * Deactivates the account of the authenticated user.
      *
-     * Request:
-     *  - email
-     *  - (auth Token in Header)
+     * @param principal the authenticated user
+     * @return a response indicating whether the account was deactivated successfully
      */
     @PatchMapping("/deleteAccount")
-    public BasicResponse deleteAccount(@RequestHeader("Authorization") String authHeader) {
-
-        return accountService.deleteAccount(authHeader);
-
+    public BasicResponse deleteAccount(
+            @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        return accountService.deleteAccount(principal.student());
     }
-
 
 
 }

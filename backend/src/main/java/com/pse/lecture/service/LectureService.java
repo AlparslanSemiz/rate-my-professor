@@ -1,9 +1,12 @@
 package com.pse.lecture.service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
+import com.pse.professor.service.ProfessorService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -86,11 +89,11 @@ public class LectureService {
     }
 
 
-    public BasicResponse addLecture(String authHeader, AddLectureRequest request) {
+    public BasicResponse addLecture(Student student, AddLectureRequest request) {
 
-        Student student = authService.verifyUser(authHeader);
-        if(!(student != null && moderationUserService.verifyAdmin(student))){
-            return new BasicResponse("User is not authorized to add Lectures (isnt Admin)", false);
+        if (!moderationUserService.verifyAdmin(student)) {
+            return new BasicResponse("User is not authorized to add lectures", false
+            );
         }
 
         if (lectureRepository.findByName(request.name()).isPresent()) {
@@ -99,7 +102,7 @@ public class LectureService {
 
 
         List<UUID> professorsIDs = request.professorIds();
-        List<Professor> professors = new ArrayList<>();
+        Set<Professor> professors = new HashSet<>();
 
         //Validate professorIDs exist
         for (UUID professorID: professorsIDs){
@@ -136,10 +139,9 @@ public class LectureService {
     }
 
 
-
     private LecturesResponse getLectures(boolean includeInactive){
 
-        List<Lecture> lectures;
+        Set<Lecture> lectures;
 
         if(includeInactive){
             lectures = lectureRepository.findAllByOrderByNameAsc();
@@ -167,14 +169,7 @@ public class LectureService {
         List<ProfessorShortResponse> professorResponses = new ArrayList<>();
 
         for (Professor professor : lecture.getProfessors()) {
-            professorResponses.add(
-                    new ProfessorShortResponse(
-                            professor.getId(),
-                            professor.getFirstName(),
-                            professor.getLastName(),
-                            professor.isActive()
-                    )
-            );
+            professorResponses.add(ProfessorService.createProfessorShortResponse(professor));
         }
 
         return new LectureResponse(

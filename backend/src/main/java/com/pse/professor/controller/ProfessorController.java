@@ -3,6 +3,9 @@ package com.pse.professor.controller;
 
 import java.util.UUID;
 
+import com.pse.security.AuthenticatedUser;
+import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,35 +35,36 @@ public class ProfessorController {
 
     @GetMapping("/professor")
     public ProfessorsResponse getProfessors() {
-
         return professorService.getProfessors();
-
     }
-
 
     @GetMapping("/professor/{professor_id}")
     public ProfessorDetailResponse getProfessor(@PathVariable UUID professor_id) {
-
         return professorService.getProfessor(professor_id);
-
     }
 
 
+    /**
+     * SECURED [NEEDS ADMIN]
+     * @param request
+     * @return
+     */
     @PostMapping("/professor")
-    public BasicResponse addProfessor(@RequestHeader("Authorization") String authHeader, @RequestBody ProfessorAddRequest request){
-
-        return professorService.addProfessor(authHeader, request);
-
+    public BasicResponse addProfessor(@Valid @RequestBody ProfessorAddRequest request) {
+        return professorService.addProfessor(request);
     }
 
 
+    /**
+     * Used for adding Lecture.
+     * First, add all professors, then add get IDs for them, and then add lectures
+     * @param firstName of Prof
+     * @param lastName of Prof
+     * @return the UUID of Prof
+     */
     @GetMapping("/professor/id")
-    public UUID getProfessorID( @RequestParam String firstName,
-        @RequestParam String lastName) {
-
+    public UUID getProfessorID( @RequestParam String firstName, @RequestParam String lastName) {
         return professorService.getProfessorID(firstName, lastName);
-
-
     }
 
 

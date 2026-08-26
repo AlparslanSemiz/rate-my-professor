@@ -3,15 +3,16 @@ package com.pse.professor.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
+import com.pse.professor.dto.response.ProfessorShortResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
-import com.pse.moderation.service.ModerationUserService;
 import com.pse.professor.dto.request.ProfessorAddRequest;
 import com.pse.professor.dto.response.ProfessorDetailResponse;
 import com.pse.professor.dto.response.ProfessorResponse;
@@ -25,45 +26,38 @@ public class ProfessorService {
     private final ProfessorRepository professorRepository;
     private final LectureRepository lectureRepository;
 
-    private final ModerationUserService moderationUserService;
 
 
-    public ProfessorService(ProfessorRepository professorRepository, LectureRepository lectureRepository, ModerationUserService moderationUserService) {
+    public ProfessorService(ProfessorRepository professorRepository, LectureRepository lectureRepository) {
         this.professorRepository = professorRepository;
         this.lectureRepository = lectureRepository;
-        this.moderationUserService = moderationUserService;
     }
 
-    // Transactional because the response carries lectureIds and Professor.lectures is the
-    // lazy inverse side of the many-to-many. Open-in-view is disabled, so without a
-    // transaction boundary here reading it throws LazyInitializationException.
+
     @Transactional(readOnly = true)
     public ProfessorsResponse getProfessors() {
 
-        List<Professor> professors = professorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc();
+        Set<Professor> professors = professorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc();
 
         List<ProfessorResponse> responses = new ArrayList<>();
 
         for (Professor professor : professors) {
-            responses.add(toResponse(professor));
+            responses.add(createProfessorResponse(professor));
         }
 
         return new ProfessorsResponse("Found " + responses.size() + " professors", true, responses);
     }
 
 
-    // For the admin panel: getProfessors() filters to active=true, the same as the
-    // student app's catalogue read, so a deactivated professor would otherwise be
-    // unreachable from the panel to correct or reactivate.
     @Transactional(readOnly = true)
     public ProfessorsResponse getAllProfessors() {
 
-        List<Professor> professors = professorRepository.findAllByOrderByLastNameAscFirstNameAsc();
+        Set<Professor> professors = professorRepository.findAllByOrderByLastNameAscFirstNameAsc();
 
         List<ProfessorResponse> responses = new ArrayList<>();
 
         for (Professor professor : professors) {
-            responses.add(toResponse(professor));
+            responses.add(createProfessorResponse(professor));
         }
 
         return new ProfessorsResponse("Found " + responses.size() + " professors", true, responses);
@@ -79,39 +73,18 @@ public class ProfessorService {
             return new ProfessorDetailResponse("Couldnt find prof with uuid: " + professor_id, false, null);
         }
 
-        // success was hard-coded false on this success path, so a client that trusted the
-        // flag treated every found professor as a miss.
+
         return new ProfessorDetailResponse(
                 "Found professor with uuid: " + professor_id,
                 true,
-                toResponse(professor)
+                createProfessorResponse(professor)
         );
 
     }
 
-    private ProfessorResponse toResponse(Professor professor) {
-        return new ProfessorResponse(
-                professor.getId(),
-                professor.getFirstName(),
-                professor.getLastName(),
-                professor.isActive(),
-                professor.getAverageRating(),
-                professor.getRatingCount(),
-                professor.getLectures().stream().map(Lecture::getId).toList()
-        );
-    }
 
-    public BasicResponse addProfessor(
-        String authHeader,
-        ProfessorAddRequest request
-) {
-
-    if (!moderationUserService.validateAdminToken(authHeader)) {
-        return new BasicResponse(
-                "Error, not authorized to add professors (must be admin)",
-                false
-        );
-    }
+    @Transactional
+    public BasicResponse addProfessor(ProfessorAddRequest request) {
 
     if (getProfessorID(request.firstName(), request.lastName()) != null) {
         return new BasicResponse(
@@ -123,63 +96,70 @@ public class ProfessorService {
         );
     }
 
-    Professor professor = new Professor();
-    professor.setFirstName(request.firstName().trim());
-    professor.setLastName(request.lastName().trim());
+    List<Lecture> lectures = new ArrayList<>();
+        if (request.lectureIDs() != null) {
+            for (UUID lectureId : request.lectureIDs()) {
 
-    // Zuerst speichern, damit der Professor eine ID hat
-    professorRepository.save(professor);
+                Lecture lecture = lectureRepository.findById(lectureId).orElse(null);
 
-    if (request.lectureIDs() != null) {
+                if (lecture == null) {
+                    return new BasicResponse(
+                            "Couldn't find lecture with lectureID: " + lectureId,
+                            false
+                    );
+                }
 
-        for (UUID lectureID : request.lectureIDs()) {
-
-            Lecture lecture = lectureRepository
-                    .findById(lectureID)
-                    .orElse(null);
-
-            if (lecture == null) {
-                return new BasicResponse(
-                        "Couldn't find lecture with lectureID: " + lectureID,
-                        false
-                );
+                lectures.add(lecture);
             }
-
-            // Beide Seiten der Many-to-Many-Beziehung aktualisieren
-            if (!lecture.getProfessors().contains(professor)) {
-                lecture.getProfessors().add(professor);
-            }
-
-            if (!professor.getLectures().contains(lecture)) {
-                professor.getLectures().add(lecture);
-            }
-
-            lectureRepository.save(lecture);
         }
-    }
 
-    professorRepository.save(professor);
+        Professor professor = new Professor();
+        professor.setFirstName(request.firstName().trim());
+        professor.setLastName(request.lastName().trim());
 
-    return new BasicResponse(
-            "Professor added successfully",
-            true
-    );
-}
+        for (Lecture lecture : lectures) {
+            lecture.getProfessors().add(professor);
+            professor.getLectures().add(lecture);
+        }
 
-
-    public void linkLectureToProf(Professor professor, Lecture lecture) {
-        professor.getLectures().add(lecture);
         professorRepository.save(professor);
+
+        return new BasicResponse("Professor added successfully", true);
     }
+
+
+
+    public static ProfessorResponse createProfessorResponse(Professor professor) {
+        return new ProfessorResponse(
+                professor.getId(),
+                professor.getFirstName(),
+                professor.getLastName(),
+                professor.isActive(),
+                professor.getAverageRating(),
+                professor.getRatingCount(),
+                professor.getLectures().stream().map(Lecture::getId).toList()
+        );
+    }
+
+
+
+    public static ProfessorShortResponse createProfessorShortResponse(Professor professor) {
+        return new ProfessorShortResponse(
+                professor.getId(),
+                professor.getFirstName(),
+                professor.getLastName(),
+                professor.isActive()
+        );
+    }
+
 
     public UUID getProfessorID(String firstName, String lastName) {
-
         Professor professor = professorRepository.findByFirstNameAndLastName(firstName, lastName).orElse(null);
-
         if(professor == null) {
             return null;
         }
-
         return professor.getId();
     }
+
+
 }

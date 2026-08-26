@@ -3,7 +3,9 @@ package com.pse.professor.model;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.hibernate.annotations.UpdateTimestamp;
@@ -47,8 +49,7 @@ public class Professor {
     private int ratingCount = 0;
 
     @ManyToMany(mappedBy = "professors")
-    private List<Lecture> lectures = new ArrayList<>();
-
+    private Set<Lecture> lectures = new HashSet<>();
 
     @UpdateTimestamp
     @Column(name = "updated_at")

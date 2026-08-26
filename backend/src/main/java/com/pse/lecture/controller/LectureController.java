@@ -3,6 +3,9 @@ package com.pse.lecture.controller;
 
 import java.util.UUID;
 
+import com.pse.security.AuthenticatedUser;
+import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -65,10 +68,9 @@ public class LectureController {
      * @return : See .success() and .message() for further information
      */
     @PostMapping("/lectures")
-    public BasicResponse addLecture(@RequestHeader("Authorization") String authHeader, @RequestBody AddLectureRequest request) {
-        return lectureService.addLecture(authHeader, request);
+    public BasicResponse addLecture(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody AddLectureRequest request) {
+        return lectureService.addLecture(principal.student(), request);
     }
-
 
 
 }
