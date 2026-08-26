@@ -1,5 +1,7 @@
 package com.pse.rating.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -236,6 +238,35 @@ public class RatingService {
 
         return new RatingCategoriesResponse("Found " + responses.size() + " categories", true, responses);
     }
+
+    public static double calculateAverageScore(Rating rating){
+
+        // Overall Rating berechnen
+        double weightedSum = 0;
+        double totalWeight = 0;
+
+        for (RatingTopic topic : rating.getTopics()) {
+
+            double weight = topic.getCategory().getDefaultWeight();
+
+            weightedSum += topic.getValue() * weight;
+            totalWeight += weight;
+        }
+
+        double overallRating;
+
+        if (totalWeight == 0) {
+            return 0;
+        }
+        double averageScore = weightedSum / totalWeight;
+
+        return BigDecimal.valueOf(averageScore)
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue();
+
+
+    }
+
 
 
 }

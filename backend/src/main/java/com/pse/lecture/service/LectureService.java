@@ -66,7 +66,11 @@ public class LectureService {
         return getLectures(true);
     }
 
-
+    /**
+     * Retrieves a Lecture with a given ID
+     * @param lectureId UUID
+     * @return LectureDetailResponse
+     */
     @Transactional(readOnly = true)
     public LectureDetailResponse getLecture(UUID lectureId) {
 
@@ -97,6 +101,7 @@ public class LectureService {
         List<UUID> professorsIDs = request.professorIds();
         List<Professor> professors = new ArrayList<>();
 
+        //Validate professorIDs exist
         for (UUID professorID: professorsIDs){
 
             if(professorRepository.existsById(professorID)){
@@ -132,14 +137,14 @@ public class LectureService {
 
 
 
-    private LecturesResponse getLectures(boolean nonActive){
+    private LecturesResponse getLectures(boolean includeInactive){
 
         List<Lecture> lectures;
 
-        if(nonActive){
-            lectures = lectureRepository.findByActiveTrueOrderByNameAsc();
-        } else {
+        if(includeInactive){
             lectures = lectureRepository.findAllByOrderByNameAsc();
+        } else {
+            lectures = lectureRepository.findByActiveTrueOrderByNameAsc();
         }
 
         List<LectureResponse> responses = new ArrayList<>();
@@ -157,7 +162,7 @@ public class LectureService {
      * @param lecture to be parsed
      * @return a LectureResponse
      */
-    private static LectureResponse createLectureResponse(Lecture lecture) {
+    public static LectureResponse createLectureResponse(Lecture lecture) {
 
         List<ProfessorShortResponse> professorResponses = new ArrayList<>();
 

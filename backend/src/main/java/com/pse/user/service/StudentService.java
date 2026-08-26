@@ -7,8 +7,10 @@ import java.util.UUID;
 
 import com.pse.lecture.dto.response.LectureResponse;
 import com.pse.lecture.model.Lecture;
+import com.pse.lecture.service.LectureService;
 import com.pse.professor.dto.response.ProfessorShortResponse;
 import com.pse.professor.model.Professor;
+import com.pse.rating.service.RatingService;
 import com.pse.shared.util.ProfilePictureGenerator;
 import com.pse.shared.enums.VoteType;
 import com.pse.social.model.Answer;
@@ -38,10 +40,12 @@ public class StudentService {
 
 
     private final StudentRepository studentRepository;
+    private final LectureService lectureService;
 
 
-    public StudentService(StudentRepository studentRepository) {
+    public StudentService(StudentRepository studentRepository, LectureService lectureService) {
         this.studentRepository = studentRepository;
+        this.lectureService = lectureService;
     }
 
 
@@ -115,57 +119,10 @@ public class StudentService {
 
             Lecture lecture = rating.getLecture();
 
-            // Professors
-            List<ProfessorShortResponse> professorResponses = new ArrayList<>();
+            LectureResponse lectureResponse = LectureService.createLectureResponse(lecture);
 
-            for (Professor professor : lecture.getProfessors()) {
 
-                ProfessorShortResponse professorResponse =
-                        new ProfessorShortResponse(
-                                professor.getId(),
-                                professor.getFirstName(),
-                                professor.getLastName(),
-                                professor.isActive()
-                        );
-
-                professorResponses.add(professorResponse);
-            }
-
-            //Lectures
-            LectureResponse lectureResponse = new LectureResponse(
-                    lecture.getId(),
-                    lecture.getName(),
-                    lecture.getCode(),
-                    lecture.getSemesterYear(),
-                    lecture.getSemesterSeason(),
-                    lecture.isActive(),
-                    lecture.getLectureType(),
-                    professorResponses,
-                    lecture.getComments().size(),
-                    lecture.getRatings().size()
-            );
-
-            // Overall Rating berechnen
-            double weightedSum = 0;
-            double totalWeight = 0;
-
-            for (RatingTopic topic : rating.getTopics()) {
-
-                double weight = topic.getCategory().getDefaultWeight();
-
-                weightedSum += topic.getValue() * weight;
-                totalWeight += weight;
-            }
-
-            double overallRating;
-
-            if (totalWeight == 0) {
-                overallRating = 0;
-            } else {
-                overallRating = weightedSum / totalWeight;
-            }
-
-            overallRating = Math.round(overallRating * 100.0) / 100.0;
+            double overallRating = RatingService.calculateAverageScore(rating);
 
             UserRatingDto userRatingDto = new UserRatingDto(
                     lectureResponse,
