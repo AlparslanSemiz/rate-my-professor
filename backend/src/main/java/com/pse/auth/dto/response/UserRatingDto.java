@@ -1,7 +1,12 @@
 package com.pse.auth.dto.response;
 
+
+import com.pse.lecture.dto.response.LectureResponse;
+
+//Used for "List of my Ratings
 public record UserRatingDto(
-        String lectureName,
-        String semester,
+
+        LectureResponse lecture,
         double overallRating
+
 ) {}
