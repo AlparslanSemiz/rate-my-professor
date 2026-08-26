@@ -37,6 +37,9 @@ import java.time.LocalDateTime;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Every endpoint here was hit by the same bug: open-in-view is disabled, so a
@@ -106,22 +109,26 @@ class LazyLoadingRegressionTests {
     }
 
     @Test
-    void professorEndpointsSurviveAProfessorWithLectures() throws Exception {
+    void professorEndpointsReturnLectureIdsForProfessorWithLectures() throws Exception {
         Student student = createStudent("lazy-professor@student.kit.edu");
         Lecture lecture = createLecture(student);
-        Professor professor = lecture.getProfessors().getFirst();
 
-        // ProfessorResponse carries lectureIds, and Professor.lectures is the lazy inverse
-        // side of the many-to-many. Without a transaction boundary and a fetch graph on the
-        // read, this is a LazyInitializationException the catch-all turns into an opaque 500.
+        assertEquals(1, lecture.getProfessors().size());
+
+        Professor professor = lecture.getProfessors().iterator().next();
+        String lectureId = lecture.getId().toString();
+        String professorId = professor.getId().toString();
+
         mockMvc.perform(get("/data/professor"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.professors[0].lectureIds[0]")
-                        .value(lecture.getId().toString()));
+                .andExpect(jsonPath("$.professors", hasSize(1)))
+                .andExpect(jsonPath("$.professors[0].id").value(professorId))
+                .andExpect(jsonPath("$.professors[0].lectureIds", hasItem(lectureId)));
 
-        mockMvc.perform(get("/data/professor/" + professor.getId()))
+        mockMvc.perform(get("/data/professor/" + professorId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.professor.lectureIds[0]").value(lecture.getId().toString()));
+                .andExpect(jsonPath("$.professor.id").value(professorId))
+                .andExpect(jsonPath("$.professor.lectureIds", hasItem(lectureId)));
     }
 
     @Test

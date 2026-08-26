@@ -23,41 +23,15 @@ public class AccountService {
     }
 
 
-    public UserRatingResponse getUserRatings(String authHeader) {
-
-        Student student = authService.verifyUser(authHeader);
-        if(student == null) {
-            return new UserRatingResponse("Error, couldnt verify User", false,null);
-        }
-
+    public UserRatingResponse getUserRatings(Student student) {
         return studentService.getUserRatings(student.getId());
-
-
     }
 
-        public StudentProfileResponse getUserInformation(String authHeader) {
-
-        Student student = authService.verifyUser(authHeader);
-
-        if (student == null) {
-            return new StudentProfileResponse(
-                    "Error, cannot authenticate user",
-                    false,
-                    null,
-                    null,
-                    0,
-                    0,
-                    0,
-                    0
-            );
-        }
-
+    public StudentProfileResponse getUserInformation(Student student) {
         return studentService.getUserInformation(student.getId());
     }
 
-    public BasicResponse deleteAccount(String authHeader) {
-
-        Student student = authService.verifyUser(authHeader);
+    public BasicResponse deleteAccount(Student student) {
 
         BasicResponse response = studentService.deleteAccount(student);
 
@@ -70,13 +44,8 @@ public class AccountService {
         return response;
     }
 
-    public BasicResponse requestLogout(String authHeader) {
+    public BasicResponse requestLogout(Student student) {
 
-        Student student = authService.verifyUser(authHeader);
-
-        if (student == null) {
-            return new BasicResponse("Error, couldnt authenticate user", false);
-        }
 
         //Iterate through every entry in AuthToken and delete every match where: AuthToken.email == email
         int sessions = authService.invalidateAllAuthTokensForEmail(student.getKitEmail());

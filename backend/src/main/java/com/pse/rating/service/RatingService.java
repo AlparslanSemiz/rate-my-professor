@@ -1,5 +1,7 @@
 package com.pse.rating.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,7 +19,6 @@ import com.pse.rating.dto.response.RatingCategoryResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
 import com.pse.rating.model.RatingCategory;
 import com.pse.user.service.StudentService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,44 +34,26 @@ import com.pse.rating.dto.response.TopicAverageResponse;
 @Service
 public class RatingService {
 
-    private final StudentService studentService;
-    private final AuthService authService;
     private final LectureService lectureService;
 
 
     private final RatingRepository ratingRepository;
     private final AuditWriter auditWriter;
 
-    public RatingService(StudentService studentService, AuthService authService, LectureService lectureService, RatingRepository ratingRepository, AuditWriter auditWriter) {
-        this.studentService = studentService;
-        this.authService = authService;
+    public RatingService(LectureService lectureService, RatingRepository ratingRepository, AuditWriter auditWriter) {
         this.lectureService = lectureService;
         this.ratingRepository = ratingRepository;
         this.auditWriter = auditWriter;
     }
 
 
-    // Needs a transaction so that the rating and its activity-log entry commit together.
     @Transactional
-    public BasicResponse submitRating(String authHeader, RatingRequest request) {
+    public BasicResponse submitRating(Student student, RatingRequest request) {
 
-        Student student = authService.verifyUser(authHeader);
-
-        if(student == null) {
-            return new BasicResponse("Error, cannot authenticate user", false);
-        }
-
-        Lecture lecture = lectureService.findById(request.lectureId());
+        Lecture lecture = lectureService.getById(request.lectureId());
 
         if (lecture == null) {
             return new BasicResponse("Error, cannot find lecture with id " + request.lectureId(), false);
-        }
-
-
-        student = studentService.findByKitEmail(student.getKitEmail());
-
-        if (student == null) {
-            return new BasicResponse("Error, cannot find student", false);
         }
 
         //Check if User already has Rating
@@ -88,10 +71,6 @@ public class RatingService {
         }
 
 
-        double weightedSum = 0.0;
-        double totalWeight = 0.0;
-
-
         for (RatingTopicRequest topicRequest : request.topics()) {
 
             // OVERALL shouldnt be set by client
@@ -107,27 +86,23 @@ public class RatingService {
 
             rating.getTopics().add(topic);
 
-            //for overall Rating
-            double weight = topicRequest.category().getDefaultWeight();
-
-            weightedSum += topicRequest.value() * weight;
-            totalWeight += weight;
         }
 
-        //Calculate Overall
-        if (totalWeight  > 0) {
+        //TODO: idk ob heir ein bug ensteht weil wir das rating objekt noch nicht gespeicehrt haben
 
-            double overall = weightedSum / totalWeight;
+        //Add overall Rating
+        double overallRating = calculateAverageScore(rating);
+        RatingTopic overallTopic = new RatingTopic();
+        overallTopic.setCategory(RatingCategory.OVERALL);
+        overallTopic.setValue(overallRating);
+        overallTopic.setRating(rating);
 
-            RatingTopic overallTopic = new RatingTopic();
-            overallTopic.setCategory(RatingCategory.OVERALL);
-            overallTopic.setValue(overall);
-            overallTopic.setRating(rating);
+        rating.getTopics().add(overallTopic);
 
-            rating.getTopics().add(overallTopic);
-        }
 
         ratingRepository.save(rating);
+
+
 
         String code = lecture.getCode();
         auditWriter.writeStudentAction(
@@ -147,9 +122,7 @@ public class RatingService {
     }
 
 
-    // Needs a transaction: open-in-view is disabled and this walks the lazy
-    // topics collection of every rating. Without it this endpoint fails with
-    // LazyInitializationException for any lecture that has ratings.
+
     @Transactional(readOnly = true)
     public RatingsAverageResponse getRatings(UUID lectureId) {
 
@@ -163,9 +136,7 @@ public class RatingService {
             for (RatingTopic topic : rating.getTopics()) {
 
                 RatingCategory category = topic.getCategory();
-
                 sums.put(category, sums.getOrDefault(category, 0.0) + topic.getValue());
-
                 counts.put(category, counts.getOrDefault(category, 0.0) + 1);
             }
         }
@@ -175,7 +146,7 @@ public class RatingService {
         for (RatingCategory category : sums.keySet()) {
 
             double average = (double) sums.get(category) / counts.get(category);
-            
+
             result.add(new TopicAverageResponse(category, average));
         }
 
@@ -184,20 +155,13 @@ public class RatingService {
     }
 
     @Transactional
-    public RatingsAverageResponse getOwnRating(String authHeader, UUID lectureId) {
+    public RatingsAverageResponse getOwnRating(Student student, UUID lectureId) {
 
-        Student student = authService.verifyUser(authHeader);
-
-        if(student == null) {
-            return new RatingsAverageResponse("Error, cannot authenticate user", false, null);
-        }
-
-        Lecture lecture = lectureService.findById(lectureId);
+        Lecture lecture = lectureService.getById(lectureId);
 
         if (lecture == null) {
             return new RatingsAverageResponse("Error, cannot find lecture with id " + lectureId, false, null);
         }
-
 
         Rating rating = ratingRepository.findByStudentIdAndLectureId(student.getId(), lectureId).orElse(null);
 
@@ -205,10 +169,7 @@ public class RatingService {
             return new RatingsAverageResponse("Error, couldnt find rating for Lecture: " + lectureId, false, null);
         }
 
-
-
         List<TopicAverageResponse> topics = new ArrayList<>();
-
 
         for (RatingTopic topic : rating.getTopics()) {
             topics.add(new TopicAverageResponse(topic.getCategory(), topic.getValue()));
@@ -220,7 +181,7 @@ public class RatingService {
 
     public RatingCategoriesResponse getRatingCategories(UUID lectureId) {
 
-        Lecture lecture = lectureService.findById(lectureId);
+        Lecture lecture = lectureService.getById(lectureId);
 
         List<RatingCategoryResponse> responses = new ArrayList<>();
 
@@ -236,6 +197,34 @@ public class RatingService {
         }
 
         return new RatingCategoriesResponse("Found " + responses.size() + " categories", true, responses);
+    }
+
+
+
+    //TODO: Ich bin mir unsicher, eig haben wir ja eine OVERALL kategorie, also müsssen das nicht jedes mal berechnen
+    public static double calculateAverageScore(Rating rating){
+
+        // Overall Rating berechnen
+        double weightedSum = 0;
+        double totalWeight = 0;
+
+        for (RatingTopic topic : rating.getTopics()) {
+
+            double weight = topic.getCategory().getDefaultWeight();
+
+            weightedSum += topic.getValue() * weight;
+            totalWeight += weight;
+        }
+
+        if (totalWeight == 0) {
+            return 0;
+        }
+        double averageScore = weightedSum / totalWeight;
+
+        return BigDecimal.valueOf(averageScore)
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue();
+
     }
 
 

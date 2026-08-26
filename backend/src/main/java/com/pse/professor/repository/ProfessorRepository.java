@@ -2,6 +2,7 @@ package com.pse.professor.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -18,10 +19,10 @@ public interface ProfessorRepository extends JpaRepository<Professor, UUID> {
      * at best and a LazyInitializationException at worst.
      */
     @EntityGraph(attributePaths = "lectures")
-    List<Professor> findByActiveTrueOrderByLastNameAscFirstNameAsc();
+    Set<Professor> findByActiveTrueOrderByLastNameAscFirstNameAsc();
 
     @EntityGraph(attributePaths = "lectures")
-    List<Professor> findAllByOrderByLastNameAscFirstNameAsc();
+    Set<Professor> findAllByOrderByLastNameAscFirstNameAsc();
 
     @EntityGraph(attributePaths = "lectures")
     Optional<Professor> findWithLecturesById(UUID id);

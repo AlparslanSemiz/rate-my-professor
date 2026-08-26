@@ -11,12 +11,10 @@ public class AdminService {
 
     private final ModerationUserService moderationUserService;
 
-    private final AdminRepository adminRepository;
 
 
-    public AdminService(ModerationUserService moderationUserService, AdminRepository adminRepository) {
+    public AdminService(ModerationUserService moderationUserService) {
         this.moderationUserService = moderationUserService;
-        this.adminRepository = adminRepository;
     }
 
     public BasicResponse validateAdmin(String authHeader) {

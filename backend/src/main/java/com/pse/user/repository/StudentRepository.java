@@ -29,30 +29,18 @@ public interface StudentRepository
 
     boolean existsByUsername(String username);
 
-    List<Student> findAllByStatusNotOrderByCreatedAtDesc(UserStatus status);
-
     long countByStatusNot(UserStatus status);
 
     long countByStatus(UserStatus status);
 
     Optional<Student> findByIdAndStatusNot(UUID id, UserStatus status);
 
+
+    //TODO: Is Query part needed?
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select student from Student student where student.id = :id")
     Optional<Student> findByIdForUpdate(@Param("id") UUID id);
 
-
-    /**
-     * Returns the average of all rating topic values submitted by the user.
-     * @param student references the User
-     * @return average rating value
-     */
-    @Query("""
-        SELECT AVG(rt.value)
-        FROM RatingTopic rt
-        WHERE rt.rating.student = :student
-    """)
-    Double getAverageOverallRating(@Param("student") Student student);
 
 
 }

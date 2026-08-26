@@ -4,7 +4,9 @@ import java.util.UUID;
 
 import com.pse.rating.dto.response.RatingCategoriesResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
+import com.pse.security.AuthenticatedUser;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,9 +34,9 @@ public class RatingController {
     }
 
     @PostMapping("/rate")
-    public BasicResponse submitRating(@RequestHeader("Authorization") String authHeader, @RequestBody  RatingRequest request) {
+    public BasicResponse submitRating(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody  RatingRequest request) {
 
-        return ratingService.submitRating(authHeader, request);
+        return ratingService.submitRating(principal.student(), request);
 
     }
 
@@ -51,8 +53,8 @@ public class RatingController {
     }
 
     @GetMapping("own/{lectureId}")
-    public RatingsAverageResponse getOwnRating(@RequestHeader("Authorization") String authHeader, @PathVariable UUID lectureId) {
-        return ratingService.getOwnRating(authHeader, lectureId);
+    public RatingsAverageResponse getOwnRating(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID lectureId) {
+        return ratingService.getOwnRating(principal.student(), lectureId);
     }
 
 

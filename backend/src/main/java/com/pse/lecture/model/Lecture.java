@@ -2,7 +2,9 @@ package com.pse.lecture.model;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import com.pse.rating.model.LectureType;
@@ -67,8 +69,7 @@ public class Lecture {
             joinColumns = @JoinColumn(name = "lecture_id"),
             inverseJoinColumns = @JoinColumn(name = "professor_id")
     )
-    private List<Professor> professors = new ArrayList<>();
-
+    private Set<Professor> professors = new HashSet<>();
 
 
     @OneToMany(mappedBy = "lecture", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -80,4 +81,6 @@ public class Lecture {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+
 }

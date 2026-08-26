@@ -2,7 +2,7 @@ package com.pse.auth.controller;
 
 import com.pse.auth.dto.request.LoginRequest;
 import com.pse.auth.dto.request.OTPRequest;
-import com.pse.auth.dto.request.ValidateCredsRequest;
+import com.pse.auth.dto.request.ValidateCredentialsRequest;
 import com.pse.auth.dto.response.AuthMeResponse;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.LoginResponse;
@@ -29,18 +29,12 @@ public class AuthController {
     }
 
     @PostMapping("/request-login")
-    public BasicResponse requestLogin(
-            @Valid @RequestBody OTPRequest request,
-            HttpServletRequest httpRequest
-    ) {
+    public BasicResponse requestLogin(@Valid @RequestBody OTPRequest request, HttpServletRequest httpRequest) {
         return authService.requestLogin(request, httpRequest);
     }
 
     @PostMapping("/login")
-    public LoginResponse login(
-            @Valid @RequestBody LoginRequest request,
-            HttpServletRequest httpRequest
-    ) {
+    public LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         return authService.login(request, httpRequest);
     }
 
@@ -60,10 +54,7 @@ public class AuthController {
     }
 
     @PostMapping("/validate")
-    public BasicResponse validate(
-            @RequestHeader("Authorization") String authHeader,
-            @RequestBody ValidateCredsRequest request
-    ) {
+    public BasicResponse validate(@RequestHeader("Authorization") String authHeader, @Valid @RequestBody ValidateCredentialsRequest request) {
         return authService.validate(authHeader, request);
     }
 }

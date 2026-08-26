@@ -14,7 +14,6 @@ public interface RatingRepository
 
     List<Rating> findByLectureId(UUID lectureId);
 
-    List<Rating> findAllByOrderByCreatedAtDesc();
 
     Optional<Rating> findByStudentIdAndLectureId(
             UUID studentId,
