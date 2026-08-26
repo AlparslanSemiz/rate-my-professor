@@ -5,6 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.pse.lecture.dto.response.LectureResponse;
+import com.pse.lecture.model.Lecture;
+import com.pse.professor.dto.response.ProfessorShortResponse;
+import com.pse.professor.model.Professor;
 import com.pse.shared.util.ProfilePictureGenerator;
 import com.pse.shared.enums.VoteType;
 import com.pse.social.model.Answer;
@@ -109,12 +113,39 @@ public class StudentService {
 
         for (Rating rating : student.getRatings()) {
 
-            String lectureName = rating.getLecture().getName();
+            Lecture lecture = rating.getLecture();
 
-            String semester = rating.getLecture().getSemesterSeason()
-                    + " "
-                    + rating.getLecture().getSemesterYear();
+            // Professors
+            List<ProfessorShortResponse> professorResponses = new ArrayList<>();
 
+            for (Professor professor : lecture.getProfessors()) {
+
+                ProfessorShortResponse professorResponse =
+                        new ProfessorShortResponse(
+                                professor.getId(),
+                                professor.getFirstName(),
+                                professor.getLastName(),
+                                professor.isActive()
+                        );
+
+                professorResponses.add(professorResponse);
+            }
+
+            //Lectures
+            LectureResponse lectureResponse = new LectureResponse(
+                    lecture.getId(),
+                    lecture.getName(),
+                    lecture.getCode(),
+                    lecture.getSemesterYear(),
+                    lecture.getSemesterSeason(),
+                    lecture.isActive(),
+                    lecture.getLectureType(),
+                    professorResponses,
+                    lecture.getComments().size(),
+                    lecture.getRatings().size()
+            );
+
+            // Overall Rating berechnen
             double weightedSum = 0;
             double totalWeight = 0;
 
@@ -126,17 +157,23 @@ public class StudentService {
                 totalWeight += weight;
             }
 
-            double overallRating = totalWeight == 0? 0: weightedSum / totalWeight;
+            double overallRating;
+
+            if (totalWeight == 0) {
+                overallRating = 0;
+            } else {
+                overallRating = weightedSum / totalWeight;
+            }
 
             overallRating = Math.round(overallRating * 100.0) / 100.0;
 
-            ratingDtos.add(
-                    new UserRatingDto(
-                            lectureName,
-                            semester,
-                            overallRating
-                    )
+            UserRatingDto userRatingDto = new UserRatingDto(
+                    lectureResponse,
+                    overallRating
             );
+
+            ratingDtos.add(userRatingDto);
+
         }
 
         return new UserRatingResponse(
