@@ -7,9 +7,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
+import com.example.myapplication_java.DomainModel.Semester;
+import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.Responses.UserRatingDto;
-import com.example.myapplication_java.databinding.ItemRatingBinding;
 import com.example.myapplication_java.databinding.ItemUserRatingBinding;
 import com.example.myapplication_java.logic.RatingColorCalculator;
 
@@ -20,6 +20,8 @@ public class ListOfMyRatingsAdapter extends RecyclerView.Adapter<ListOfMyRatings
 
     private final List<UserRatingDto> ratings;
 
+    private final OnRatingClickListener listener;
+
     @NonNull
     @Override
     public ListOfMyRatingsAdapter.UserRatingViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -28,17 +30,30 @@ public class ListOfMyRatingsAdapter extends RecyclerView.Adapter<ListOfMyRatings
         return new ListOfMyRatingsAdapter.UserRatingViewHolder(binding);
     }
 
-    public ListOfMyRatingsAdapter(List<UserRatingDto> ratings) {
+    public ListOfMyRatingsAdapter(List<UserRatingDto> ratings, OnRatingClickListener listener) {
         this.ratings = ratings;
+        this.listener = listener;
     }
 
     @Override
     public void onBindViewHolder(@NonNull ListOfMyRatingsAdapter.UserRatingViewHolder holder, int position) {
         UserRatingDto rating = ratings.get(position);
         holder.averageRating.setText(String.format(Locale.ROOT,"%.1f", rating.overallRating()));
-        holder.averageRating.setTextColor(RatingColorCalculator.ratingColourCalculator(holder.itemView.getContext(), rating.overallRating()));
-        holder.lectureName.setText(rating.lectureName());
-        holder.semester.setText(rating.semester());
+        holder.averageRating.setTextColor(RatingColorCalculator.calculateColour(holder.itemView.getContext(), rating.overallRating()));
+        holder.lectureName.setText(rating.lecture().name());
+        holder.semester.setText(
+                holder.itemView.getContext().getString(
+                        R.string.semester,
+                        rating.lecture().semesterSeason().name(),
+                        rating.lecture().semesterYear()
+                )
+        );
+
+        Semester semesterObject = new Semester(rating.lecture().semesterYear(), rating.lecture().semesterSeason());
+        String profId = rating.lecture().professors().get(0).id(); // Currently just choosing the first prof if multiple profs
+        String lectureName = rating.lecture().name();
+
+        holder.itemView.setOnClickListener(v -> listener.onRatingClick(semesterObject, profId, lectureName));
     }
 
     @Override

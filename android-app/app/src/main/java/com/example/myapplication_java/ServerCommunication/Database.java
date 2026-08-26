@@ -37,7 +37,8 @@ import retrofit2.Response;
  */
 @androidx.room.Database(
         entities = {Lecture.class, Professor.class, CommentModel.class},
-        version = 5
+        version = 5,
+        exportSchema = false
 )
 @TypeConverters(LocalDateTimeConverter.class)
 public abstract class Database extends RoomDatabase {

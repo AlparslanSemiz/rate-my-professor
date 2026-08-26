@@ -144,4 +144,7 @@ public interface SearchService {
 
     @Query("DELETE FROM comments")
     void deleteComments();
+
+    @Query("SELECT * FROM professors WHERE id = :id LIMIT 1")
+    Professor getProfessorById(String id);
 }

@@ -43,7 +43,7 @@ public final class RatingColorCalculator {
      * @param rating  the rating to colour; values outside 0.0 - 5.0 are pulled back into range
      * @return the colour as an ARGB integer
      */
-    public static int ratingColourCalculator(Context context, double rating) {
+    public static int calculateColour(Context context, double rating) {
         // Ratings outside the scale would produce negative or oversized colour channels,
         // so they are cut off at the ends of the scale first.
         double boundedRating = Math.max(0.0, Math.min(MAX_RATING, rating));
