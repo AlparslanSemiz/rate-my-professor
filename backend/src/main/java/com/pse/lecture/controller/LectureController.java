@@ -17,10 +17,19 @@ import com.pse.lecture.dto.response.LectureDetailResponse;
 import com.pse.lecture.dto.response.LecturesResponse;
 import com.pse.lecture.service.LectureService;
 
+
+/**
+ * REST controller for reading and adding lectures.
+ *
+ * Provides functionality for:
+ * - Retrieving all lectures
+ * - Retrieving a specific lecture by its ID
+ * - Adding a new lecture (user needs administrator privileges)
+ *
+ */
 @RestController
 @RequestMapping("/data")
 public class LectureController {
-
 
     private final LectureService lectureService;
 
@@ -28,16 +37,20 @@ public class LectureController {
         this.lectureService = lectureService;
     }
 
+    /**
+     * Retrieving all lectures in a List
+     * @return : See .success() and .message() for further information
+     */
     @GetMapping("/lectures")
     public LecturesResponse getLectures() {
         return lectureService.getLectures();
     }
 
-
-    // Was mapped to "/professor/{lecture_id}" — an exact path collision with
-    // ProfessorController's "/data/professor/{professor_id}". Spring can't pick
-    // between them at request time and throws "Ambiguous handler methods
-    // mapped", so this endpoint 500'd unconditionally, for every id, always.
+    /**
+     * Retrieving one lecture
+     * @param lecture_id ID of the retrieving Lecture
+     * @return : See .success() and .message() for further information
+     */
     @GetMapping("/lectures/{lecture_id}")
     public LectureDetailResponse getLecture(@PathVariable UUID lecture_id) {
         return lectureService.getLecture(lecture_id);
@@ -45,11 +58,11 @@ public class LectureController {
 
 
     /**
-     * Interface for adding Lectures
+     * Add one Lecture
      * AuthToken needs to be connected to an Admin
-     * @param authHeader
-     * @param request
-     * @return
+     * @param authHeader (needs administrator privileges)
+     * @param request (see wiki for details)
+     * @return : See .success() and .message() for further information
      */
     @PostMapping("/lectures")
     public BasicResponse addLecture(@RequestHeader("Authorization") String authHeader, @RequestBody AddLectureRequest request) {

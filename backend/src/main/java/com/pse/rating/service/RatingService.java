@@ -17,7 +17,6 @@ import com.pse.rating.dto.response.RatingCategoryResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
 import com.pse.rating.model.RatingCategory;
 import com.pse.user.service.StudentService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,7 +59,7 @@ public class RatingService {
             return new BasicResponse("Error, cannot authenticate user", false);
         }
 
-        Lecture lecture = lectureService.findById(request.lectureId());
+        Lecture lecture = lectureService.getById(request.lectureId());
 
         if (lecture == null) {
             return new BasicResponse("Error, cannot find lecture with id " + request.lectureId(), false);
@@ -192,7 +191,7 @@ public class RatingService {
             return new RatingsAverageResponse("Error, cannot authenticate user", false, null);
         }
 
-        Lecture lecture = lectureService.findById(lectureId);
+        Lecture lecture = lectureService.getById(lectureId);
 
         if (lecture == null) {
             return new RatingsAverageResponse("Error, cannot find lecture with id " + lectureId, false, null);
@@ -220,7 +219,7 @@ public class RatingService {
 
     public RatingCategoriesResponse getRatingCategories(UUID lectureId) {
 
-        Lecture lecture = lectureService.findById(lectureId);
+        Lecture lecture = lectureService.getById(lectureId);
 
         List<RatingCategoryResponse> responses = new ArrayList<>();
 

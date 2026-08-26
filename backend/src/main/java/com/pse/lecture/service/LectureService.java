@@ -22,6 +22,10 @@ import com.pse.user.model.Student;
 import com.pse.professor.dto.response.ProfessorShortResponse;
 
 
+/**
+ * Service for Lectures.
+ *
+ */
 @Service
 public class LectureService {
 
@@ -40,96 +44,26 @@ public class LectureService {
     }
 
 
-
-    // Needs a transaction: open-in-view is disabled and the response walks the
-    // lazy professors/comments/ratings collections of every lecture. Without it
-    // this endpoint fails with LazyInitializationException for any lecture with
-    // professors, comments, or ratings.
+    /**
+     * Searches only for Lectures which are active.
+     * @return all active Lectures.
+     */
     @Transactional(readOnly = true)
     public LecturesResponse getLectures() {
 
-        List<Lecture> lectures = lectureRepository.findByActiveTrueOrderByNameAsc();
-
-        List<LectureResponse> responses = new ArrayList<>();
-
-        for (Lecture lecture : lectures) {
-
-
-            List<ProfessorShortResponse> professorResponses = new ArrayList<>();
-
-            for (Professor professor : lecture.getProfessors()) {
-                professorResponses.add(
-                    new ProfessorShortResponse(
-                        professor.getId(),
-                        professor.getFirstName(),
-                        professor.getLastName(),
-                        professor.isActive()
-                    )
-                );
-            }
-
-            responses.add(
-                    new LectureResponse(
-                            lecture.getId(),
-                            lecture.getName(),
-                            lecture.getCode(),
-                            lecture.getSemesterYear(),
-                            lecture.getSemesterSeason(),
-                            lecture.isActive(),
-                            lecture.getLectureType(),
-                            professorResponses,
-                            lecture.getComments().size(),
-                            lecture.getRatings().size()
-                    )
-            );
-        }
-
-        return new LecturesResponse("Found " + responses.size() + " lectures", true, responses);
+        return getLectures(false);
     }
 
 
-    // For the admin panel: getLectures() filters to active=true, the same as the
-    // student app's catalogue read, so a deactivated lecture would otherwise be
-    // unreachable from the panel to correct or reactivate.
+    /**
+     * Used by Admin Panel.
+     * Searches for all Lectures (including non-active Lectures)
+     * @return all Lectures
+     */
     @Transactional(readOnly = true)
     public LecturesResponse getAllLectures() {
 
-        List<Lecture> lectures = lectureRepository.findAllByOrderByNameAsc();
-
-        List<LectureResponse> responses = new ArrayList<>();
-
-        for (Lecture lecture : lectures) {
-
-            List<ProfessorShortResponse> professorResponses = new ArrayList<>();
-
-            for (Professor professor : lecture.getProfessors()) {
-                professorResponses.add(
-                    new ProfessorShortResponse(
-                        professor.getId(),
-                        professor.getFirstName(),
-                        professor.getLastName(),
-                        professor.isActive()
-                    )
-                );
-            }
-
-            responses.add(
-                    new LectureResponse(
-                            lecture.getId(),
-                            lecture.getName(),
-                            lecture.getCode(),
-                            lecture.getSemesterYear(),
-                            lecture.getSemesterSeason(),
-                            lecture.isActive(),
-                            lecture.getLectureType(),
-                            professorResponses,
-                            lecture.getComments().size(),
-                            lecture.getRatings().size()
-                    )
-            );
-        }
-
-        return new LecturesResponse("Found " + responses.size() + " lectures", true, responses);
+        return getLectures(true);
     }
 
 
@@ -142,37 +76,11 @@ public class LectureService {
             return new LectureDetailResponse("Couldn find lecture with uuid: " + lectureId, false, null);
         }
 
-        
-        List<ProfessorShortResponse> professorResponses = new ArrayList<>();
-
-            for (Professor professor : lecture.getProfessors()) {
-                professorResponses.add(
-                    new ProfessorShortResponse(
-                        professor.getId(),
-                        professor.getFirstName(),
-                        professor.getLastName(),
-                        professor.isActive()
-                    )
-                );
-            }
-
-
-        LectureResponse lectureResponse = new LectureResponse(
-                lecture.getId(),
-                lecture.getName(),
-                lecture.getCode(),
-                lecture.getSemesterYear(),
-                lecture.getSemesterSeason(),
-                lecture.isActive(),
-                lecture.getLectureType(),
-                professorResponses,
-                lecture.getComments().size(),
-                lecture.getRatings().size()
-        );
-
+        LectureResponse lectureResponse = createLectureResponse(lecture);
 
         return new LectureDetailResponse("Found lecture", true, lectureResponse);
     }
+
 
     public BasicResponse addLecture(String authHeader, AddLectureRequest request) {
 
@@ -181,11 +89,8 @@ public class LectureService {
             return new BasicResponse("User is not authorized to add Lectures (isnt Admin)", false);
         }
 
-
-
         if (lectureRepository.findByName(request.name()).isPresent()) {
-            
-                return new BasicResponse("Lecture already exists: " + request.name(),false);
+            return new BasicResponse("Lecture already exists: " + request.name(),false);
         }
 
 
@@ -198,7 +103,6 @@ public class LectureService {
                 professors.add(professorRepository.findById(professorID).orElse(null));
             }else{
                 return new BasicResponse("Professor not found: " + professorID, false);
-
             }
 
         }
@@ -212,7 +116,8 @@ public class LectureService {
         lecture.setSemesterSeason(request.semesterSeason());
         lecture.setActive(true);
 
-        //Link Profs to lecture
+
+        //Link Profs to Lecture and vice versa
         lecture.setProfessors(professors);
 
         for(Professor professor: professors){
@@ -227,13 +132,66 @@ public class LectureService {
 
 
 
-    public Lecture findById(UUID id) {
-        return lectureRepository.findById(id).orElse(null);
+    private LecturesResponse getLectures(boolean nonActive){
+
+        List<Lecture> lectures;
+
+        if(nonActive){
+            lectures = lectureRepository.findByActiveTrueOrderByNameAsc();
+        } else {
+            lectures = lectureRepository.findAllByOrderByNameAsc();
+        }
+
+        List<LectureResponse> responses = new ArrayList<>();
+
+        for (Lecture lecture : lectures) {
+            responses.add(createLectureResponse(lecture));
+        }
+
+        return new LecturesResponse("Found " + responses.size() + " lectures", true, responses);
     }
 
 
-    public Lecture getLectureByID(String lectureID) {
+    /**
+     * Creates a LectureResponse for a given Lecture.
+     * @param lecture to be parsed
+     * @return a LectureResponse
+     */
+    private static LectureResponse createLectureResponse(Lecture lecture) {
 
+        List<ProfessorShortResponse> professorResponses = new ArrayList<>();
+
+        for (Professor professor : lecture.getProfessors()) {
+            professorResponses.add(
+                    new ProfessorShortResponse(
+                            professor.getId(),
+                            professor.getFirstName(),
+                            professor.getLastName(),
+                            professor.isActive()
+                    )
+            );
+        }
+
+        return new LectureResponse(
+                lecture.getId(),
+                lecture.getName(),
+                lecture.getCode(),
+                lecture.getSemesterYear(),
+                lecture.getSemesterSeason(),
+                lecture.isActive(),
+                lecture.getLectureType(),
+                professorResponses,
+                lecture.getComments().size(),
+                lecture.getRatings().size()
+        );
+
+    }
+
+    public Lecture getById(UUID id) {
+        return lectureRepository.findById(id).orElse(null);
+    }
+
+    public Lecture getLectureByID(String lectureID) {
         return lectureRepository.findById(UUID.fromString(lectureID)).orElse(null);
     }
 

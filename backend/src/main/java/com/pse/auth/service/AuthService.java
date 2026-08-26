@@ -5,11 +5,12 @@ import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.auth.dto.request.LoginRequest;
 import com.pse.auth.dto.request.OTPRequest;
-import com.pse.auth.dto.request.ValidateCredsRequest;
+import com.pse.auth.dto.request.ValidateCredentialsRequest;
 import com.pse.auth.dto.response.AuthMeResponse;
 import com.pse.auth.dto.response.AuthUserResponse;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.LoginResponse;
+import com.pse.auth.exception.InvalidAuthTokenException;
 import com.pse.auth.model.Token;
 import com.pse.auth.repository.TokenRepository;
 import com.pse.moderation.model.Admin;
@@ -318,14 +319,9 @@ public class AuthService {
         );
     }
 
-    public BasicResponse me(String authHeader) {
-        Student student = verifyUser(authHeader);
-        return student == null
-                ? new BasicResponse("Not logged in", false)
-                : new BasicResponse("Logged in as: " + student.getKitEmail(), true);
-    }
 
-    public BasicResponse validate(String authHeader, ValidateCredsRequest request) {
+    public BasicResponse validate(String authHeader, ValidateCredentialsRequest request) {
+
         Student student = verifyUser(authHeader);
         if (student == null) {
             return new BasicResponse("Error, wrong Auth-Token", false);
@@ -338,9 +334,13 @@ public class AuthService {
     }
 
     public Student verifyUser(String authHeader) {
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return null;
+            throw new InvalidAuthTokenException("Couldnt find Auth-Token");
         }
+
+
+
         return tokenAuthenticationService
                 .authenticate(authHeader.substring("Bearer ".length()).trim())
                 .map(AuthenticatedUser::student)

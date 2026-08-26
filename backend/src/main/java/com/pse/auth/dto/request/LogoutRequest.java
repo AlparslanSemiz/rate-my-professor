@@ -1,3 +1,7 @@
 package com.pse.auth.dto.request;
 
-public record LogoutRequest(String email) {}
+import jakarta.validation.constraints.NotBlank;
+
+public record LogoutRequest(
+        String email
+) {}
