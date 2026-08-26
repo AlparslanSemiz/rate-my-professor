@@ -122,8 +122,7 @@ public interface SearchService {
      * @param lectureTitle the name of the lecture
      * @return every semester in which that professor held that lecture
      */
-    @Query("SELECT semesterYear, semesterSeason FROM lectures JOIN instructors ON instructors.lectureID = lectures.id " +
-            "WHERE instructors.professorID = :professorId AND lectures.name = :lectureTitle")
+    @Query("SELECT semesterYear, semesterSeason FROM lectures WHERE professorId = :professorId AND name = :lectureTitle")
     List<Semester> getSemestersByProfessorAndLectureTitle(String professorId, String lectureTitle);
 
     /**
@@ -148,6 +147,9 @@ public interface SearchService {
 
     @Query("DELETE FROM comments")
     void deleteComments();
+
+    @Query("SELECT * FROM professors WHERE id = :id LIMIT 1")
+    Professor getProfessorById(String id);
 
     @Query("SELECT * FROM comments WHERE lectureID = :lectureId ORDER BY upVotes DESC")
     List<CommentModel> getComments(String lectureId);

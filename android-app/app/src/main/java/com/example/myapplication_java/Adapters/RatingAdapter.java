@@ -43,12 +43,18 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
     }
 
     public Map<RatingCategory, Double> getChangedRatings() {
+//        System.out.println("Submit");
+//        for (RatingCategory category : changedRatings.keySet()) {
+//            System.out.println(category + "->" + changedRatings.get(category));
+//        }
         return changedRatings;
     }
 
     @Override
     public void onRatingChanged(RatingCategory category, double rating) {
-        changedRatings.put(category, rating);
+        if (category != null) {
+            changedRatings.put(category, rating);
+        }
     }
 
     public void updateRatings(List<TopicAverageResponse> newRatings) {
@@ -72,6 +78,8 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
 
         holder.name.setText(rating.category().getDisplayName());
         holder.averageRating.setText(String.format(Locale.ROOT, RATING_FORMAT, rating.value()));
+        holder.averageRating.setTextColor(RatingColorCalculator.calculateColour(holder.itemView.getContext(),
+                rating.value()));
         holder.averageBar.setRating((float) rating.value());
     }
 
@@ -107,7 +115,7 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
                     (bar, rating, fromUser) -> {
                         if (fromUser) {
                             userRatingNum.setText(String.valueOf((double) rating));
-                            userRatingNum.setTextColor(RatingColorCalculator.ratingColourCalculator(bar.getContext(), rating));
+                            userRatingNum.setTextColor(RatingColorCalculator.calculateColour(bar.getContext(), rating));
 
                             listener.onRatingChanged(category, rating);
                         }

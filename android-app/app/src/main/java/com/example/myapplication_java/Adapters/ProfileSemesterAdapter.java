@@ -63,14 +63,4 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
         }
     }
 
-    /**
-     * Reports which semester the user clicked.
-     */
-    public interface OnSemesterClickListener {
-
-        /**
-         * @param semester the clicked semester
-         */
-        void onSemesterClick(Semester semester);
-    }
 }
