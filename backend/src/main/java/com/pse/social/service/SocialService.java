@@ -57,7 +57,6 @@ import com.pse.user.model.Student;
 public class SocialService {
 
     private final LectureService lectureService;
-    private final AuthService authService;
 
 
     private final CommentRepository commentRepository;
@@ -71,7 +70,7 @@ public class SocialService {
 
     private final AuditWriter auditWriter;
 
-    public SocialService(LectureService lectureService, AuthService authService,
+    public SocialService(LectureService lectureService,
                          CommentRepository commentRepository,
                          AnswerRepository answerRepository,
                          CommentReportRepository commentReportRepository,
@@ -82,7 +81,6 @@ public class SocialService {
                          AuditWriter auditWriter) {
 
         this.lectureService = lectureService;
-        this.authService = authService;
         this.commentRepository = commentRepository;
         this.answerRepository = answerRepository;
         this.commentReportRepository = commentReportRepository;
@@ -100,13 +98,7 @@ public class SocialService {
     // Needs a transaction so that the comment and its activity-log entry commit
     // together. The same holds for the other submit methods below.
     @Transactional
-    public BasicResponse submitComment(String authHeader, CommentSubmitRequest request) {
-
-        Student student = authService.verifyUser(authHeader);
-
-        if (student == null) {
-            return new BasicResponse("Error, cannot authenticate user", false);
-        }
+    public BasicResponse submitComment(Student student, CommentSubmitRequest request) {
 
         if (!submitComment(student, request.lectureID(), request.content())) {
             return new BasicResponse("Error, cannot submit comment", false);
@@ -143,29 +135,19 @@ public class SocialService {
 
     }
 
-    public BasicResponse voteComment(UUID commentId, String authHeader, VoteCommentRequest request) {
-
-        Student student = authService.verifyUser(authHeader);
-
-        if (student == null) {
-            return new BasicResponse("Error, cannot authenticate user", false);
-        }
+    public BasicResponse voteComment(UUID commentId, Student student, VoteCommentRequest request) {
 
         Comment comment = commentRepository.findById(commentId).orElse(null);
         if (comment == null) {
             return new BasicResponse("Error, cannot find comment", false);
         }
 
-
-        //check if user has already up/down voted this comment
-        //Falls ja, update diesen Eintrag
+        //check if user has already up/down voted this comment. If yes => update this entry
 
         CommentVote commentVote = commentVoteRepository.findByStudentAndComment(student, comment).orElse(null);
 
         if(commentVote != null) {
-
             commentVote.setVote(request.voteType());
-
         }else{
             commentVote = new CommentVote();
             commentVote.setStudent(student);
@@ -179,47 +161,24 @@ public class SocialService {
 
     }
 
-    // Needs a transaction: open-in-view is disabled and the response walks the
-    // lazy answers collection of every comment. Without it this endpoint fails
-    // with LazyInitializationException for any lecture that has comments.
+
     @Transactional(readOnly = true)
     public CommentsResponse getAllComments() {
 
-        List<Comment> comments = commentRepository
-                .findAllByStatus(ContentStatus.VISIBLE);
+        List<Comment> comments = commentRepository.findAllByStatus(ContentStatus.VISIBLE);
 
         List<CommentResponse> commentsResponses = new ArrayList<>();
 
         for (Comment comment : comments) {
-
-            List<AnswerResponse> answerResponses = getAnswerResponses(comment);
-
-            commentsResponses.add(new CommentResponse(
-                    comment.getId(),
-                    comment.getContent(),
-                    comment.getStatus(),
-                    comment.getStudent().getUsername(),
-                    ProfilePictureGenerator.generateProfilePicture(comment.getStudent()),
-                    comment.getLecture().getId(),
-                    comment.getCreatedAt(),
-                    commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
-                    commentVoteRepository.countByCommentAndVote(comment, VoteType.UP),
-                    answerResponses
-            ));
-
+            commentsResponses.add(createCommentResponse(comment));
         }
 
         return new CommentsResponse("Comments loaded successfully", true, commentsResponses);
     }
 
+
     @Transactional
-    public BasicResponse submitAnswer(String authHeader, AnswerSubmitRequest request) {
-
-        Student student = authService.verifyUser(authHeader);
-
-        if(student == null) {
-            return new BasicResponse("Error, cannot authenticate user", false);
-        }
+    public BasicResponse submitAnswer(Student student, AnswerSubmitRequest request) {
 
         if(!submitAnswer(student, request.commentID(), request.content())){
             return new BasicResponse("Error, couldnt finde comment",false);
@@ -263,59 +222,37 @@ public class SocialService {
     }
 
 
-    public BasicResponse voteAnswer(UUID answerID, String authHeader, VoteAnswerRequest request) {
-
-
-        Student student = authService.verifyUser(authHeader);
-
-        if (student == null) {
-            return new BasicResponse("Error, cannot authenticate user", false);
-        }
+    public BasicResponse voteAnswer(UUID answerID, Student student, VoteAnswerRequest request) {
 
         Answer answer = answerRepository.findById(answerID).orElse(null);
         if (answer == null) {
             return new BasicResponse("Error, cannot find Answer", false);
         }
 
-
-        //check if user has already up/down voted this comment
-        //Falls ja, update diesen Eintrag
+        //check if user has already up/down voted this comment. If yes => update this entry
 
         AnswerVote answerVote = answerVoteRepository.findByStudentAndAnswer(student, answer).orElse(null);
 
         if(answerVote != null) {
-
             answerVote.setVote(request.voteType());
-
         }else{
             answerVote = new AnswerVote();
             answerVote.setStudent(student);
             answerVote.setAnswer(answer);
             answerVote.setVote(request.voteType());
         }
-
         answerVoteRepository.save(answerVote);
-
         return new BasicResponse("Answer vote saved successfully", true);
-
-
     }
 
 
 
     @Transactional
-    public BasicResponse submitCommentReport(String authHeader, CommentReportRequest request) {
-
-        Student student = authService.verifyUser(authHeader);
-
-        if(student == null) {
-            return new BasicResponse("Error, cannot authenticate user", false);
-        }
+    public BasicResponse submitCommentReport(Student student, CommentReportRequest request) {
 
         if(!submitCommentReport(student, request.commentID(), request.reportReason(), request.explanation())){
             return new BasicResponse("Error, couldnt finde comment",false);
         }
-
 
         return new BasicResponse("Comment Report submitted successfully",true);
 
@@ -353,13 +290,7 @@ public class SocialService {
 
 
     @Transactional
-    public BasicResponse submitAnswerReport(String authHeader, AnswerReportRequest request) {
-
-        Student student = authService.verifyUser(authHeader);
-
-        if(student == null) {
-            return new BasicResponse("Error, cannot authenticate user", false);
-        }
+    public BasicResponse submitAnswerReport(Student student, AnswerReportRequest request) {
 
         if(!submitAnswerReport(student, request.answerID(), request.reportReason(), request.explanation())){
             return new BasicResponse("Error, couldnt finde answer",false);
@@ -398,129 +329,10 @@ public class SocialService {
 
     }
 
-
-    /**
-     * The lecture a piece of content belongs to, formatted the way the reported-comments
-     * endpoint formats its {@code postContext}.
-     */
-    private String lectureLabel(Lecture lecture) {
-        String code = lecture.getCode();
-        String name = lecture.getName();
-        return code == null || code.isBlank() ? name : code + " — " + name;
-    }
-
-    /**
-     * A preview of submitted text. The full body stays in its own table; the activity
-     * log only needs enough to recognise the entry.
-     */
-    private Map<String, Object> contentMetadata(String content) {
-        String text = content == null ? "" : content;
-        return Map.of(
-                "contentPreview", text.substring(0, Math.min(text.length(), 120)),
-                "contentLength", text.length()
-        );
-    }
-
-
-    //Methods used by other Services
-
-    public boolean updateReportStatus(UUID reportId, ReportStatus status) {
-        CommentReport commentReport = commentReportRepository.findById(reportId).orElse(null);
-
-        if(commentReport == null) {
-            return false;
-        }
-
-        commentReport.setStatus(status);
-
-        return true;
-    }
-
-
-
-    //Repository methods
-
-    public List<CommentReport> getReportedComments() {
-        return commentReportRepository.findAll();
-    }
-
-
-    // Needs a transaction: open-in-view is disabled and the response walks the
-    // lazy answers collection of every comment. Without it this endpoint fails
-    // with LazyInitializationException for any lecture that has comments.
     @Transactional(readOnly = true)
-    public CommentsResponse getComments(UUID lecture_id) {
-
-        // Only VISIBLE comments reach the student app. A comment is set to HIDDEN
-        // when an admin resolves a report against it as ACTION_TAKEN.
-        List<Comment> comments = commentRepository
-                .findAllByLectureIdAndStatus(lecture_id, ContentStatus.VISIBLE);
-
-        List<CommentResponse> commentsResponses = new ArrayList<>();
-
-        for(Comment comment : comments) {
-
-            List<AnswerResponse> answerResponses = getAnswerResponses(comment);
-
-            commentsResponses.add(new CommentResponse(
-                    comment.getId(),
-                    comment.getContent(),
-                    comment.getStatus(),
-                    comment.getStudent().getUsername(),
-                    ProfilePictureGenerator.generateProfilePicture(comment.getStudent()),
-                    comment.getLecture().getId(),
-                    comment.getCreatedAt(),
-                    commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
-                    commentVoteRepository.countByCommentAndVote(comment, VoteType.UP),
-                    answerResponses
-            ));
-
-        }
-
-
-
-        return new CommentsResponse("Found " + commentsResponses.size() + " comments", true, commentsResponses);
-    }
-
-    private List<AnswerResponse> getAnswerResponses(Comment comment) {
-
-        List<Answer> answers = comment.getAnswers();
-        List<AnswerResponse> answerResponses = new ArrayList<>();
-        for(Answer answer : answers) {
-
-            // Hidden answers must not reach students once an admin has resolved a
-            // report against them as ACTION_TAKEN, mirroring the comment filter above.
-            if (answer.getStatus() != ContentStatus.VISIBLE) {
-                continue;
-            }
-
-            answerResponses.add(new AnswerResponse(
-                    answer.getId(),
-                    answer.getContent(),
-                    answer.getStatus(),
-                    answer.getStudent().getUsername(),
-                    ProfilePictureGenerator.generateProfilePicture(answer.getStudent()),
-                    answer.getCreatedAt(),
-                    answerVoteRepository.countByAnswerAndVote(answer, VoteType.DOWN),
-                    answerVoteRepository.countByAnswerAndVote(answer, VoteType.UP)
-                    ));
-        }
-        return answerResponses;
-    }
-
-
-    @Transactional(readOnly = true)
-    public NotificationsResponse getNotifications(String authHeader) {
-
-        Student student = authService.verifyUser(authHeader);
-
-        if (student == null) {
-            return new NotificationsResponse("Error, cannot authenticate user", false, new ArrayList<>());
-        }
-
+    public NotificationsResponse getNotifications(Student student) {
 
         List<Notification> notifications = notificationRepository.findAllByRecipientAndSeenFalseOrderByCreatedAtDesc(student);
-
 
         List<NotificationResponse> notificationResponses = new ArrayList<>();
 
@@ -558,16 +370,132 @@ public class SocialService {
 
     }
 
-    public BasicResponse markAllNotificationsAsSeen(String authHeader) {
 
-        Student student = authService.verifyUser(authHeader);
+    @Transactional(readOnly = true)
+    public CommentsResponse getComments(UUID lecture_id) {
 
-        if(student == null) {
-            return new BasicResponse("Error, cannot authenticate user", false);
+        // Only VISIBLE comments reach the student app. A comment is set to HIDDEN
+        // when an admin resolves a report against it as ACTION_TAKEN.
+        List<Comment> comments = commentRepository
+                .findAllByLectureIdAndStatus(lecture_id, ContentStatus.VISIBLE);
+
+        List<CommentResponse> commentsResponses = new ArrayList<>();
+
+        for(Comment comment : comments) {
+
+            commentsResponses.add(createCommentResponse(comment));
         }
 
-        notificationRepository.markAllAsSeen(student);
+        return new CommentsResponse("Found " + commentsResponses.size() + " comments", true, commentsResponses);
+    }
 
+
+
+
+    /**
+     * The lecture a piece of content belongs to, formatted the way the reported-comments
+     * endpoint formats its {@code postContext}.
+     */
+    private String lectureLabel(Lecture lecture) {
+        String code = lecture.getCode();
+        String name = lecture.getName();
+        return code == null || code.isBlank() ? name : code + " — " + name;
+    }
+
+    /**
+     * A preview of submitted text. The full body stays in its own table; the activity
+     * log only needs enough to recognise the entry.
+     */
+    private Map<String, Object> contentMetadata(String content) {
+        String text = content == null ? "" : content;
+        return Map.of(
+                "contentPreview", text.substring(0, Math.min(text.length(), 120)),
+                "contentLength", text.length()
+        );
+    }
+
+
+    public CommentResponse createCommentResponse(Comment comment){
+
+        List<AnswerResponse> answerResponses = getAnswerResponses(comment);
+
+        return new CommentResponse(
+                comment.getId(),
+                comment.getContent(),
+                comment.getStatus(),
+                comment.getStudent().getUsername(),
+                ProfilePictureGenerator.generateProfilePicture(comment.getStudent()),
+                comment.getLecture().getId(),
+                comment.getCreatedAt(),
+                commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
+                commentVoteRepository.countByCommentAndVote(comment, VoteType.UP),
+                answerResponses
+        );
+    }
+
+    public AnswerResponse createAnswerResponse(Answer answer){
+
+        return new AnswerResponse(
+                answer.getId(),
+                answer.getContent(),
+                answer.getStatus(),
+                answer.getStudent().getUsername(),
+                ProfilePictureGenerator.generateProfilePicture(answer.getStudent()),
+                answer.getCreatedAt(),
+                answerVoteRepository.countByAnswerAndVote(answer, VoteType.DOWN),
+                answerVoteRepository.countByAnswerAndVote(answer, VoteType.UP)
+        );
+    }
+
+
+
+
+    //Methods used by other Services
+
+    public boolean updateReportStatus(UUID reportId, ReportStatus status) {
+        CommentReport commentReport = commentReportRepository.findById(reportId).orElse(null);
+
+        if(commentReport == null) {
+            return false;
+        }
+
+        commentReport.setStatus(status);
+
+        return true;
+    }
+
+
+
+    //Repository methods
+
+    public List<CommentReport> getReportedComments() {
+        return commentReportRepository.findAll();
+    }
+
+
+
+    private List<AnswerResponse> getAnswerResponses(Comment comment) {
+
+        List<Answer> answers = comment.getAnswers();
+        List<AnswerResponse> answerResponses = new ArrayList<>();
+        for(Answer answer : answers) {
+
+            // Hidden answers must not reach students once an admin has resolved a
+            // report against them as ACTION_TAKEN, mirroring the comment filter above.
+            if (answer.getStatus() != ContentStatus.VISIBLE) {
+                continue;
+            }
+
+            answerResponses.add(createAnswerResponse(answer));
+        }
+        return answerResponses;
+    }
+
+
+
+    public BasicResponse markAllNotificationsAsSeen(Student student) {
+
+        notificationRepository.markAllAsSeen(student);
 
         return new BasicResponse("Marked all Notifications as Seen", true);
 

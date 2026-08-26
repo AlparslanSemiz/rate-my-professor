@@ -38,6 +38,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/health").permitAll()
                         .requestMatchers("/account/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/data/lectures").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/social/notifications").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/social/notifications").authenticated()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/social/comments",
+                                "/social/comments/vote/**",
+                                "/social/answers",
+                                "/social/comments/report",
+                                "/social/answers/report"
+                        ).authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout-all").authenticated()
                         .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()

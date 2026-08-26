@@ -1,6 +1,7 @@
 package com.pse.social.controller;
 
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.security.AuthenticatedUser;
 import com.pse.social.dto.request.AnswerReportRequest;
 import com.pse.social.dto.request.AnswerSubmitRequest;
 import com.pse.social.dto.request.CommentReportRequest;
@@ -11,6 +12,7 @@ import com.pse.social.dto.response.CommentsResponse;
 import com.pse.social.dto.response.NotificationsResponse;
 import com.pse.social.service.SocialService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,35 +39,34 @@ public class SocialController {
 
 
     @GetMapping("/notifications")
-    public NotificationsResponse getNotifications(@RequestHeader("Authorization") String authHeader){
+    public NotificationsResponse getNotifications(@AuthenticationPrincipal AuthenticatedUser principal){
 
-        return socialService.getNotifications(authHeader);
+        return socialService.getNotifications(principal.student());
     }
 
     @PatchMapping("notifications")
-    public BasicResponse markAllNotificationsAsSeen(@RequestHeader("Authorization") String authHeader){
+    public BasicResponse markAllNotificationsAsSeen(@AuthenticationPrincipal AuthenticatedUser principal){
 
-        return socialService.markAllNotificationsAsSeen(authHeader);
+        return socialService.markAllNotificationsAsSeen(principal.student());
     }
 
 
 
 
     @PostMapping("/comments")
-    public BasicResponse submitComment(@RequestHeader("Authorization") String authHeader, @RequestBody CommentSubmitRequest request) {
+    public BasicResponse submitComment(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody CommentSubmitRequest request) {
 
-        return socialService.submitComment(authHeader, request);
+        return socialService.submitComment(principal.student(), request);
 
     }
 
 
     @PostMapping("/comments/vote/comment/{comment_id}")
-    public BasicResponse voteComment(@PathVariable UUID comment_id, @RequestHeader("Authorization") String authHeader, @RequestBody VoteCommentRequest request) {
+    public BasicResponse voteComment(@PathVariable UUID comment_id, @AuthenticationPrincipal AuthenticatedUser principal, @RequestBody VoteCommentRequest request) {
 
-        return socialService.voteComment(comment_id, authHeader, request);
+        return socialService.voteComment(comment_id, principal.student(), request);
 
     }
-
 
 
 
@@ -78,32 +79,32 @@ public class SocialController {
 
 
     @PostMapping("/answers")
-    public BasicResponse submitAnswer(@RequestHeader("Authorization") String authHeader, @RequestBody AnswerSubmitRequest request) {
+    public BasicResponse submitAnswer(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody AnswerSubmitRequest request) {
 
-        return socialService.submitAnswer(authHeader, request);
+        return socialService.submitAnswer(principal.student(), request);
 
     }
 
     @PostMapping("/comments/vote/answer{answer_id}")
-    public BasicResponse voteAnswer(@PathVariable UUID answer_id, @RequestHeader("Authorization") String authHeader, @RequestBody VoteAnswerRequest request) {
+    public BasicResponse voteAnswer(@PathVariable UUID answer_id, @AuthenticationPrincipal AuthenticatedUser principal, @RequestBody VoteAnswerRequest request) {
 
-        return socialService.voteAnswer(answer_id, authHeader, request);
+        return socialService.voteAnswer(answer_id, principal.student(), request);
 
     }
 
 
 
     @PostMapping("/comments/report")
-    public BasicResponse submitCommentReport(@RequestHeader("Authorization") String authHeader, @RequestBody CommentReportRequest request) {
+    public BasicResponse submitCommentReport(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody CommentReportRequest request) {
 
-        return socialService.submitCommentReport(authHeader, request);
+        return socialService.submitCommentReport(principal.student(), request);
 
     }
 
     @PostMapping("/answers/report")
-    public BasicResponse submitAnswerReport(@RequestHeader("Authorization") String authHeader, @RequestBody AnswerReportRequest request) {
+    public BasicResponse submitAnswerReport(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody AnswerReportRequest request) {
 
-        return socialService.submitAnswerReport(authHeader, request);
+        return socialService.submitAnswerReport(principal.student(), request);
 
     }
 

@@ -8,8 +8,6 @@ import java.util.UUID;
 import com.pse.lecture.dto.response.LectureResponse;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.service.LectureService;
-import com.pse.professor.dto.response.ProfessorShortResponse;
-import com.pse.professor.model.Professor;
 import com.pse.rating.service.RatingService;
 import com.pse.shared.util.ProfilePictureGenerator;
 import com.pse.shared.enums.VoteType;
@@ -24,7 +22,6 @@ import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.UserRatingDto;
 import com.pse.auth.dto.response.UserRatingResponse;
 import com.pse.rating.model.Rating;
-import com.pse.rating.model.RatingTopic;
 import com.pse.shared.enums.UserStatus;
 import com.pse.user.dto.StudentProfileResponse;
 import com.pse.user.model.Student;
@@ -38,26 +35,15 @@ import com.pse.user.repository.StudentRepository;
 @Service
 public class StudentService {
 
-
     private final StudentRepository studentRepository;
-    private final LectureService lectureService;
 
 
-    public StudentService(StudentRepository studentRepository, LectureService lectureService) {
+    public StudentService(StudentRepository studentRepository) {
         this.studentRepository = studentRepository;
-        this.lectureService = lectureService;
     }
 
 
-    //Methods used by AccountController
 
-    // Takes the id rather than the Student handed back by AuthService, and
-    // re-fetches it here. That earlier Student was loaded in
-    // TokenAuthenticationService's own (by now committed and closed)
-    // transaction, so its lazy collections are bound to a session that no
-    // longer exists; wrapping this method in @Transactional does not reattach
-    // it. Re-fetching inside this transaction is what actually makes
-    // student.getRatings()/getComments() below initializable.
     @Transactional(readOnly = true)
     public StudentProfileResponse getUserInformation(UUID studentId) {
         Student student = studentRepository.findById(studentId).orElse(null);
@@ -66,29 +52,7 @@ public class StudentService {
         }
 
         //CredibilityScore = |Upvotes| - |DownVotes|
-        int credibilityScore = 0;
-
-        // Kommentare
-        for (Comment comment : student.getComments()) {
-            for (CommentVote vote : comment.getVotes()) {
-                if (vote.getVote() == VoteType.UP) {
-                    credibilityScore++;
-                } else if (vote.getVote() == VoteType.DOWN) {
-                    credibilityScore--;
-                }
-            }
-        }
-
-        // Antworten
-        for (Answer answer : student.getAnswers()) {
-            for (AnswerVote vote : answer.getVotes()) {
-                if (vote.getVote() == VoteType.UP) {
-                    credibilityScore++;
-                } else if (vote.getVote() == VoteType.DOWN) {
-                    credibilityScore--;
-                }
-            }
-        }
+        int credibilityScore = calculateCredibilityScore(student);
 
         student.setCredibilityScore(credibilityScore);
 
@@ -104,7 +68,8 @@ public class StudentService {
         );
     }
 
-    // Same reattachment reason as getUserInformation above.
+
+
     @Transactional(readOnly = true)
     public UserRatingResponse getUserRatings(UUID studentId) {
 
@@ -120,7 +85,6 @@ public class StudentService {
             Lecture lecture = rating.getLecture();
 
             LectureResponse lectureResponse = LectureService.createLectureResponse(lecture);
-
 
             double overallRating = RatingService.calculateAverageScore(rating);
 
@@ -141,24 +105,51 @@ public class StudentService {
     }
 
 
-
-    public BasicResponse requestLogout(Student student) {
-
-        return new BasicResponse("Logged out successfully ("  + " sessions)", true);
-    }
-
     public BasicResponse deleteAccount(Student student) {
 
         if (student == null) {
             return new BasicResponse("Error, couldnt authenticate user", false);
         }
 
-        //Set deleted in Database: Set "deleted" to true
+        //Soft delete in Database: Set "deleted" to true
         if( !softDeleteByKitEmail(student.getKitEmail())){
             return new BasicResponse("Error, couldnt find student", false);
         }
 
         return new BasicResponse("Deleted Account succesfully: " + student.getKitEmail(), true);
+    }
+
+
+    /**
+     * CredibilityScore = |Upvotes| - |DownVotes|
+     * @param student
+     * @return
+     */
+    private static int calculateCredibilityScore(Student student) {
+        int credibilityScore = 0;
+
+        // Comments
+        for (Comment comment : student.getComments()) {
+            for (CommentVote vote : comment.getVotes()) {
+                if (vote.getVote() == VoteType.UP) {
+                    credibilityScore++;
+                } else if (vote.getVote() == VoteType.DOWN) {
+                    credibilityScore--;
+                }
+            }
+        }
+
+        // Answers
+        for (Answer answer : student.getAnswers()) {
+            for (AnswerVote vote : answer.getVotes()) {
+                if (vote.getVote() == VoteType.UP) {
+                    credibilityScore++;
+                } else if (vote.getVote() == VoteType.DOWN) {
+                    credibilityScore--;
+                }
+            }
+        }
+        return credibilityScore;
     }
 
 
@@ -177,6 +168,7 @@ public class StudentService {
         return true;
     }
 
+    //TODO: Why arent they in use?
     public boolean deleteUser(UUID studentId) {
         Student student = studentRepository.findById(studentId).orElse(null);
 
@@ -212,31 +204,6 @@ public class StudentService {
     }
 
 
-
-
-
-
-    private double calculateOverallRating(Rating rating) {
-
-        double weightedSum = 0;
-        double totalWeight = 0;
-
-        for (RatingTopic topic : rating.getTopics()) {
-
-            double weight = topic.getCategory().getDefaultWeight();
-
-            weightedSum += topic.getValue() * weight;
-            totalWeight += weight;
-        }
-
-        if (totalWeight == 0) {
-            return 0;
-        }
-
-        return weightedSum / totalWeight;
-    }
-
-
     //Repository Methods
 
 
@@ -256,7 +223,7 @@ public class StudentService {
         double sum = 0;
 
         for (Rating rating : student.getRatings()) {
-            sum += calculateOverallRating(rating);
+            sum += RatingService.calculateAverageScore(rating);
         }
 
         return sum / student.getRatings().size();
