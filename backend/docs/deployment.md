@@ -1,0 +1,384 @@
+# Deployment Guide
+
+This guide documents deployment behavior confirmed by repository files.
+
+## Project Scope
+
+This repository contains a Spring Boot backend service with PostgreSQL
+persistence, Docker packaging, a Docker Compose local stack, GitLab CI/CD
+configuration, API documentation, health/status endpoints, and optional SMTP,
+GitLab issue, IPinfo, and Geoapify integrations.
+
+## Prerequisites
+
+| Tool or runtime | Confirmed version or usage |
+| --- | --- |
+| Java | Java 21 is configured in `pom.xml` and used by the Docker images. |
+| Maven | The Maven wrapper uses Maven 3.9.15. |
+| Spring Boot | `pom.xml` uses Spring Boot 4.0.6. |
+| Docker | Used for image build, local Compose, and server deployment. |
+| Docker Compose | Used by `docker-compose.yml` and `scripts/docker-smoke-test.sh`. |
+| PostgreSQL | Local Docker Compose uses `postgres:16`. |
+| Kaniko | CI image build uses `gcr.io/kaniko-project/executor:v1.23.2-debug`. |
+| GitLab CI/CD | The pipeline is defined in `.gitlab-ci.yml`. |
+
+The Maven wrapper is committed as `mvnw` and `mvnw.cmd`; the wrapper
+configuration is in `.mvn/wrapper/maven-wrapper.properties`.
+
+## System Components
+
+| Component | Role | Confirmed source |
+| --- | --- | --- |
+| Backend API | Spring Boot application exposing authentication, account, catalogue, social, moderation, audit, health, and system status endpoints. | `src/main/java/com/pse`, `docs/admin-api.md` |
+| PostgreSQL database | Runtime persistence for the backend. The app uses JDBC/JPA with PostgreSQL in normal runtime and H2 in tests. | `pom.xml`, `application.properties`, `docker-compose.yml` |
+| SMTP server | Sends OTP login emails and successful-login notification emails. | `MailService`, `application.properties`, `.env.example` |
+| Admin Web origin | Browser origin allowed through CORS. CI defaults it to the BW Cloud/staging URL. | `CorsConfig`, `.gitlab-ci.yml`, `docs/admin-api.md` |
+| GitLab issue integration | Optional backend integration for creating GitLab issues from bug reports. | `RestClientGitLabClient`, `application.properties`, `.env.example` |
+| IPinfo and Geoapify | Optional login-location enrichment for notification emails. | `LoginLocationService`, `.env.example` |
+| GitLab Container Registry | Stores backend images built by CI. | `.gitlab-ci.yml` |
+| BW Cloud/staging host | Deployment target reached by SSH from CI and updated with Docker. | `.gitlab-ci.yml` |
+
+## Configuration
+
+The backend reads configuration from Spring Boot properties and environment
+variables. `.env.example` lists expected variables. When running directly,
+provide variables through the shell, process manager, or deployment environment.
+
+Do not commit real secret values. `.env` is ignored by `.gitignore`.
+
+### Backend Environment Variables
+
+| Variable | Usage | Default or behavior confirmed in repository |
+| --- | --- | --- |
+| `SERVER_PORT` | Backend HTTP port. | Falls back to `PORT`, then `8080`. |
+| `PORT` | Secondary backend HTTP port fallback. | Used only as fallback for `SERVER_PORT`. |
+| `SPRING_DATASOURCE_URL` | PostgreSQL JDBC URL. | Defaults to `jdbc:postgresql://localhost:5432/postgres`. CI staging defaults to `jdbc:postgresql://host.docker.internal:5432/postgres`. |
+| `SPRING_DATASOURCE_USERNAME` | PostgreSQL username. | Defaults to `postgres`. |
+| `SPRING_DATASOURCE_PASSWORD` | PostgreSQL password. | Defaults to empty. Treat as secret. |
+| `ADMIN_FRONTEND_ORIGINS` | Comma-separated exact browser origins allowed by CORS. | Local default is `http://localhost:5173,http://127.0.0.1:5173`. Wildcards are rejected. |
+| `ADMIN_BOOTSTRAP_EMAILS` | Comma-separated `email` or `email:Display Name` entries promoted to admin on startup. | `application.properties` contains project defaults; `.env.example` contains an example admin email. |
+| `AUTH_RATE_LIMIT_HMAC_KEY` | HMAC key for rate-limit subject hashes. | Must contain at least 32 characters or startup fails. Treat as secret. |
+| `AUTH_OTP_TTL` | OTP lifetime. | Defaults to `PT5M`. |
+| `AUTH_ADMIN_SESSION_TTL` | Admin session lifetime. | Defaults to `PT12H`. |
+| `AUTH_STUDENT_SESSION_TTL` | Student session lifetime. | Defaults to `P365D`. |
+| `AUTH_RATE_LIMIT_WINDOW` | Rate-limit window. | Defaults to `PT15M`. |
+| `AUTH_RATE_LIMIT_REQUEST_EMAIL` | OTP request limit per email. | Defaults to `3`. |
+| `AUTH_RATE_LIMIT_REQUEST_IP` | OTP request limit per IP. | Defaults to `20`. |
+| `AUTH_RATE_LIMIT_LOGIN_EMAIL` | Login failure limit per email. | Defaults to `10`. |
+| `AUTH_RATE_LIMIT_LOGIN_IP` | Login failure limit per IP. | Defaults to `30`. |
+| `SPRING_MAIL_HOST` | SMTP host. | Defaults to `localhost`. |
+| `SPRING_MAIL_PORT` | SMTP port. | Defaults to `25`; `.env.example` and CI use `587` as the deployment example/default. |
+| `SPRING_MAIL_USERNAME` | SMTP username. | Defaults to empty. Treat as secret when used. |
+| `SPRING_MAIL_PASSWORD` | SMTP password. | Defaults to empty. Treat as secret when used. |
+| `SPRING_MAIL_SMTP_AUTH` | SMTP authentication toggle. | Defaults to `false`; CI staging defaults to `true`. |
+| `SPRING_MAIL_STARTTLS` | SMTP STARTTLS toggle. | Defaults to `false`; CI staging defaults to `true`. |
+| `MAIL_FROM_ADDRESS` | Sender email address. | Defaults to `no-reply@localhost`. |
+| `MAIL_FROM_NAME` | Sender display name. | Defaults to `RateMyProfApp`. |
+| `IPINFO_TOKEN` | IPinfo lookup token for login-location emails. | Empty value reports location as unknown. Treat as secret when set. |
+| `GEOAPIFY_API_KEY` | Geoapify static map API key for login-location emails. | Empty value skips static map generation. Treat as secret when set. |
+| `AUDIT_REVERT_WINDOW` | Time window for reverting administrative field edits. | Defaults to `P7D`. |
+| `GITLAB_BASE_URL` | GitLab instance base URL for issue creation. | Empty value disables the integration. |
+| `GITLAB_PROJECT_ID` | GitLab project id/path for issue creation. | Empty value disables the integration. |
+| `GITLAB_TOKEN` | GitLab API token for issue creation. | Empty value disables the integration. Treat as secret. |
+| `GITLAB_TIMEOUT` | GitLab connect/read timeout. | Defaults to `PT10S`. |
+
+Notes:
+
+- `ADMIN_FRONTEND_ORIGINS` must include the exact scheme, host, and port of each
+  Admin Web origin.
+- A CORS mismatch causes `403 Invalid CORS request` before controller logic runs.
+- With any required `GITLAB_*` value empty, `GET /system/status` reports
+  `gitlabEnabled:false` and issue creation returns 503.
+
+### GitLab CI/CD Variables
+
+The deployment job uses these custom CI/CD variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `SSH_PRIVATE_KEY` | SSH key file used by the CI job for deployment. |
+| `DEPLOY_HOST` | Deployment host. |
+| `DEPLOY_PORT` | SSH port for the deployment host. |
+| `DEPLOY_USER` | SSH user for the deployment host. |
+| `DEPLOY_PATH` | Directory created and entered on the deployment host. |
+| `SPRING_DATASOURCE_URL` | Optional override for the deployed container datasource URL. |
+| `SPRING_DATASOURCE_USERNAME` | Optional override for the deployed container datasource username. |
+| `SPRING_DATASOURCE_PASSWORD` | Deployed container datasource password. Secret. |
+| `ADMIN_FRONTEND_ORIGINS` | Optional override for allowed frontend origins. |
+| `ADMIN_BOOTSTRAP_EMAILS` | Optional override for admin bootstrap accounts. |
+| `AUTH_RATE_LIMIT_HMAC_KEY` | Required deployed rate-limit HMAC key. Secret. |
+| `SPRING_MAIL_HOST` | SMTP host. |
+| `SPRING_MAIL_PORT` | SMTP port. |
+| `SPRING_MAIL_USERNAME` | SMTP username. Secret when used. |
+| `SPRING_MAIL_PASSWORD` | SMTP password. Secret. |
+| `SPRING_MAIL_SMTP_AUTH` | SMTP authentication toggle. |
+| `SPRING_MAIL_STARTTLS` | SMTP STARTTLS toggle. |
+| `MAIL_FROM_ADDRESS` | Sender email address. |
+| `MAIL_FROM_NAME` | Sender display name. |
+| `IPINFO_TOKEN` | Optional IPinfo token. Secret when set. |
+| `GEOAPIFY_API_KEY` | Optional Geoapify API key. Secret when set. |
+
+GitLab built-in variables used by the pipeline include `CI_REGISTRY`,
+`CI_REGISTRY_USER`, `CI_REGISTRY_PASSWORD`, `CI_REGISTRY_IMAGE`,
+`CI_COMMIT_SHORT_SHA`, `CI_COMMIT_BRANCH`, `CI_DEFAULT_BRANCH`, and merge request
+variables.
+
+## Required Ports
+
+| Port or variable | Direction | Purpose | Confirmed source |
+| --- | --- | --- | --- |
+| `8080` | Inbound to backend container/app | Backend HTTP server. Dockerfile exposes it, Compose publishes it, and CI deploy maps it. | `application.properties`, `src/Dockerfile`, `docker-compose.yml`, `.gitlab-ci.yml` |
+| `5432` | Inbound to PostgreSQL | Local Compose publishes PostgreSQL. CI staging defaults the backend datasource to `host.docker.internal:5432`. | `application.properties`, `docker-compose.yml`, `.gitlab-ci.yml` |
+| `5173` | Browser origin | Local Admin Web origins in CORS defaults. | `application.properties`, `.env.example`, `CorsConfig` |
+| `25` | Outbound from backend | Default SMTP port. | `application.properties` |
+| `587` | Outbound from backend | SMTP port used in `.env.example` and CI staging default. | `.env.example`, `.gitlab-ci.yml` |
+| `DEPLOY_PORT` | Inbound SSH to server | CI deployment SSH port. | `.gitlab-ci.yml` |
+
+The repository references the BW Cloud/staging HTTPS URL
+`https://server.example.org` for the
+default Admin Web origin and scheduled health check.
+
+## Build Instructions
+
+### Backend JAR
+
+Run the full Maven verification build:
+
+```bash
+./mvnw verify
+```
+
+The Maven project artifact is `demo` version `0.0.1-SNAPSHOT`, so a package
+build produces a jar under `target/`.
+
+The Dockerfile builds the jar with:
+
+```bash
+./mvnw clean package -DskipTests
+```
+
+The runtime image starts it with:
+
+```bash
+java -jar app.jar
+```
+
+### Local Docker Compose Stack
+
+Validate the Compose file:
+
+```bash
+docker compose config
+```
+
+Start the local backend and PostgreSQL stack:
+
+```bash
+docker compose up --build -d
+```
+
+Stop and remove the local stack:
+
+```bash
+docker compose down --remove-orphans
+```
+
+`docker-compose.yml` builds the backend image from `src/Dockerfile`, starts
+`postgres:16`, waits for PostgreSQL health, and publishes backend port `8080`
+and PostgreSQL port `5432`.
+
+`scripts/docker-smoke-test.sh` runs `docker compose config`, starts the stack,
+checks `GET /hello`, and tears the stack down on exit.
+
+## Database Setup and Schema Management
+
+### Local Database
+
+`docker-compose.yml` defines a local PostgreSQL service:
+
+- Image: `postgres:16`
+- Database name: `postgres`
+- User: `postgres`
+- Published port: `5432`
+- Persistent volume: `postgres-data`
+- Health check: `pg_isready -U postgres -d postgres`
+
+The backend service in Compose connects to PostgreSQL at
+`jdbc:postgresql://postgres:5432/postgres`.
+
+### Deployed Database
+
+The CI deployment starts the backend container and passes the datasource
+configuration through environment variables. The deployment job defaults the
+datasource URL to:
+
+```text
+jdbc:postgresql://host.docker.internal:5432/postgres
+```
+
+The deployed container is started with:
+
+```text
+--add-host=host.docker.internal:host-gateway
+```
+
+### Schema Management
+
+The runtime schema is managed by Spring/JPA:
+
+```properties
+spring.jpa.hibernate.ddl-auto=update
+```
+
+`docs/admin-api.md` states that deployments should point the backend at the
+target PostgreSQL database and take a database backup before deploying against an
+existing database. Hibernate then applies additive schema updates required by the
+current JPA entities when the backend starts.
+
+The repository also contains `prisma/migrations` directories:
+
+- `20260723000000_existing_schema_baseline`
+- `20260723235500_admin_api`
+- `20260729120000_moderation_effects`
+
+## Deployment to BW Cloud or Staging
+
+The confirmed deployment path is the manual GitLab CI job
+`server:deploy:staging`, available on the `main` branch for non-scheduled
+pipelines.
+
+The job:
+
+1. Uses the image produced by `server:package`:
+   `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`.
+2. Installs `openssh-client` in an Alpine 3.20 CI image.
+3. Uses `SSH_PRIVATE_KEY`, `DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_USER`, and
+   `DEPLOY_PATH` to connect to the target server.
+4. Logs in to the GitLab Container Registry on the server.
+5. Pulls the image tag for the current commit.
+6. Stops and removes the existing container named `app-server`, if present.
+7. Starts a new detached container named `app-server`.
+8. Maps `8080:8080`, sets restart policy `unless-stopped`, and adds
+   `host.docker.internal:host-gateway`.
+9. Passes backend environment variables with `docker run -e`.
+10. Polls `http://localhost:8080/health` inside the container up to 30 times.
+11. Prints recent container logs and fails the job if health never succeeds.
+
+The deployment job defaults `ADMIN_FRONTEND_ORIGINS` to the BW Cloud/staging URL
+used elsewhere in the repository and defaults the datasource URL to the Docker
+host gateway PostgreSQL address listed above.
+
+## CI/CD Pipeline Usage
+
+The GitLab pipeline is defined in `.gitlab-ci.yml`.
+
+Pipeline sources:
+
+- Push pipelines
+- Merge request pipelines
+- Scheduled pipelines
+
+Stages:
+
+- `test`
+- `package`
+- `deploy`
+
+Jobs:
+
+| Job | When it runs | What it does |
+| --- | --- | --- |
+| `server:test` | Push and merge request pipelines | Runs `./mvnw verify`, then `java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"`. Publishes JUnit and JaCoCo artifacts. |
+| `server:package` | `main` branch, non-scheduled pipelines | Uses Kaniko to build `src/Dockerfile` and push `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`. |
+| `server:deploy:staging` | Manual job on `main`, non-scheduled pipelines | SSHes to the deployment host and replaces the `app-server` Docker container. |
+| `health:check` | Scheduled pipelines only | Curls the configured BW Cloud/staging `/health` URL and expects HTTP 200. |
+
+The changed-code coverage threshold is configured as `COVERAGE_THRESHOLD: "30"`.
+
+## Verifying a Successful Deployment
+
+Use the checks that are explicitly supported by the source and CI configuration:
+
+1. Confirm the backend health endpoint:
+
+   ```bash
+   curl -fsS http://localhost:8080/health
+   ```
+
+   Expected response:
+
+   ```json
+   {"message":"API healthy","success":true}
+   ```
+
+2. For the BW Cloud/staging URL referenced by CI, confirm:
+
+   ```bash
+   curl -fsS https://server.example.org/health
+   ```
+
+3. For an authenticated admin deployment, use `GET /system/status` from the
+   Admin Web or an authenticated client. It reports overall status, database
+   reachability, counts, last write metadata, and `gitlabEnabled`.
+
+4. Verify CORS for the Admin Web origin:
+
+   ```bash
+   curl -i -X POST -H "Origin: <panel origin>" -H "Content-Type: application/json" -d '{"email":"nobody@example.invalid"}' <api base>/auth/request-login
+   ```
+
+   `400 Invalid KIT email` means the origin was accepted and the request reached
+   controller validation. `403 Invalid CORS request` means the origin is not in
+   `ADMIN_FRONTEND_ORIGINS`.
+
+5. Check recent deployment logs. The CI deployment job prints the last 100 lines
+   after a successful health check and the last 200 lines after a failed health
+   check.
+
+## Updating and Restarting
+
+### Through CI
+
+The confirmed update path is:
+
+1. Merge or push the desired commit to `main`.
+2. Let `server:test` and `server:package` run.
+3. Start the manual `server:deploy:staging` job.
+4. Wait for the job's `/health` polling loop to succeed.
+
+The deployment job replaces the running `app-server` container by stopping and
+removing it, then running a new container from the current commit image tag.
+
+### Local Docker Compose
+
+Rebuild and restart the local stack:
+
+```bash
+docker compose up --build -d
+```
+
+Stop the local stack:
+
+```bash
+docker compose down --remove-orphans
+```
+
+Inspect local container state and logs:
+
+```bash
+docker compose ps
+docker compose logs backend
+```
+
+## Basic Troubleshooting
+
+| Symptom | Confirmed cause or check |
+| --- | --- |
+| Application fails during startup with `AUTH_RATE_LIMIT_HMAC_KEY must contain at least 32 characters` | Set `AUTH_RATE_LIMIT_HMAC_KEY` to an unpredictable value with at least 32 characters. |
+| Browser requests fail with `403 Invalid CORS request` | Set `ADMIN_FRONTEND_ORIGINS` to the exact Admin Web origin, including scheme and port. Wildcards are rejected. |
+| `GET /health` returns 503 | The backend could not run `SELECT 1` against the configured database. Check datasource URL, username, password, PostgreSQL reachability, and port `5432`. |
+| `GET /system/status` reports database down or degraded | The database probe or follow-up reads failed. Check database availability and backend logs. |
+| GitLab issue creation returns 503 | `GITLAB_BASE_URL`, `GITLAB_PROJECT_ID`, or `GITLAB_TOKEN` is unset, so the integration is disabled. |
+| GitLab issue creation returns bad gateway | The backend could not reach GitLab or GitLab did not return the expected issue payload. Check `GITLAB_BASE_URL`, token permissions, network access, and `GITLAB_TIMEOUT`. |
+| Admin API rejects every caller | `ADMIN_BOOTSTRAP_EMAILS` may be empty. The startup runner logs a warning when no administrator emails are configured. |
+| `scripts/docker-smoke-test.sh` fails | The script checks `GET /hello`; the deployment health endpoint used by Dockerfile, CI deploy, and scheduled CI health checks is `GET /health`. |
