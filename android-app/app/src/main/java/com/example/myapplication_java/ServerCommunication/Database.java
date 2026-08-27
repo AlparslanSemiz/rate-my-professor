@@ -122,16 +122,10 @@ public abstract class Database extends RoomDatabase {
                 "professors"
         );
 
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                service.deleteInstructors();
-            }
-        });
         refreshTable(
                 apiService.getLectures(),
                 LecturesResponse::lectures,
-                service::deleteLectures,
+                this::deleteLectures,
                 this::insertLecture,
                 executor,
                 "lectures"
@@ -240,5 +234,10 @@ public abstract class Database extends RoomDatabase {
         List<String> res = searchService.getLectureTitlesFromInstructors();
 
         //Log.println(Log.DEBUG, "Database", "title size"  + res.size());
+    }
+    private void deleteLectures() {
+        SearchService searchService = searchService();
+        searchService.deleteLectures();
+        searchService.deleteInstructors();
     }
 }

@@ -258,12 +258,17 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         SearchService searchService = Database.getInstance(getContext()).searchService();
         if (!AuthManager.getInstance().isLoggedIn()) {
             Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
-            List<Rating> ratings = searchService.getLectureRatings(lecture.id, Rater.USER);
-            List<TopicAverageResponse> topicRatings = new ArrayList<>();
-            for (Rating rating : ratings) {
-                topicRatings.add(new TopicAverageResponse(rating.category, rating.score));
-            }
-            showRatings(topicRatings);
+            executorService.execute(new Runnable() {
+                @Override
+                public void run() {
+                    List<Rating> ratings = searchService.getLectureRatings(lecture.id, Rater.AVERAGE);
+                    List<TopicAverageResponse> topicRatings = new ArrayList<>();
+                    for (Rating rating : ratings) {
+                        topicRatings.add(new TopicAverageResponse(rating.category, rating.score));
+                    }
+                    showRatings(topicRatings);
+                }
+            });
         } else {
             ratingCall.enqueue(new Callback<RatingAverageResponse>() {
                 @Override
