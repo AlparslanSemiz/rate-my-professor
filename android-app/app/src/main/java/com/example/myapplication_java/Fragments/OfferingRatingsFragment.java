@@ -151,6 +151,16 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         }
     }
 
+    private List<Comment> commentModelToComment(List<CommentModel> models) {
+        ArrayList<Comment> comments = new ArrayList<>();
+        for (CommentModel model : models) {
+            comments.add(new Comment(model.commentID(), model.content(), model.status(),
+                    model.studentUsername(), model.lectureID(), null, model.createdAt(),
+                    model.downVotes(), model.upVotes(), new ArrayList<>()));
+        }
+        return comments;
+    }
+
     /**
      * Gets the comments for the offering to display them.
      */
