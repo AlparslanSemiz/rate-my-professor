@@ -25,6 +25,7 @@ public record Comment (
         ContentStatus status,
         String studentUsername,
         String lectureID,
+        String profilePicture,
         LocalDateTime createdAt,
         int downVotes,
         int upVotes,

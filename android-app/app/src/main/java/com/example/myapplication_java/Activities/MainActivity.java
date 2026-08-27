@@ -29,11 +29,13 @@ import com.example.myapplication_java.Fragments.SettingsFragment;
 import com.example.myapplication_java.MyApplication;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
-import com.example.myapplication_java.ServerCommunication.Database;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
-import com.example.myapplication_java.ServerCommunication.Responses.PersonalStatisticsResponse;
+import com.example.myapplication_java.ServerCommunication.NetworkUtils;
+import com.example.myapplication_java.ServerCommunication.Responses.StudentProfileResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.databinding.ActivityMainBinding;
+
+import java.io.IOException;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -75,6 +77,7 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
 
         MainViewModel viewModel = new ViewModelProvider(this).get(MainViewModel.class);
         setUpBottomNavigation();
+        getHomepageData();
     }
 
 
@@ -112,29 +115,34 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
     private void getHomepageData() {
         APIService apiService = RetrofitClient.getClient().create(APIService.class);
         String authToken = LoginSession.from(this).bearerToken();
-        Call<PersonalStatisticsResponse> call = apiService.getHomepageData(authToken);
-        call.enqueue(new Callback<PersonalStatisticsResponse>() {
-            @Override
-            public void onResponse(Call<PersonalStatisticsResponse> call, Response<PersonalStatisticsResponse> response) {
-                if (response.isSuccessful()) {
-                    PersonalStatisticsResponse statisticsResponse = response.body();
-                    SharedPreferences statistics = getSharedPreferences(MyApplication.STATISTICS_STORAGE, Context.MODE_PRIVATE);
-                    statistics.edit().putString("username", statisticsResponse.username())
-                    .putString("profilePicture", statisticsResponse.profilePicture())
-                    .putFloat("averageRating", statisticsResponse.averageRating())
-                    .putInt("ratingCount", statisticsResponse.ratingCount())
-                    .putInt("writtencomments", statisticsResponse.writtencomments())
-                    .putInt("credibilityScore", statisticsResponse.credibilityScore()).apply();
-                } else {
+        Call<StudentProfileResponse> call = apiService.getUserInformation(authToken);
+        if (!NetworkUtils.isInternetAvailable(this)) {
+            Toast.makeText(this, "Internet not available", Toast.LENGTH_SHORT);
+        } else {
+            call.enqueue(new Callback<StudentProfileResponse>() {
+                @Override
+                public void onResponse(Call<StudentProfileResponse> call, Response<StudentProfileResponse> response) {
+                    if (response.isSuccessful()) {
+                        StudentProfileResponse statisticsResponse = response.body();
+                        Log.println(Log.DEBUG, "MainActivity", statisticsResponse.toString());
+                        SharedPreferences statistics = getSharedPreferences(MyApplication.STATISTICS_STORAGE, Context.MODE_PRIVATE);
+                        statistics.edit().putString("username", statisticsResponse.username())
+                                .putString("profilePicture", statisticsResponse.profilePicture())
+                                .putFloat("averageRating", (float)statisticsResponse.averageRating())
+                                .putInt("ratingCount", statisticsResponse.ratingsCount())
+                                .putInt("writtencomments", statisticsResponse.commentsWritten())
+                                .putInt("credibilityScore", statisticsResponse.credibilityScore()).apply();
+                    } else {
+                        Log.println(Log.ERROR, "HomePage", "couldn't get the homepage data.");
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<StudentProfileResponse> call, Throwable throwable) {
                     Log.println(Log.ERROR, "HomePage", "couldn't get the homepage data.");
                 }
-            }
-
-            @Override
-            public void onFailure(Call<PersonalStatisticsResponse> call, Throwable throwable) {
-                Log.println(Log.ERROR, "HomePage", "couldn't get the homepage data.");
-            }
-        });
+            });
+        }
     }
     @Override
     public void openHome() {

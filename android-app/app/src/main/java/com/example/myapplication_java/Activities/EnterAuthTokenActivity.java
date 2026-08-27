@@ -1,7 +1,6 @@
 package com.example.myapplication_java.Activities;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -15,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
+import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
@@ -75,44 +75,48 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
         Intent mainActivity = new Intent(this, MainActivity.class);
         mainActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
-        call.enqueue(new Callback<>() {
-            @Override
-            public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
-                ServerResponse body = response.body();
+        if (!NetworkUtils.isInternetAvailable(this)) {
+            Toast.makeText(this, "Internet not available", Toast.LENGTH_SHORT).show();
+        } else {
+            call.enqueue(new Callback<>() {
+                @Override
+                public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                    ServerResponse body = response.body();
 
-                // A rejected login comes back without a body, so it has to be checked before
-                // reading the success flag out of it.
-                if (!response.isSuccessful() || body == null || !body.success()) {
-                    Log.d(TAG, "failure: " + response.code());
+                    // A rejected login comes back without a body, so it has to be checked before
+                    // reading the success flag out of it.
+                    if (!response.isSuccessful() || body == null || !body.success()) {
+                        Log.d(TAG, "failure: " + response.code());
 
-                    // Without a body the server did not judge the token at all, which is a
-                    // problem on its side rather than a wrong code the user could correct.
-                    String message = body == null || body.message() == null || body.message().isEmpty()
-                            ? getString(response.isSuccessful()
-                                    ? R.string.login_failed
-                                    : R.string.login_server_unreachable)
-                            : body.message();
-                    Toast.makeText(EnterAuthTokenActivity.this, message, Toast.LENGTH_LONG).show();
-                    return;
+                        // Without a body the server did not judge the token at all, which is a
+                        // problem on its side rather than a wrong code the user could correct.
+                        String message = body == null || body.message() == null || body.message().isEmpty()
+                                ? getString(response.isSuccessful()
+                                ? R.string.login_failed
+                                : R.string.login_server_unreachable)
+                                : body.message();
+                        Toast.makeText(EnterAuthTokenActivity.this, message, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    Log.d(TAG, "success!!");
+
+                    // Saving the OneTimePassword for future logins
+                    session.saveTokens(token, body.authToken());
+                    EnterAuthTokenActivity.this.startActivity(mainActivity);
                 }
 
-                Log.d(TAG, "success!!");
-
-                // Saving the OneTimePassword for future logins
-                session.saveTokens(token, body.authToken());
-                EnterAuthTokenActivity.this.startActivity(mainActivity);
-            }
-
-            @Override
-            public void onFailure(Call<ServerResponse> call, Throwable t) {
-                Log.e(TAG, "login failed: " + t);
-                Toast.makeText(
-                        EnterAuthTokenActivity.this,
-                        R.string.login_server_unreachable,
-                        Toast.LENGTH_LONG
-                ).show();
-            }
-        });
+                @Override
+                public void onFailure(Call<ServerResponse> call, Throwable t) {
+                    Log.e(TAG, "login failed: " + t);
+                    Toast.makeText(
+                            EnterAuthTokenActivity.this,
+                            R.string.login_server_unreachable,
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+            });
+        }
 
     }
 }

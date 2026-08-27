@@ -24,7 +24,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication_java.Adapters.CommentsAdapter;
 import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.Adapters.RatingAdapter;
+import com.example.myapplication_java.Adapters.SearchService;
 import com.example.myapplication_java.DomainModel.Comment;
+import com.example.myapplication_java.DomainModel.CommentModel;
 import com.example.myapplication_java.DomainModel.CommentType;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
@@ -33,7 +35,9 @@ import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.DomainModel.VoteType;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.Database;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
+import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.ReportReason;
 import com.example.myapplication_java.ServerCommunication.Requests.CommentReportRequest;
 import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRequest;
@@ -148,33 +152,56 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         }
     }
 
+    private List<Comment> commentModelToComment(List<CommentModel> models) {
+        ArrayList<Comment> comments = new ArrayList<>();
+        for (CommentModel model : models) {
+            comments.add(new Comment(model.commentID(), model.content(), model.status(),
+                    model.studentUsername(), model.lectureID(), null, model.createdAt(),
+                    model.downVotes(), model.upVotes(), new ArrayList<>()));
+        }
+        return comments;
+    }
+
     /**
      * Gets the comments for the offering to display them.
      */
     private void getComments() {
         Call<CommentsResponse> commentsResponseCall = apiService.getComments(lecture.id);
-        commentsResponseCall.enqueue(new Callback<CommentsResponse>() {
-            @Override
-            public void onResponse(Call<CommentsResponse> call, Response<CommentsResponse> response) {
-                CommentsResponse body = response.body();
-                if (!response.isSuccessful() || body == null || body.comments() == null) {
-                    Log.d(TAG, "couldn't get the comments");
-                    return;
+        if (!NetworkUtils.isInternetAvailable(getContext())) {
+            SearchService searchService = Database.getInstance(getContext()).searchService();
+            executorService.execute(new Runnable() {
+                @Override
+                public void run() {
+                    comments = commentModelToComment(searchService.getComments(lecture.id));
+                    commentsAdapter = new CommentsAdapter(getContext(), comments, OfferingRatingsFragment.this, CommentType.COMMENT);
+                    binding.commentList.setAdapter(commentsAdapter);
+                }
+            });
+            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        } else {
+            commentsResponseCall.enqueue(new Callback<CommentsResponse>() {
+                @Override
+                public void onResponse(Call<CommentsResponse> call, Response<CommentsResponse> response) {
+                    CommentsResponse body = response.body();
+                    if (!response.isSuccessful() || body == null || body.comments() == null) {
+                        Log.d(TAG, "couldn't get the comments");
+                        return;
+                    }
+
+                    // Copied into an own list, because folding answers in and out modifies it.
+                    comments = new ArrayList<>(body.comments());
+                    runOnUiThread(() -> {
+                        commentsAdapter = new CommentsAdapter(getContext(), comments, OfferingRatingsFragment.this, CommentType.COMMENT);
+                        binding.commentList.setAdapter(commentsAdapter);
+                    });
                 }
 
-                // Copied into an own list, because folding answers in and out modifies it.
-                comments = new ArrayList<>(body.comments());
-                runOnUiThread(() -> {
-                    commentsAdapter = new CommentsAdapter(comments, OfferingRatingsFragment.this, CommentType.COMMENT);
-                    binding.commentList.setAdapter(commentsAdapter);
-                });
-            }
-
-            @Override
-            public void onFailure(Call<CommentsResponse> call, Throwable throwable) {
-                Log.d(TAG, "couldn't get the comments: " + throwable.getMessage());
-            }
-        });
+                @Override
+                public void onFailure(Call<CommentsResponse> call, Throwable throwable) {
+                    Log.d(TAG, "couldn't get the comments: " + throwable.getMessage());
+                }
+            });
+        }
     }
 
     /**
@@ -189,23 +216,28 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
             PostCommentRequest request = new PostCommentRequest(lecture.id, comment);
             String token = LoginSession.from(requireContext()).bearerToken();
 
-            apiService.postComment(token, request).enqueue(new Callback<ServerResponse>() {
-                @Override
-                public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
-                    if (!response.isSuccessful()) {
-                        showToast("Your comment couldn't be sent.");
-                        return;
+
+
+            if (!NetworkUtils.isInternetAvailable(getContext())) {
+                Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+            } else {
+                apiService.postComment(token, request).enqueue(new Callback<ServerResponse>() {
+                    @Override
+                    public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                        if (!response.isSuccessful()) {
+                            showToast("Your comment couldn't be sent.");
+                            return;
+                        }
+                        showToast("Your comment is sent.");
                     }
-                    showToast("Your comment is sent.");
-                }
 
-                @Override
-                public void onFailure(Call<ServerResponse> call, Throwable throwable) {
-                    showToast("Your comment couldn't be sent.");
-                }
+                    @Override
+                    public void onFailure(Call<ServerResponse> call, Throwable throwable) {
+                        showToast("Your comment couldn't be sent.");
+                    }
+                });
+            }
             });
-
-        });
     }
 
     /**
@@ -219,29 +251,33 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         Call<RatingAverageResponse> ratingCall = apiService.getRatings(lecture.id);
         Log.d(TAG, "loading ratings for id: " + lecture.id);
 
-        ratingCall.enqueue(new Callback<RatingAverageResponse>() {
-            @Override
-            public void onResponse(Call<RatingAverageResponse> call,
-                                   Response<RatingAverageResponse> response) {
-                RatingAverageResponse body = response.body();
-                if (!response.isSuccessful() || body == null || body.ratings() == null) {
-                    Log.d(TAG, "couldn't get the ratings, status " + response.code());
-                    return;
+        if (!NetworkUtils.isInternetAvailable(getContext())) {
+            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        } else {
+            ratingCall.enqueue(new Callback<RatingAverageResponse>() {
+                @Override
+                public void onResponse(Call<RatingAverageResponse> call,
+                                       Response<RatingAverageResponse> response) {
+                    RatingAverageResponse body = response.body();
+                    if (!response.isSuccessful() || body == null || body.ratings() == null) {
+                        Log.d(TAG, "couldn't get the ratings, status " + response.code());
+                        return;
+                    }
+
+                    List<TopicAverageResponse> ratings = body.ratings();
+                    for (TopicAverageResponse rating : ratings) {
+                        System.out.println(rating.category() + "->" + rating.value());
+                    }
+                    runOnUiThread(() -> showRatings(ratings));
                 }
 
-                List<TopicAverageResponse> ratings = body.ratings();
-                for(TopicAverageResponse rating : ratings) {
-                    System.out.println(rating.category() + "->" + rating.value());
+                @Override
+                public void onFailure(Call<RatingAverageResponse> call,
+                                      Throwable throwable) {
+                    Log.d(TAG, "couldn't get the ratings: " + throwable.getMessage());
                 }
-                runOnUiThread(() -> showRatings(ratings));
-            }
-
-            @Override
-            public void onFailure(Call<RatingAverageResponse> call,
-                                  Throwable throwable) {
-                Log.d(TAG, "couldn't get the ratings: " + throwable.getMessage());
-            }
-        });
+            });
+        }
     }
 
     /**
@@ -297,35 +333,39 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
 
 
             // (Trying to) submit the ratings
-            apiService.submitRating(token, request).enqueue(new Callback<ServerResponse>() {
-                @Override
-                public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
-                    if (!response.isSuccessful()) {
+            if (!NetworkUtils.isInternetAvailable(getContext())) {
+                Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+            } else {
+                apiService.submitRating(token, request).enqueue(new Callback<ServerResponse>() {
+                    @Override
+                    public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                        if (!response.isSuccessful()) {
+                            Toast.makeText(requireContext(),
+                                    "Your rating couldn't be sent.",
+                                    Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+
                         Toast.makeText(requireContext(),
-                                "Your rating couldn't be sent.",
+                                "Rating submitted successfully.",
                                 Toast.LENGTH_SHORT).show();
-                        return;
+
+                        // update View
+                        insertAverageRatings(lecture);
                     }
 
-
-                    Toast.makeText(requireContext(),
-                            "Rating submitted successfully.",
-                            Toast.LENGTH_SHORT).show();
-
-                    // update View
-                    insertAverageRatings(lecture);
-                }
-
-                @Override
-                public void onFailure(Call<ServerResponse> call, Throwable throwable) {
-                    requireActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(requireContext(), "Your rating couldn't be sent.", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                }
-            });
+                    @Override
+                    public void onFailure(Call<ServerResponse> call, Throwable throwable) {
+                        requireActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(requireContext(), "Your rating couldn't be sent.", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+            }
         }
         );
     }
@@ -336,21 +376,25 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         Log.d(TAG, "reply send " + commentId + ":" + reply);
 
         Call<BasicResponse> call = apiService.postAnswer(token, new SubmitAnswerRequest(commentId, reply));
-        call.enqueue(new Callback<BasicResponse>() {
-            @Override
-            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
-                if (!response.isSuccessful()) {
-                    showToast("Error while replying.");
-                } else {
-                    showToast("Reply sent.");
+        if (!NetworkUtils.isInternetAvailable(getContext())) {
+            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        } else {
+            call.enqueue(new Callback<BasicResponse>() {
+                @Override
+                public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                    if (!response.isSuccessful()) {
+                        showToast("Error while replying.");
+                    } else {
+                        showToast("Reply sent.");
+                    }
                 }
-            }
 
-            @Override
-            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
-                showToast("Couldn't connect the server.");
-            }
-        });
+                @Override
+                public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                    showToast("Couldn't connect the server.");
+                }
+            });
+        }
     }
 
     /**
@@ -372,19 +416,23 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         } else {
             call = apiService.voteAnswer(authToken, commentID, new VoteRequest(voteType));
         }
-        call.enqueue(new Callback<>() {
-            @Override
-            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
-                if (!response.isSuccessful()) {
+        if (!NetworkUtils.isInternetAvailable(getContext())) {
+            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        } else {
+            call.enqueue(new Callback<>() {
+                @Override
+                public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                    if (!response.isSuccessful()) {
+                        Toast.makeText(getContext(), "Vote couldn't be sent.", Toast.LENGTH_SHORT);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<BasicResponse> call, Throwable throwable) {
                     Toast.makeText(getContext(), "Vote couldn't be sent.", Toast.LENGTH_SHORT);
                 }
-            }
-
-            @Override
-            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
-                Toast.makeText(getContext(), "Vote couldn't be sent.", Toast.LENGTH_SHORT);
-            }
-        });
+            });
+        }
     }
 
     @Override
@@ -514,22 +562,26 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         } else {
             reportCall = apiService.reportReply(authToken, request);
         }
-        reportCall.enqueue(new Callback<BasicResponse>() {
-            @Override
-            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
-                BasicResponse body = response.body();
-                if (!response.isSuccessful() || body == null || !body.success()) {
-                    Log.println(Log.DEBUG, "comment report", "failure: " + response.code());
+        if (!NetworkUtils.isInternetAvailable(getContext())) {
+            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        } else {
+            reportCall.enqueue(new Callback<BasicResponse>() {
+                @Override
+                public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                    BasicResponse body = response.body();
+                    if (!response.isSuccessful() || body == null || !body.success()) {
+                        Log.println(Log.DEBUG, "comment report", "failure: " + response.code());
+                    }
                 }
-            }
 
-            @Override
-            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
-                Log.println(Log.DEBUG, "comment report", "failure: " + throwable.getMessage());
-            }
-        });
-        dialogBinding.bugReportInputLayout.setError(null);
-        Toast.makeText(requireContext(), R.string.bug_report_submitted, Toast.LENGTH_SHORT).show();
+                @Override
+                public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                    Log.println(Log.DEBUG, "comment report", "failure: " + throwable.getMessage());
+                }
+            });
+            dialogBinding.bugReportInputLayout.setError(null);
+            Toast.makeText(requireContext(), R.string.bug_report_submitted, Toast.LENGTH_SHORT).show();
+        }
         dialog.dismiss();
     }
 }

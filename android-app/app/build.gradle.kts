@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.converter.gson)
     implementation(libs.logging.interceptor)
     implementation(libs.room.runtime)
+    implementation(libs.glide)
     annotationProcessor(libs.room.compiler)
     testImplementation(libs.mockwebserver)
 }

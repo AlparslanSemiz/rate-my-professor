@@ -15,6 +15,7 @@ import com.example.myapplication_java.ServerCommunication.Responses.RatingAverag
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.StudentProfileResponse;
 
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
@@ -22,6 +23,7 @@ import retrofit2.http.Header;
 import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
+import retrofit2.http.Url;
 
 /**
  * Describes every route of the backend this app talks to.
@@ -181,11 +183,6 @@ public interface APIService {
             @Body VoteRequest request
     );
 
-    @GET("/account")
-    Call<PersonalStatisticsResponse> getHomepageData(
-            @Header("Authorization") String token
-    );
-
     /**
      * Loads all comments from the backend.
      *
@@ -217,5 +214,6 @@ public interface APIService {
             @Body CommentReportRequest request
     );
 
-
+    @GET
+    Call<ResponseBody> downloadImage(@Url String url);
 }
