@@ -97,6 +97,9 @@ public class ListOfMyRatingsFragment extends Fragment {
         return binding.getRoot();
     }
 
+    /**
+     * Sets up the adapter for showing all ratings given by the user.
+     */
     public void setUpList() {
         LoginSession session = LoginSession.from(requireContext());
         Call<UserRatingResponse> getRatingsCall = apiService.getUserRatings(session.bearerToken());
@@ -133,6 +136,9 @@ public class ListOfMyRatingsFragment extends Fragment {
         recyclerView.setAdapter(adapter);
     }
 
+    /**
+     * Passes the user to the lecture offering tab when the corresponding rating is clicked.
+     */
     public void openRating(Semester semester, String profId, String lectureName) {
         executor.execute(() -> {
             List<Lecture> lectures = searchService.getLecture(profId, lectureName,
@@ -143,10 +149,6 @@ public class ListOfMyRatingsFragment extends Fragment {
             }
             Professor prof = searchService.getProfessorById(profId);
             Lecture lecture = lectures.get(0);
-
-            System.out.println(semester.semesterYear());
-            System.out.println(prof.lastName);
-            System.out.println(lecture.name);
 
             runOnUiThread(() -> flowInterface.openLectureProfile(prof, semester, lecture));
         });
