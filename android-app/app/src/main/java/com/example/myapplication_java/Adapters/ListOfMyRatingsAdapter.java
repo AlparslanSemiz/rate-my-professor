@@ -16,6 +16,9 @@ import com.example.myapplication_java.logic.RatingColorCalculator;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Adapter for "List of my Ratings"-tab
+ */
 public class ListOfMyRatingsAdapter extends RecyclerView.Adapter<ListOfMyRatingsAdapter.UserRatingViewHolder>{
 
     private final List<UserRatingDto> ratings;
