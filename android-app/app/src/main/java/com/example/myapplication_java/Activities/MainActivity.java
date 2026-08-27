@@ -29,6 +29,7 @@ import com.example.myapplication_java.Fragments.SettingsFragment;
 import com.example.myapplication_java.MyApplication;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.AuthManager;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.Responses.StudentProfileResponse;
@@ -116,9 +117,7 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
         APIService apiService = RetrofitClient.getClient().create(APIService.class);
         String authToken = LoginSession.from(this).bearerToken();
         Call<StudentProfileResponse> call = apiService.getUserInformation(authToken);
-        if (!NetworkUtils.isInternetAvailable(this)) {
-            Toast.makeText(this, "Internet not available", Toast.LENGTH_SHORT);
-        } else {
+        if (AuthManager.getInstance().isLoggedIn()){
             call.enqueue(new Callback<StudentProfileResponse>() {
                 @Override
                 public void onResponse(Call<StudentProfileResponse> call, Response<StudentProfileResponse> response) {

@@ -15,6 +15,7 @@ import com.example.myapplication_java.DomainModel.Instructor;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.LectureModel;
 import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.DomainModel.Rating;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
@@ -37,8 +38,8 @@ import retrofit2.Response;
  * and is meant to exist only once per process, so every screen shares the same instance.</p>
  */
 @androidx.room.Database(
-        entities = {Lecture.class, Professor.class, CommentModel.class, Instructor.class},
-        version = 6
+        entities = {Lecture.class, Professor.class, CommentModel.class, Instructor.class, Rating.class},
+        version = 7
 )
 @TypeConverters(LocalDateTimeConverter.class)
 public abstract class Database extends RoomDatabase {
@@ -111,17 +112,6 @@ public abstract class Database extends RoomDatabase {
         // Room forbids database access on the main thread, so all writes go through this executor.
         ExecutorService executor = Executors.newSingleThreadExecutor();
 
-        Runnable tableFinished = () -> {
-            if (completed.incrementAndGet() == 2) {
-                // both tables are updated
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        //service.fillMissingData();
-                    }
-                });
-            }
-        };
         //the calls to the server for updating
         refreshTable(
                 apiService.getProfessors(),
@@ -129,8 +119,7 @@ public abstract class Database extends RoomDatabase {
                 service::deleteProfessors,
                 service::insertProfessor,
                 executor,
-                "professors",
-                tableFinished
+                "professors"
         );
 
         executor.execute(new Runnable() {
@@ -145,8 +134,7 @@ public abstract class Database extends RoomDatabase {
                 service::deleteLectures,
                 this::insertLecture,
                 executor,
-                "lectures",
-                tableFinished
+                "lectures"
         );
 
         refreshTable(
@@ -155,8 +143,7 @@ public abstract class Database extends RoomDatabase {
                 service::deleteComments,
                 this::insertComment,
                 executor,
-                "comments",
-                null
+                "comments"
         );
     }
 
@@ -181,8 +168,7 @@ public abstract class Database extends RoomDatabase {
             Runnable clearTable,
             Consumer<E> insert,
             ExecutorService executor,
-            String label,
-            Runnable onComplete
+            String label
     ) {
         // retrofit2.Callback has to be written out here: RoomDatabase brings its own nested
         // Callback class along, which would shadow the imported one.
@@ -210,9 +196,6 @@ public abstract class Database extends RoomDatabase {
                         insert.accept(entity);
                     }
                 });
-                if (onComplete != null) {
-                    onComplete.run();
-                }
             }
 
             @Override
@@ -250,8 +233,12 @@ public abstract class Database extends RoomDatabase {
         Lecture lecture = new Lecture(model.id(), model.name(), model.code(), model.semesterYear(),
                 model.semesterSeason(), model.active(), model.commentCount(), model.ratingCount());
         searchService.insertLecture(lecture);
+        //Log.println(Log.DEBUG, "Database", "professors size"  + model.professors().size());
         for (Professor professor : model.professors()) {
             searchService.insertInstructor(new Instructor(model.id(), model.name(), professor.id));
         }
+        List<String> res = searchService.getLectureTitlesFromInstructors();
+
+        //Log.println(Log.DEBUG, "Database", "title size"  + res.size());
     }
 }

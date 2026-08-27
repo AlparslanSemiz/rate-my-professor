@@ -8,6 +8,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -16,6 +17,7 @@ import com.bumptech.glide.Glide;
 import com.example.myapplication_java.DomainModel.Comment;
 import com.example.myapplication_java.DomainModel.CommentType;
 import com.example.myapplication_java.DomainModel.VoteType;
+import com.example.myapplication_java.ServerCommunication.AuthManager;
 import com.example.myapplication_java.databinding.ItemCommentBinding;
 import com.example.myapplication_java.databinding.ItemReplyBinding;
 
@@ -67,7 +69,13 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
         holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
 
-        holder.replyButton.setOnClickListener(v -> holder.commentBox.setVisibility(View.VISIBLE));
+        holder.replyButton.setOnClickListener(v -> {
+            if (!AuthManager.getInstance().isLoggedIn()) {
+                Toast.makeText(context, "You are not logged in.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            holder.commentBox.setVisibility(View.VISIBLE);
+        });
         holder.cancelButton.setOnClickListener(v -> holder.commentBox.setVisibility(View.GONE));
         holder.sendReply.setOnClickListener(v ->
                 listener.onReplySend(comment.commentID(), holder.replyText.getText().toString())
@@ -77,12 +85,20 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         holder.itemView.setOnClickListener(v -> openReplies(comment));
         holder.showCommentButton.setOnClickListener(v -> openReplies(comment));
         holder.upVoteButton.setOnClickListener(v -> {
+            if (!AuthManager.getInstance().isLoggedIn()) {
+                Toast.makeText(context, "You are not logged in.", Toast.LENGTH_SHORT).show();
+                return;
+            }
             holder.upVoteCount.setText(String.valueOf(comment.upVotes() + 1));
             holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
             listener.vote(comment.commentID(), VoteType.UP, type);
         });
 
         holder.downVoteButton.setOnClickListener(v -> {
+            if (!AuthManager.getInstance().isLoggedIn()) {
+                Toast.makeText(context, "You are not logged in.", Toast.LENGTH_SHORT).show();
+                return;
+            }
             holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
             holder.downVoteCount.setText(String.valueOf(comment.downVotes() + 1));
             listener.vote(comment.commentID(), VoteType.DOWN, type);

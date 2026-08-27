@@ -25,6 +25,7 @@ import com.example.myapplication_java.DomainModel.CommentType;
 import com.example.myapplication_java.DomainModel.VoteType;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.AuthManager;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.ReportReason;
@@ -86,7 +87,13 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         mainComment.upvotesNum.setText(String.valueOf(comment.upVotes()));
         mainComment.downvotesNum.setText(String.valueOf(comment.downVotes()));
 
-        mainComment.replyButton.setOnClickListener(v -> mainComment.commentBox.getRoot().setVisibility(View.VISIBLE));
+        mainComment.replyButton.setOnClickListener(v -> {
+            if (!AuthManager.getInstance().isLoggedIn()) {
+                Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            mainComment.commentBox.getRoot().setVisibility(View.VISIBLE);
+        });
         mainComment.commentBox.cancelButton.setOnClickListener(v -> mainComment.commentBox.getRoot().setVisibility(View.GONE));
         mainComment.commentBox.sendReply.setOnClickListener(v ->
                 onReplySend(comment.commentID(), mainComment.commentBox.replyText.getText().toString())
@@ -95,12 +102,20 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
 
         mainComment.commentsIcon.setOnClickListener(v -> onOpenReplies(comment));
         mainComment.upvoteIcon.setOnClickListener(v -> {
+            if (!AuthManager.getInstance().isLoggedIn()) {
+                Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
+                return;
+            }
             mainComment.upvotesNum.setText(String.valueOf(comment.upVotes() + 1));
             mainComment.downvotesNum.setText(String.valueOf(comment.downVotes()));
             vote(comment.commentID(), VoteType.UP, CommentType.COMMENT);
         });
 
         mainComment.downvoteIcon.setOnClickListener(v -> {
+            if (!AuthManager.getInstance().isLoggedIn()) {
+                Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
+                return;
+            }
             mainComment.upvotesNum.setText(String.valueOf(comment.upVotes()));
             mainComment.downvotesNum.setText(String.valueOf(comment.downVotes() + 1));
             vote(comment.commentID(), VoteType.DOWN, CommentType.COMMENT);
@@ -137,8 +152,8 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
             call = apiService.voteAnswer(authToken, commentID, new VoteRequest(voteType));
             Log.println(Log.DEBUG, "Reply", "voteanswer");
         }
-        if (!NetworkUtils.isInternetAvailable(getContext())) {
-            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
         } else {
             call.enqueue(new Callback<>() {
                 @Override
@@ -245,8 +260,8 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         } else {
             reportCall = apiService.reportReply(authToken, request);
         }
-        if (!NetworkUtils.isInternetAvailable(getContext())) {
-            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
         } else {
             reportCall.enqueue(new Callback<BasicResponse>() {
                 @Override

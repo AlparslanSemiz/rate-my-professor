@@ -29,7 +29,8 @@ public enum RatingCategory {
     TUTOR_PREPARATION("Vorbereitung"),
     TUTOR_MOTIVATION("Motivation"),
     TUTOR_FRIENDLINESS("Freundlichkeit"),
-    TUTOR_FEEDBACK("Feedback");
+    TUTOR_FEEDBACK("Feedback"),
+    OVERALL("Allgemein");
 
     private final String displayName;
 

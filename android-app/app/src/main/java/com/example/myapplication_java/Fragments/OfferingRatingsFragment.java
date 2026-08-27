@@ -30,11 +30,14 @@ import com.example.myapplication_java.DomainModel.CommentModel;
 import com.example.myapplication_java.DomainModel.CommentType;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.DomainModel.Rater;
+import com.example.myapplication_java.DomainModel.Rating;
 import com.example.myapplication_java.DomainModel.RatingCategory;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.DomainModel.VoteType;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.AuthManager;
 import com.example.myapplication_java.ServerCommunication.Database;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.NetworkUtils;
@@ -132,6 +135,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         binding.name.setText(professor.firstName);
         binding.surname.setText(professor.lastName);
         binding.commentList.setLayoutManager(new LinearLayoutManager(requireContext()));
+        binding.backButton.setOnClickListener(v -> requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
         getComments();
         setSubmitCommentListener();
@@ -167,7 +171,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
      */
     private void getComments() {
         Call<CommentsResponse> commentsResponseCall = apiService.getComments(lecture.id);
-        if (!NetworkUtils.isInternetAvailable(getContext())) {
+        if (!AuthManager.getInstance().isLoggedIn()) {
             SearchService searchService = Database.getInstance(getContext()).searchService();
             executorService.execute(new Runnable() {
                 @Override
@@ -218,8 +222,8 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
 
 
 
-            if (!NetworkUtils.isInternetAvailable(getContext())) {
-                Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+            if (!AuthManager.getInstance().isLoggedIn()) {
+                Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
             } else {
                 apiService.postComment(token, request).enqueue(new Callback<ServerResponse>() {
                     @Override
@@ -251,8 +255,15 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         Call<RatingAverageResponse> ratingCall = apiService.getRatings(lecture.id);
         Log.d(TAG, "loading ratings for id: " + lecture.id);
 
-        if (!NetworkUtils.isInternetAvailable(getContext())) {
-            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        SearchService searchService = Database.getInstance(getContext()).searchService();
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
+            List<Rating> ratings = searchService.getLectureRatings(lecture.id, Rater.USER);
+            List<TopicAverageResponse> topicRatings = new ArrayList<>();
+            for (Rating rating : ratings) {
+                topicRatings.add(new TopicAverageResponse(rating.category, rating.score));
+            }
+            showRatings(topicRatings);
         } else {
             ratingCall.enqueue(new Callback<RatingAverageResponse>() {
                 @Override
@@ -265,9 +276,11 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                     }
 
                     List<TopicAverageResponse> ratings = body.ratings();
+                    updateLocalRatingsFromResponse(ratings);
                     for (TopicAverageResponse rating : ratings) {
                         System.out.println(rating.category() + "->" + rating.value());
                     }
+
                     runOnUiThread(() -> showRatings(ratings));
                 }
 
@@ -333,8 +346,8 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
 
 
             // (Trying to) submit the ratings
-            if (!NetworkUtils.isInternetAvailable(getContext())) {
-                Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+            if (!AuthManager.getInstance().isLoggedIn()) {
+                Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
             } else {
                 apiService.submitRating(token, request).enqueue(new Callback<ServerResponse>() {
                     @Override
@@ -350,8 +363,8 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                         Toast.makeText(requireContext(),
                                 "Rating submitted successfully.",
                                 Toast.LENGTH_SHORT).show();
-
                         // update View
+                        updateLocalRatingsFromRequest(requestList);
                         insertAverageRatings(lecture);
                     }
 
@@ -376,7 +389,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         Log.d(TAG, "reply send " + commentId + ":" + reply);
 
         Call<BasicResponse> call = apiService.postAnswer(token, new SubmitAnswerRequest(commentId, reply));
-        if (!NetworkUtils.isInternetAvailable(getContext())) {
+        if (!AuthManager.getInstance().isLoggedIn()) {
             Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
         } else {
             call.enqueue(new Callback<BasicResponse>() {
@@ -416,8 +429,8 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         } else {
             call = apiService.voteAnswer(authToken, commentID, new VoteRequest(voteType));
         }
-        if (!NetworkUtils.isInternetAvailable(getContext())) {
-            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
         } else {
             call.enqueue(new Callback<>() {
                 @Override
@@ -445,6 +458,30 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         showCommentReportDialog(commentID, CommentType.REPLY);
     }
 
+    private void updateLocalRatingsFromRequest(List<RatingTopicRequest> ratingRequests) {
+        SearchService searchService = Database.getInstance(getContext()).searchService();
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                for (RatingTopicRequest ratingResponse: ratingRequests){
+                    Rating rating = new Rating(lecture.id, ratingResponse.category(), ratingResponse.value(), Rater.USER);
+                    searchService.upsertRating(rating);
+                }
+            }
+        });
+    }
+    private void updateLocalRatingsFromResponse(List<TopicAverageResponse> ratingResponses) {
+        SearchService searchService = Database.getInstance(getContext()).searchService();
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                for (TopicAverageResponse ratingResponse: ratingResponses){
+                    Rating rating = new Rating(lecture.id, ratingResponse.category(), ratingResponse.value(), Rater.AVERAGE);
+                    searchService.upsertRating(rating);
+                }
+            }
+        });
+    }
     /**
      * Shows a short message to the user, if the screen is still on display.
      *
@@ -562,8 +599,8 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         } else {
             reportCall = apiService.reportReply(authToken, request);
         }
-        if (!NetworkUtils.isInternetAvailable(getContext())) {
-            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
         } else {
             reportCall.enqueue(new Callback<BasicResponse>() {
                 @Override

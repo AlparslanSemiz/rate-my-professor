@@ -8,10 +8,12 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.AuthManager;
 import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.Responses.AuthState;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 
@@ -43,6 +45,7 @@ public class StartActivity extends AppCompatActivity {
         if (!NetworkUtils.isInternetAvailable(this)) {
             Toast.makeText(this, "You are currently offline. If you want to use the online mode " +
                     "make sure that there is an internet connection and then log in.", Toast.LENGTH_LONG).show();
+            AuthManager.getInstance().setAuthState(AuthState.LOGGED_OUT);
             openScreen(MainActivity.class);
         } else {
             if (!session.isLoggedIn()) {
@@ -65,6 +68,9 @@ public class StartActivity extends AppCompatActivity {
         call.enqueue(new Callback<>() {
             @Override
             public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                if (response.isSuccessful()) {
+                    AuthManager.getInstance().setAuthState(AuthState.LOGGED_IN);
+                }
                 openScreen(response.isSuccessful() ? MainActivity.class : LoginActivity.class);
             }
 

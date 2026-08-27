@@ -5,9 +5,11 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.R;
 import com.example.myapplication_java.databinding.ItemProfNameSmallBinding;
 
 import java.util.List;
@@ -22,6 +24,7 @@ public class ProfileProfessorAdapter extends RecyclerView.Adapter<ProfileProfess
 
     private final List<Professor> professors;
     private final OnProfessorClickListener listener;
+    private int currentChoice = 0;
 
     public ProfileProfessorAdapter(List<Professor> professors, OnProfessorClickListener listener) {
         this.professors = professors;

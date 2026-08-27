@@ -3,11 +3,17 @@ package com.example.myapplication_java.Adapters;
 import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
+import androidx.room.Update;
+import androidx.room.Upsert;
 
 import com.example.myapplication_java.DomainModel.CommentModel;
 import com.example.myapplication_java.DomainModel.Instructor;
 import com.example.myapplication_java.DomainModel.Lecture;
 import com.example.myapplication_java.DomainModel.Professor;
+import com.example.myapplication_java.DomainModel.Rater;
+import com.example.myapplication_java.DomainModel.Rating;
+import com.example.myapplication_java.DomainModel.RatingCategory;
+import com.example.myapplication_java.DomainModel.RatingTopic;
 import com.example.myapplication_java.DomainModel.Semester;
 import com.example.myapplication_java.DomainModel.SemesterSeason;
 
@@ -102,6 +108,8 @@ public interface SearchService {
     @Query("SELECT DISTINCT name FROM lectures")
     List<String> getLectureTitles();
 
+    @Query("SELECT DISTINCT lectureTitle FROM instructors")
+    List<String> getLectureTitlesFromInstructors();
     /**
      * @param lectureTitle the name of the lecture
      * @return every professor who holds a lecture with that name
@@ -114,7 +122,7 @@ public interface SearchService {
      * @param professorId the professor to look up
      * @return the name of every lecture held by that professor, each one only once
      */
-    @Query("SELECT DISTINCT lectureTitle FROM instructors WHERE professorId = :professorId ORDER BY lectureTitle ASC")
+    @Query("SELECT DISTINCT lectureTitle FROM instructors WHERE professorID = :professorId ORDER BY lectureTitle ASC")
     List<String> getLectureTitlesByProfessor(String professorId);
 
     /**
@@ -160,4 +168,10 @@ public interface SearchService {
 
     @Query("DELETE FROM instructors")
     void deleteInstructors();
+
+    @Query("SELECT * from ratings WHERE lectureID = :lectureID AND rater = :rater")
+    List<Rating> getLectureRatings(String lectureID, Rater rater);
+
+    @Upsert
+    void upsertRating(Rating rating);
 }

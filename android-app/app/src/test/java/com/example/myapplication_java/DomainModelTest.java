@@ -82,16 +82,6 @@ public class DomainModelTest {
     }
 
     @Test
-    public void ratingConstructorStoresFields() {
-        RatingTopic topic = new RatingTopic("Clarity", 5);
-        Rating rating = new Rating("lecture-1", Collections.singletonList(topic));
-        assertEquals("lecture-1", rating.lectureId());
-        assertEquals(1, rating.topics().size());
-        assertEquals(topic, rating.topics().get(0));
-    }
-
-
-    @Test
     public void userConstructorStoresFields() {
         User user = new User(
                 "user-1",

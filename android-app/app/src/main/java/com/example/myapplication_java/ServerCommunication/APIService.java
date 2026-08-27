@@ -202,7 +202,7 @@ public interface APIService {
             @Header("Authorization") String token
     );
 
-    @POST("/comments/report")
+    @POST("/social/comments/report")
     Call<BasicResponse> reportComment(
             @Header("Authorization") String token,
             @Body CommentReportRequest request

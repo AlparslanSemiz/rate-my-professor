@@ -27,6 +27,7 @@ import com.example.myapplication_java.Adapters.ControlFlowInterface;
 import com.example.myapplication_java.MyApplication;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.AuthManager;
 import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
@@ -85,15 +86,19 @@ public class SettingsFragment extends Fragment {
     private void setUpClickListeners() {
         binding.darkModeSwitch.setChecked(isNightModeEnabled());
 
-        binding.backButton.setOnClickListener(v -> navigateToHome());
         binding.darkModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) ->
                 setNightMode(isChecked)
         );
         // The whole row is the target users aim at, not just the switch at its far end.
         binding.darkModeRow.setOnClickListener(v -> binding.darkModeSwitch.toggle());
         binding.bugReport.setOnClickListener(v -> showBugReportDialog());
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            binding.logoutAllDevicesButton.setVisibility(View.GONE);
+            binding.loginButton.setVisibility(View.VISIBLE);
+        }
         binding.logoutAllDevicesButton.setOnClickListener(v -> confirmLogoutOnAllDevices());
         binding.deleteAccountButton.setOnClickListener(v -> confirmAccountDeletion());
+        binding.loginButton.setOnClickListener(v -> openLoginScreen());
     }
 
     /**
@@ -144,21 +149,6 @@ public class SettingsFragment extends Fragment {
         AppCompatDelegate.setDefaultNightMode(nightMode);
     }
 
-    /**
-     * Navigates back to the home screen from settings.
-     *
-     * <p>Which screen follows this one is the hosting activity's decision, so it is asked to
-     * open the home screen. Only when this fragment is shown outside of that host, the normal
-     * back navigation is used instead.</p>
-     */
-    private void navigateToHome() {
-        if (requireActivity() instanceof ControlFlowInterface host) {
-            host.openHome();
-            return;
-        }
-
-        requireActivity().getOnBackPressedDispatcher().onBackPressed();
-    }
 
     /**
      * Opens the bug report dialog.
@@ -321,8 +311,8 @@ public class SettingsFragment extends Fragment {
         APIService apiService = createApiService();
         Call<BasicResponse> call = apiService.deleteAccount(session.bearerToken());
 
-        if (!NetworkUtils.isInternetAvailable(getContext())) {
-            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
         } else {
             call.enqueue(new Callback<>() {
                 /**

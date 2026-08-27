@@ -13,9 +13,11 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.AuthManager;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.Requests.LoginRequest;
+import com.example.myapplication_java.ServerCommunication.Responses.AuthState;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.databinding.ActivityEnterAuthTokenBinding;
@@ -103,6 +105,7 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
 
                     // Saving the OneTimePassword for future logins
                     session.saveTokens(token, body.authToken());
+                    AuthManager.getInstance().setAuthState(AuthState.LOGGED_IN);
                     EnterAuthTokenActivity.this.startActivity(mainActivity);
                 }
 

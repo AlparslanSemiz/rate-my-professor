@@ -20,6 +20,7 @@ import com.example.myapplication_java.Activities.MainActivity;
 import com.example.myapplication_java.MyApplication;
 import com.example.myapplication_java.R;
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.AuthManager;
 import com.example.myapplication_java.ServerCommunication.LoginSession;
 import com.example.myapplication_java.ServerCommunication.NetworkUtils;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
@@ -73,8 +74,8 @@ public class HomeFragment extends Fragment {
         APIService apiService = RetrofitClient.getClient().create(APIService.class);
         Call<StudentProfileResponse> userInfoCall = apiService.getUserInformation(session.bearerToken());
 
-        if (!NetworkUtils.isInternetAvailable(getContext())) {
-            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
             SharedPreferences statistics = getActivity().getSharedPreferences(MyApplication.STATISTICS_STORAGE, Context.MODE_PRIVATE);
 
             binding.userName.setText(statistics.getString("username", ""));

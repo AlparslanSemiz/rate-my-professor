@@ -85,6 +85,7 @@ public class ProfileFragment extends Fragment {
         binding.averageRatingBackground.setText("5.0");
         binding.lectureList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         binding.semesterList.setLayoutManager(new LinearLayoutManager(requireContext()));
+        binding.backButton.setOnClickListener(v -> requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
         service = Database.getInstance(requireContext()).searchService();
         executor = Executors.newSingleThreadExecutor();
@@ -124,8 +125,10 @@ public class ProfileFragment extends Fragment {
         executor.execute(() -> {
             if (selectionType == SelectionType.PROFESSORS) {
                 List<String> lectures = service.getLectureTitlesByProfessor(professor.id);
+                List<String> lecturess = service.getLectureTitlesFromInstructors();
                 if (lectures.isEmpty()) {
                     Log.d(TAG, "professor " + professor.id + " has no lectures");
+                    Log.d(TAG, lecturess.toString());
                     return;
                 }
 

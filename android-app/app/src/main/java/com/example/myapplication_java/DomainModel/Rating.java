@@ -1,5 +1,8 @@
 package com.example.myapplication_java.DomainModel;
 
+import androidx.annotation.NonNull;
+import androidx.room.Entity;
+
 import java.util.List;
 
 /**
@@ -8,10 +11,23 @@ import java.util.List;
  * <p>A rating is not a single number: the user grades several topics separately, and the
  * value shown on the offering screen is the average over those topics.</p>
  *
- * @param lectureId the id of the rated lecture offering
- * @param topics    one graded topic per entry
  */
-public record Rating (
-    String lectureId,
-    List<RatingTopic> topics
-) {}
+@Entity(tableName = "ratings",
+        primaryKeys = {"lectureID", "rater", "category"}
+)
+public class Rating {
+    @NonNull
+    public String lectureID;
+    @NonNull
+    public RatingCategory category;
+    public double score;
+    @NonNull
+    public Rater rater;
+
+    public Rating (String lectureID, RatingCategory category, double score, Rater rater) {
+        this.lectureID = lectureID;
+        this.category = category;
+        this.score = score;
+        this.rater = rater;
+    }
+}
