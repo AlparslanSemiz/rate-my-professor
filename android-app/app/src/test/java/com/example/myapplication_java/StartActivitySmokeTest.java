@@ -9,6 +9,9 @@ import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 
+/**
+ * This test case checks whether the app crashes on start up.
+ */
 @RunWith(RobolectricTestRunner.class)
 public class StartActivitySmokeTest {
 
