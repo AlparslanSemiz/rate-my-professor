@@ -4,6 +4,8 @@ import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
+import java.util.List;
+
 /**
  * One concrete lecture offering: a lecture held by one professor in one semester.
  *

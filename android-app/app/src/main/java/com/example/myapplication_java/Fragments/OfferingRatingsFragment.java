@@ -51,7 +51,6 @@ import com.example.myapplication_java.ServerCommunication.Responses.ServerRespon
 import com.example.myapplication_java.ServerCommunication.Responses.TopicAverageResponse;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.ServerCommunication.Requests.VoteRequest;
-import com.example.myapplication_java.databinding.DialogBugReportBinding;
 import com.example.myapplication_java.databinding.DialogCommentReportBinding;
 import com.example.myapplication_java.databinding.FragmentOfferingRatingsBinding;
 import com.example.myapplication_java.logic.RatingColorCalculator;
@@ -64,7 +63,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -264,12 +262,11 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                         return;
                     }
 
-                    List<TopicAverageResponse> ratings = body.ratings();
-                    for (TopicAverageResponse rating : ratings) {
-                        System.out.println(rating.category() + "->" + rating.value());
-                    }
-                    runOnUiThread(() -> showRatings(ratings));
-                }
+                List<TopicAverageResponse> ratings = body.ratings();
+                // Dont know why we even get "null" categories but it happens
+                ratings.removeIf(rating -> rating.category() == null);
+                runOnUiThread(() -> showRatings(ratings));
+            }
 
                 @Override
                 public void onFailure(Call<RatingAverageResponse> call,
@@ -304,7 +301,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         }
         double lectureRating = sum / ratings.size();
         binding.averageLectureRating.setText(String.format(Locale.ROOT, RATING_FORMAT, lectureRating));
-        binding.averageLectureRating.setTextColor(RatingColorCalculator.ratingColourCalculator(
+        binding.averageLectureRating.setTextColor(RatingColorCalculator.calculateColour(
                 binding.averageLectureRating.getContext(), lectureRating));
     }
 
@@ -324,12 +321,11 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
 
             RatingRequest request = new RatingRequest(lecture.id, requestList);
             String token = LoginSession.from(requireContext()).bearerToken();
-                    System.out.println(token);
 
-            for (Map.Entry<RatingCategory, Double> entry : changedRatings.entrySet()) {
-                Log.d(TAG,entry.getKey() + " -> " + entry.getValue());
-                System.out.println(entry.getKey() + " -> " + entry.getValue());
-            }
+//            for (Map.Entry<RatingCategory, Double> entry : changedRatings.entrySet()) {
+//                Log.d(TAG,entry.getKey() + " -> " + entry.getValue());
+//                System.out.println(entry.getKey() + " -> " + entry.getValue());
+//            }
 
 
             // (Trying to) submit the ratings
