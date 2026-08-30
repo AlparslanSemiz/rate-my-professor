@@ -208,12 +208,10 @@ public abstract class Database extends RoomDatabase {
         SearchService service = searchService();
         service.insertComment(parseCommentToModel(comment, null));
         // We will store replies too when the unique-id problem is solved.
-        /**
         for (Comment reply : comment.answers()) {
             Log.println(Log.DEBUG, "replies", reply.commentID());
             service.insertComment(parseCommentToModel(reply, reply.commentID()));
         }
-         */
     }
     private CommentModel parseCommentToModel(Comment comment, String parentID) {
         return new CommentModel(comment.commentID(), parentID, comment.content(),
@@ -227,13 +225,9 @@ public abstract class Database extends RoomDatabase {
         Lecture lecture = new Lecture(model.id(), model.name(), model.code(), model.semesterYear(),
                 model.semesterSeason(), model.active(), model.commentCount(), model.ratingCount());
         searchService.insertLecture(lecture);
-        //Log.println(Log.DEBUG, "Database", "professors size"  + model.professors().size());
         for (Professor professor : model.professors()) {
             searchService.insertInstructor(new Instructor(model.id(), model.name(), professor.id));
         }
-        List<String> res = searchService.getLectureTitlesFromInstructors();
-
-        //Log.println(Log.DEBUG, "Database", "title size"  + res.size());
     }
     private void deleteLectures() {
         SearchService searchService = searchService();

@@ -125,10 +125,8 @@ public class ProfileFragment extends Fragment {
         executor.execute(() -> {
             if (selectionType == SelectionType.PROFESSORS) {
                 List<String> lectures = service.getLectureTitlesByProfessor(professor.id);
-                List<String> lecturess = service.getLectureTitlesFromInstructors();
                 if (lectures.isEmpty()) {
                     Log.d(TAG, "professor " + professor.id + " has no lectures");
-                    Log.d(TAG, lecturess.toString());
                     return;
                 }
 
