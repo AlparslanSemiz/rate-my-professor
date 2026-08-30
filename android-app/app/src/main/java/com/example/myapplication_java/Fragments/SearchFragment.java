@@ -67,6 +67,10 @@ public class SearchFragment extends Fragment {
 
         binding = FragmentSearchBinding.inflate(inflater, container, false);
 
+        binding.searchButton.setEnableDynamicBackground(true);
+        binding.searchButton.setEnableAdaptiveTint(true);
+        binding.searchButton.setCollectFrameStats(false);
+
         // Touching a result list means the user is done typing, so the search bar closes.
         SearchPagerAdapter adapter = new SearchPagerAdapter(this, this::closeSearchMode);
 

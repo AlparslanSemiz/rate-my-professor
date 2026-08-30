@@ -1,0 +1,6 @@
+# Quelltext plattformübergreifend mit LF speichern
+* text=auto eol=lf
+
+# Windows-Skripte benötigen CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf

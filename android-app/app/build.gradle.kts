@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.glide)
     annotationProcessor(libs.room.compiler)
+    implementation("com.github.QWEA0:liquidglass:v2.0.4")
 }
 
 jacoco {
