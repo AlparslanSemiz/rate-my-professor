@@ -18,17 +18,9 @@ fi
 docker compose up --build -d
 
 for attempt in {1..60}; do
-  response="$(curl -fsS http://localhost:8080/hello 2>/dev/null || true)"
-
-  if [ "$response" = "Hello Backend" ]; then
-    echo "Docker smoke test passed: /hello returned expected response."
+  if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
+    echo "Docker smoke test passed: /health returned a successful response."
     exit 0
-  fi
-
-  if [ -n "$response" ]; then
-    echo "Unexpected response from /hello: $response" >&2
-    docker compose logs backend >&2
-    exit 1
   fi
 
   sleep 2

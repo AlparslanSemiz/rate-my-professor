@@ -37,6 +37,7 @@ build/
 ### Node / local env ###
 node_modules/
 .env
+.deploy.env
 
 ### Local working notes (not repo history)
 CLAUDE.md
