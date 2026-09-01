@@ -105,11 +105,12 @@ public abstract class Database extends RoomDatabase {
      */
     public void updateDB(APIService apiService) {
         if (NO_UPDATE) return;
+        completed.set(0);
         Log.d(TAG, "updateDB started");
 
         SearchService service = searchService();
         // Room forbids database access on the main thread, so all writes go through this executor.
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ExecutorService executor = createUpdateExecutor();
 
         Runnable tableFinished = () -> {
             if (completed.incrementAndGet() == 2) {
@@ -158,6 +159,10 @@ public abstract class Database extends RoomDatabase {
                 "comments",
                 null
         );
+    }
+
+    protected ExecutorService createUpdateExecutor() {
+        return Executors.newSingleThreadExecutor();
     }
 
     /**
