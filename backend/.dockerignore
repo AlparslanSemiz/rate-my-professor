@@ -14,6 +14,7 @@ npm-debug.log
 .env
 .env.*
 !.env.example
+.deploy.env
 
 *.iml
 *.iws

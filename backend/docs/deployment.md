@@ -17,7 +17,7 @@ GitLab issue, IPinfo, and Geoapify integrations.
 | Maven | The Maven wrapper uses Maven 3.9.15. |
 | Spring Boot | `pom.xml` uses Spring Boot 4.0.6. |
 | Docker | Used for image build, local Compose, and server deployment. |
-| Docker Compose | Used by `docker-compose.yml` and `scripts/docker-smoke-test.sh`. |
+| Docker Compose | Used by `docker-compose.yml`, `docker-compose.prod.yml`, CI deploy, and `scripts/docker-smoke-test.sh`. |
 | PostgreSQL | Local Docker Compose uses `postgres:16`. |
 | Kaniko | CI image build uses `gcr.io/kaniko-project/executor:v1.23.2-debug`. |
 | GitLab CI/CD | The pipeline is defined in `.gitlab-ci.yml`. |
@@ -29,7 +29,7 @@ configuration is in `.mvn/wrapper/maven-wrapper.properties`.
 
 | Component | Role | Confirmed source |
 | --- | --- | --- |
-| Backend API | Spring Boot application exposing authentication, account, catalogue, social, moderation, audit, health, and system status endpoints. | `src/main/java/com/pse`, `docs/admin-api.md` |
+| Backend API | Spring Boot application exposing authentication, account, catalogue, social, moderation, audit, health, and system status endpoints. | `src/main/java/com/pse`, `docs/admin-api.md`, `docker-compose.prod.yml` |
 | PostgreSQL database | Runtime persistence for the backend. The app uses JDBC/JPA with PostgreSQL in normal runtime and H2 in tests. | `pom.xml`, `application.properties`, `docker-compose.yml` |
 | SMTP server | Sends OTP login emails and successful-login notification emails. | `MailService`, `application.properties`, `.env.example` |
 | Admin Web origin | Browser origin allowed through CORS. CI defaults it to the BW Cloud/staging URL. | `CorsConfig`, `.gitlab-ci.yml`, `docs/admin-api.md` |
@@ -101,6 +101,7 @@ The deployment job uses these custom CI/CD variables:
 | `DEPLOY_PORT` | SSH port for the deployment host. |
 | `DEPLOY_USER` | SSH user for the deployment host. |
 | `DEPLOY_PATH` | Directory created and entered on the deployment host. |
+| `BACKEND_PUBLISHED_PORT` | Optional host port for the Compose-managed backend. Defaults to `8080`. |
 | `SPRING_DATASOURCE_URL` | Optional override for the deployed container datasource URL. |
 | `SPRING_DATASOURCE_USERNAME` | Optional override for the deployed container datasource username. |
 | `SPRING_DATASOURCE_PASSWORD` | Deployed container datasource password. Secret. |
@@ -117,6 +118,11 @@ The deployment job uses these custom CI/CD variables:
 | `MAIL_FROM_NAME` | Sender display name. |
 | `IPINFO_TOKEN` | Optional IPinfo token. Secret when set. |
 | `GEOAPIFY_API_KEY` | Optional Geoapify API key. Secret when set. |
+| `AUDIT_REVERT_WINDOW` | Optional audit revert window override. |
+| `GITLAB_BASE_URL` | Optional GitLab instance base URL for issue creation. |
+| `GITLAB_PROJECT_ID` | Optional GitLab project id/path for issue creation. |
+| `GITLAB_TOKEN` | Optional GitLab API token for issue creation. Secret when set. |
+| `GITLAB_TIMEOUT` | Optional GitLab timeout override. Defaults to `PT10S`. |
 
 GitLab built-in variables used by the pipeline include `CI_REGISTRY`,
 `CI_REGISTRY_USER`, `CI_REGISTRY_PASSWORD`, `CI_REGISTRY_IMAGE`,
@@ -183,12 +189,33 @@ Stop and remove the local stack:
 docker compose down --remove-orphans
 ```
 
-`docker-compose.yml` builds the backend image from `src/Dockerfile`, starts
-`postgres:16`, waits for PostgreSQL health, and publishes backend port `8080`
-and PostgreSQL port `5432`.
+`docker-compose.yml` is the local development stack. It builds the backend image
+from `src/Dockerfile`, starts `postgres:16`, waits for PostgreSQL health, and
+publishes backend port `8080` and PostgreSQL port `5432`.
 
 `scripts/docker-smoke-test.sh` runs `docker compose config`, starts the stack,
-checks `GET /hello`, and tears the stack down on exit.
+checks `GET /health`, and tears the stack down on exit.
+
+### Production Docker Compose Stack
+
+`docker-compose.prod.yml` is the production deployment stack used by CI. It
+keeps PostgreSQL outside Compose and manages only the backend application
+container:
+
+- Service: `backend`
+- Container name: `app-server`
+- Image: `${BACKEND_IMAGE}`, set by CI to
+  `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`
+- Restart policy: `unless-stopped`
+- Published port: `${BACKEND_PUBLISHED_PORT:-8080}:${SERVER_PORT:-8080}`
+- Host gateway: `host.docker.internal:host-gateway`
+- Health check: `GET /health` inside the container
+- Volumes: none
+
+The production Compose service receives the same application environment
+variables documented above. `SPRING_DATASOURCE_PASSWORD` and
+`AUTH_RATE_LIMIT_HMAC_KEY` are required; optional integrations stay disabled when
+their variables are empty.
 
 ## Database Setup and Schema Management
 
@@ -208,18 +235,20 @@ The backend service in Compose connects to PostgreSQL at
 
 ### Deployed Database
 
-The CI deployment starts the backend container and passes the datasource
-configuration through environment variables. The deployment job defaults the
-datasource URL to:
+The CI deployment starts the backend through `docker-compose.prod.yml` and passes
+the datasource configuration through environment variables. PostgreSQL remains a
+host or externally managed service, not a production Compose service. The
+deployment job defaults the datasource URL to:
 
 ```text
 jdbc:postgresql://host.docker.internal:5432/postgres
 ```
 
-The deployed container is started with:
+The deployed Compose service includes:
 
 ```text
---add-host=host.docker.internal:host-gateway
+extra_hosts:
+  - "host.docker.internal:host-gateway"
 ```
 
 ### Schema Management
@@ -254,15 +283,20 @@ The job:
 2. Installs `openssh-client` in an Alpine 3.20 CI image.
 3. Uses `SSH_PRIVATE_KEY`, `DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_USER`, and
    `DEPLOY_PATH` to connect to the target server.
-4. Logs in to the GitLab Container Registry on the server.
-5. Pulls the image tag for the current commit.
-6. Stops and removes the existing container named `app-server`, if present.
-7. Starts a new detached container named `app-server`.
-8. Maps `8080:8080`, sets restart policy `unless-stopped`, and adds
-   `host.docker.internal:host-gateway`.
-9. Passes backend environment variables with `docker run -e`.
-10. Polls `http://localhost:8080/health` inside the container up to 30 times.
-11. Prints recent container logs and fails the job if health never succeeds.
+4. Creates `$DEPLOY_PATH` on the server.
+5. Copies `docker-compose.prod.yml` to `$DEPLOY_PATH/docker-compose.yml`.
+6. Writes the deployment `.env` file from CI/CD variables.
+7. Logs in to the GitLab Container Registry on the server.
+8. Confirms `docker compose` is available on the server.
+9. Pulls the image tag for the current commit through Compose.
+10. Removes the legacy standalone `app-server` container if present, so the
+    first Compose deployment can claim the same container name.
+11. Starts or replaces the detached Compose service with
+    `docker compose up -d --remove-orphans`.
+12. Polls `http://localhost:8080/health` inside the Compose service up to 30
+    times.
+13. Prints recent Compose service logs and fails the job if health never
+    succeeds.
 
 The deployment job defaults `ADMIN_FRONTEND_ORIGINS` to the BW Cloud/staging URL
 used elsewhere in the repository and defaults the datasource URL to the Docker
@@ -290,7 +324,7 @@ Jobs:
 | --- | --- | --- |
 | `server:test` | Push and merge request pipelines | Runs `./mvnw verify`, then `java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"`. Publishes JUnit and JaCoCo artifacts. |
 | `server:package` | `main` branch, non-scheduled pipelines | Uses Kaniko to build `src/Dockerfile` and push `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`. |
-| `server:deploy:staging` | Manual job on `main`, non-scheduled pipelines | SSHes to the deployment host and replaces the `app-server` Docker container. |
+| `server:deploy:staging` | Manual job on `main`, non-scheduled pipelines | SSHes to the deployment host and replaces the Compose-managed `backend` service. |
 | `health:check` | Scheduled pipelines only | Curls the configured BW Cloud/staging `/health` URL and expects HTTP 200. |
 
 The changed-code coverage threshold is configured as `COVERAGE_THRESHOLD: "30"`.
@@ -346,8 +380,10 @@ The confirmed update path is:
 3. Start the manual `server:deploy:staging` job.
 4. Wait for the job's `/health` polling loop to succeed.
 
-The deployment job replaces the running `app-server` container by stopping and
-removing it, then running a new container from the current commit image tag.
+The deployment job updates the Compose-managed `backend` service from the
+current commit image tag. The first Compose deployment removes the previous
+standalone `app-server` container so the Compose service can reuse the existing
+container name.
 
 ### Local Docker Compose
 
@@ -381,4 +417,4 @@ docker compose logs backend
 | GitLab issue creation returns 503 | `GITLAB_BASE_URL`, `GITLAB_PROJECT_ID`, or `GITLAB_TOKEN` is unset, so the integration is disabled. |
 | GitLab issue creation returns bad gateway | The backend could not reach GitLab or GitLab did not return the expected issue payload. Check `GITLAB_BASE_URL`, token permissions, network access, and `GITLAB_TIMEOUT`. |
 | Admin API rejects every caller | `ADMIN_BOOTSTRAP_EMAILS` may be empty. The startup runner logs a warning when no administrator emails are configured. |
-| `scripts/docker-smoke-test.sh` fails | The script checks `GET /hello`; the deployment health endpoint used by Dockerfile, CI deploy, and scheduled CI health checks is `GET /health`. |
+| `scripts/docker-smoke-test.sh` fails | The script checks `GET /health`, the same endpoint used by the Dockerfile, CI deploy, and scheduled CI health checks. Check PostgreSQL reachability first because `/health` performs `SELECT 1`. |
