@@ -44,7 +44,7 @@ public class SocialController {
         return socialService.getNotifications(principal.student());
     }
 
-    @PatchMapping("notifications")
+    @PatchMapping("/notifications")
     public BasicResponse markAllNotificationsAsSeen(@AuthenticationPrincipal AuthenticatedUser principal){
 
         return socialService.markAllNotificationsAsSeen(principal.student());
