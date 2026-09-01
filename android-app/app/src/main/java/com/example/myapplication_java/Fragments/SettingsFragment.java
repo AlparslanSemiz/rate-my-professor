@@ -85,7 +85,7 @@ public class SettingsFragment extends Fragment {
     private void setUpClickListeners() {
         binding.darkModeSwitch.setChecked(isNightModeEnabled());
 
-        binding.backButton.setOnClickListener(v -> navigateToHome());
+
         binding.darkModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) ->
                 setNightMode(isChecked)
         );

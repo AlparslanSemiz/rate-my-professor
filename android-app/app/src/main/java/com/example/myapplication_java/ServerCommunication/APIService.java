@@ -9,6 +9,7 @@ import com.example.myapplication_java.ServerCommunication.Requests.PostCommentRe
 import com.example.myapplication_java.ServerCommunication.Requests.RatingRequest;
 import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.LecturesResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.NotificationResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.PersonalStatisticsResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ProfessorResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
@@ -225,4 +226,14 @@ public interface APIService {
 
     @GET
     Call<ResponseBody> downloadImage(@Url String url);
+
+    @GET("/notifications")
+    Call<NotificationResponse> getNotifications(
+            @Header("Authorization") String token
+    );
+
+    @PATCH("/notifications")
+    Call<BasicResponse> markNotificationsAsSeen(
+            @Header("Authorization") String token
+    );
 }

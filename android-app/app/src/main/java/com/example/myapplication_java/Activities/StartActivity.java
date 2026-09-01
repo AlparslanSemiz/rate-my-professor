@@ -46,6 +46,7 @@ public class StartActivity extends AppCompatActivity {
             openScreen(MainActivity.class);
         } else {
             if (!session.isLoggedIn()) {
+                System.out.println("got to !session.isLoggedIn()");
                 openScreen(LoginActivity.class);
                 return;
             }
@@ -65,12 +66,14 @@ public class StartActivity extends AppCompatActivity {
         call.enqueue(new Callback<>() {
             @Override
             public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                System.out.println("got to on Response. response.isSuccessfull(): " + response.isSuccessful());
                 openScreen(response.isSuccessful() ? MainActivity.class : LoginActivity.class);
             }
 
             @Override
             public void onFailure(Call<ServerResponse> call, Throwable t) {
                 Log.e(TAG, "Error: " + t.getMessage());
+                System.out.println("GOT TO onFailure() AND IT SUCKS HERE :(");
                 openScreen(LoginActivity.class);
             }
         });

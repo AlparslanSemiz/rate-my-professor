@@ -10,19 +10,6 @@
         The screen is drawn edge to edge, so the top padding that keeps the back button clear
         of the status bar is applied from the fragment, where the actual bar height is known.
     -->
-    <ImageButton
-        android:id="@+id/back_button"
-        android:layout_width="62dp"
-        android:layout_height="62dp"
-        android:layout_marginStart="26dp"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/settings_circle_button"
-        android:contentDescription="@string/back"
-        android:padding="16dp"
-        android:src="@drawable/back_icon"
-        app:tint="@color/icon_tint"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/dark_mode_row"
