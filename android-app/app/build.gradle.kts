@@ -52,6 +52,10 @@ android {
 
             // Für Robolectric unter JDK 17 oder neuer
             all {
+                it.extensions.configure(org.gradle.testing.jacoco.plugins.JacocoTaskExtension::class.java) {
+                    isIncludeNoLocationClasses = true
+                    excludes = listOf("jdk.internal.*")
+                }
                 it.jvmArgs(
                     "--add-opens=java.base/java.lang=ALL-UNNAMED",
                     "--add-opens=java.base/java.util=ALL-UNNAMED",
@@ -93,8 +97,30 @@ jacoco {
     toolVersion = "0.8.14"
 }
 
+val debugCoverageExcludes = listOf(
+    "**/R.class",
+    "**/R$*.class",
+    "**/BuildConfig.*",
+    "**/*Binding.*",
+    "**/*_Impl.*",
+    "**/*_Impl*",
+    "**/Activities/**",
+    "**/Adapters/**",
+    "**/Fragments/**"
+)
+
+fun debugCoverageClassDirectories() = files(
+    fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
+        exclude(debugCoverageExcludes)
+    },
+    fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
+        exclude(debugCoverageExcludes)
+    }
+)
+
 tasks.register<JacocoReport>("debugUnitTestCoverage") {
     dependsOn("testDebugUnitTest")
+    finalizedBy("debugUnitTestCoverageVerification")
 
     reports {
         xml.required.set(true)
@@ -102,30 +128,31 @@ tasks.register<JacocoReport>("debugUnitTestCoverage") {
         html.required.set(true)
     }
 
-    val excludes = listOf(
-        "**/R.class",
-        "**/R$*.class",
-        "**/BuildConfig.*",
-        "**/*Binding.*",
-        "**/*_Impl.*",
-        "**/*_Impl*",
-        "**/Activities/**",
-        "**/Adapters/**",
-        "**/Fragments/**"
-    )
-
-    classDirectories.setFrom(
-        files(
-            fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
-                exclude(excludes)
-            },
-            fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
-                exclude(excludes)
-            }
-        )
-    )
+    classDirectories.setFrom(debugCoverageClassDirectories())
     sourceDirectories.setFrom(files("src/main/java"))
     executionData.setFrom(fileTree(layout.buildDirectory) {
         include("jacoco/testDebugUnitTest.exec")
     })
+}
+
+tasks.register<org.gradle.testing.jacoco.tasks.JacocoCoverageVerification>(
+    "debugUnitTestCoverageVerification"
+) {
+    dependsOn("testDebugUnitTest")
+
+    classDirectories.setFrom(debugCoverageClassDirectories())
+    sourceDirectories.setFrom(files("src/main/java"))
+    executionData.setFrom(fileTree(layout.buildDirectory) {
+        include("jacoco/testDebugUnitTest.exec")
+    })
+
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.90".toBigDecimal()
+            }
+        }
+    }
 }
