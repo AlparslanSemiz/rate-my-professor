@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -51,7 +52,7 @@ public class SocialController {
     }
 
     @PatchMapping("/notifications")
-    public BasicResponse markNotificationAsSeen(@AuthenticationPrincipal AuthenticatedUser principal, UUID notificationId){
+    public BasicResponse markNotificationAsSeen(@AuthenticationPrincipal AuthenticatedUser principal, @RequestParam UUID notificationId){
 
         return socialService.markNotificationAsSeen(principal.student(), notificationId);
     }
