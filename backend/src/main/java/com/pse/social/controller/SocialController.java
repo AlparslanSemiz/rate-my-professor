@@ -51,10 +51,10 @@ public class SocialController {
         return socialService.markAllNotificationsAsSeen(principal.student());
     }
 
-    @PatchMapping("/notifications")
-    public BasicResponse markNotificationAsSeen(@AuthenticationPrincipal AuthenticatedUser principal, @RequestParam UUID notificationId){
+    @PatchMapping("/notifications/{notification_id}")
+    public BasicResponse markNotificationAsSeen(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID notification_id){
 
-        return socialService.markNotificationAsSeen(principal.student(), notificationId);
+        return socialService.markNotificationAsSeen(principal.student(), notification_id);
     }
 
 
