@@ -14,6 +14,7 @@ import com.pse.social.model.Comment;
 import com.pse.social.repository.AnswerRepository;
 import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.NotificationRepository;
+import com.pse.support.TestDeliveryConfig;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
 
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -40,6 +42,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import({
+        TestDeliveryConfig.class,
+        com.pse.support.TestGitLabConfig.class
+})
 class SocialApiIntegrationTests {
 
     @Autowired
