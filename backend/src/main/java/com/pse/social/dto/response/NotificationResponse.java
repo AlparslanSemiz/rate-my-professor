@@ -1,9 +1,11 @@
 package com.pse.social.dto.response;
 
 
+import com.pse.lecture.dto.response.LectureResponse;
 import com.pse.shared.enums.NotificationType;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 
 /**
@@ -16,7 +18,12 @@ import java.time.LocalDateTime;
  * carries no answer.
  */
 public record NotificationResponse(
+        UUID notificationID,
         NotificationType type,
+
+        LectureResponse lectureResponse,
+        UUID ownCommentID,
+
         String userName,
         String content,
         String message,

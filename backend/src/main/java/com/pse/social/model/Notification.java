@@ -21,6 +21,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import com.pse.lecture.model.Lecture;
 
 @Entity
 @Table(name = "notifications")
@@ -36,6 +37,15 @@ public class Notification {
     @ManyToOne(optional = false)
     @JoinColumn(name = "recipient_id")
     private Student recipient;
+
+
+    @ManyToOne
+    @JoinColumn(name = "lecture_id")
+    private Lecture lecture;
+
+    @ManyToOne
+    @JoinColumn(name = "own_comment_id")
+    private Comment ownComment;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type")

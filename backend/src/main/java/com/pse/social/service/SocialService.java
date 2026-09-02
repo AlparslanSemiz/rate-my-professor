@@ -205,6 +205,9 @@ public class SocialService {
         //Add to notification Table
         Notification notification = new Notification();
         notification.setRecipient(comment.getStudent());
+        notification.setLecture(comment.getLecture());
+        notification.setOwnComment(comment);
+        notification.setType(NotificationType.ANSWER);
         notification.setAnswer(answer);
         notificationRepository.save(notification);
 
@@ -347,7 +350,10 @@ public class SocialService {
             if (type == NotificationType.WARNING) {
                 notificationResponses.add(
                         new NotificationResponse(
+                                notification.getId(),
                                 type,
+                                LectureService.createLectureResponse(notification.getLecture()),
+                                null,
                                 null,
                                 null,
                                 notification.getMessage(),
@@ -358,7 +364,10 @@ public class SocialService {
 
             notificationResponses.add(
                     new NotificationResponse(
+                            notification.getId(),
                             type,
+                            LectureService.createLectureResponse(notification.getLecture()),
+                            notification.getOwnComment().getId(),
                             notification.getAnswer().getStudent().getUsername(),
                             notification.getAnswer().getContent(),
                             null,
@@ -496,8 +505,26 @@ public class SocialService {
     public BasicResponse markAllNotificationsAsSeen(Student student) {
 
         notificationRepository.markAllAsSeen(student);
-
         return new BasicResponse("Marked all Notifications as Seen", true);
+
+    }
+
+    @Transactional
+    public BasicResponse markNotificationAsSeen(Student student, UUID notificationId) {
+
+        //check that student owns notification
+        Notification notification = notificationRepository
+                .findByRecipientAndId(student, notificationId)
+                .orElse(null);
+
+
+        if(notification == null) {
+            return new BasicResponse("Notification Not Found", false);
+        }
+
+        notification.setSeen(true);
+
+        return new BasicResponse("Marked Notifications as seen", true);
 
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface NotificationRepository extends JpaRepository<Notification, UUID>{
@@ -35,4 +36,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
       AND n.seen = false
 """)
     int markAllAsSeen(@Param("recipient") Student recipient);
+
+
+    Optional<Notification> findByRecipientAndId(Student recipient, UUID id);
 }
