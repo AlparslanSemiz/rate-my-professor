@@ -7,7 +7,7 @@
     android:background="@color/surface">
 
     <!--
-        The screen is drawn edge to edge, so the top padding that keeps the back button clear
+        The screen is drawn edge to edge, so the top padding that keeps the first setting clear
         of the status bar is applied from the fragment, where the actual bar height is known.
     -->
 
@@ -25,7 +25,7 @@
         android:paddingEnd="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/dark_mode_label"

@@ -12,7 +12,8 @@ public record LectureResponse(
         SemesterSeason semesterSeason,
         boolean active,
 
-        //Lecture Type lecture,
+        //can be ignored at this time says luis... :O
+        //lectureType lectureType,
 
         List<ProfessorShortResponse> professors,
         int commentCount,
