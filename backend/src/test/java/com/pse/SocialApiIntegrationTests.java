@@ -38,6 +38,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.pse.moderation.repository.AdminRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -72,6 +73,9 @@ class SocialApiIntegrationTests {
     @Autowired
     AuditLogRepository auditLogRepository;
 
+    @Autowired
+    AdminRepository adminRepository;
+
 
     @BeforeEach
     void cleanDatabase() {
@@ -80,6 +84,9 @@ class SocialApiIntegrationTests {
         answerRepository.deleteAll();
         commentRepository.deleteAll();
         tokenRepository.deleteAll();
+
+        adminRepository.deleteAll();
+
         lectureRepository.deleteAll();
         studentRepository.deleteAll();
     }
