@@ -70,7 +70,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -171,13 +173,13 @@ class AdminApiIntegrationTests {
 
         mockMvc.perform(get("/users").header("Authorization", bearer(token)))
                 .andExpect(status().isUnauthorized());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 1,
                 auditLogRepository.findAll().stream()
                         .filter(log -> log.getAction() == AuditAction.ADMIN_LOGOUT)
                         .count()
         );
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 1,
                 auditLogRepository.findAll().stream()
                         .filter(log -> log.getAction() == AuditAction.ADMIN_LOGIN)
@@ -268,9 +270,9 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.users", hasSize(2)))
                 .andExpect(jsonPath("$.users[?(@.kitEmail == 'admin@student.kit.edu')].role")
-                        .value(org.hamcrest.Matchers.hasItem("ADMIN")))
+                        .value(hasItem("ADMIN")))
                 .andExpect(jsonPath("$.users[?(@.kitEmail == 'target@student.kit.edu')].biography")
-                        .value(org.hamcrest.Matchers.hasItem("")))
+                        .value(hasItem("")))
                 .andExpect(jsonPath("$.users[0].warnings").isNumber())
                 .andExpect(jsonPath("$.users[0].reports").isNumber());
 
@@ -299,7 +301,7 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isOk());
 
         Warning saved = warningRepository.findAll().getFirst();
-        org.junit.jupiter.api.Assertions.assertEquals(admin.admin().getId(), saved.getAdmin().getId());
+        assertEquals(admin.admin().getId(), saved.getAdmin().getId());
 
         mockMvc.perform(get("/users/{id}/warnings", target.student().getId())
                         .header("Authorization", bearer(admin.rawToken())))
@@ -318,7 +320,7 @@ class AdminApiIntegrationTests {
         mockMvc.perform(patch("/users/{id}/block", target.student().getId())
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(auditCount, auditLogRepository.count());
+        assertEquals(auditCount, auditLogRepository.count());
 
         mockMvc.perform(patch("/users/{id}/unblock", target.student().getId())
                         .header("Authorization", bearer(admin.rawToken())))
@@ -348,7 +350,7 @@ class AdminApiIntegrationTests {
         // turn every one of its calls into a row update.
         mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 firstSeen,
                 reloadStudent(target).getLastSeenAt(),
                 "a second request inside the refresh window does not rewrite last seen"
@@ -376,7 +378,7 @@ class AdminApiIntegrationTests {
 
         mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isUnauthorized());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 stale,
                 reloadStudent(target).getLastSeenAt(),
                 "a refused request does not register as activity"
@@ -449,7 +451,7 @@ class AdminApiIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"REVIEWED\"}"))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(audits, auditLogRepository.count());
+        assertEquals(audits, auditLogRepository.count());
 
         mockMvc.perform(patch("/comments/reported/{id}", report.getId())
                         .header("Authorization", bearer(admin.rawToken()))
@@ -488,7 +490,7 @@ class AdminApiIntegrationTests {
                 .filter(log -> log.getAction() == AuditAction.BUG_REPORT_UPDATED)
                 .findFirst()
                 .orElseThrow();
-        org.junit.jupiter.api.Assertions.assertEquals(2, audit.getChanges().size());
+        assertEquals(2, audit.getChanges().size());
         long auditCount = auditLogRepository.count();
 
         mockMvc.perform(patch("/reports/{id}", report.getId())
@@ -496,7 +498,7 @@ class AdminApiIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"ACTION_TAKEN\",\"severity\":\"HIGH\"}"))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(auditCount, auditLogRepository.count());
+        assertEquals(auditCount, auditLogRepository.count());
 
         mockMvc.perform(patch("/reports/{id}", report.getId())
                         .header("Authorization", bearer(admin.rawToken()))
@@ -652,19 +654,19 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isOk());
 
         AuditLog comment = auditOf(AuditAction.COMMENT_CREATED);
-        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.USER, comment.getActorType());
-        org.junit.jupiter.api.Assertions.assertEquals("STUDENT", comment.getActorRole());
-        org.junit.jupiter.api.Assertions.assertEquals(AuditTargetType.COMMENT, comment.getTargetType());
-        org.junit.jupiter.api.Assertions.assertEquals("CS101 — Algorithms", comment.getTargetLabel());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(AuditActorType.USER, comment.getActorType());
+        assertEquals("STUDENT", comment.getActorRole());
+        assertEquals(AuditTargetType.COMMENT, comment.getTargetType());
+        assertEquals("CS101 — Algorithms", comment.getTargetLabel());
+        assertEquals(
                 "Clear and well paced",
                 comment.getMetadata().get("contentPreview")
         );
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 AuditTargetType.BUG_REPORT,
                 auditOf(AuditAction.BUG_REPORT_CREATED).getTargetType()
         );
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 AuditTargetType.USER_SESSION,
                 auditOf(AuditAction.USER_LOGIN).getTargetType()
         );
@@ -732,22 +734,22 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isOk());
 
         AuditLog rating = auditOf(AuditAction.RATING_SUBMITTED);
-        org.junit.jupiter.api.Assertions.assertEquals(AuditTargetType.RATING, rating.getTargetType());
-        org.junit.jupiter.api.Assertions.assertEquals("CS101 — Algorithms", rating.getTargetLabel());
+        assertEquals(AuditTargetType.RATING, rating.getTargetType());
+        assertEquals("CS101 — Algorithms", rating.getTargetLabel());
 
         AuditLog answer = auditOf(AuditAction.ANSWER_CREATED);
-        org.junit.jupiter.api.Assertions.assertEquals(AuditTargetType.ANSWER, answer.getTargetType());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(AuditTargetType.ANSWER, answer.getTargetType());
+        assertEquals(
                 "Answer to poster in CS101 — Algorithms",
                 answer.getTargetLabel()
         );
 
         AuditLog report = auditOf(AuditAction.COMMENT_REPORT_CREATED);
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 AuditTargetType.COMMENT_REPORT,
                 report.getTargetType()
         );
-        org.junit.jupiter.api.Assertions.assertEquals("HARASSMENT", report.getMetadata().get("reason"));
+        assertEquals("HARASSMENT", report.getMetadata().get("reason"));
     }
 
     @Test
@@ -779,13 +781,13 @@ class AdminApiIntegrationTests {
                                 """))
                 .andExpect(status().isUnauthorized());
 
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 2,
                 auditLogRepository.findAll().stream()
                         .filter(log -> log.getAction() == AuditAction.LOGIN_REFUSED)
                         .count()
         );
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 java.util.Set.of("ACCOUNT_BLOCKED", "INVALID_CODE"),
                 auditLogRepository.findAll().stream()
                         .filter(log -> log.getAction() == AuditAction.LOGIN_REFUSED)
@@ -798,14 +800,14 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isForbidden());
 
         AuditLog refused = auditOf(AuditAction.ACCESS_REFUSED);
-        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.USER, refused.getActorType());
-        org.junit.jupiter.api.Assertions.assertEquals(AuditTargetType.ENDPOINT, refused.getTargetType());
-        org.junit.jupiter.api.Assertions.assertEquals("GET /users", refused.getTargetLabel());
-        org.junit.jupiter.api.Assertions.assertEquals("/users", refused.getMetadata().get("path"));
+        assertEquals(AuditActorType.USER, refused.getActorType());
+        assertEquals(AuditTargetType.ENDPOINT, refused.getTargetType());
+        assertEquals("GET /users", refused.getTargetLabel());
+        assertEquals("/users", refused.getMetadata().get("path"));
 
         // An anonymous request never reaches an authorization rule and has no actor.
         mockMvc.perform(get("/users")).andExpect(status().isUnauthorized());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 1,
                 auditLogRepository.findAll().stream()
                         .filter(log -> log.getAction() == AuditAction.ACCESS_REFUSED)
@@ -893,7 +895,7 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/auth/me").header("Authorization", bearer(targetToken)))
                 .andExpect(status().isUnauthorized());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 "moved@student.kit.edu",
                 studentRepository.findById(target.student().getId()).orElseThrow().getKitEmail()
         );
@@ -917,7 +919,7 @@ class AdminApiIntegrationTests {
                 .filter(log -> log.getAction() == AuditAction.USER_UPDATED)
                 .findFirst()
                 .orElseThrow();
-        org.junit.jupiter.api.Assertions.assertEquals(AuditTargetType.USER, updated.getTargetType());
+        assertEquals(AuditTargetType.USER, updated.getTargetType());
         org.junit.jupiter.api.Assertions.assertTrue(updated.getChanges().containsKey("username"));
 
         // Refusals: no empty update, no self lockout, no colliding identity, no delete
@@ -1044,8 +1046,8 @@ class AdminApiIntegrationTests {
                         .content("{\"content\":\"Original text\",\"status\":\"HIDDEN\"}"))
                 .andExpect(status().isOk());
         Comment stored = commentRepository.findById(comment.getId()).orElseThrow();
-        org.junit.jupiter.api.Assertions.assertEquals("Original text", stored.getContent());
-        org.junit.jupiter.api.Assertions.assertEquals(ContentStatus.HIDDEN, stored.getStatus());
+        assertEquals("Original text", stored.getContent());
+        assertEquals(ContentStatus.HIDDEN, stored.getStatus());
 
         mockMvc.perform(patch("/answers/{id}", answerId)
                         .header("Authorization", bearer(admin.rawToken()))
@@ -1074,9 +1076,9 @@ class AdminApiIntegrationTests {
         mockMvc.perform(delete("/comments/{id}", comment.getId())
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(0, commentRepository.count());
-        org.junit.jupiter.api.Assertions.assertEquals(0, answerRepository.count());
-        org.junit.jupiter.api.Assertions.assertEquals(0, notificationRepository.count());
+        assertEquals(0, commentRepository.count());
+        assertEquals(0, answerRepository.count());
+        assertEquals(0, notificationRepository.count());
 
         auditOf(AuditAction.COMMENT_UPDATED);
         auditOf(AuditAction.ANSWER_UPDATED);
@@ -1130,7 +1132,7 @@ class AdminApiIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"ACTION_TAKEN\"}"))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 ContentStatus.HIDDEN,
                 answerRepository.findById(answerId).orElseThrow().getStatus()
         );
@@ -1140,7 +1142,7 @@ class AdminApiIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"DISMISSED\"}"))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 ContentStatus.VISIBLE,
                 answerRepository.findById(answerId).orElseThrow().getStatus()
         );
@@ -1151,10 +1153,10 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/answers/reported").header("Authorization", bearer(admin.rawToken())))
                 .andExpect(jsonPath("$.answers", hasSize(0)));
-        org.junit.jupiter.api.Assertions.assertEquals(1, answerRepository.count());
+        assertEquals(1, answerRepository.count());
 
         // Two status changes were made, and each is its own event.
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 2,
                 auditLogRepository.findAll().stream()
                         .filter(log -> log.getAction() == AuditAction.ANSWER_REPORT_STATUS_CHANGED)
@@ -1194,7 +1196,7 @@ class AdminApiIntegrationTests {
         mockMvc.perform(delete("/reports/{id}", report.getId())
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(0, bugReportRepository.count());
+        assertEquals(0, bugReportRepository.count());
         auditOf(AuditAction.BUG_REPORT_DELETED);
     }
 
@@ -1219,7 +1221,7 @@ class AdminApiIntegrationTests {
         mockMvc.perform(delete("/ratings/{id}", ratingId)
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(0, ratingRepository.count());
+        assertEquals(0, ratingRepository.count());
 
         // The public read stays public even though the delete beside it is admin-only.
         mockMvc.perform(get("/ratings/{lectureId}", lecture.getId()))
@@ -1284,8 +1286,8 @@ class AdminApiIntegrationTests {
                                 """))
                 .andExpect(status().isOk());
         Lecture stored = lectureRepository.findById(lecture.getId()).orElseThrow();
-        org.junit.jupiter.api.Assertions.assertEquals("CS102", stored.getCode());
-        org.junit.jupiter.api.Assertions.assertEquals(2027, stored.getSemesterYear());
+        assertEquals("CS102", stored.getCode());
+        assertEquals(2027, stored.getSemesterYear());
         org.junit.jupiter.api.Assertions.assertFalse(stored.isActive());
 
         mockMvc.perform(patch("/data/lectures/{id}", lecture.getId())
@@ -1303,7 +1305,7 @@ class AdminApiIntegrationTests {
         mockMvc.perform(delete("/data/professor/{id}", professor.getId())
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(0, professorRepository.count());
+        assertEquals(0, professorRepository.count());
         mockMvc.perform(get("/data/lectures/{id}", lecture.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.lecture.professors", hasSize(0)));
@@ -1311,7 +1313,7 @@ class AdminApiIntegrationTests {
         mockMvc.perform(delete("/data/lectures/{id}", lecture.getId())
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(0, lectureRepository.count());
+        assertEquals(0, lectureRepository.count());
 
         auditOf(AuditAction.PROFESSOR_UPDATED);
         auditOf(AuditAction.PROFESSOR_DELETED);
@@ -1360,9 +1362,9 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.professors", hasSize(2)))
                 .andExpect(jsonPath("$.professors[?(@.lastName == 'Hopper')].active")
-                        .value(org.hamcrest.Matchers.hasItem(false)))
+                        .value(hasItem(false)))
                 .andExpect(jsonPath("$.professors[?(@.lastName == 'Lovelace')].active")
-                        .value(org.hamcrest.Matchers.hasItem(true)));
+                        .value(hasItem(true)));
 
         // The public catalogue reads stay filtered to active = true.
         mockMvc.perform(get("/data/lectures"))
@@ -1405,15 +1407,15 @@ class AdminApiIntegrationTests {
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
 
-        org.junit.jupiter.api.Assertions.assertEquals(0, lectureRepository.count());
-        org.junit.jupiter.api.Assertions.assertEquals(0, commentRepository.count());
-        org.junit.jupiter.api.Assertions.assertEquals(0, answerRepository.count());
-        org.junit.jupiter.api.Assertions.assertEquals(0, ratingRepository.count());
-        org.junit.jupiter.api.Assertions.assertEquals(0, notificationRepository.count());
+        assertEquals(0, lectureRepository.count());
+        assertEquals(0, commentRepository.count());
+        assertEquals(0, answerRepository.count());
+        assertEquals(0, ratingRepository.count());
+        assertEquals(0, notificationRepository.count());
 
         AuditLog deleted = auditOf(AuditAction.LECTURE_DELETED);
-        org.junit.jupiter.api.Assertions.assertEquals(1, deleted.getMetadata().get("deletedComments"));
-        org.junit.jupiter.api.Assertions.assertEquals(1, deleted.getMetadata().get("deletedRatings"));
+        assertEquals(1, deleted.getMetadata().get("deletedComments"));
+        assertEquals(1, deleted.getMetadata().get("deletedRatings"));
     }
 
     @Test
@@ -1430,8 +1432,8 @@ class AdminApiIntegrationTests {
                 "PATCH /users/{id}/block",
                 Map.of("path", "/users/coverage/block")
         );
-        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.ADMIN, adminRefusal.getActorType());
-        org.junit.jupiter.api.Assertions.assertEquals("ADMIN", adminRefusal.getActorRole());
+        assertEquals(AuditActorType.ADMIN, adminRefusal.getActorType());
+        assertEquals("ADMIN", adminRefusal.getActorRole());
 
         AuditLog studentRefusal = auditWriter.writeRefusal(
                 student.student(),
@@ -1442,8 +1444,8 @@ class AdminApiIntegrationTests {
                 "GET /users",
                 Map.of("path", "/users")
         );
-        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.USER, studentRefusal.getActorType());
-        org.junit.jupiter.api.Assertions.assertEquals("STUDENT", studentRefusal.getActorRole());
+        assertEquals(AuditActorType.USER, studentRefusal.getActorType());
+        assertEquals("STUDENT", studentRefusal.getActorRole());
 
         AuditLog nullPayloads = auditWriter.write(
                 admin.admin(),
@@ -1477,7 +1479,7 @@ class AdminApiIntegrationTests {
         mockMvc.perform(patch("/users/{id}/block", target.student().getId())
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isInternalServerError());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 UserStatus.ACTIVE,
                 studentRepository.findById(target.student().getId()).orElseThrow().getStatus()
         );
@@ -1507,11 +1509,11 @@ class AdminApiIntegrationTests {
                         .content(validateBody))
                 .andExpect(status().isUnauthorized());
 
-        org.junit.jupiter.api.Assertions.assertEquals(2, tokenRepository.findAll().size());
+        assertEquals(2, tokenRepository.findAll().size());
         org.junit.jupiter.api.Assertions.assertTrue(
                 tokenRepository.findAll().stream().allMatch(Token::isRevoked)
         );
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 UserStatus.ACTIVE,
                 studentRepository.findById(first.student().getId()).orElseThrow().getStatus()
         );
@@ -1560,43 +1562,68 @@ class AdminApiIntegrationTests {
         Session admin = createSession("admin@student.kit.edu", true);
         Session target = createSession("warned@student.kit.edu", false);
 
+        String warningMessage = "Repeated harassment after prior warning";
+
+        // Admin issues a warning to the student.
         mockMvc.perform(post("/users/{id}/warnings", target.student().getId())
                         .header("Authorization", bearer(admin.rawToken()))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"message\":\"Repeated harassment after prior warning\"}"))
+                        .content("""
+                            {
+                              "message": "%s"
+                            }
+                            """.formatted(warningMessage)))
                 .andExpect(status().isOk());
 
-        // The student is told, with the reason, through their own feed. The payload
-        // key is "answers" for historical reasons; renaming it would break the
-        // student app, so the new entries ride along in the same list.
+        // The warning is delivered through the student's notification feed.
+        // Warnings are not publicly attributed to another user and are not
+        // associated with an answer, comment or lecture.
         mockMvc.perform(get("/social/notifications")
                         .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.notifications", hasSize(1)))
+                .andExpect(jsonPath("$.notifications[0].notificationID").exists())
                 .andExpect(jsonPath("$.notifications[0].type").value("WARNING"))
-                .andExpect(jsonPath("$.notifications[0].message")
-                        .value("Repeated harassment after prior warning"));
+                .andExpect(jsonPath("$.notifications[0].message").value(warningMessage))
+                .andExpect(jsonPath("$.notifications[0].userName").isEmpty())
+                .andExpect(jsonPath("$.notifications[0].content").isEmpty())
+                .andExpect(jsonPath("$.notifications[0].lectureResponse").isEmpty())
+                .andExpect(jsonPath("$.notifications[0].ownCommentID").isEmpty())
+                .andExpect(jsonPath("$.notifications[0].createdAt").exists());
 
-        // A warning is a disciplinary record, not a restriction: the account keeps
-        // its status and the session keeps working.
-        org.junit.jupiter.api.Assertions.assertEquals(
+        // A warning is a disciplinary record, not an account restriction.
+        assertEquals(
                 UserStatus.ACTIVE,
-                studentRepository.findById(target.student().getId()).orElseThrow().getStatus()
+                studentRepository.findById(target.student().getId())
+                        .orElseThrow()
+                        .getStatus()
         );
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
+
+        // The existing session remains valid.
+        mockMvc.perform(get("/auth/me")
+                        .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.status").value("ACTIVE"));
 
-        // Warnings accumulate and are counted live.
+        // Warnings accumulate and the current count is returned to admins.
         mockMvc.perform(post("/users/{id}/warnings", target.student().getId())
                         .header("Authorization", bearer(admin.rawToken()))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"message\":\"Second incident\"}"))
+                        .content("""
+                            {
+                              "message": "Second incident"
+                            }
+                            """))
                 .andExpect(status().isOk());
-        mockMvc.perform(get("/users").header("Authorization", bearer(admin.rawToken())))
+
+        mockMvc.perform(get("/users")
+                        .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.users[?(@.kitEmail == 'warned@student.kit.edu')].warnings")
-                        .value(org.hamcrest.Matchers.hasItem(2)));
+                .andExpect(jsonPath(
+                        "$.users[?(@.kitEmail == 'warned@student.kit.edu')].warnings",
+                        hasItem(2)
+                ));
     }
 
     @Test
@@ -1654,7 +1681,7 @@ class AdminApiIntegrationTests {
                         .content("{\"status\":\"ACTION_TAKEN\"}"))
                 .andExpect(status().isOk());
 
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 ContentStatus.HIDDEN,
                 commentRepository.findById(comment.getId()).orElseThrow().getStatus()
         );
@@ -1694,7 +1721,7 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isOk());
 
         Student deleted = studentRepository.findById(target.student().getId()).orElseThrow();
-        org.junit.jupiter.api.Assertions.assertEquals(UserStatus.DELETED, deleted.getStatus());
+        assertEquals(UserStatus.DELETED, deleted.getStatus());
         org.junit.jupiter.api.Assertions.assertFalse(deleted.getUsername().contains("gone"));
         org.junit.jupiter.api.Assertions.assertTrue(
                 deleted.getKitEmail().endsWith("@invalid.local")
@@ -1749,8 +1776,8 @@ class AdminApiIntegrationTests {
         // A student logout is USER_LOGOUT; ADMIN_LOGOUT belongs to the administrative
         // record only.
         AuditLog logout = auditOf(AuditAction.USER_LOGOUT);
-        org.junit.jupiter.api.Assertions.assertEquals(AuditActorType.USER, logout.getActorType());
-        org.junit.jupiter.api.Assertions.assertEquals(1, auditLogRepository.count());
+        assertEquals(AuditActorType.USER, logout.getActorType());
+        assertEquals(1, auditLogRepository.count());
 
         Session admin = createSession("admin@student.kit.edu", true);
         String badTimestamp = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(
@@ -1790,7 +1817,7 @@ class AdminApiIntegrationTests {
         long refusals = auditLogRepository.findAll().stream()
                 .filter(log -> log.getAction() == AuditAction.LOGIN_REFUSED)
                 .count();
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 10,
                 refusals,
                 "login refusals must stop at the per-email failure limit"
@@ -1823,7 +1850,7 @@ class AdminApiIntegrationTests {
                 adminRepository.findByStudent(other.student()).isPresent(),
                 "the admin row must survive a refused demotion"
         );
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 1,
                 warningRepository.count(),
                 "the warning must survive a refused demotion"
@@ -1881,7 +1908,7 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
-        org.junit.jupiter.api.Assertions.assertEquals(1, ratingRepository.count());
+        assertEquals(1, ratingRepository.count());
     }
 
     // ---------------------------------------------------------------------------------
@@ -1926,7 +1953,7 @@ class AdminApiIntegrationTests {
                         target.student().getId(), warningId)
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertEquals(0, warningRepository.count());
+        assertEquals(0, warningRepository.count());
     }
 
     @Test
@@ -2186,7 +2213,7 @@ class AdminApiIntegrationTests {
         // and logging out would write an ADMIN_LOGOUT with no matching login.
         mockMvc.perform(post("/auth/logout").header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isUnauthorized());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 0,
                 auditLogRepository.findAll().stream()
                         .filter(log -> log.getAction() == AuditAction.ADMIN_LOGOUT)
@@ -2234,9 +2261,9 @@ class AdminApiIntegrationTests {
 
         // ...through a new event, with the original left exactly as it was recorded.
         AuditLog reversal = auditLogRepository.findFirstByRevertsAuditId(editId).orElseThrow();
-        org.junit.jupiter.api.Assertions.assertEquals(AuditAction.USER_UPDATED, reversal.getAction());
+        assertEquals(AuditAction.USER_UPDATED, reversal.getAction());
         org.junit.jupiter.api.Assertions.assertNotEquals(editId, reversal.getId());
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 "edited by mistake",
                 ((Map<?, ?>) auditLogRepository.findById(editId).orElseThrow()
                         .getChanges().get("biography")).get("after")
@@ -2275,7 +2302,7 @@ class AdminApiIntegrationTests {
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
 
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 "original",
                 commentRepository.findById(comment.getId()).orElseThrow().getContent()
         );
@@ -2306,7 +2333,7 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.auditLogs[?(@.action == 'USER_DELETED')].revertible")
                         .value(hasSize(1)))
                 .andExpect(jsonPath("$.auditLogs[?(@.action == 'USER_DELETED')].revertBlockedReason")
-                        .value(org.hamcrest.Matchers.hasItem("ACTION_NOT_REVERTIBLE")));
+                        .value(hasItem("ACTION_NOT_REVERTIBLE")));
 
         Session second = createSession("other@student.kit.edu", false);
         mockMvc.perform(patch("/users/{id}", second.student().getId())
@@ -2395,7 +2422,7 @@ class AdminApiIntegrationTests {
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.issueUrl").value("https://gitlab.example/issues/1"));
-        org.junit.jupiter.api.Assertions.assertEquals(1, gitLabClient.calls());
+        assertEquals(1, gitLabClient.calls());
 
         mockMvc.perform(get("/reports").header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk())
@@ -2404,9 +2431,9 @@ class AdminApiIntegrationTests {
                         .value("https://gitlab.example/issues/1"));
 
         AuditLog recorded = auditOf(AuditAction.BUG_REPORT_ISSUE_CREATED);
-        org.junit.jupiter.api.Assertions.assertEquals(
+        assertEquals(
                 admin.student().getId(), recorded.getActorId());
-        org.junit.jupiter.api.Assertions.assertEquals(report.getId(), recorded.getTargetId());
+        assertEquals(report.getId(), recorded.getTargetId());
     }
 
     @Test
@@ -2571,7 +2598,7 @@ class AdminApiIntegrationTests {
         java.util.List<AuditLog> matches = auditLogRepository.findAll().stream()
                 .filter(log -> log.getAction() == action)
                 .toList();
-        org.junit.jupiter.api.Assertions.assertEquals(1, matches.size(), action + " entries");
+        assertEquals(1, matches.size(), action + " entries");
         return matches.getFirst();
     }
 

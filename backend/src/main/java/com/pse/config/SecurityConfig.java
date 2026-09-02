@@ -53,6 +53,12 @@ public class SecurityConfig {
                                 "/social/comments/report",
                                 "/social/answers/report"
                         ).authenticated()
+                        .requestMatchers(HttpMethod.GET, "/social/notifications").authenticated()
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/social/notifications/all",
+                                "/social/notifications/*"
+                        ).authenticated()
                         .requestMatchers(HttpMethod.POST, "/ratings/rate").authenticated()
                         .requestMatchers(HttpMethod.GET, "/ratings/own/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
