@@ -352,7 +352,7 @@ public class SocialService {
                         new NotificationResponse(
                                 notification.getId(),
                                 type,
-                                LectureService.createLectureResponse(notification.getLecture()),
+                                null,
                                 null,
                                 null,
                                 null,
