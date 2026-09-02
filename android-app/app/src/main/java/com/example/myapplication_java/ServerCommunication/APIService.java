@@ -226,12 +226,12 @@ public interface APIService {
     @GET
     Call<ResponseBody> downloadImage(@Url String url);
 
-    @GET("/notifications")
+    @GET("/social/notifications")
     Call<NotificationsResponse> getNotifications(
             @Header("Authorization") String token
     );
 
-    @PATCH("/notifications")
+    @PATCH("/social/notifications")
     Call<BasicResponse> markNotificationsAsSeen(
             @Header("Authorization") String token
     );
