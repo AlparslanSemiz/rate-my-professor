@@ -86,7 +86,7 @@ public class LectureService {
         return new LectureDetailResponse("Found lecture", true, lectureResponse);
     }
 
-
+    @Transactional
     public BasicResponse addLecture(Student student, AddLectureRequest request) {
 
         if (!moderationUserService.verifyAdmin(student)) {
