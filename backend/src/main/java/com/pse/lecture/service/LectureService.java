@@ -34,14 +34,12 @@ public class LectureService {
 
 
     private final ModerationUserService moderationUserService;
-    private final AuthService authService;
 
     private final LectureRepository lectureRepository;
     private final ProfessorRepository professorRepository;
 
-    public LectureService(ModerationUserService moderationUserService, AuthService authService, LectureRepository lectureRepository, ProfessorRepository professorRepository ) {
+    public LectureService(ModerationUserService moderationUserService, LectureRepository lectureRepository, ProfessorRepository professorRepository ) {
         this.moderationUserService = moderationUserService;
-        this.authService = authService;
         this.lectureRepository = lectureRepository;
         this.professorRepository = professorRepository;
     }
@@ -107,11 +105,16 @@ public class LectureService {
         //Validate professorIDs exist
         for (UUID professorID: professorsIDs){
 
-            if(professorRepository.existsById(professorID)){
-                professors.add(professorRepository.findById(professorID).orElse(null));
-            }else{
-                return new BasicResponse("Professor not found: " + professorID, false);
+            Professor professor = professorRepository.findById(professorID).orElse(null);
+
+            if (professor == null) {
+                return new BasicResponse(
+                        "Professor not found: " + professorID,
+                        false
+                );
             }
+
+            professors.add(professor);
 
         }
 
