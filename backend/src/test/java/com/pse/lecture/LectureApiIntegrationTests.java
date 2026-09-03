@@ -1,18 +1,30 @@
 package com.pse.lecture;
 
+import com.pse.audit.repository.AuditLogRepository;
 import com.pse.auth.model.Token;
+import com.pse.auth.repository.AuthRateLimitBucketRepository;
+import com.pse.auth.repository.OneTimePasswordRepository;
 import com.pse.auth.repository.TokenRepository;
 import com.pse.auth.service.TokenGenerator;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.moderation.model.Admin;
 import com.pse.moderation.repository.AdminRepository;
+import com.pse.moderation.repository.BugReportRepository;
+import com.pse.moderation.repository.WarningRepository;
 import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
+import com.pse.rating.repository.RatingRepository;
 import com.pse.shared.enums.SemesterSeason;
 
 import com.pse.shared.enums.UserStatus;
 import com.pse.shared.util.HashGenerator;
+import com.pse.social.repository.AnswerReportRepository;
+import com.pse.social.repository.AnswerRepository;
+import com.pse.social.repository.AnswerVoteRepository;
+import com.pse.social.repository.CommentReportRepository;
+import com.pse.social.repository.CommentRepository;
+import com.pse.social.repository.NotificationRepository;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
 import org.h2.engine.Session;
@@ -70,12 +82,68 @@ class LectureApiIntegrationTests {
     TokenRepository tokenRepository;
 
 
+    @Autowired
+    NotificationRepository notificationRepository;
+
+    @Autowired
+    AnswerRepository answerRepository;
+
+    @Autowired
+    AnswerReportRepository answerReportRepository;
+
+    @Autowired
+    AnswerVoteRepository answerVoteRepository;
+
+    @Autowired
+    CommentRepository commentRepository;
+
+    @Autowired
+    CommentReportRepository commentReportRepository;
+
+    @Autowired
+    RatingRepository ratingRepository;
+
+    @Autowired
+    WarningRepository warningRepository;
+
+    @Autowired
+    BugReportRepository bugReportRepository;
+
+    @Autowired
+    AuditLogRepository auditLogRepository;
+
+    @Autowired
+    OneTimePasswordRepository otpRepository;
+
+    @Autowired
+    AuthRateLimitBucketRepository rateLimitRepository;
+
+
     @BeforeEach
     void setUp() {
+        auditLogRepository.deleteAll();
+        notificationRepository.deleteAll();
+        warningRepository.deleteAll();
+
+        answerReportRepository.deleteAll();
+        answerVoteRepository.deleteAll();
+        answerRepository.deleteAll();
+
+        commentReportRepository.deleteAll();
+        commentRepository.deleteAll();
+
+        bugReportRepository.deleteAll();
+        ratingRepository.deleteAll();
+
         tokenRepository.deleteAll();
+        otpRepository.deleteAll();
+        rateLimitRepository.deleteAll();
+
         adminRepository.deleteAll();
+
         lectureRepository.deleteAll();
         professorRepository.deleteAll();
+
         studentRepository.deleteAll();
     }
 
