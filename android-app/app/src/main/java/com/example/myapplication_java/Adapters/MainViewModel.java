@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.ViewModel;
 
 import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.AuthManager;
 import com.example.myapplication_java.ServerCommunication.Database;
 import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 
@@ -23,8 +24,10 @@ public class MainViewModel extends AndroidViewModel {
      * the search screen has something to work with.
      */
     private void refreshLocalData() {
-        Context context = getApplication().getApplicationContext();
-        APIService apiService = RetrofitClient.getClient().create(APIService.class);
-        Database.getInstance(context).updateDB(apiService);
+        if (AuthManager.getInstance().isLoggedIn()){
+            Context context = getApplication().getApplicationContext();
+            APIService apiService = RetrofitClient.getClient().create(APIService.class);
+            Database.getInstance(context).updateDB(apiService);
+        }
     }
 }

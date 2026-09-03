@@ -61,6 +61,10 @@ public class SettingsFragment extends Fragment {
             @Nullable Bundle savedInstanceState
     ) {
         binding = FragmentSettingsBinding.inflate(inflater, container, false);
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            binding.logoutAllDevicesButton.setVisibility(View.GONE);
+            binding.loginButton.setVisibility(View.VISIBLE);
+        }
         applyStatusBarInset();
         setUpClickListeners();
         return binding.getRoot();
@@ -143,22 +147,6 @@ public class SettingsFragment extends Fragment {
                 ? AppCompatDelegate.MODE_NIGHT_YES
                 : AppCompatDelegate.MODE_NIGHT_NO;
         AppCompatDelegate.setDefaultNightMode(nightMode);
-    }
-
-    /**
-     * Navigates back to the home screen from settings.
-     *
-     * <p>Which screen follows this one is the hosting activity's decision, so it is asked to
-     * open the home screen. Only when this fragment is shown outside of that host, the normal
-     * back navigation is used instead.</p>
-     */
-    private void navigateToHome() {
-        if (requireActivity() instanceof ControlFlowInterface host) {
-            host.openHome();
-            return;
-        }
-
-        requireActivity().getOnBackPressedDispatcher().onBackPressed();
     }
 
     /**
