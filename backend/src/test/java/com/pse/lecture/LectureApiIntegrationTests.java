@@ -39,9 +39,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.pse.support.TestDeliveryConfig;
+import org.springframework.context.annotation.Import;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import({
+        TestDeliveryConfig.class,
+        com.pse.support.TestGitLabConfig.class
+})
 class LectureApiIntegrationTests {
 
     @Autowired
