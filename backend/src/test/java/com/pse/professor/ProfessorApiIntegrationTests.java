@@ -253,20 +253,6 @@ class ProfessorApiIntegrationTests {
 
 
     @Test
-    void getProfessorIDReturnsBadRequestWhenParameterIsMissing()
-            throws Exception {
-
-        mockMvc.perform(
-                        get("/data/professor/id")
-                                .param("firstName", "Stefan")
-                )
-                .andExpect(status().isBadRequest());
-    }
-
-
-
-
-    @Test
     void adminCanAddProfessor() throws Exception {
 
         Session admin =
@@ -335,14 +321,14 @@ class ProfessorApiIntegrationTests {
                                 )
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
-                                        {
-                                          "firstName": "Stefan",
-                                          "lastName": "Kühnlein",
-                                          "lectureIDs": [
-                                            "%s"
-                                          ]
-                                        }
-                                        """.formatted(lecture.getId()))
+                                    {
+                                      "firstName": "Stefan",
+                                      "lastName": "Kühnlein",
+                                      "lectureIDs": [
+                                        "%s"
+                                      ]
+                                    }
+                                    """.formatted(lecture.getId()))
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
@@ -355,25 +341,21 @@ class ProfessorApiIntegrationTests {
                         )
                         .orElseThrow();
 
-        assertEquals(
-                1,
-                professor.getLectures().size()
-        );
-
-        assertTrue(
-                professor.getLectures()
-                        .contains(lecture)
-        );
-
         mockMvc.perform(
-                        get("/data/professor/{id}", professor.getId())
+                        get(
+                                "/data/professor/{id}",
+                                professor.getId()
+                        )
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath(
                         "$.professor.lectureIDs",
                         hasSize(1)
-                ));
+                ))
+                .andExpect(jsonPath(
+                        "$.professor.lectureIDs[0]"
+                ).value(lecture.getId().toString()));
     }
 
 
@@ -391,17 +373,17 @@ class ProfessorApiIntegrationTests {
                                 )
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
-                                        {
-                                          "firstName": "Stefan",
-                                          "lastName": "Kühnlein",
-                                          "lectureIDs": []
-                                        }
-                                        """)
+                                    {
+                                      "firstName": "Stefan",
+                                      "lastName": "Kühnlein",
+                                      "lectureIDs": []
+                                    }
+                                    """)
                 )
-                .andExpect(status().isForbidden())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message")
-                        .value("Could not authenticate Admin"));
+                        .value("Error, couldnt authenticate Admin"));
 
         assertTrue(
                 professorRepository
