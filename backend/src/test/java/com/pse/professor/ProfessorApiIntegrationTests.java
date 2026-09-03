@@ -350,11 +350,11 @@ class ProfessorApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath(
-                        "$.professor.lectures",
+                        "$.professor.lectureIds",
                         hasSize(1)
                 ))
                 .andExpect(jsonPath(
-                        "$.professor.lectures[0]"
+                        "$.professor.lectureIds[0]"
                 ).value(lecture.getId().toString()));
     }
 
