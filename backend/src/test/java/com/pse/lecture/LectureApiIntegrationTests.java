@@ -279,15 +279,14 @@ class LectureApiIntegrationTests {
         assertEquals(2026, lecture.getSemesterYear());
         assertTrue(lecture.isActive());
 
-        assertEquals(1, lecture.getProfessors().size());
-
-        assertEquals(
-                professor.getId(),
-                lecture.getProfessors()
-                        .iterator()
-                        .next()
-                        .getId()
-        );
+        mockMvc.perform(
+                        get("/data/lectures/{id}", lecture.getId())
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.lecture.professors", hasSize(1)))
+                .andExpect(jsonPath("$.lecture.professors[0].id")
+                        .value(professor.getId().toString()));
     }
 
     @Test
