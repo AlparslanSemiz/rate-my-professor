@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.pse.professor.dto.response.ProfessorShortResponse;
+import com.pse.user.model.Student;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
