@@ -185,7 +185,7 @@ class LectureServiceTests {
         assertFalse(response.success());
 
         assertEquals(
-                "Lecture already exists: Analysis 1",
+                "Lecture already exists: Lineare Algebra 1",
                 response.message()
         );
 
@@ -212,7 +212,7 @@ class LectureServiceTests {
 
         when(lectureRepository.findByName("Lineare Algebra 1")).thenReturn(Optional.empty());
 
-        when(professorRepository.existsById(professorId)).thenReturn(false);
+        when(professorRepository.findById(professorId)).thenReturn(Optional.empty());
 
         BasicResponse response = lectureService.addLecture(student, request);
 
@@ -223,7 +223,7 @@ class LectureServiceTests {
                 response.message()
         );
 
-        verify(professorRepository).existsById(professorId);
+        verify(professorRepository).findById(professorId);
 
         verify(lectureRepository, never()).save(any());
     }
@@ -245,8 +245,6 @@ class LectureServiceTests {
         when(moderationUserService.verifyAdmin(student)).thenReturn(true);
 
         when(lectureRepository.findByName("Lineare Algebra 1")).thenReturn(Optional.empty());
-
-        when(professorRepository.existsById(professorId)).thenReturn(true);
 
         when(professorRepository.findById(professorId)).thenReturn(Optional.of(professor));
 
@@ -286,9 +284,6 @@ class LectureServiceTests {
 
         when(lectureRepository.findByName("Lineare Algebra 1"))
                 .thenReturn(Optional.empty());
-
-        when(professorRepository.existsById(professorId))
-                .thenReturn(true);
 
         when(professorRepository.findById(professorId))
                 .thenReturn(Optional.of(professor));
