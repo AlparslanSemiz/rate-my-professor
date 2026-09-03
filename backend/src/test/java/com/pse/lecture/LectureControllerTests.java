@@ -1,4 +1,100 @@
 package com.pse.lecture;
 
+import com.pse.auth.dto.response.BasicResponse;
+import com.pse.lecture.controller.LectureController;
+import com.pse.lecture.dto.request.AddLectureRequest;
+import com.pse.lecture.dto.response.LectureDetailResponse;
+import com.pse.lecture.dto.response.LecturesResponse;
+import com.pse.lecture.service.LectureService;
+import com.pse.security.AuthenticatedUser;
+import com.pse.user.model.Student;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
 public class LectureControllerTests {
+
+
+    @Mock
+    private LectureService lectureService;
+
+    @InjectMocks
+    private LectureController lectureController;
+
+
+
+
+    @Test
+    void getLecturesReturnsServiceResponse() {
+
+        LecturesResponse expectedResponse = mock(LecturesResponse.class);
+
+        when(lectureService.getLectures()).thenReturn(expectedResponse);
+
+
+        LecturesResponse response = lectureController.getLectures();
+
+
+        assertSame(expectedResponse, response);
+
+        verify(lectureService).getLectures();
+    }
+
+
+    @Test
+    void getLectureReturnsServiceResponse() {
+
+        UUID lectureId = UUID.randomUUID();
+
+        LectureDetailResponse expectedResponse = mock(LectureDetailResponse.class);
+
+        when(lectureService.getLecture(lectureId))
+                .thenReturn(expectedResponse);
+
+
+        LectureDetailResponse response = lectureController.getLecture(lectureId);
+
+
+        assertSame(expectedResponse, response);
+        verify(lectureService).getLecture(lectureId);
+    }
+
+
+    @Test
+    void addLecturePassesStudentAndRequestToService() {
+
+        AuthenticatedUser principal = mock(AuthenticatedUser.class);
+
+        Student student = mock(Student.class);
+
+        AddLectureRequest request = mock(AddLectureRequest.class);
+
+        BasicResponse expectedResponse = new BasicResponse("Successfully added Lectures", true);
+
+        when(principal.student()).thenReturn(student);
+
+        when(lectureService.addLecture(student, request))
+                .thenReturn(expectedResponse);
+
+
+        BasicResponse response = lectureController.addLecture(principal, request);
+
+
+        assertSame(expectedResponse, response);
+
+        verify(principal).student();
+        verify(lectureService).addLecture(student, request);
+    }
+
+
+
 }
