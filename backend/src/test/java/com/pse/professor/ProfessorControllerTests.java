@@ -7,6 +7,7 @@ import com.pse.professor.dto.response.ProfessorDetailResponse;
 import com.pse.professor.dto.response.ProfessorsResponse;
 import com.pse.professor.service.ProfessorService;
 
+import com.pse.security.AuthenticatedUser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,6 +16,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.*;
 
@@ -72,6 +75,7 @@ public class ProfessorControllerTests {
     @Test
     void addProfessorPassesRequestToService() {
 
+        AuthenticatedUser principal = mock(AuthenticatedUser.class);
         ProfessorAddRequest request = mock(ProfessorAddRequest.class);
 
         BasicResponse expectedResponse =
@@ -79,18 +83,45 @@ public class ProfessorControllerTests {
                         "Professor added successfully",
                         true
                 );
+        when(principal.isAdmin()).thenReturn(true);
 
         when(professorService.addProfessor(request))
                 .thenReturn(expectedResponse);
 
 
-        BasicResponse response =
-                professorController.addProfessor(request);
+        BasicResponse response = professorController.addProfessor(principal, request);
 
 
         assertSame(expectedResponse, response);
 
+        verify(principal).isAdmin();
         verify(professorService).addProfessor(request);
+    }
+
+    @Test
+    void addProfessorDoesNotCallServiceWhenUserIsNotAdmin() {
+
+        AuthenticatedUser principal = mock(AuthenticatedUser.class);
+        ProfessorAddRequest request = mock(ProfessorAddRequest.class);
+
+        when(principal.isAdmin()).thenReturn(false);
+
+
+        BasicResponse response =
+                professorController.addProfessor(
+                        principal,
+                        request
+                );
+
+
+        assertFalse(response.success());
+        assertEquals(
+                "Error, couldnt authenticate Admin",
+                response.message()
+        );
+
+        verify(principal).isAdmin();
+        verifyNoInteractions(professorService);
     }
 
 
