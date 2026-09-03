@@ -254,17 +254,19 @@ class LectureApiIntegrationTests {
                                         bearer(admin.rawToken())
                                 )
                                 .contentType(MediaType.APPLICATION_JSON)
+
                                 .content("""
-                                    {
-                                      "name": "Lineare Algebra 1",
-                                      "code": "LA1",
-                                      "semesterYear": 2026,
-                                      "semesterSeason": "SUMMER",
-                                      "professorIds": [
-                                        "%s"
-                                      ]
-                                    }
-                                    """.formatted(professor.getId()))
+        {
+          "name": "Lineare Algebra 1",
+          "code": "LA1",
+          "semesterYear": 2026,
+          "semesterSeason": "SUMMER",
+          "active": true,
+          "professorIds": [
+            "%s"
+          ]
+        }
+        """.formatted(professor.getId()))
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
@@ -307,21 +309,22 @@ class LectureApiIntegrationTests {
                                 )
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
-                                    {
-                                      "name": "Lineare Algebra 1",
-                                      "code": "LA1",
-                                      "semesterYear": 2026,
-                                      "semesterSeason": "SUMMER",
-                                      "professorIds": [
-                                        "%s"
-                                      ]
-                                    }
-                                    """.formatted(professor.getId()))
+        {
+          "name": "Lineare Algebra 1",
+          "code": "LA1",
+          "semesterYear": 2026,
+          "semesterSeason": "SUMMER",
+          "active": true,
+          "professorIds": [
+            "%s"
+          ]
+        }
+        """.formatted(professor.getId()))
                 )
-                .andExpect(status().isOk())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message")
-                        .value("User is not authorized to add lectures"));
+                        .value("Could not authenticate Admin"));
 
         assertTrue(
                 lectureRepository
@@ -358,16 +361,17 @@ class LectureApiIntegrationTests {
                                 )
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
-                                    {
-                                      "name": "Lineare Algebra 1",
-                                      "code": "LA1-NEW",
-                                      "semesterYear": 2026,
-                                      "semesterSeason": "SUMMER",
-                                      "professorIds": [
-                                        "%s"
-                                      ]
-                                    }
-                                    """.formatted(professor.getId()))
+        {
+          "name": "Lineare Algebra 1",
+          "code": "LA1",
+          "semesterYear": 2026,
+          "semesterSeason": "SUMMER",
+          "active": true,
+          "professorIds": [
+            "%s"
+          ]
+        }
+        """.formatted(professor.getId()))
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(false))
@@ -396,16 +400,17 @@ class LectureApiIntegrationTests {
                                 )
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
-                                    {
-                                      "name": "Lineare Algebra 1",
-                                      "code": "LA1",
-                                      "semesterYear": 2026,
-                                      "semesterSeason": "SUMMER",
-                                      "professorIds": [
-                                        "%s"
-                                      ]
-                                    }
-                                    """.formatted(unknownProfessorId))
+        {
+          "name": "Lineare Algebra 1",
+          "code": "LA1",
+          "semesterYear": 2026,
+          "semesterSeason": "SUMMER",
+          "active": true,
+          "professorIds": [
+            "%s"
+          ]
+        }
+        """.formatted(unknownProfessorId))
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(false))
