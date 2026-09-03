@@ -72,10 +72,12 @@ class LectureApiIntegrationTests {
 
     @BeforeEach
     void setUp() {
+        tokenRepository.deleteAll();
+        adminRepository.deleteAll();
         lectureRepository.deleteAll();
         professorRepository.deleteAll();
+        studentRepository.deleteAll();
     }
-
 
     @Test
     void getLecturesReturnsActiveLectures() throws Exception {
