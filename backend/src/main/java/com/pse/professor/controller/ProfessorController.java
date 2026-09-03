@@ -50,7 +50,10 @@ public class ProfessorController {
      * @return
      */
     @PostMapping("/professor")
-    public BasicResponse addProfessor(@Valid @RequestBody ProfessorAddRequest request) {
+    public BasicResponse addProfessor( @AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody ProfessorAddRequest request) {
+        if (!principal.isAdmin()){
+            return new BasicResponse("Error, couldnt authenticate Admin", false);
+        }
         return professorService.addProfessor(request);
     }
 
