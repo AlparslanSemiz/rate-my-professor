@@ -20,7 +20,7 @@
         app:srcCompat="@drawable/go_back_icon" />
 
     <TextView
-        android:id="@+id/notification_heading"
+        android:id="@+id/list_of_my_ratings_header"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
@@ -33,7 +33,7 @@
         app:layout_constraintTop_toTopOf="@id/back_button" />
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/List_of_my_Ratings_list"
+        android:id="@+id/list_of_my_ratings_list"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginStart="8dp"

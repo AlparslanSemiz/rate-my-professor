@@ -78,7 +78,6 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
 
         MainViewModel viewModel = new ViewModelProvider(this).get(MainViewModel.class);
         setUpBottomNavigation();
-        getHomepageData();
     }
 
 

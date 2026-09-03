@@ -45,6 +45,7 @@ public class Professor {
         this.ratingCount = ratingCount;
     }
 
+
     /**
      * The lectures held by this professor.
      *

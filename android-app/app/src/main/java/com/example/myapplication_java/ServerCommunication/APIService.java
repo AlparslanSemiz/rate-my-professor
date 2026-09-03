@@ -14,6 +14,7 @@ import com.example.myapplication_java.ServerCommunication.Responses.ProfessorRes
 import com.example.myapplication_java.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.ServerResponse;
 import com.example.myapplication_java.ServerCommunication.Responses.StudentProfileResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.UserRatingResponse;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -199,6 +200,14 @@ public interface APIService {
      */
     @GET("/account/information")
     Call<StudentProfileResponse> getUserInformation(
+            @Header("Authorization") String token
+    );
+
+    /**
+     * Get all Ratings from a specific user
+     */
+    @GET("/account/ratings")
+    Call<UserRatingResponse> getUserRatings(
             @Header("Authorization") String token
     );
 

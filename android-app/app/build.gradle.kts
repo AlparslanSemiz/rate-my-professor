@@ -26,7 +26,7 @@ android {
             // Skips the login screen and opens the app directly, so the rest of the app can be
             // worked on while the backend is unavailable. Set this to false to test the real
             // login flow. It is hardwired to false for release below, so it cannot ship.
-            buildConfigField("boolean", "SKIP_LOGIN", "false")
+            buildConfigField("boolean", "SKIP_LOGIN", "true")
         }
         release {
             buildConfigField("boolean", "SKIP_LOGIN", "false")
@@ -45,6 +45,31 @@ android {
         viewBinding = true
         buildConfig = true
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+
+            // Für Robolectric unter JDK 17 oder neuer
+            all {
+                it.extensions.configure(org.gradle.testing.jacoco.plugins.JacocoTaskExtension::class.java) {
+                    isIncludeNoLocationClasses = true
+                    excludes = listOf("jdk.internal.*")
+                }
+                it.jvmArgs(
+                    "--add-opens=java.base/java.lang=ALL-UNNAMED",
+                    "--add-opens=java.base/java.util=ALL-UNNAMED",
+                    "--add-opens=java.base/java.io=ALL-UNNAMED",
+                    "--add-opens=java.base/java.net=ALL-UNNAMED",
+                    "--add-opens=java.base/java.security=ALL-UNNAMED",
+                    "--add-opens=java.base/java.text=ALL-UNNAMED",
+                    "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
+                    "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
+                    "--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
+                )
+            }
+        }
+    }
 }
 
 dependencies {
@@ -56,6 +81,8 @@ dependencies {
     implementation(libs.recyclerview)
     implementation(libs.viewpager2)
     testImplementation(libs.junit)
+    testImplementation(libs.mockwebserver)
+    testImplementation(libs.robolectric)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
     implementation(libs.retrofit)
@@ -64,15 +91,36 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.glide)
     annotationProcessor(libs.room.compiler)
-    testImplementation(libs.mockwebserver)
 }
 
 jacoco {
     toolVersion = "0.8.14"
 }
 
+val debugCoverageExcludes = listOf(
+    "**/R.class",
+    "**/R$*.class",
+    "**/BuildConfig.*",
+    "**/*Binding.*",
+    "**/*_Impl.*",
+    "**/*_Impl*",
+    "**/Activities/**",
+    "**/Adapters/**",
+    "**/Fragments/**"
+)
+
+fun debugCoverageClassDirectories() = files(
+    fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
+        exclude(debugCoverageExcludes)
+    },
+    fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
+        exclude(debugCoverageExcludes)
+    }
+)
+
 tasks.register<JacocoReport>("debugUnitTestCoverage") {
     dependsOn("testDebugUnitTest")
+    finalizedBy("debugUnitTestCoverageVerification")
 
     reports {
         xml.required.set(true)
@@ -80,30 +128,31 @@ tasks.register<JacocoReport>("debugUnitTestCoverage") {
         html.required.set(true)
     }
 
-    val excludes = listOf(
-        "**/R.class",
-        "**/R$*.class",
-        "**/BuildConfig.*",
-        "**/*Binding.*",
-        "**/*_Impl.*",
-        "**/*_Impl*",
-        "**/Activities/**",
-        "**/Adapters/**",
-        "**/Fragments/**"
-    )
-
-    classDirectories.setFrom(
-        files(
-            fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
-                exclude(excludes)
-            },
-            fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
-                exclude(excludes)
-            }
-        )
-    )
+    classDirectories.setFrom(debugCoverageClassDirectories())
     sourceDirectories.setFrom(files("src/main/java"))
     executionData.setFrom(fileTree(layout.buildDirectory) {
         include("jacoco/testDebugUnitTest.exec")
     })
+}
+
+tasks.register<org.gradle.testing.jacoco.tasks.JacocoCoverageVerification>(
+    "debugUnitTestCoverageVerification"
+) {
+    dependsOn("testDebugUnitTest")
+
+    classDirectories.setFrom(debugCoverageClassDirectories())
+    sourceDirectories.setFrom(files("src/main/java"))
+    executionData.setFrom(fileTree(layout.buildDirectory) {
+        include("jacoco/testDebugUnitTest.exec")
+    })
+
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.90".toBigDecimal()
+            }
+        }
+    }
 }
