@@ -61,14 +61,17 @@ public class SessionApplicationAndUtilityTest {
     }
 
     @Test
-    public void myApplicationLeavesNightModeWhenSettingIsMissing() {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+    public void myApplicationDefaultsToDarkModeWhenSettingIsMissing() {
+        AppCompatDelegate.setDefaultNightMode(
+                AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        );
+
         SharedPreferences settings = cleanSettings();
 
         new PreferenceBackedApplication(settings).onCreate();
 
         assertEquals(
-                AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM,
+                AppCompatDelegate.MODE_NIGHT_YES,
                 AppCompatDelegate.getDefaultNightMode()
         );
     }
