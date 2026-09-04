@@ -68,6 +68,18 @@ public class DatabaseSyncTest {
                 8
         );
         LocalDateTime createdAt = LocalDateTime.of(2026, 8, 3, 10, 0);
+        Comment reply = new Comment(
+                "reply-1",
+                "Indeed",
+                ContentStatus.VISIBLE,
+                "helper",
+                "lecture-1",
+                null,
+                createdAt.plusMinutes(5),
+                0,
+                2,
+                Collections.emptyList()
+        );
         Comment comment = new Comment(
                 "comment-1",
                 "Helpful",
@@ -78,7 +90,7 @@ public class DatabaseSyncTest {
                 createdAt,
                 1,
                 5,
-                Collections.emptyList()
+                Collections.singletonList(reply)
         );
         APIService apiService = apiService(
                 FakeCall.response(new ProfessorResponse("ok", true, Collections.singletonList(professor))),
@@ -112,6 +124,10 @@ public class DatabaseSyncTest {
         assertEquals(ContentStatus.VISIBLE, insertedComment.status());
         assertEquals(createdAt, insertedComment.createdAt());
         assertEquals(5, insertedComment.upVotes());
+
+        CommentModel insertedReply = searchService.insertedComments.get(1);
+        assertEquals("reply-1", insertedReply.commentID());
+        assertEquals("reply-1", insertedReply.parentID());
     }
 
     @Test

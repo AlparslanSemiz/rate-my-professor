@@ -8,6 +8,9 @@ import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.Lecture;
 import com.example.ratemyprofessor.DomainModel.LectureOffering;
 import com.example.ratemyprofessor.DomainModel.Professor;
+import com.example.ratemyprofessor.DomainModel.Rater;
+import com.example.ratemyprofessor.DomainModel.Rating;
+import com.example.ratemyprofessor.DomainModel.RatingCategory;
 import com.example.ratemyprofessor.DomainModel.RatingTopic;
 import com.example.ratemyprofessor.DomainModel.Semester;
 import com.example.ratemyprofessor.DomainModel.SemesterSeason;
@@ -77,6 +80,15 @@ public class DomainModelTest {
         RatingTopic topic = new RatingTopic("Clarity", 5);
         assertEquals("Clarity", topic.name());
         assertEquals(5, topic.value());
+    }
+
+    @Test
+    public void ratingConstructorStoresFields() {
+        Rating rating = new Rating("l1", RatingCategory.ROOM, 4.5, Rater.USER);
+        assertEquals("l1", rating.lectureID);
+        assertEquals(RatingCategory.ROOM, rating.category);
+        assertEquals(4.5, rating.score, 0.001);
+        assertEquals(Rater.USER, rating.rater);
     }
 
     @Test

@@ -36,6 +36,8 @@ import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LectureResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.PersonalStatisticsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorShortResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoriesResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoryResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.StudentProfileResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.UserRatingDto;
 import com.example.ratemyprofessor.ServerCommunication.Responses.UserRatingResponse;
@@ -117,6 +119,8 @@ public class ModelRequestResponseCoverageTest {
                 3,
                 88
         );
+        RatingCategoryResponse catResp = new RatingCategoryResponse(RatingCategory.ROOM, "Room", 4.0);
+        RatingCategoriesResponse catsResp = new RatingCategoriesResponse("ok", true, Collections.singletonList(catResp));
 
         assertEquals("answer-1", answer.commentId());
         assertEquals(ContentStatus.VISIBLE, answer.status());
@@ -133,6 +137,8 @@ public class ModelRequestResponseCoverageTest {
         assertEquals(91, student.credibilityScore());
         assertEquals(4.1f, statistics.averageRating(), 0.001f);
         assertEquals(3, statistics.writtencomments());
+        assertEquals(catResp, catsResp.categories().get(0));
+        assertEquals(RatingCategory.ROOM, catResp.category());
     }
 
     @Test
