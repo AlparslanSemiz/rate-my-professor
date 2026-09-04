@@ -95,10 +95,26 @@ public class ProfileFragment extends Fragment {
                 getParentFragmentManager().popBackStack()
         );
 
+        setHeader();
+
         return binding.getRoot();
 
     }
 
+    /**
+     * We need this because we use the same xml for prof and lecture
+     * but lectures don't have a first name
+     */
+    private void setHeader() {
+        if (selectionType == SelectionType.PROFESSORS) {
+            binding.name.setVisibility(View.VISIBLE);
+            binding.name.setText(professor.firstName);
+            binding.surname.setText(professor.lastName);
+        } else {
+            binding.name.setVisibility(View.GONE);
+            binding.surname.setText(lectureTitle);
+        }
+    }
     /**
      * Writes the already known part of the selection into the header.
      */
