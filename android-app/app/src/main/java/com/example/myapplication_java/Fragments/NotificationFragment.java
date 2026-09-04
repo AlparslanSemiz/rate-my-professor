@@ -2,9 +2,11 @@ package com.example.myapplication_java.Fragments;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -13,12 +15,28 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.myapplication_java.Adapters.NotificationAdapter;
 import com.example.myapplication_java.DomainModel.Notification;
+import com.example.myapplication_java.ServerCommunication.APIService;
+import com.example.myapplication_java.ServerCommunication.LoginSession;
+import com.example.myapplication_java.ServerCommunication.Responses.LectureResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.NotificationResponse;
+import com.example.myapplication_java.ServerCommunication.Responses.NotificationType;
+import com.example.myapplication_java.ServerCommunication.Responses.NotificationsResponse;
+import com.example.myapplication_java.ServerCommunication.RetrofitClient;
 import com.example.myapplication_java.databinding.FragmentNotificationBinding;
 
+import com.example.myapplication_java.Activities.MainActivity;
+import com.example.myapplication_java.DomainModel.Comment;
+import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
+
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * Displays replies to comments of the current user.
@@ -28,7 +46,12 @@ import java.util.List;
  */
 public class NotificationFragment extends Fragment {
 
+    private static final String TAG = "NotificationFragment";
+
     private FragmentNotificationBinding binding;
+    private APIService apiService;
+    private Call<NotificationsResponse> notificationsCall;
+    private Call<CommentsResponse> commentThreadCall;
 
     @Nullable
     @Override
@@ -38,28 +61,180 @@ public class NotificationFragment extends Fragment {
             @Nullable Bundle savedInstanceState
     ) {
         binding = FragmentNotificationBinding.inflate(inflater, container, false);
-        setUpNotificationList();
+
+        apiService = RetrofitClient.getClient().create(APIService.class);
+
+        binding.notificationList.setLayoutManager(new LinearLayoutManager(requireContext()));
+
+        loadNotifications();
+        //setUpNotificationList();
         binding.backButton.setOnClickListener(v ->
                 requireActivity().getSupportFragmentManager().popBackStack()
         );
         return binding.getRoot();
     }
 
-    /**
-     * Fills the list and shows the empty state when there is nothing to display.
-     */
-    private void setUpNotificationList() {
-        List<Notification> notifications = createTemporaryNotifications();
+    private void loadNotifications() {
+        LoginSession session = LoginSession.from(requireContext());
 
-        binding.notificationList.setLayoutManager(new LinearLayoutManager(requireContext()));
-        binding.notificationList.setAdapter(
-                new NotificationAdapter(notifications, this::onNotificationClicked)
+        notificationsCall = apiService.getNotifications(
+                session.bearerToken()
         );
 
-        // The list and the empty text swap places, only one of them is ever visible.
+        notificationsCall.enqueue(new Callback<NotificationsResponse>() {
+            @Override
+            public void onResponse(
+                    Call<NotificationsResponse> call,
+                    Response<NotificationsResponse> response
+            ) {
+                if (binding == null) {
+                    return;
+                }
+
+                NotificationsResponse body = response.body();
+
+                if (!response.isSuccessful()
+                        || body == null
+                        || !body.success()) {
+
+                    String errorMessage = body != null
+                            ? body.message()
+                            : "Benachrichtigungen konnten nicht geladen werden";
+
+                    showLoadError(errorMessage);
+                    return;
+                }
+
+                List<Notification> notifications = new ArrayList<>();
+
+                if (body.notifications() != null) {
+                    for (NotificationResponse serverNotification
+                            : body.notifications()) {
+
+                        notifications.add(
+                                convertNotification(serverNotification)
+                        );
+                    }
+                }
+
+                showNotifications(notifications);
+
+                if (!notifications.isEmpty()) {
+                    //markNotificationsAsSeen();
+                }
+            }
+
+            @Override
+            public void onFailure(
+                    Call<NotificationsResponse> call,
+                    Throwable throwable
+            ) {
+                if (call.isCanceled() || binding == null) {
+                    return;
+                }
+
+                Log.e(TAG, "Loading notifications failed", throwable);
+                showLoadError("Keine Verbindung zum Server");
+            }
+        });
+    }
+
+    private void showNotifications(
+            List<Notification> notifications
+    ) {
+        binding.notificationList.setAdapter(
+                new NotificationAdapter(
+                        notifications,
+                        this::onNotificationClicked
+                )
+        );
+
         boolean isEmpty = notifications.isEmpty();
-        binding.notificationList.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
-        binding.emptyNotifications.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+
+        binding.notificationList.setVisibility(
+                isEmpty ? View.GONE : View.VISIBLE
+        );
+
+        binding.emptyNotifications.setVisibility(
+                isEmpty ? View.VISIBLE : View.GONE
+        );
+    }
+
+    private void showLoadError(String message) {
+        showNotifications(new ArrayList<>());
+
+        Toast.makeText(
+                requireContext(),
+                message,
+                Toast.LENGTH_SHORT
+        ).show();
+    }
+
+    /**
+     * Converts NotificationResponse to Notification for the NotificationAdapter
+     * @param response
+     * @return
+     */
+    private Notification convertNotification(
+            NotificationResponse response
+    ) {
+        boolean isWarning =
+                response.type() == NotificationType.WARNING;
+
+        String preview = isWarning
+                ? valueOrEmpty(response.message())
+                : valueOrEmpty(response.content());
+
+        String actorUsername = isWarning
+                ? "Warning"
+                : valueOrEmpty(response.userName());
+
+        Date createdAt = response.createdAt() == null
+                ? null
+                : Date.from(
+                response.createdAt()
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant()
+        );
+
+        LectureResponse lecture = response.lectureResponse();
+
+        return new Notification(
+                valueOrEmpty(response.notificationId()),
+                response.type() == null
+                        ? ""
+                        : response.type().name(),
+                createdAt,
+                false,
+                actorUsername,
+                preview,
+                createLectureLabel(lecture),
+                lecture == null ? "" : valueOrEmpty(lecture.id()),
+                valueOrEmpty(response.ownCommentId()),
+                ""
+        );
+    }
+
+    private String createLectureLabel(LectureResponse lecture) {
+        if (lecture == null) {
+            return "";
+        }
+
+        String semester = lecture.semesterSeason() == null
+                ? ""
+                : lecture.semesterSeason().name()
+                  + " "
+                  + lecture.semesterYear();
+
+        return valueOrEmpty(lecture.name())
+                + " · "
+                + valueOrEmpty(lecture.code())
+                + " · "
+                + semester;
+    }
+
+    private String valueOrEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     /**
@@ -75,43 +250,87 @@ public class NotificationFragment extends Fragment {
             // short list is cheaper than tracking its position.
             binding.notificationList.getAdapter().notifyDataSetChanged();
         }
-        // TODO: Open CommentThreadFragment with offering, parent comment and reply IDs.
+        if (notification.lectureOfferingId.isEmpty()
+                || notification.parentCommentId.isEmpty()) {
+
+            Toast.makeText(
+                    requireContext(),
+                    "This notification has no comment",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            return;
+        }
+
+        loadAndOpenCommentThread(
+                notification.lectureOfferingId,
+                notification.parentCommentId
+        );
     }
 
-    /**
-     * Builds the stand-in notifications shown until the backend route exists.
-     *
-     * @return two example notifications, one unread and one already read
-     */
-    private List<Notification> createTemporaryNotifications() {
-        List<Notification> notifications = new ArrayList<>();
-        notifications.add(new Notification(
-                "notification-1",
-                "replied to your comment",
-                hoursAgo(2),
-                false,
-                "AdventuresRabbit",
-                "Fand der war blöd.",
-                "Kühnlein · LA1 · WS24/25",
-                "offering-4711",
-                "comment-9321",
-                "comment-9550"
-        ));
-        notifications.add(new Notification(
-                "notification-2",
-                "replied to your comment",
-                hoursAgo(26),
-                true,
-                "CourageousRaccoon",
-                "Tolles Gitarren Solo amk.",
-                "Kühnlein · LA1 · WS24/25",
-                "offering-4711",
-                "comment-9321",
-                "comment-9588"
-        ));
-        return notifications;
+    private void loadAndOpenCommentThread(String lectureId, String commentId) {
+        commentThreadCall = apiService.getComments(lectureId);
+
+        commentThreadCall.enqueue(new Callback<CommentsResponse>() {
+            @Override
+            public void onResponse(Call<CommentsResponse> call, Response<CommentsResponse> response) {
+                if (!isAdded()) {
+                    return;
+                }
+                CommentsResponse body = response.body();
+
+                if (!response.isSuccessful()
+                        || body == null
+                        || !body.success()
+                        || body.comments() == null) {
+                    Toast.makeText(requireContext(), "Could not load Comments", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Comment selectedComment = findComment(body.comments(), commentId);
+
+                if (selectedComment == null) {
+                    Toast.makeText(requireContext(), "Could not find related comment", Toast.LENGTH_SHORT).show();
+
+                    return;
+                }
+                if (requireActivity() instanceof MainActivity mainActivity) {
+                    mainActivity.openReplyFragment(selectedComment);
+                }
+            }
+
+            @Override
+            public void onFailure(
+                    Call<CommentsResponse> call,
+                    Throwable throwable
+            ) {
+                if (call.isCanceled() || !isAdded()) {
+                    return;
+                }
+
+                Log.e(TAG, "Loading comment thread failed", throwable);
+
+                Toast.makeText(
+                        requireContext(),
+                        "No connection to server",
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
+        });
     }
 
+    @Nullable
+    private Comment findComment(
+            List<Comment> comments,
+            String commentId
+    ) {
+        for (Comment comment : comments) {
+            if (commentId.equals(comment.commentID())) {
+                return comment;
+            }
+        }
+
+        return null;
+    }
     /**
      * @param hours how far in the past the returned date should lie
      * @return the point in time that many hours before now
@@ -124,6 +343,14 @@ public class NotificationFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        if (notificationsCall != null) {
+            notificationsCall.cancel();
+        }
+
+        if (commentThreadCall != null) {
+            commentThreadCall.cancel();
+        }
+
         super.onDestroyView();
         binding = null;
     }

@@ -219,20 +219,20 @@
         android:id="@+id/profilePicture"
         android:layout_width="80dp"
         android:layout_height="80dp"
-        android:maxHeight="80dp"
-        android:maxWidth="80dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="32dp"
         android:layout_marginBottom="8dp"
+
         android:background="@drawable/rounded_box_light"
-        android:scaleX="1.0"
-        android:scaleY="1.0"
+        android:clipToOutline="true"
+        android:outlineProvider="background"
+        android:scaleType="centerCrop"
         android:src="@drawable/profile_icon"
-        app:layout_constraintBottom_toTopOf="@+id/your_stats_background"
-        app:layout_constraintStart_toStartOf="@+id/profile"
+
+        app:layout_constraintBottom_toTopOf="@id/your_stats_background"
+        app:layout_constraintStart_toStartOf="@id/profile"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.348" />
-
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -130,6 +130,9 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         binding.name.setText(professor.firstName);
         binding.surname.setText(professor.lastName);
         binding.commentList.setLayoutManager(new LinearLayoutManager(requireContext()));
+        binding.backButton.setOnClickListener(v ->
+                getParentFragmentManager().popBackStack()
+        );
 
         getComments();
         setSubmitCommentListener();

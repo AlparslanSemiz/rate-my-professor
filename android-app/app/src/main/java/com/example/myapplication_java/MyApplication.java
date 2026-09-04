@@ -33,11 +33,7 @@ public class MyApplication extends Application {
         super.onCreate();
 
         SharedPreferences settingsStorage = getSharedPreferences(SETTINGS_STORAGE, MODE_PRIVATE);
-        if (!settingsStorage.contains(DARK_MODE_KEY)) {
-            return;
-        }
-
-        int nightMode = settingsStorage.getBoolean(DARK_MODE_KEY, false)
+        int nightMode = settingsStorage.getBoolean(DARK_MODE_KEY, true)
                 ? AppCompatDelegate.MODE_NIGHT_YES
                 : AppCompatDelegate.MODE_NIGHT_NO;
         AppCompatDelegate.setDefaultNightMode(nightMode);

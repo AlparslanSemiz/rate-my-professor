@@ -67,6 +67,18 @@ public class SearchFragment extends Fragment {
 
         binding = FragmentSearchBinding.inflate(inflater, container, false);
 
+        binding.searchButton.setEnableDynamicBackground(true);
+        binding.searchButton.setEnableAdaptiveTint(true);
+        binding.searchButton.setCollectFrameStats(false);
+
+        binding.profsButton.setEnableDynamicBackground(true);
+        binding.profsButton.setEnableAdaptiveTint(true);
+        binding.profsButton.setCollectFrameStats(false);
+
+        binding.lecturesButton.setEnableDynamicBackground(true);
+        binding.lecturesButton.setEnableAdaptiveTint(true);
+        binding.lecturesButton.setCollectFrameStats(false);
+
         // Touching a result list means the user is done typing, so the search bar closes.
         SearchPagerAdapter adapter = new SearchPagerAdapter(this, this::closeSearchMode);
 
@@ -142,11 +154,39 @@ public class SearchFragment extends Fragment {
     private void selectProfessorTab() {
         binding.profsButton.setSelected(true);
         binding.lecturesButton.setSelected(false);
+
+        binding.profsButton.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(150)
+                .start();
+
+        binding.lecturesButton.animate()
+                .alpha(0.65f)
+                .scaleX(0.97f)
+                .scaleY(0.97f)
+                .setDuration(150)
+                .start();
     }
 
     private void selectLectureTab() {
         binding.profsButton.setSelected(false);
         binding.lecturesButton.setSelected(true);
+
+        binding.profsButton.animate()
+                .alpha(0.65f)
+                .scaleX(0.97f)
+                .scaleY(0.97f)
+                .setDuration(150)
+                .start();
+
+        binding.lecturesButton.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(150)
+                .start();
     }
 
     @Override

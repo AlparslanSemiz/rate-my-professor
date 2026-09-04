@@ -15,50 +15,62 @@
         app:layout_constraintTop_toTopOf="parent" />
 
 
-    <LinearLayout
+    <com.example.liquidglass.LiquidGlassView
         android:id="@+id/custom_bottom_nav"
         android:layout_width="350dp"
         android:layout_height="80dp"
         android:layout_marginBottom="30dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:background="@drawable/bottom_nav_background"
         android:elevation="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toStartOf="parent"
+        app:cornerRadius="40dp"
+        app:glassMaterial="regular"
+        app:refractionHeight="40dp"
+        app:bevelWidth="12dp"
+        app:dispersionStrength="0.10"
+        app:adaptiveTint="true">
 
-        <ImageButton
-            android:id="@+id/nav_search"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@android:color/transparent"
-            android:src="@drawable/search_icon"
-            android:scaleType="center"
-            app:tint="@color/bottom_nav_icon" />
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@android:color/transparent">
 
-        <ImageButton
-            android:id="@+id/nav_home"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@android:color/transparent"
-            android:src="@drawable/home_icon"
-            android:scaleType="center"
-            app:tint="@color/bottom_nav_icon" />
+            <ImageButton
+                android:id="@+id/nav_search"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:src="@drawable/search_icon"
+                android:scaleType="center"
+                app:tint="@color/bottom_nav_icon" />
 
-        <ImageButton
-            android:id="@+id/nav_settings"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@android:color/transparent"
-            android:src="@drawable/settings_icon"
-            android:scaleType="center"
-            app:tint="@color/bottom_nav_icon" />
+            <ImageButton
+                android:id="@+id/nav_home"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:src="@drawable/home_icon"
+                android:scaleType="center"
+                app:tint="@color/bottom_nav_icon" />
 
-    </LinearLayout>
+            <ImageButton
+                android:id="@+id/nav_settings"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:src="@drawable/settings_icon"
+                android:scaleType="center"
+                app:tint="@color/bottom_nav_icon" />
+
+        </LinearLayout>
+
+    </com.example.liquidglass.LiquidGlassView>
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

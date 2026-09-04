@@ -14,7 +14,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:backgroundTint="@color/surface_container"
+        android:backgroundTint="@color/input_field_background"
         android:letterSpacing="0"
         android:text="Enter"
         android:textSize="24sp"
