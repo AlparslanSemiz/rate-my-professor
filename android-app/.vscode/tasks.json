@@ -45,7 +45,7 @@
                 "-ExecutionPolicy",
                 "Bypass",
                 "-Command",
-                "& \"$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe\" shell monkey -p com.example.myapplication_java -c android.intent.category.LAUNCHER 1"
+                "& \"$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe\" shell monkey -p com.example.ratemyprofessor -c android.intent.category.LAUNCHER 1"
             ],
             "problemMatcher": [],
             "presentation": {
