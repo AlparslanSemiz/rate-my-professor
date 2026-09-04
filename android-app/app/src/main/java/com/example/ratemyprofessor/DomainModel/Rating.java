@@ -12,13 +12,12 @@ import androidx.room.ForeignKey;
  *
  */
 @Entity(tableName = "ratings",
-        primaryKeys = {"lectureID", "rater", "category"},
-        foreignKeys = @ForeignKey(
-                entity = Lecture.class,
-                parentColumns = "id",
-                childColumns = "lectureID",
-                onDelete = ForeignKey.CASCADE
-        )
+       primaryKeys = {"lectureID", "rater", "category"}
+//        foreignKeys = @ForeignKey(
+//                entity = Lecture.class,
+//                parentColumns = "id",
+//                childColumns = "lectureID"
+//        )
 )
 public class Rating {
     @NonNull

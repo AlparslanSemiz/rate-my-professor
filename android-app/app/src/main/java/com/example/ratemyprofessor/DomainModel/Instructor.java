@@ -8,18 +8,17 @@ import androidx.room.ForeignKey;
         tableName = "instructors",
         primaryKeys = {"lectureID", "professorID"},
         foreignKeys = {
-                @ForeignKey(
-                        entity = Professor.class,
-                        parentColumns = "id",
-                        childColumns = "professorID",
-                        onDelete = ForeignKey.CASCADE
-                ),
-                @ForeignKey(
-                        entity = Lecture.class,
-                        parentColumns = "id",
-                        childColumns = "lectureID",
-                        onDelete = ForeignKey.CASCADE
-                )
+//                @ForeignKey(
+//                        entity = Professor.class,
+//                        parentColumns = "id",
+//                        childColumns = "professorID",
+//                        onDelete = ForeignKey.CASCADE
+//                ),
+//                @ForeignKey(
+//                        entity = Lecture.class,
+//                        parentColumns = "id",
+//                        childColumns = "lectureID"
+//                )
         }
 )
 public class Instructor {

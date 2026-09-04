@@ -70,18 +70,22 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
 
     @Override
     public void onBindViewHolder(@NonNull RatingAdapter.RatingViewHolder holder, int position) {
-        TopicAverageResponse rating = ratings.get(position);
-        TopicAverageResponse userRating = userRatings.get(position);
-        holder.setCategory(rating.category(), this);
+        TopicAverageResponse rating;
+        TopicAverageResponse userRating;
+
 
         if (userRatings != null) {
-            holder.name.setText(rating.category().getDisplayName());
+            userRating = userRatings.get(position);
+            holder.setCategory(userRating.category(), this);
+            holder.name.setText(userRating.category().getDisplayName());
             holder.userRating.setText(String.format(Locale.ROOT, RATING_FORMAT, userRating.value()));
             holder.userRating.setTextColor(RatingColorCalculator.calculateColour(holder.itemView.getContext(),
                     userRating.value()));
             holder.userRatingBar.setRating((float) userRating.value());
         }
         if (ratings != null) {
+            rating = ratings.get(position);
+            holder.setCategory(rating.category(), this);
             holder.name.setText(rating.category().getDisplayName());
             holder.averageRating.setText(String.format(Locale.ROOT, RATING_FORMAT, rating.value()));
             holder.averageRating.setTextColor(RatingColorCalculator.calculateColour(holder.itemView.getContext(),

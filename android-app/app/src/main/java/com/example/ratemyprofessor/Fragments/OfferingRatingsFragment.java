@@ -287,6 +287,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                     List<TopicAverageResponse> ratings = body.ratings();
                     // Dont know why we even get "null" categories but it happens
                     ratings.removeIf(rating -> rating.category() == null);
+                    Log.d("HEREHEREHERE", "BITTEEEEE");
                     updateLocalRatingsFromResponse(ratings);
                     for (TopicAverageResponse rating : ratings) {
                         System.out.println(rating.category() + "->" + rating.value());

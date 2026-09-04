@@ -13,12 +13,11 @@ import java.time.LocalDateTime;
 
 @Entity(
         tableName = "comments",
-        foreignKeys = @ForeignKey(
-                entity = CommentModel.class,
-                parentColumns = "commentID",
-                childColumns = "parentID",
-                onDelete = ForeignKey.CASCADE
-        ),
+//        foreignKeys = @ForeignKey(
+//                entity = CommentModel.class,
+//                parentColumns = "commentID",
+//                childColumns = "parentID"
+//        ),
         indices = @Index("parentID")
 )
 public record CommentModel (
