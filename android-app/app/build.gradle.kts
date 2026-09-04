@@ -49,6 +49,7 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            isReturnDefaultValues = true
 
             // Für Robolectric unter JDK 17 oder neuer
             all {

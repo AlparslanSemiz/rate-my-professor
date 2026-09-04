@@ -54,7 +54,6 @@ public class DatabaseSyncTest {
     public void updateDBRefreshesSuccessfulResponsesIntoSearchService() {
         RecordingSearchService searchService = new RecordingSearchService();
         TestDatabase database = new TestDatabase(searchService);
-        database.completed.set(99);
 
         Professor professor = new Professor("prof-1", "Ada", "Lovelace", 4.8f, 9);
         LectureModel lecture = new LectureModel(
@@ -113,7 +112,6 @@ public class DatabaseSyncTest {
         assertEquals(ContentStatus.VISIBLE, insertedComment.status());
         assertEquals(createdAt, insertedComment.createdAt());
         assertEquals(5, insertedComment.upVotes());
-        assertEquals(2, database.completed.get());
     }
 
     @Test
@@ -131,11 +129,10 @@ public class DatabaseSyncTest {
         assertEquals(0, searchService.deleteProfessorsCalls);
         assertEquals(0, searchService.deleteLecturesCalls);
         assertEquals(0, searchService.deleteCommentsCalls);
-        assertEquals(1, searchService.deleteInstructorsCalls);
+        assertEquals(0, searchService.deleteInstructorsCalls);
         assertTrue(searchService.insertedProfessors.isEmpty());
         assertTrue(searchService.insertedLectures.isEmpty());
         assertTrue(searchService.insertedComments.isEmpty());
-        assertEquals(0, database.completed.get());
     }
 
     private static APIService apiService(

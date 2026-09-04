@@ -23,7 +23,6 @@ import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorRespon
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -51,10 +50,6 @@ public abstract class Database extends RoomDatabase {
 
     private static final String TAG = "Database";
 
-    /**
-     * The counter for the amount of tables that have been updated.
-     */
-    AtomicInteger completed = new AtomicInteger(0);
     /**
      * Switch to skip the server update while working on something else locally.
      */
@@ -106,7 +101,6 @@ public abstract class Database extends RoomDatabase {
      */
     public void updateDB(APIService apiService) {
         if (NO_UPDATE) return;
-        completed.set(0);
         Log.d(TAG, "updateDB started");
 
         SearchService service = searchService();

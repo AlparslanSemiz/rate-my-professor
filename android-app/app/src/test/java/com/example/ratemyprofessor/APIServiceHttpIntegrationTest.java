@@ -22,6 +22,8 @@ import com.google.gson.JsonDeserializer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -34,6 +36,7 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
+@RunWith(RobolectricTestRunner.class)
 public class APIServiceHttpIntegrationTest {
     private MockWebServer server;
     private APIService apiService;
