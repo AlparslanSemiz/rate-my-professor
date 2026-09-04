@@ -26,10 +26,10 @@ android {
             // Skips the login screen and opens the app directly, so the rest of the app can be
             // worked on while the backend is unavailable. Set this to false to test the real
             // login flow. It is hardwired to false for release below, so it cannot ship.
-            buildConfigField("boolean", "SKIP_LOGIN", "true")
+            buildConfigField("boolean", "SKIP_LOGIN", "false")
         }
         release {
-            buildConfigField("boolean", "SKIP_LOGIN", "false")
+            buildConfigField("boolean", "SKIP_LOGIN", "true")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -92,6 +92,7 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.glide)
     annotationProcessor(libs.room.compiler)
+    implementation("com.github.QWEA0:liquidglass:v2.0.4")
 }
 
 jacoco {

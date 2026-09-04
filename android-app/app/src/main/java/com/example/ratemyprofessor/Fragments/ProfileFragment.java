@@ -91,6 +91,9 @@ public class ProfileFragment extends Fragment {
 
         bindHeader();
         loadUpperList();
+        binding.backButton.setOnClickListener(v ->
+                getParentFragmentManager().popBackStack()
+        );
 
         return binding.getRoot();
 

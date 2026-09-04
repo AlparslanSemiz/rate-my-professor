@@ -76,6 +76,9 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         binding = FragmentReplyBinding.inflate(inflater, container, false);
         answerList = binding.answerList;
         ItemCommentBinding mainComment = binding.mainComment;
+        binding.backButton.setOnClickListener(v ->
+                getParentFragmentManager().popBackStack()
+        );
 
         if (comment.profilePicture() != null) {
             Glide.with(getContext())

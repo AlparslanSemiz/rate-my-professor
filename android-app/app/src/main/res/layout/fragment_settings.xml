@@ -8,7 +8,7 @@
     android:background="@color/surface">
 
     <!--
-        The screen is drawn edge to edge, so the top padding that keeps the back button clear
+        The screen is drawn edge to edge, so the top padding that keeps the first setting clear
         of the status bar is applied from the fragment, where the actual bar height is known.
     -->
 

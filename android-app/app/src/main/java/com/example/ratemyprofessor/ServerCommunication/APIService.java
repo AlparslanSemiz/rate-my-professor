@@ -226,6 +226,16 @@ public interface APIService {
     @GET
     Call<ResponseBody> downloadImage(@Url String url);
 
+    @GET("/social/notifications")
+    Call<NotificationsResponse> getNotifications(
+            @Header("Authorization") String token
+    );
+
+    @PATCH("/social/notifications")
+    Call<BasicResponse> markNotificationsAsSeen(
+            @Header("Authorization") String token
+    );
+
     @GET("/ratings/{lectureId}/categories")
     Call<RatingCategoriesResponse> getCategories(@Path("lectureId") String lectureId);
 }

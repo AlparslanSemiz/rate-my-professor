@@ -4,15 +4,36 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/surface"
     tools:context=".Fragments.ReplyFragment">
+
+    <com.example.liquidglass.LiquidGlassFab
+        android:id="@+id/back_button"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="32dp"
+        android:contentDescription="@string/back"
+        android:elevation="8dp"
+        android:src="@drawable/go_back_icon"
+        app:adaptiveTint="true"
+        app:bevelWidth="8dp"
+        app:cornerRadius="32dp"
+        app:dispersionStrength="0.08"
+        app:glassMaterial="regular"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:refractionHeight="28dp" />
 
     <include
         android:id="@+id/main_comment"
         layout="@layout/item_comment"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_marginTop="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/back_button" />
 
     <TextView
         android:id="@+id/textView2"
@@ -20,16 +41,19 @@
         android:layout_height="wrap_content"
         android:text="Replies"
         android:textAppearance="@style/TextAppearance.AppCompat.Display1"
-        android:textColor="@color/black"
+        android:textColor="@color/text_primary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/main_comment" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/answer_list"
-        android:layout_width="409dp"
-        android:layout_height="524dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:layout_marginTop="1dp"
+        android:clipToPadding="false"
+        android:paddingBottom="112dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView2" />
