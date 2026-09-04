@@ -17,6 +17,8 @@ import com.example.ratemyprofessor.DomainModel.Instructor;
 import com.example.ratemyprofessor.DomainModel.Lecture;
 import com.example.ratemyprofessor.DomainModel.LectureModel;
 import com.example.ratemyprofessor.DomainModel.Professor;
+import com.example.ratemyprofessor.DomainModel.Rater;
+import com.example.ratemyprofessor.DomainModel.Rating;
 import com.example.ratemyprofessor.DomainModel.Semester;
 import com.example.ratemyprofessor.DomainModel.SemesterSeason;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
@@ -363,11 +365,6 @@ public class DatabaseSyncTest {
         }
 
         @Override
-        public List<String> getLectureTitles() {
-            return Collections.emptyList();
-        }
-
-        @Override
         public List<Professor> getProfessorsByLectureTitle(String lectureTitle) {
             return Collections.emptyList();
         }
@@ -425,6 +422,16 @@ public class DatabaseSyncTest {
         @Override
         public void deleteInstructors() {
             deleteInstructorsCalls++;
+        }
+
+        @Override
+        public List<Rating> getLectureRatings(String lectureID, Rater rater) {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public void upsertRating(Rating rating) {
+
         }
     }
 }
