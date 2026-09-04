@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">My Application_Java</string>
+    <string name="app_name">Rate My Professor</string>
 
     <string name="nav_home">Home</string>
     <string name="nav_search">Search</string>
@@ -26,6 +26,7 @@
     <string name="settings_bug_report">Bug Report</string>
     <string name="comments_report">Report Comment</string>
     <string name="settings_logout_all_devices">Log Out On All Devices</string>
+    <string name="settings_login">Log In</string>
     <string name="settings_delete_account">Delete Account</string>
 
     <string name="bug_report_prompt">What went wrong?</string>
