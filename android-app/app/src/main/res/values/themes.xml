@@ -6,7 +6,7 @@
         values-night/colors.xml holds the dark value of each of those names, so there is no
         second copy of this theme that could drift away from this one.
     -->
-    <style name="Theme.MyApplication_Java" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.RateMyProfessor" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!--
             The app is drawn in greys, so its "brand" colour is simply the text colour. This is
             what Material uses for dialog buttons, text cursors and input field accents.

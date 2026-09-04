@@ -4,7 +4,7 @@
     android:layout_marginStart="8dp"
     android:layout_marginTop="8dp"
     android:layout_marginBottom="8dp"
-    android:background="@drawable/rounded_box_light"
+    android:background="@drawable/secondary_choice_item"
     android:fontFamily="@font/inter_bold"
     android:padding="8dp"
     android:text="Lecture Name"

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">My Application_Java</string>
+    <string name="app_name">Rate My Professor</string>
 
     <string name="nav_home">Home</string>
     <string name="nav_search">Search</string>

@@ -29,22 +29,22 @@
         app:layout_constraintStart_toStartOf="parent">
 
         <ImageButton
-            android:id="@+id/nav_search"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@android:color/transparent"
-            android:src="@drawable/search_icon"
-            android:scaleType="center"
-            app:tint="@color/bottom_nav_icon" />
-
-        <ImageButton
             android:id="@+id/nav_home"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@android:color/transparent"
             android:src="@drawable/home_icon"
+            android:scaleType="center"
+            app:tint="@color/bottom_nav_icon" />
+
+        <ImageButton
+            android:id="@+id/nav_search"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:src="@drawable/search_icon"
             android:scaleType="center"
             app:tint="@color/bottom_nav_icon" />
 

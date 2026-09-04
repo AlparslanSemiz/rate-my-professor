@@ -10,12 +10,12 @@
         android:id="@+id/back_button"
         android:layout_width="64dp"
         android:layout_height="64dp"
-        android:layout_marginStart="32dp"
+        android:layout_marginStart="8dp"
         android:layout_marginTop="32dp"
         android:background="@drawable/search_button"
         android:contentDescription="@string/back"
         android:scaleType="center"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/list_of_my_ratings_list"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/go_back_icon" />
 
