@@ -1,4 +1,4 @@
-package com.example.myapplication_java.ServerCommunication.Responses;
+package com.example.ratemyprofessor.ServerCommunication.Responses;
 
 public enum NotificationType {
     ANSWER,

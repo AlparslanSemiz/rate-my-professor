@@ -9,6 +9,7 @@ import com.example.ratemyprofessor.ServerCommunication.Requests.PostCommentReque
 import com.example.ratemyprofessor.ServerCommunication.Requests.RatingRequest;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoriesResponse;

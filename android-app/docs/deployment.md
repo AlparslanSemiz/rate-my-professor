@@ -52,10 +52,10 @@ The app is an Android Java application:
 
 - Root project name: `Rate My Professor`
 - Gradle module: `:app`
-- Application ID: `com.example.myapplication_java`
-- Namespace: `com.example.myapplication_java`
+- Application ID: `com.example.ratemyprofessor`
+- Namespace: `com.example.ratemyprofessor`
 - App label: `My Application_Java`
-- Launcher activity: `com.example.myapplication_java.Activities.StartActivity`
+- Launcher activity: `com.example.ratemyprofessor.Activities.StartActivity`
 
 The manifest requests:
 
@@ -66,7 +66,7 @@ The app sets `android:usesCleartextTraffic="true"` in `app/src/main/AndroidManif
 
 ### Backend API
 
-The Android app communicates with a backend through Retrofit and OkHttp. The configured base URL is hardcoded in `app/src/main/java/com/example/myapplication_java/ServerCommunication/RetrofitClient.java`:
+The Android app communicates with a backend through Retrofit and OkHttp. The configured base URL is hardcoded in `app/src/main/java/com/example/ratemyprofessor/ServerCommunication/RetrofitClient.java`:
 
 ```text
 https://server.example.org/
@@ -111,7 +111,7 @@ TODO: Confirm the backend repository, backend runtime, server start command, hea
 
 The app uses Room for an on-device database:
 
-- Database class: `com.example.myapplication_java.ServerCommunication.Database`
+- Database class: `com.example.ratemyprofessor.ServerCommunication.Database`
 - Database file name: `database.db`
 - Room schema version: `6`
 - Entities: `Lecture`, `Professor`, `CommentModel`, `Instructor`
@@ -233,7 +233,7 @@ The repository also contains Windows-oriented VS Code tasks that run `gradlew.ba
 
 - `.\gradlew.bat assembleDebug`
 - `.\gradlew.bat installDebug`
-- `adb.exe shell monkey -p com.example.myapplication_java -c android.intent.category.LAUNCHER 1`
+- `adb.exe shell monkey -p com.example.ratemyprofessor -c android.intent.category.LAUNCHER 1`
 
 TODO: Confirm whether production releases should be APKs, AABs, signed APKs, or another package format.
 

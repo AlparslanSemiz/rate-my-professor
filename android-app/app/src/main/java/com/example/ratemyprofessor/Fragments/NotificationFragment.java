@@ -15,11 +15,14 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.ratemyprofessor.Adapters.NotificationAdapter;
 import com.example.ratemyprofessor.DomainModel.Notification;
+import com.example.ratemyprofessor.ServerCommunication.APIService;
+import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationsResponse;
+import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
 import com.example.ratemyprofessor.databinding.FragmentNotificationBinding;
 
-import com.example.myapplication_java.Activities.MainActivity;
-import com.example.myapplication_java.DomainModel.Comment;
-import com.example.myapplication_java.ServerCommunication.Responses.CommentsResponse;
+import com.example.ratemyprofessor.Activities.MainActivity;
+import com.example.ratemyprofessor.DomainModel.Comment;
+import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
 
 import java.time.ZoneId;
 import java.util.ArrayList;
