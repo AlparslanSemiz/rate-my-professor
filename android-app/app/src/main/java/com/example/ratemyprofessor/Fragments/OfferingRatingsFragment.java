@@ -651,7 +651,6 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                 ? ""
                 : dialogBinding.commentReportInput.getText().toString().trim();
 
-        // There is no bug-report endpoint yet, so this only validates local input.
         if (report.isEmpty()) {
             dialogBinding.bugReportInputLayout.setError(getString(R.string.bug_report_empty_error));
             return;

@@ -41,9 +41,47 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:fontFamily="@font/inter"
-        android:text="@string/bug_report_prompt"
+        android:text="@string/bug_severity"
         android:textColor="@color/text_muted"
         android:textSize="15sp" />
+
+    <Spinner
+        android:id="@+id/bug_severity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/bug_report_title_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="@string/bug_report_title_hint"
+        app:boxBackgroundColor="@color/surface_container_low"
+        app:boxBackgroundMode="filled"
+        app:boxCornerRadiusBottomEnd="20dp"
+        app:boxCornerRadiusBottomStart="20dp"
+        app:boxCornerRadiusTopEnd="20dp"
+        app:boxCornerRadiusTopStart="20dp"
+        app:boxStrokeColor="@color/outline"
+        app:errorTextColor="@color/danger"
+        app:hintTextColor="@color/text_muted">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/bug_report_title_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:inputType="textCapSentences"
+            android:maxLines="1"
+            android:paddingStart="18dp"
+            android:paddingTop="18dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="18dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_muted"
+            android:textSize="16sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/bug_report_input_layout"
@@ -62,7 +100,7 @@
         app:hintTextColor="@color/text_muted">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/comment_report_input"
+            android:id="@+id/bug_report_input"
             android:layout_width="match_parent"
             android:layout_height="176dp"
             android:fontFamily="@font/inter"
