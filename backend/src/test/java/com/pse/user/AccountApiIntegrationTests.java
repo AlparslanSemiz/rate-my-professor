@@ -1,10 +1,24 @@
 package com.pse.user;
 
+import com.pse.audit.repository.AuditLogRepository;
 import com.pse.auth.model.Token;
+import com.pse.auth.repository.AuthRateLimitBucketRepository;
+import com.pse.auth.repository.OneTimePasswordRepository;
 import com.pse.auth.repository.TokenRepository;
 import com.pse.auth.service.TokenGenerator;
+import com.pse.lecture.repository.LectureRepository;
+import com.pse.moderation.repository.AdminRepository;
+import com.pse.moderation.repository.WarningRepository;
+import com.pse.professor.repository.ProfessorRepository;
+import com.pse.rating.repository.RatingRepository;
 import com.pse.shared.enums.UserStatus;
 import com.pse.shared.util.HashGenerator;
+import com.pse.social.repository.AnswerReportRepository;
+import com.pse.social.repository.AnswerRepository;
+import com.pse.social.repository.AnswerVoteRepository;
+import com.pse.social.repository.CommentReportRepository;
+import com.pse.social.repository.CommentRepository;
+import com.pse.social.repository.NotificationRepository;
 import com.pse.support.TestDeliveryConfig;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
@@ -49,11 +63,59 @@ class AccountApiIntegrationTests {
     TokenRepository tokenRepository;
 
 
+    @Autowired
+    AuditLogRepository auditLogRepository;
+    @Autowired
+    NotificationRepository notificationRepository;
+    @Autowired
+    WarningRepository warningRepository;
+    @Autowired
+    AnswerReportRepository answerReportRepository;
+    @Autowired
+    AnswerVoteRepository answerVoteRepository;
+    @Autowired
+    AnswerRepository answerRepository;
+    @Autowired
+    CommentReportRepository commentReportRepository;
+    @Autowired
+    CommentRepository commentRepository;
+    @Autowired
+    RatingRepository ratingRepository;
+    @Autowired
+    OneTimePasswordRepository otpRepository;
+    @Autowired
+    AuthRateLimitBucketRepository rateLimitRepository;
+    @Autowired
+    AdminRepository adminRepository;
+    @Autowired
+    LectureRepository lectureRepository;
+    @Autowired
+    ProfessorRepository professorRepository;
+
     @BeforeEach
     void cleanDatabase() {
+        auditLogRepository.deleteAll();
+        notificationRepository.deleteAll();
+        warningRepository.deleteAll();
 
-        // Token references Student -> therefore delete tokens first
+        answerReportRepository.deleteAll();
+        answerVoteRepository.deleteAll();
+        answerRepository.deleteAll();
+
+        commentReportRepository.deleteAll();
+        commentRepository.deleteAll();
+
+        ratingRepository.deleteAll();
+
         tokenRepository.deleteAll();
+        otpRepository.deleteAll();
+        rateLimitRepository.deleteAll();
+
+        adminRepository.deleteAll();
+
+        lectureRepository.deleteAll();
+        professorRepository.deleteAll();
+
         studentRepository.deleteAll();
     }
 
@@ -117,7 +179,6 @@ class AccountApiIntegrationTests {
                 createSession("logout@student.kit.edu");
 
 
-        // Session exists before logout
         assertEquals(1, tokenRepository.count());
 
 
@@ -134,11 +195,9 @@ class AccountApiIntegrationTests {
                         .value("Logged out successfully (1 sessions)"));
 
 
-        // Token was removed/revoked
         assertEquals(0, tokenRepository.count());
 
 
-        // Old token must no longer work
         mockMvc.perform(
                         get("/account/information")
                                 .header(
@@ -185,11 +244,9 @@ class AccountApiIntegrationTests {
                 deletedStudent.getStatus()
         );
 
-        // deleteAccount must also invalidate existing sessions
         assertEquals(0, tokenRepository.count());
 
 
-        // Old token can no longer be used
         mockMvc.perform(
                         get("/account/information")
                                 .header(
@@ -230,9 +287,6 @@ class AccountApiIntegrationTests {
     }
 
 
-    // ---------------------------------------------------------
-    // Test Helpers
-    // ---------------------------------------------------------
 
     private Session createSession(String email) {
 
