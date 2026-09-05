@@ -1,73 +1,84 @@
 package com.pse.user;
 
-import com.pse.security.AuthenticatedUser;
+import com.pse.auth.model.Token;
+import com.pse.auth.repository.TokenRepository;
+import com.pse.auth.service.TokenGenerator;
 import com.pse.shared.enums.UserStatus;
-import com.pse.support.TestGitLabConfig;
+import com.pse.shared.util.HashGenerator;
+import com.pse.support.TestDeliveryConfig;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.RequestPostProcessor;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import com.pse.support.TestDeliveryConfig;
-
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 @ActiveProfiles("test")
-@Import({TestDeliveryConfig.class, TestGitLabConfig.class})
+@Import({
+        TestDeliveryConfig.class,
+        com.pse.support.TestGitLabConfig.class
+})
 class AccountApiIntegrationTests {
 
     @Autowired
-    private MockMvc mockMvc;
+    MockMvc mockMvc;
 
     @Autowired
-    private StudentRepository studentRepository;
+    StudentRepository studentRepository;
+
+    @Autowired
+    TokenRepository tokenRepository;
+
+
+    @BeforeEach
+    void cleanDatabase() {
+
+        // Token references Student -> therefore delete tokens first
+        tokenRepository.deleteAll();
+        studentRepository.deleteAll();
+    }
 
 
     @Test
     void getUserInformationReturnsProfileOfAuthenticatedStudent()
             throws Exception {
 
-        Student student = createStudent(
-                "information@student.kit.edu",
-                "informationUser"
-        );
+        Session session =
+                createSession("information@student.kit.edu");
 
 
         mockMvc.perform(
                         get("/account/information")
-                                .with(authenticatedAs(student))
+                                .header(
+                                        "Authorization",
+                                        bearer(session.rawToken())
+                                )
                 )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Success"))
+                .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.username")
-                        .value("informationUser"))
+                        .value("information"))
+                .andExpect(jsonPath("$.averageRating").value(0))
                 .andExpect(jsonPath("$.ratingsCount").value(0))
                 .andExpect(jsonPath("$.commentsWritten").value(0))
                 .andExpect(jsonPath("$.credibilityScore").value(0));
@@ -78,67 +89,94 @@ class AccountApiIntegrationTests {
     void getUserRatingsReturnsEmptyListWhenStudentHasNoRatings()
             throws Exception {
 
-        Student student = createStudent(
-                "ratings@student.kit.edu",
-                "ratingsUser"
-        );
+        Session session =
+                createSession("ratings@student.kit.edu");
 
 
         mockMvc.perform(
                         get("/account/ratings")
-                                .with(authenticatedAs(student))
+                                .header(
+                                        "Authorization",
+                                        bearer(session.rawToken())
+                                )
                 )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")
                         .value("Success, found 0 ratings."))
+                .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.ratings").isArray())
                 .andExpect(jsonPath("$.ratings", hasSize(0)));
     }
 
 
     @Test
-    void logoutReturnsSuccessfulResponse()
+    void logoutInvalidatesAllSessionsOfStudent()
             throws Exception {
 
-        Student student = createStudent(
-                "logout@student.kit.edu",
-                "logoutUser"
-        );
+        Session session =
+                createSession("logout@student.kit.edu");
+
+
+        // Session exists before logout
+        assertEquals(1, tokenRepository.count());
 
 
         mockMvc.perform(
                         post("/account/logout")
-                                .with(authenticatedAs(student))
+                                .header(
+                                        "Authorization",
+                                        bearer(session.rawToken())
+                                )
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")
-                        .value("Logged out successfully (0 sessions)"));
+                        .value("Logged out successfully (1 sessions)"));
+
+
+        // Token was removed/revoked
+        assertEquals(0, tokenRepository.count());
+
+
+        // Old token must no longer work
+        mockMvc.perform(
+                        get("/account/information")
+                                .header(
+                                        "Authorization",
+                                        bearer(session.rawToken())
+                                )
+                )
+                .andExpect(status().isUnauthorized());
     }
 
 
     @Test
-    void deleteAccountSoftDeletesStudent()
+    void deleteAccountSoftDeletesStudentAndInvalidatesSession()
             throws Exception {
 
-        Student student = createStudent(
-                "delete@student.kit.edu",
-                "deleteUser"
-        );
+        Session session =
+                createSession("delete@student.kit.edu");
 
 
         mockMvc.perform(
                         patch("/account/deleteAccount")
-                                .with(authenticatedAs(student))
+                                .header(
+                                        "Authorization",
+                                        bearer(session.rawToken())
+                                )
                 )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message")
+                        .value(
+                                "Deleted Account succesfully: "
+                                        + "delete@student.kit.edu"
+                        ));
 
 
         Student deletedStudent =
                 studentRepository
-                        .findByKitEmail("delete@student.kit.edu")
+                        .findById(session.student().getId())
                         .orElseThrow();
 
 
@@ -146,6 +184,20 @@ class AccountApiIntegrationTests {
                 UserStatus.DELETED,
                 deletedStudent.getStatus()
         );
+
+        // deleteAccount must also invalidate existing sessions
+        assertEquals(0, tokenRepository.count());
+
+
+        // Old token can no longer be used
+        mockMvc.perform(
+                        get("/account/information")
+                                .header(
+                                        "Authorization",
+                                        bearer(session.rawToken())
+                                )
+                )
+                .andExpect(status().isUnauthorized());
     }
 
 
@@ -156,49 +208,90 @@ class AccountApiIntegrationTests {
         mockMvc.perform(
                         get("/account/information")
                 )
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isUnauthorized());
+
+
+        mockMvc.perform(
+                        get("/account/ratings")
+                )
+                .andExpect(status().isUnauthorized());
+
+
+        mockMvc.perform(
+                        post("/account/logout")
+                )
+                .andExpect(status().isUnauthorized());
+
+
+        mockMvc.perform(
+                        patch("/account/deleteAccount")
+                )
+                .andExpect(status().isUnauthorized());
     }
 
 
+    // ---------------------------------------------------------
+    // Test Helpers
+    // ---------------------------------------------------------
 
-    private Student createStudent(
-            String email,
-            String username
-    ) {
+    private Session createSession(String email) {
+
+        Student student = createStudent(email);
+
+        String rawToken =
+                TokenGenerator.generateToken();
+
+        Token token = new Token();
+
+        token.setEmail(email);
+        token.setStudent(student);
+        token.setHash(
+                HashGenerator.hashToken(rawToken)
+        );
+        token.setExpiresAt(
+                LocalDateTime.now().plusHours(12)
+        );
+
+        token = tokenRepository.saveAndFlush(token);
+
+        return new Session(
+                student,
+                token,
+                rawToken
+        );
+    }
+
+
+    private Student createStudent(String email) {
 
         Student student = new Student();
 
         student.setKitEmail(email);
-        student.setUsername(username);
+
+        student.setUsername(
+                email.substring(
+                        0,
+                        email.indexOf('@')
+                )
+        );
+
+        student.setCredibilityScore(0);
         student.setStatus(UserStatus.ACTIVE);
+        student.setEmailVerifiedAt(LocalDateTime.now());
 
         return studentRepository.saveAndFlush(student);
     }
 
 
-    private RequestPostProcessor authenticatedAs(
-            Student student
+    private String bearer(String token) {
+        return "Bearer " + token;
+    }
+
+
+    private record Session(
+            Student student,
+            Token token,
+            String rawToken
     ) {
-
-        AuthenticatedUser principal =
-                mock(AuthenticatedUser.class);
-
-        when(principal.student())
-                .thenReturn(student);
-
-
-        Authentication authentication =
-                new UsernamePasswordAuthenticationToken(
-                        principal,
-                        null,
-                        List.of(
-                                new SimpleGrantedAuthority(
-                                        "ROLE_USER"
-                                )
-                        )
-                );
-
-
-        return authentication(authentication);
     }
 }
