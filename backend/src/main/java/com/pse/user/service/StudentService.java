@@ -47,6 +47,7 @@ public class StudentService {
     @Transactional(readOnly = true)
     public StudentProfileResponse getUserInformation(UUID studentId) {
         Student student = studentRepository.findById(studentId).orElse(null);
+
         if (student == null) {
             return new StudentProfileResponse("Error, cannot authenticate user", false, null, null, 0, 0, 0, 0);
         }
@@ -64,7 +65,7 @@ public class StudentService {
                 getAverageRating(student),
                 student.getRatings().size(),
                 student.getComments().size(),
-                student.getCredibilityScore()
+                credibilityScore
         );
     }
 
