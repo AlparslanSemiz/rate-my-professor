@@ -57,6 +57,7 @@ Do not commit real secret values. `.env` is ignored by `.gitignore`.
 | `SPRING_DATASOURCE_PASSWORD` | PostgreSQL password. | Defaults to empty. Treat as secret. |
 | `ADMIN_FRONTEND_ORIGINS` | Comma-separated exact browser origins allowed by CORS. | Local default is `http://localhost:5173,http://127.0.0.1:5173`. Wildcards are rejected. |
 | `ADMIN_BOOTSTRAP_EMAILS` | Comma-separated `email` or `email:Display Name` entries promoted to admin on startup. | `application.properties` contains project defaults; `.env.example` contains an example admin email. |
+| `ADMIN_SUPERUSER_EMAILS` | Comma-separated addresses of administrators that may also moderate other administrator accounts. | Must already be administrators; this list does not create them. Defaults to `u-kisi4@student.kit.edu`. Not a role: these accounts still report `ADMIN`. |
 | `AUTH_RATE_LIMIT_HMAC_KEY` | HMAC key for rate-limit subject hashes. | Must contain at least 32 characters or startup fails. Treat as secret. |
 | `AUTH_OTP_TTL` | OTP lifetime. | Defaults to `PT5M`. |
 | `AUTH_ADMIN_SESSION_TTL` | Admin session lifetime. | Defaults to `PT12H`. |
@@ -107,6 +108,7 @@ The deployment job uses these custom CI/CD variables:
 | `SPRING_DATASOURCE_PASSWORD` | Deployed container datasource password. Secret. |
 | `ADMIN_FRONTEND_ORIGINS` | Optional override for allowed frontend origins. |
 | `ADMIN_BOOTSTRAP_EMAILS` | Optional override for admin bootstrap accounts. |
+| `ADMIN_SUPERUSER_EMAILS` | Optional override for the administrators that may moderate other administrators. |
 | `AUTH_RATE_LIMIT_HMAC_KEY` | Required deployed rate-limit HMAC key. Secret. |
 | `SPRING_MAIL_HOST` | SMTP host. |
 | `SPRING_MAIL_PORT` | SMTP port. |

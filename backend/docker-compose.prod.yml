@@ -12,6 +12,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: "${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD is required}"
       ADMIN_FRONTEND_ORIGINS: "${ADMIN_FRONTEND_ORIGINS:-https://server.example.org}"
       ADMIN_BOOTSTRAP_EMAILS: "${ADMIN_BOOTSTRAP_EMAILS:-u-kisi4@student.kit.edu:Alparslan,u-kisi5@student.kit.edu:Bob,u-kisi6@student.kit.edu:Cem,u-kisi7@student.kit.edu:Dan,u-kisi8@student.kit.edu:Eva,u-kisi9@student.kit.edu:Fin}"
+      ADMIN_SUPERUSER_EMAILS: "${ADMIN_SUPERUSER_EMAILS:-u-kisi4@student.kit.edu}"
       AUTH_RATE_LIMIT_HMAC_KEY: "${AUTH_RATE_LIMIT_HMAC_KEY:?AUTH_RATE_LIMIT_HMAC_KEY is required}"
       AUTH_OTP_TTL: "${AUTH_OTP_TTL:-PT5M}"
       AUTH_ADMIN_SESSION_TTL: "${AUTH_ADMIN_SESSION_TTL:-PT12H}"

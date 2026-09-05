@@ -6,6 +6,7 @@ import com.pse.audit.service.AuditWriter;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.model.Token;
 import com.pse.auth.repository.TokenRepository;
+import com.pse.auth.service.AdminSuperuserPolicy;
 import com.pse.auth.service.AuthService;
 import com.pse.moderation.dto.request.UserUpdateRequest;
 import com.pse.moderation.dto.request.WarningRequest;
@@ -68,6 +69,7 @@ public class ModerationUserService {
     private final TokenRepository tokenRepository;
     private final AuditWriter auditWriter;
     private final AuthService authService;
+    private final AdminSuperuserPolicy superuserPolicy;
     private final KeysetCursorCodec cursorCodec;
     private final Clock clock;
 
@@ -80,6 +82,7 @@ public class ModerationUserService {
             TokenRepository tokenRepository,
             AuditWriter auditWriter,
             AuthService authService,
+            AdminSuperuserPolicy superuserPolicy,
             KeysetCursorCodec cursorCodec,
             Clock clock
     ) {
@@ -91,6 +94,7 @@ public class ModerationUserService {
         this.tokenRepository = tokenRepository;
         this.auditWriter = auditWriter;
         this.authService = authService;
+        this.superuserPolicy = superuserPolicy;
         this.cursorCodec = cursorCodec;
         this.clock = clock;
     }
@@ -374,6 +378,8 @@ public class ModerationUserService {
         Student target = findMutableStudent(studentId);
         boolean targetIsAdmin = adminRepository.existsByStudent(target);
         boolean targetIsSelf = target.getId().equals(principal.student().getId());
+        boolean targetIsElevated = superuserPolicy.isSuperuser(target.getKitEmail());
+        boolean callerIsElevated = isElevated(principal);
         String label = userLabel(target);
         Map<String, Object> changes = new LinkedHashMap<>();
 
@@ -395,6 +401,21 @@ public class ModerationUserService {
         if (request.kitEmail() != null) {
             String email = normalizeKitEmail(request.kitEmail());
             if (!email.equals(target.getKitEmail())) {
+                // Elevation is keyed on the address, so moving one is how an elevated
+                // account would be taken over: free the address with one edit, claim it
+                // with the next. Not editable through this endpoint by anyone.
+                if (targetIsElevated) {
+                    throw new ApiException(
+                            HttpStatus.CONFLICT,
+                            "The address of an elevated administrator cannot be changed"
+                    );
+                }
+                if (targetIsAdmin && !callerIsElevated) {
+                    throw new ApiException(
+                            HttpStatus.CONFLICT,
+                            "Administrator accounts cannot be modified"
+                    );
+                }
                 if (studentRepository.findByKitEmail(email).isPresent()) {
                     throw new ApiException(HttpStatus.CONFLICT, "Email is already taken");
                 }
@@ -434,7 +455,7 @@ public class ModerationUserService {
             if (targetIsSelf) {
                 throw new ApiException(HttpStatus.CONFLICT, "You cannot change your own status");
             }
-            if (targetIsAdmin) {
+            if (targetIsAdmin && !callerIsElevated) {
                 throw new ApiException(
                         HttpStatus.CONFLICT,
                         "Administrator accounts cannot be modified"
@@ -455,6 +476,16 @@ public class ModerationUserService {
         if (request.role() != null && request.role() != roleBefore) {
             if (targetIsSelf) {
                 throw new ApiException(HttpStatus.CONFLICT, "You cannot change your own role");
+            }
+            // Demoting an administrator has always been open to any administrator, and
+            // stays that way. The elevated operator is the exception: demoting it out of
+            // admins is a lockout the API has no way back from, which is the same reason
+            // the self-guard above exists.
+            if (targetIsElevated && !callerIsElevated) {
+                throw new ApiException(
+                        HttpStatus.CONFLICT,
+                        "Administrator accounts cannot be modified"
+                );
             }
             changes.put("role", change(roleBefore.name(), request.role().name()));
             if (request.role() == UserRole.ADMIN) {
@@ -496,6 +527,10 @@ public class ModerationUserService {
             revokeTokens(target);
         }
 
+        Map<String, Object> metadata = elevationMetadata(principal, targetIsAdmin);
+        if (sessionsRevoked) {
+            metadata.put("sessionsRevoked", true);
+        }
         auditWriter.write(
                 principal.admin(),
                 AuditAction.USER_UPDATED,
@@ -503,7 +538,7 @@ public class ModerationUserService {
                 target.getId(),
                 label,
                 changes,
-                sessionsRevoked ? Map.of("sessionsRevoked", true) : Map.of()
+                metadata
         );
         return new BasicResponse("Updated user successfully", true);
     }
@@ -511,7 +546,8 @@ public class ModerationUserService {
     @Transactional
     public BasicResponse deleteStudent(AuthenticatedUser principal, UUID studentId) {
         Student target = findMutableStudent(studentId);
-        protectAdministrator(target);
+        boolean targetIsAdmin = adminRepository.existsByStudent(target);
+        protectAdministrator(principal, target);
 
         // The audit label is built before the scrub so the record keeps the real
         // identity of who was deleted. audit_logs has no foreign key to students
@@ -546,7 +582,7 @@ public class ModerationUserService {
                 target.getId(),
                 label,
                 changes,
-                Map.of()
+                elevationMetadata(principal, targetIsAdmin)
         );
         return new BasicResponse("Deleted user successfully", true);
     }
@@ -554,7 +590,8 @@ public class ModerationUserService {
     @Transactional
     public BasicResponse blockStudent(AuthenticatedUser principal, UUID studentId) {
         Student target = findMutableStudent(studentId);
-        protectAdministrator(target);
+        boolean targetIsAdmin = adminRepository.existsByStudent(target);
+        protectAdministrator(principal, target);
         if (target.getStatus() == UserStatus.BLOCKED) {
             return new BasicResponse("Student blocked successfully", true);
         }
@@ -571,7 +608,7 @@ public class ModerationUserService {
                 target.getId(),
                 userLabel(target),
                 AuditWriter.change("status", before.name(), UserStatus.BLOCKED.name()),
-                Map.of()
+                elevationMetadata(principal, targetIsAdmin)
         );
         return new BasicResponse("Student blocked successfully", true);
     }
@@ -579,7 +616,8 @@ public class ModerationUserService {
     @Transactional
     public BasicResponse unblockStudent(AuthenticatedUser principal, UUID studentId) {
         Student target = findMutableStudent(studentId);
-        protectAdministrator(target);
+        boolean targetIsAdmin = adminRepository.existsByStudent(target);
+        protectAdministrator(principal, target);
         if (target.getStatus() == UserStatus.ACTIVE) {
             return new BasicResponse("Student unblocked successfully", true);
         }
@@ -596,7 +634,7 @@ public class ModerationUserService {
                 target.getId(),
                 userLabel(target),
                 AuditWriter.change("status", before.name(), UserStatus.ACTIVE.name()),
-                Map.of()
+                elevationMetadata(principal, targetIsAdmin)
         );
         return new BasicResponse("Student unblocked successfully", true);
     }
@@ -613,7 +651,8 @@ public class ModerationUserService {
         }
 
         Student target = findMutableStudent(studentId);
-        protectAdministrator(target);
+        boolean targetIsAdmin = adminRepository.existsByStudent(target);
+        protectAdministrator(principal, target);
         long before = warningRepository.countByStudent(target);
 
         Warning warning = new Warning();
@@ -638,7 +677,7 @@ public class ModerationUserService {
                 target.getId(),
                 userLabel(target),
                 AuditWriter.change("warnings", before, before + 1),
-                Map.of("reason", message)
+                warningMetadata(principal, targetIsAdmin, message)
         );
         return new BasicResponse("Student warned successfully", true);
     }
@@ -765,10 +804,58 @@ public class ModerationUserService {
         return target;
     }
 
-    private void protectAdministrator(Student target) {
-        if (adminRepository.existsByStudent(target)) {
+    /**
+     * The guard behind delete, block, unblock and warn. Two rules that used to be one,
+     * and had to be separated: an administrator account is off limits unless the caller
+     * is an elevated operator, but nobody moderates their own account at all. Self used
+     * to be refused only incidentally, because the caller is necessarily an administrator
+     * and so the first rule caught it — lifting that rule for an elevated caller would
+     * have taken the only self-protection these four endpoints have with it.
+     *
+     * <p>Both refusals answer 409, the status these endpoints have always refused with.
+     */
+    private void protectAdministrator(AuthenticatedUser principal, Student target) {
+        if (target.getId().equals(principal.student().getId())) {
+            throw new ApiException(HttpStatus.CONFLICT, "You cannot moderate your own account");
+        }
+        if (adminRepository.existsByStudent(target) && !isElevated(principal)) {
             throw new ApiException(HttpStatus.CONFLICT, "Administrator accounts cannot be modified");
         }
+    }
+
+    /** The warning reason, plus the elevation marker when one applies. */
+    private Map<String, Object> warningMetadata(
+            AuthenticatedUser principal,
+            boolean targetIsAdmin,
+            String message
+    ) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("reason", message);
+        metadata.putAll(elevationMetadata(principal, targetIsAdmin));
+        return metadata;
+    }
+
+    /**
+     * Marks an entry as an action only an elevated operator could have taken. Recorded in
+     * the metadata on purpose: the audit actor keeps reporting the ADMIN role, because
+     * elevation is not one and the panel renders that role.
+     */
+    private Map<String, Object> elevationMetadata(AuthenticatedUser principal, boolean targetIsAdmin) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        if (targetIsAdmin && isElevated(principal)) {
+            metadata.put("elevated", true);
+        }
+        return metadata;
+    }
+
+    /**
+     * An elevated operator: an administrator whose address is configured as a superuser.
+     * Elevation is not a role — it lifts the refusals that protect administrator accounts
+     * and nothing else, and every response still reports these accounts as ADMIN.
+     */
+    private boolean isElevated(AuthenticatedUser principal) {
+        return principal.isAdmin()
+                && superuserPolicy.isSuperuser(principal.student().getKitEmail());
     }
 
     private void revokeTokens(Student target) {

@@ -52,6 +52,7 @@ public class AuthService {
     private final RateLimitService rateLimitService;
     private final LoginCodeDelivery loginCodeDelivery;
     private final AdminBootstrapPolicy bootstrapPolicy;
+    private final AdminSuperuserPolicy superuserPolicy;
     private final AuditWriter auditWriter;
     private final TokenAuthenticationService tokenAuthenticationService;
     private final ApplicationEventPublisher eventPublisher;
@@ -71,6 +72,7 @@ public class AuthService {
             RateLimitService rateLimitService,
             LoginCodeDelivery loginCodeDelivery,
             AdminBootstrapPolicy bootstrapPolicy,
+            AdminSuperuserPolicy superuserPolicy,
             AuditWriter auditWriter,
             TokenAuthenticationService tokenAuthenticationService,
             ApplicationEventPublisher eventPublisher,
@@ -89,6 +91,7 @@ public class AuthService {
         this.rateLimitService = rateLimitService;
         this.loginCodeDelivery = loginCodeDelivery;
         this.bootstrapPolicy = bootstrapPolicy;
+        this.superuserPolicy = superuserPolicy;
         this.auditWriter = auditWriter;
         this.tokenAuthenticationService = tokenAuthenticationService;
         this.eventPublisher = eventPublisher;
@@ -314,7 +317,9 @@ public class AuthService {
                         student.getUsername(),
                         student.getKitEmail(),
                         principal.isAdmin() ? UserRole.ADMIN : UserRole.STUDENT,
-                        student.getStatus()
+                        student.getStatus(),
+                        principal.isAdmin()
+                                && superuserPolicy.isSuperuser(student.getKitEmail())
                 )
         );
     }
