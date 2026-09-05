@@ -218,7 +218,6 @@ class RatingServiceTests {
                 );
     }
 
-
     @Test
     void submitRatingIgnoresOverallSentByClient() {
 
@@ -265,6 +264,9 @@ class RatingServiceTests {
         when(lectureService.getById(lectureId))
                 .thenReturn(lecture);
 
+        when(lecture.getId())
+                .thenReturn(lectureId);
+
         when(ratingRepository
                 .findByStudentIdAndLectureId(
                         studentId,
@@ -273,7 +275,10 @@ class RatingServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        ratingService.submitRating(student, request);
+        ratingService.submitRating(
+                student,
+                request
+        );
 
 
         ArgumentCaptor<Rating> captor = ArgumentCaptor.forClass(Rating.class);
@@ -295,6 +300,7 @@ class RatingServiceTests {
 
         assertEquals(1, overallTopics);
     }
+
 
 
     @Test
@@ -345,6 +351,9 @@ class RatingServiceTests {
         when(lectureService.getById(lectureId))
                 .thenReturn(lecture);
 
+        when(lecture.getId())
+                .thenReturn(lectureId);
+
         when(ratingRepository
                 .findByStudentIdAndLectureId(
                         studentId,
@@ -367,21 +376,15 @@ class RatingServiceTests {
 
         assertTrue(response.success());
 
-        assertEquals(
-                2,
-                existingTopics.size()
-        );
+        assertEquals(2, existingTopics.size());
 
-        assertFalse(
-                existingTopics.contains(oldTopic)
-        );
+        assertFalse(existingTopics.contains(oldTopic));
 
 
         verify(ratingRepository).flush();
 
         verify(ratingRepository).save(existing);
     }
-
 
 
     @Test
