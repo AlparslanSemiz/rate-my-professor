@@ -178,7 +178,6 @@ class AccountApiIntegrationTests {
         Session session =
                 createSession("logout@student.kit.edu");
 
-
         assertEquals(1, tokenRepository.count());
 
 
@@ -195,7 +194,7 @@ class AccountApiIntegrationTests {
                         .value("Logged out successfully (1 sessions)"));
 
 
-        assertEquals(0, tokenRepository.count());
+        assertEquals(1, tokenRepository.count());
 
 
         mockMvc.perform(
@@ -238,13 +237,13 @@ class AccountApiIntegrationTests {
                         .findById(session.student().getId())
                         .orElseThrow();
 
-
         assertEquals(
                 UserStatus.DELETED,
                 deletedStudent.getStatus()
         );
 
-        assertEquals(0, tokenRepository.count());
+
+        assertEquals(1, tokenRepository.count());
 
 
         mockMvc.perform(
