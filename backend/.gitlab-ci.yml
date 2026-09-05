@@ -102,7 +102,11 @@ server:deploy:staging:
       chmod 600 .deploy.env
       write_env BACKEND_IMAGE "$IMAGE_TAG"
       write_env SERVER_PORT "8080"
-      write_env BACKEND_PUBLISHED_PORT "8080"
+      # The loopback prefix is load-bearing, not decoration. Without it Docker publishes the
+      # backend on 0.0.0.0:8080 and the API answers plain HTTP straight from the internet,
+      # bypassing nginx: no TLS, no HSTS, no edge access log. Every real request already
+      # arrives over 443, so nothing legitimate reaches port 8080 from outside.
+      write_env BACKEND_PUBLISHED_PORT "127.0.0.1:8080"
       write_env SPRING_DATASOURCE_URL "${SPRING_DATASOURCE_URL:-jdbc:postgresql://host.docker.internal:5432/postgres}"
       write_env SPRING_DATASOURCE_USERNAME "${SPRING_DATASOURCE_USERNAME:-postgres}"
       write_env SPRING_DATASOURCE_PASSWORD "${SPRING_DATASOURCE_PASSWORD}"

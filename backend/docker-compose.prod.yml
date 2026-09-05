@@ -38,7 +38,7 @@ services:
       GITLAB_TOKEN: "${GITLAB_TOKEN:-}"
       GITLAB_TIMEOUT: "${GITLAB_TIMEOUT:-PT10S}"
     ports:
-      - "${BACKEND_PUBLISHED_PORT:-8080}:${SERVER_PORT:-8080}"
+      - "${BACKEND_PUBLISHED_PORT:-127.0.0.1:8080}:${SERVER_PORT:-8080}"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:${SERVER_PORT:-8080}/health || exit 1"]
       interval: 30s
