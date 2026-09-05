@@ -6,6 +6,7 @@ import ErrorAlert from '../../../components/ErrorAlert'
 import LoadError from '../../../components/LoadError'
 import { darkModalStyles } from '../../../constants/modalStyles'
 import { useAuth } from '../../../context/useAuth'
+import { isSuperAdminEmail } from '../../../utils/adminAccess'
 import { useUserProfile, type UserChange } from '../hooks/useUserProfile'
 import { getUserConfirmation, type ConfirmAction } from '../userConfirmation'
 import ProfileActions from './ProfileActions'
@@ -64,6 +65,9 @@ export default function UserProfileModal({
       : null
 
   const isSelf = profile.user !== null && profile.user.id === currentAdmin?.id
+  // Read from the address rather than the role: these operators are reported as plain ADMIN
+  // on purpose, so nothing in the panel renders them differently.
+  const canActOnAdmins = isSuperAdminEmail(currentAdmin?.email ?? '')
 
   return (
     <>
@@ -95,6 +99,7 @@ export default function UserProfileModal({
             <ProfileActions
               user={profile.user}
               isSelf={isSelf}
+              canActOnAdmins={canActOnAdmins}
               onToggleEdit={() => setShowEditForm((visible) => !visible)}
               onToggleWarning={() => setShowWarnForm((visible) => !visible)}
               onConfirm={setConfirmAction}
@@ -104,6 +109,7 @@ export default function UserProfileModal({
                 key={profile.user.id}
                 user={profile.user}
                 isSelf={isSelf}
+                canActOnAdmins={canActOnAdmins}
                 loading={profile.editLoading}
                 onCancel={() => setShowEditForm(false)}
                 onSubmit={async (update) => {

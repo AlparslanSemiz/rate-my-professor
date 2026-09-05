@@ -82,9 +82,13 @@ const users: User[] = [
   },
 ]
 
-function renderUsers() {
+// The address decides what the operator may do; `u-kisi4@student.kit.edu` is the one allowed to
+// act on admin accounts, and it is still reported as a plain ADMIN.
+const superAdminUser = { ...authUser, email: 'u-kisi4@student.kit.edu' }
+
+function renderUsers(sessionUser = authUser) {
   localStorage.setItem('token', 'admin-token')
-  localStorage.setItem('user', JSON.stringify(authUser))
+  localStorage.setItem('user', JSON.stringify(sessionUser))
 
   return render(
     <MantineProvider>
@@ -519,5 +523,54 @@ describe('Users page', () => {
     )
     expect(await screen.findByText(/reading it back failed/)).toHaveTextContent('Database unavailable')
     expect(screen.getByRole('button', { name: 'Block' })).toBeInTheDocument()
+  })
+
+  describe('signed in as an operator who may act on admins', () => {
+    it('offers the moderation actions on another admin account', async () => {
+      const user = userEvent.setup()
+      renderUsers(superAdminUser)
+
+      await user.click(await screen.findByText('Alice Smith'))
+      expect(await screen.findByText('User Profile')).toBeInTheDocument()
+
+      const dialog = within(screen.getByRole('dialog'))
+      expect(dialog.getByRole('button', { name: 'Warn' })).toBeInTheDocument()
+      expect(dialog.getByRole('button', { name: 'Block' })).toBeInTheDocument()
+      expect(dialog.getByRole('button', { name: 'Delete account' })).toBeInTheDocument()
+    })
+
+    it('unlocks the status and credibility score of another admin account', async () => {
+      const user = userEvent.setup()
+      renderUsers(superAdminUser)
+
+      await user.click(await screen.findByText('Alice Smith'))
+      await user.click(await screen.findByRole('button', { name: 'Edit' }))
+
+      // Scoped to the profile: the filter bar above it has its own Status and Role selects.
+      const dialog = within(screen.getByRole('dialog'))
+      expect(await dialog.findByLabelText('Credibility score')).toBeEnabled()
+      expect(dialog.getByLabelText('Status')).toBeEnabled()
+      // The login identity is not editable for anyone.
+      expect(dialog.getByLabelText('KIT email')).toBeDisabled()
+    })
+
+    it('still protects the operator\u2019s own account', async () => {
+      const user = userEvent.setup()
+      const self: User = { ...users[0], id: authUser.id, username: 'Admin User' }
+      accounts = [self]
+      renderUsers(superAdminUser)
+
+      await user.click(await screen.findByText('Admin User'))
+      expect(await screen.findByText('User Profile')).toBeInTheDocument()
+
+      const dialog = within(screen.getByRole('dialog'))
+      expect(dialog.queryByRole('button', { name: 'Warn' })).not.toBeInTheDocument()
+      expect(dialog.queryByRole('button', { name: 'Block' })).not.toBeInTheDocument()
+      expect(dialog.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument()
+
+      await user.click(dialog.getByRole('button', { name: 'Edit' }))
+      expect(await dialog.findByLabelText('Role')).toBeDisabled()
+      expect(dialog.getByLabelText('Credibility score')).toBeDisabled()
+    })
   })
 })

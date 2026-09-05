@@ -12,6 +12,15 @@ const REQUIRED_ADMIN_EMAILS = new Set([
   'u-kisi9@student.kit.edu', // demo admin
 ])
 
+/**
+ * The addresses that may also act on admin accounts. This is not a role: these addresses are
+ * still reported and rendered as ADMIN everywhere. The set only decides which actions the
+ * panel offers, never what it displays.
+ */
+const SUPER_ADMIN_EMAILS = new Set([
+  'u-kisi4@student.kit.edu', // Alparslan
+])
+
 interface AdminAccessSubject {
   email?: string
   kitEmail?: string
@@ -24,6 +33,10 @@ export function normalizeEmail(email: string): string {
 
 export function isRequiredAdminEmail(email: string): boolean {
   return REQUIRED_ADMIN_EMAILS.has(normalizeEmail(email))
+}
+
+export function isSuperAdminEmail(email: string): boolean {
+  return SUPER_ADMIN_EMAILS.has(normalizeEmail(email))
 }
 
 export function withRequiredAdminRole<T extends AdminAccessSubject & { role: string }>(subject: T): T {

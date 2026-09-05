@@ -34,6 +34,8 @@ interface UserEditFormProps {
   user: User
   /** True when the profile belongs to the signed-in admin, who cannot change its own access. */
   isSelf: boolean
+  /** True when the signed-in admin may also change the access of other admin accounts. */
+  canActOnAdmins: boolean
   loading: boolean
   onCancel: () => void
   onSubmit: (update: UserUpdate) => Promise<void>
@@ -47,6 +49,7 @@ interface UserEditFormProps {
 export default function UserEditForm({
   user,
   isSelf,
+  canActOnAdmins,
   loading,
   onCancel,
   onSubmit,
@@ -59,12 +62,12 @@ export default function UserEditForm({
   const [error, setError] = useState('')
 
   const trimmedUsername = username.trim()
-  const accessLocked = isSelf || user.role === 'ADMIN'
+  const accessLocked = isSelf || (user.role === 'ADMIN' && !canActOnAdmins)
 
   const update: UserUpdate = {}
   if (trimmedUsername !== user.username) update.username = trimmedUsername
   if (biography !== user.biography) update.biography = biography
-  if (!isSelf && user.role !== 'ADMIN' && isEditableStatus(status) && status !== user.status) {
+  if (!accessLocked && isEditableStatus(status) && status !== user.status) {
     update.status = status
   }
   if (!isSelf && isRole(role) && role !== user.role) update.role = role
