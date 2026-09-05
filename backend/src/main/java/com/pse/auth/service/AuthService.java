@@ -304,20 +304,6 @@ public class AuthService {
         );
     }
 
-    public AuthMeResponse me(AuthenticatedUser principal) {
-        Student student = principal.student();
-        return new AuthMeResponse(
-                "Authenticated",
-                true,
-                new AuthUserResponse(
-                        student.getId(),
-                        student.getUsername(),
-                        student.getKitEmail(),
-                        principal.isAdmin() ? UserRole.ADMIN : UserRole.STUDENT,
-                        student.getStatus()
-                )
-        );
-    }
 
 
     public BasicResponse validate(String authHeader, ValidateCredentialsRequest request) {
