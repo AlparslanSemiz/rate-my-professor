@@ -1,6 +1,7 @@
 workflow:
   rules:
-    # Scheduled pipelines only run health:check; every other job opts out of them below.
+    # Scheduled pipelines only run health:check and backup:offsite; every other job opts
+    # out of them below.
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -194,3 +195,63 @@ health:check:
         exit 1
       fi
       echo "API is healthy."
+
+# Also schedule-only. The nightly pg_dumpall on the server is sound, but every copy of it
+# lives on the same disk as the database it came from -- a lost instance takes the backups
+# with it. This job is the off-machine copy, and it deliberately reuses the deploy key and
+# host variables rather than introducing a second credential to keep in sync.
+#
+# The dump carries real student e-mail addresses, so it is encrypted before it ever becomes
+# a job artifact: artifacts are downloadable by everyone with Reporter access to the project,
+# which is a wider audience than the database itself has.
+backup:offsite:
+  stage: test
+  image: alpine:3.20
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  cache: []
+  before_script:
+    - apk add --no-cache openssh-client gnupg
+  script:
+    - |
+      # Refuse to run rather than publish a readable dump. An empty passphrase would make
+      # gpg fall back to no protection at all, which is the one outcome worth failing over.
+      if [ -z "$BACKUP_PASSPHRASE" ]; then
+        echo "BACKUP_PASSPHRASE is not set -- refusing to export the database unencrypted."
+        echo "Add it under Settings > CI/CD > Variables (masked)."
+        exit 1
+      fi
+    - |
+      chmod 400 "$SSH_PRIVATE_KEY"
+      mkdir -p ~/.ssh
+      chmod 700 ~/.ssh
+      ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+    - |
+      SSH="ssh -i $SSH_PRIVATE_KEY -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST"
+
+      # The backup directory is 0700 root, so this reads through sudo. Newest first, and the
+      # glob is resolved on the server rather than here.
+      LATEST=$($SSH "sudo ls -1t /var/backups/postgres/pgdumpall-*.sql.gz 2>/dev/null | head -1")
+      if [ -z "$LATEST" ]; then
+        echo "No dump found in /var/backups/postgres -- has pg-backup.timer run?"
+        exit 1
+      fi
+      echo "Newest dump on the server: $LATEST"
+
+      $SSH "sudo cat '$LATEST'" > dump.sql.gz
+      # A dump that arrives truncated is worse than none, because it looks like a backup.
+      gzip -t dump.sql.gz
+      zcat dump.sql.gz | grep -q 'PostgreSQL database cluster dump complete'
+      echo "Transferred and verified: $(du -h dump.sql.gz | cut -f1)"
+
+      gpg --batch --yes --symmetric --cipher-algo AES256 \
+          --passphrase "$BACKUP_PASSPHRASE" \
+          --output "pgdumpall-$(date -u +%Y%m%d).sql.gz.gpg" dump.sql.gz
+      rm -f dump.sql.gz
+      ls -la ./*.gpg
+    - echo "Restore with:  gpg -d pgdumpall-YYYYMMDD.sql.gz.gpg | gunzip | psql -U postgres"
+  artifacts:
+    name: "pg-backup-$CI_PIPELINE_ID"
+    paths:
+      - "*.sql.gz.gpg"
+    expire_in: 30 days
