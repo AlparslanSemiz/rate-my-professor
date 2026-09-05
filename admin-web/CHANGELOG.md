@@ -4,62 +4,80 @@
 
 ### Added — elevated permissions for `u-kisi4@student.kit.edu`
 
-`u-kisi4@student.kit.edu` may now act on **admin** accounts from the user profile,
-not only on students. Nothing about this is visible: the account is still
-reported and rendered as `ADMIN` everywhere in the panel — no new role, no
-badge, no label change.
+One address may now act on **admin** accounts from the user profile, not only on
+students: warn, block, unblock, delete, and change an admin's status. Nothing
+about it is visible — the account is still reported and rendered as `ADMIN`
+everywhere, with no new role, badge or label.
+
+The permission is **the backend's to grant**. It resolves it from
+`ADMIN_SUPERUSER_EMAILS` and reports it as `isSuperAdmin` on `/auth/me`; the
+panel only reads it. An earlier draft of this feature kept its own address set,
+which had to be edited in two repositories at once — that set is gone.
+
+**`src/api/AuthService.ts`**
+- `AuthUser` gained `isSuperAdmin?: boolean`. Optional, so a session stored
+  before the backend reported it stays valid; an absent flag grants nothing.
+- `me()` now maps the `/auth/me` payload onto `AuthUser` instead of casting it,
+  so every caller sees one shape.
 
 **`src/utils/adminAccess.ts`**
-- Added `SUPER_ADMIN_EMAILS`, a second and narrower set next to the existing
-  `REQUIRED_ADMIN_EMAILS`, holding only `u-kisi4@student.kit.edu`.
-- Added `isSuperAdminEmail(email)`, which normalizes the address the same way
-  `isRequiredAdminEmail` does (trim + lowercase).
-- `withRequiredAdminRole` is **unchanged**: the address is still reported as
-  `'ADMIN'`, so `UserRole`, `roleColor` / `roleAccent`, `USER_ROLE_FILTERS`,
-  `UserChip` and the audit-log rows were not touched.
+- Removed `SUPER_ADMIN_EMAILS` and `isSuperAdminEmail`. `REQUIRED_ADMIN_EMAILS`,
+  `isRequiredAdminEmail`, `normalizeEmail` and `withRequiredAdminRole` are a
+  different gate — who is offered a login code — and are untouched.
+
+**`src/context/authSessionStorage.ts`**
+- `isAuthUser` accepts the flag as an optional boolean, and rejects a stored
+  payload carrying anything else under that name.
 
 **`src/features/users/components/UserProfileModal.tsx`**
-- Derives `canActOnAdmins` from the signed-in operator's address — the one place
-  that already made an authorization decision from `useAuth()` — and passes it to
-  `ProfileActions` and `UserEditForm`.
+- `canActOnAdmins` now reads `currentAdmin?.isSuperAdmin === true` and is passed
+  to `ProfileActions` and `UserEditForm` as before.
 
 **`src/features/users/components/ProfileActions.tsx`**
 - New `canActOnAdmins` prop. `isProtected` became
   `isSelf || (user.role === 'ADMIN' && !canActOnAdmins)`, so Warn / Block /
   Unblock / Delete account are offered on admin accounts to an elevated operator.
 
-**`src/features/users/components/UserEditForm.tsx`**
-- New `canActOnAdmins` prop. `accessLocked` became
-  `isSelf || (user.role === 'ADMIN' && !canActOnAdmins)`, unlocking Status and
-  Credibility score on admin accounts for an elevated operator.
-- The status field now reads `accessLocked` instead of repeating the same
-  condition inline — identical behaviour, one source of truth.
+### Fixed
+
+- **The panel signed the operator out on every reload.** `/auth/me` reports
+  `username` / `kitEmail`, the names it also uses on `/users`, but `AuthUser`
+  read `name` / `email`. Both were therefore `undefined`: `isAuthUser` rejected
+  the stored session on the next load, the sidebar fell back to
+  `Unknown account`, and `canActOnAdmins` was computed from an empty address —
+  so the elevated permission had never actually reached the UI. `me()` now reads
+  either spelling.
+- **Credibility score was locked on admin accounts.** Only an admin's *status*
+  is reserved for an elevated operator; a username, biography, credibility score
+  or a demotion to `STUDENT` are accepted from any admin. `UserEditForm` split
+  `accessLocked` into `statusLocked` and a plain `isSelf` check, so the field is
+  no longer hidden from edits the backend would have taken.
 
 ### Unchanged on purpose
 
-- **Self protection stays.** No one can change their own role, block or delete
-  themselves, elevated or not.
+- **Self protection stays.** No one can change their own role or status, block
+  or delete themselves, elevated or not.
 - **The role label stays `ADMIN`.** No `SUPERADMIN` value entered `UserRole`,
   the role dropdown still offers Student / Admin only, and the sidebar, header,
   user table and audit log render exactly what they rendered before.
-- **KIT email stays read-only** for everyone.
+- **KIT email stays read-only** for everyone — it is the sign-in identity, and
+  the backend keys elevation on it.
+- The audit log's actor shape is unchanged; the backend's optional
+  `metadata.elevated` is deliberately not rendered.
 - No route or navigation gating changed; `ProtectedRoute` is still
   authentication-only.
 
 ### Tests
 
-- New `src/utils/adminAccess.unit.test.ts` — the address is recognised, casing
-  and whitespace are normalized, the other five admins are not elevated, and
-  `withRequiredAdminRole` still reports the elevated address as `ADMIN`.
-- `src/features/users/UsersPage.integration.test.tsx` — `renderUsers()` takes an
-  optional session user; a new block covers the elevated operator seeing the
-  moderation buttons and the unlocked fields on another admin, and still being
-  blocked on their own account. Every pre-existing test passes unmodified, since
-  the fixture operator (`admin@student.kit.edu`) is not elevated.
-
-### Known limitation
-
-Frontend only. The backend lives in a separate repository and still answers
-`409` / `403` for these actions on admin accounts, so an elevated operator sees
-the buttons but the request fails until the backend grants the same permission.
-See `backendtasks.md`.
+- `src/api/AuthService.unit.test.ts` — `/auth/me` is read in both the
+  `username` / `kitEmail` and the older `name` / `email` spelling, an absent flag
+  becomes `false`, and a payload with no usable `id` names nobody.
+- `src/context/AuthContext.unit.test.tsx` — a stored session carrying the flag
+  survives, one carrying a non-boolean is discarded, and an elevation `/auth/me`
+  no longer reports is withdrawn from the stored copy.
+- `src/features/users/UsersPage.integration.test.tsx` — the elevated operator
+  fixture is now an ordinary address with `isSuperAdmin: true`, proving the flag
+  alone grants the permission; a further test pins that an ordinary admin sees an
+  admin's status locked but the credibility score editable.
+- `src/utils/adminAccess.unit.test.ts` — the `isSuperAdminEmail` suite is gone
+  with the function; `withRequiredAdminRole` coverage stays.

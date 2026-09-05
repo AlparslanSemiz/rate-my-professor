@@ -250,6 +250,16 @@ To add or remove an administrator, edit that list and the backend's
 `ADMIN_BOOTSTRAP_EMAILS` together — the frontend decides who is offered a code,
 the backend decides who is actually authorized.
 
+One address is additionally allowed to **moderate other admin accounts** —
+warn, block, unblock, delete, and change an admin's status. The panel does not
+decide this and keeps no list of its own: the backend resolves it from
+`ADMIN_SUPERUSER_EMAILS` and reports it as `isSuperAdmin` on `/auth/me`, which
+is the only thing the panel reads. It stays a behavioural permission, not a
+role: the account is reported and rendered as `ADMIN` everywhere, `UserRole`
+remains `'STUDENT' | 'ADMIN'`, and there is no badge or label for it. Everything
+else — a username, biography, credibility score or a demotion to `STUDENT` — is
+accepted from any admin, and nobody moderates their own account.
+
 This client-side gate is a usability boundary, not a security one. The backend
 independently validates the token and requires an `admins` row for every
 protected endpoint; a valid non-admin token is answered with `403` regardless
@@ -274,7 +284,7 @@ contract; this table is the subset the panel calls.
 | `POST` | `/auth/request-login` | Request a login code for `{ "email": "..." }` | No |
 | `POST` | `/auth/login` | Exchange `{ "email": "...", "loginToken": "..." }` for an `authToken` | No |
 | `POST` | `/auth/logout` | Revoke the current token | Admin |
-| `GET` | `/auth/me` | Inspect the current session | Any |
+| `GET` | `/auth/me` | Inspect the current session; reports `user` as `{ id, username, kitEmail, role, status, isSuperAdmin }` | Any |
 
 ### Users
 
