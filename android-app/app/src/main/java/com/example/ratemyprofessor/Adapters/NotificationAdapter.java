@@ -119,6 +119,21 @@ public class NotificationAdapter
     }
 
     /**
+     * This method is used to mark individual notifications as read
+     * @param notificationId
+     */
+    public void notifyNotificationChanged(String notificationId) {
+        for (int position = 0; position < notifications.size(); position++) {
+            Notification notification = notifications.get(position);
+
+            if (notificationId.equals(notification.notificationId)) {
+                notifyItemChanged(position);
+                return;
+            }
+        }
+    }
+
+    /**
      * Reports which notification the user clicked.
      */
     public interface OnNotificationClickListener {

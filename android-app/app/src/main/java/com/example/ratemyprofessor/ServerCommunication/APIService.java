@@ -232,9 +232,10 @@ public interface APIService {
             @Header("Authorization") String token
     );
 
-    @PATCH("/social/notifications")
+    @PATCH("/social/notifications/{notification_id}")
     Call<BasicResponse> markNotificationsAsSeen(
-            @Header("Authorization") String token
+            @Header("Authorization") String token,
+            @Path("notification_id") String notificationId
     );
 
     @GET("/ratings/{lectureId}/categories")
