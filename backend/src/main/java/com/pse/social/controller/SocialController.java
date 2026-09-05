@@ -45,12 +45,6 @@ public class SocialController {
         return socialService.getNotifications(principal.student());
     }
 
-    @PatchMapping("/notifications/all")
-    public BasicResponse markAllNotificationsAsSeen(@AuthenticationPrincipal AuthenticatedUser principal){
-
-        return socialService.markAllNotificationsAsSeen(principal.student());
-    }
-
     @PatchMapping("/notifications/{notification_id}")
     public BasicResponse markNotificationAsSeen(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID notification_id){
 
@@ -92,7 +86,7 @@ public class SocialController {
 
     }
 
-    @PostMapping("/comments/vote/answer{answer_id}")
+    @PostMapping("/comments/vote/answer/{answer_id}")
     public BasicResponse voteAnswer(@PathVariable UUID answer_id, @AuthenticationPrincipal AuthenticatedUser principal, @RequestBody VoteAnswerRequest request) {
 
         return socialService.voteAnswer(answer_id, principal.student(), request);

@@ -95,8 +95,7 @@ public class SocialService {
 
 
 
-    // Needs a transaction so that the comment and its activity-log entry commit
-    // together. The same holds for the other submit methods below.
+
     @Transactional
     public BasicResponse submitComment(Student student, CommentSubmitRequest request) {
 
@@ -401,27 +400,7 @@ public class SocialService {
 
 
 
-    /**
-     * The lecture a piece of content belongs to, formatted the way the reported-comments
-     * endpoint formats its {@code postContext}.
-     */
-    private String lectureLabel(Lecture lecture) {
-        String code = lecture.getCode();
-        String name = lecture.getName();
-        return code == null || code.isBlank() ? name : code + " — " + name;
-    }
 
-    /**
-     * A preview of submitted text. The full body stays in its own table; the activity
-     * log only needs enough to recognise the entry.
-     */
-    private Map<String, Object> contentMetadata(String content) {
-        String text = content == null ? "" : content;
-        return Map.of(
-                "contentPreview", text.substring(0, Math.min(text.length(), 120)),
-                "contentLength", text.length()
-        );
-    }
 
 
     public CommentResponse createCommentResponse(Comment comment){
@@ -459,29 +438,6 @@ public class SocialService {
 
 
 
-    //Methods used by other Services
-
-    public boolean updateReportStatus(UUID reportId, ReportStatus status) {
-        CommentReport commentReport = commentReportRepository.findById(reportId).orElse(null);
-
-        if(commentReport == null) {
-            return false;
-        }
-
-        commentReport.setStatus(status);
-
-        return true;
-    }
-
-
-
-    //Repository methods
-
-    public List<CommentReport> getReportedComments() {
-        return commentReportRepository.findAll();
-    }
-
-
 
     private List<AnswerResponse> getAnswerResponses(Comment comment) {
 
@@ -502,13 +458,6 @@ public class SocialService {
 
 
 
-    public BasicResponse markAllNotificationsAsSeen(Student student) {
-
-        notificationRepository.markAllAsSeen(student);
-        return new BasicResponse("Marked all Notifications as Seen", true);
-
-    }
-
     @Transactional
     public BasicResponse markNotificationAsSeen(Student student, UUID notificationId) {
 
@@ -527,4 +476,28 @@ public class SocialService {
         return new BasicResponse("Marked Notifications as seen", true);
 
     }
+
+
+    /**
+     * The lecture a piece of content belongs to, formatted the way the reported-comments
+     * endpoint formats its {@code postContext}.
+     */
+    private String lectureLabel(Lecture lecture) {
+        String code = lecture.getCode();
+        String name = lecture.getName();
+        return code == null || code.isBlank() ? name : code + " — " + name;
+    }
+
+    /**
+     * A preview of submitted text. The full body stays in its own table; the activity
+     * log only needs enough to recognise the entry.
+     */
+    private Map<String, Object> contentMetadata(String content) {
+        String text = content == null ? "" : content;
+        return Map.of(
+                "contentPreview", text.substring(0, Math.min(text.length(), 120)),
+                "contentLength", text.length()
+        );
+    }
+
 }
