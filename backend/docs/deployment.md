@@ -60,7 +60,7 @@ Do not commit real secret values. `.env` is ignored by `.gitignore`.
 | `ADMIN_SUPERUSER_EMAILS` | Comma-separated addresses of administrators that may also moderate other administrator accounts. | Must already be administrators; this list does not create them. Defaults to `u-kisi4@student.kit.edu`. Not a role: these accounts still report `ADMIN`. |
 | `AUTH_RATE_LIMIT_HMAC_KEY` | HMAC key for rate-limit subject hashes. | Must contain at least 32 characters or startup fails. Treat as secret. |
 | `AUTH_OTP_TTL` | OTP lifetime. | Defaults to `PT5M`. |
-| `AUTH_ADMIN_SESSION_TTL` | Admin session lifetime. | Defaults to `PT12H`. |
+| `AUTH_ADMIN_SESSION_TTL` | Admin session lifetime. | Defaults to `P1D`. |
 | `AUTH_STUDENT_SESSION_TTL` | Student session lifetime. | Defaults to `P365D`. |
 | `AUTH_RATE_LIMIT_WINDOW` | Rate-limit window. | Defaults to `PT15M`. |
 | `AUTH_RATE_LIMIT_REQUEST_EMAIL` | OTP request limit per email. | Defaults to `3`. |

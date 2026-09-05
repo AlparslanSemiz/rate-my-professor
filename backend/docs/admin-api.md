@@ -57,8 +57,13 @@ No authentication.
 }
 ```
 
+The optional `sessionType` request field accepts `APP` or `ADMIN`. `APP` sessions always
+have student privileges, even when the account is also an administrator. Omitting the
+field preserves the legacy role-based selection, so existing admin clients receive an
+admin session and existing student clients receive an app session.
+
 The opaque token is returned once; only its SHA-256 hash is persisted. Admin sessions
-expire after 12 hours and student sessions after 365 days by default. An eligible email
+expire after one day and app sessions after 365 days by default. An eligible email
 in `ADMIN_BOOTSTRAP_EMAILS` is provisioned into `admins` at startup, and again after
 successful OTP verification if the row is missing. Admin token creation and `ADMIN_LOGIN` audit insertion share one
 transaction.
@@ -92,7 +97,7 @@ Admin authentication; no body. Revokes the current token and writes
 **Not every `ADMIN_LOGIN` has a matching `ADMIN_LOGOUT`, and that is the intended
 behaviour.** A session ends without one whenever the client never calls this endpoint: a
 closed tab, or a request that came back `401` on an already-rejected token, where there is
-nothing left to revoke. A session that reaches its TTL (`AUTH_ADMIN_SESSION_TTL`, 12 hours
+nothing left to revoke. A session that reaches its TTL (`AUTH_ADMIN_SESSION_TTL`, one day
 by default) simply stops authenticating — there is no request at that moment and no actor to
 attribute an entry to, and this log records what someone did, not what a clock did.
 

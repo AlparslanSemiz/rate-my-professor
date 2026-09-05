@@ -8,6 +8,7 @@ import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.repository.AuditLogRepository;
 import com.pse.audit.service.AuditWriter;
 import com.pse.auth.model.OneTimePassword;
+import com.pse.auth.model.SessionType;
 import com.pse.auth.model.Token;
 import com.pse.auth.repository.AuthRateLimitBucketRepository;
 import com.pse.auth.repository.OneTimePasswordRepository;
@@ -166,6 +167,22 @@ class AdminApiIntegrationTests {
                 "$.authToken"
         );
 
+        Token issuedToken = tokenRepository
+                .findByHashAndRevokedFalseAndExpiresAtAfter(
+                        HashGenerator.hashToken(token),
+                        LocalDateTime.now(java.time.Clock.systemUTC())
+                )
+                .orElseThrow();
+        assertEquals(SessionType.ADMIN, issuedToken.getSessionType());
+        long remainingSeconds = java.time.Duration.between(
+                LocalDateTime.now(java.time.Clock.systemUTC()),
+                issuedToken.getExpiresAt()
+        ).toSeconds();
+        org.junit.jupiter.api.Assertions.assertTrue(
+                remainingSeconds >= java.time.Duration.ofDays(1).minusSeconds(5).toSeconds()
+                        && remainingSeconds <= java.time.Duration.ofDays(1).toSeconds()
+        );
+
         mockMvc.perform(get("/auth/me").header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Authenticated"))
@@ -190,6 +207,95 @@ class AdminApiIntegrationTests {
                         .filter(log -> log.getAction() == AuditAction.ADMIN_LOGIN)
                         .count()
         );
+    }
+
+    @Test
+    void appLoginGivesAdminAccountYearLongStudentOnlySession() throws Exception {
+        requestCode("admin@student.kit.edu");
+        String rawToken = com.jayway.jsonpath.JsonPath.read(
+                mockMvc.perform(post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {"email":"admin@student.kit.edu","loginToken":"%s","sessionType":"APP"}
+                                        """.formatted(codeDelivery.codeFor("admin@student.kit.edu"))))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(),
+                "$.authToken"
+        );
+
+        Token issuedToken = tokenRepository
+                .findByHashAndRevokedFalseAndExpiresAtAfter(
+                        HashGenerator.hashToken(rawToken),
+                        LocalDateTime.now(java.time.Clock.systemUTC())
+                )
+                .orElseThrow();
+        assertEquals(SessionType.APP, issuedToken.getSessionType());
+        long remainingSeconds = java.time.Duration.between(
+                LocalDateTime.now(java.time.Clock.systemUTC()),
+                issuedToken.getExpiresAt()
+        ).toSeconds();
+        org.junit.jupiter.api.Assertions.assertTrue(
+                remainingSeconds >= java.time.Duration.ofDays(365).minusSeconds(5).toSeconds()
+                        && remainingSeconds <= java.time.Duration.ofDays(365).toSeconds()
+        );
+
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(rawToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("STUDENT"));
+        mockMvc.perform(get("/users").header("Authorization", bearer(rawToken)))
+                .andExpect(status().isForbidden());
+        assertEquals(
+                1,
+                auditLogRepository.findAll().stream()
+                        .filter(log -> log.getAction() == AuditAction.USER_LOGIN)
+                        .count()
+        );
+        assertEquals(
+                0,
+                auditLogRepository.findAll().stream()
+                        .filter(log -> log.getAction() == AuditAction.ADMIN_LOGIN)
+                        .count()
+        );
+    }
+
+    @Test
+    void appLoginGivesStudentAccountYearLongSession() throws Exception {
+        requestCode("mobile-student@student.kit.edu");
+        String rawToken = com.jayway.jsonpath.JsonPath.read(
+                mockMvc.perform(post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {"email":"mobile-student@student.kit.edu","loginToken":"%s","sessionType":"APP"}
+                                        """.formatted(codeDelivery.codeFor("mobile-student@student.kit.edu"))))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(),
+                "$.authToken"
+        );
+
+        Token issuedToken = tokenRepository
+                .findByHashAndRevokedFalseAndExpiresAtAfter(
+                        HashGenerator.hashToken(rawToken),
+                        LocalDateTime.now(java.time.Clock.systemUTC())
+                )
+                .orElseThrow();
+        assertEquals(SessionType.APP, issuedToken.getSessionType());
+        long remainingSeconds = java.time.Duration.between(
+                LocalDateTime.now(java.time.Clock.systemUTC()),
+                issuedToken.getExpiresAt()
+        ).toSeconds();
+        org.junit.jupiter.api.Assertions.assertTrue(
+                remainingSeconds >= java.time.Duration.ofDays(365).minusSeconds(5).toSeconds()
+                        && remainingSeconds <= java.time.Duration.ofDays(365).toSeconds()
+        );
+    }
+
+    @Test
+    void legacyAdminTokenWithoutSessionTypeKeepsAdminAccessUntilExpiry() throws Exception {
+        Session legacyAdmin = createSession("legacy-admin@student.kit.edu", true);
+
+        org.junit.jupiter.api.Assertions.assertNull(legacyAdmin.token().getSessionType());
+        mockMvc.perform(get("/users").header("Authorization", bearer(legacyAdmin.rawToken())))
+                .andExpect(status().isOk());
     }
 
     @Test
