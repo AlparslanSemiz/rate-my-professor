@@ -21,7 +21,6 @@ import com.pse.rating.service.RatingService;
 
 
 
-
 @RestController
 @RequestMapping("/ratings")
 public class RatingController {
@@ -35,9 +34,7 @@ public class RatingController {
 
     @PostMapping("/rate")
     public BasicResponse submitRating(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody  RatingRequest request) {
-
         return ratingService.submitRating(principal.student(), request);
-
     }
 
     @GetMapping("/{lectureId}")
@@ -46,18 +43,15 @@ public class RatingController {
 
     }
 
-
     @GetMapping("/{lectureId}/categories")
     public RatingCategoriesResponse getRatingCategories(@PathVariable UUID lectureId) {
         return ratingService.getRatingCategories(lectureId);
     }
 
-    @GetMapping("own/{lectureId}")
+    @GetMapping("/own/{lectureId}")
     public RatingsAverageResponse getOwnRating(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID lectureId) {
         return ratingService.getOwnRating(principal.student(), lectureId);
     }
-
-
 
 
 
