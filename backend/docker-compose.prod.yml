@@ -10,6 +10,8 @@ services:
       SPRING_DATASOURCE_URL: "${SPRING_DATASOURCE_URL:-jdbc:postgresql://host.docker.internal:5432/postgres}"
       SPRING_DATASOURCE_USERNAME: "${SPRING_DATASOURCE_USERNAME:-postgres}"
       SPRING_DATASOURCE_PASSWORD: "${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD is required}"
+      SPRING_FLYWAY_ENABLED: "${SPRING_FLYWAY_ENABLED:-true}"
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "${SPRING_FLYWAY_BASELINE_ON_MIGRATE:-true}"
       ADMIN_FRONTEND_ORIGINS: "${ADMIN_FRONTEND_ORIGINS:-https://server.example.org}"
       ADMIN_BOOTSTRAP_EMAILS: "${ADMIN_BOOTSTRAP_EMAILS:-u-kisi4@student.kit.edu:Alparslan,u-kisi5@student.kit.edu:Bob,u-kisi6@student.kit.edu:Cem,u-kisi7@student.kit.edu:Dan,u-kisi8@student.kit.edu:Eva,u-kisi9@student.kit.edu:Fin}"
       ADMIN_SUPERUSER_EMAILS: "${ADMIN_SUPERUSER_EMAILS:-u-kisi4@student.kit.edu}"
