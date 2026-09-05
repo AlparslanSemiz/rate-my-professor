@@ -8,6 +8,7 @@ import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.repository.AuditLogRepository;
 import com.pse.audit.service.AuditWriter;
 import com.pse.auth.model.OneTimePassword;
+import com.pse.auth.model.SessionType;
 import com.pse.auth.model.Token;
 import com.pse.auth.repository.AuthRateLimitBucketRepository;
 import com.pse.auth.repository.OneTimePasswordRepository;
@@ -91,6 +92,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({TestDeliveryConfig.class, com.pse.support.TestGitLabConfig.class})
 class AdminApiIntegrationTests {
 
+    /** Matches app.auth.admin-superuser-emails in application-test.properties. It is
+     * deliberately not the bootstrap admin, so the plain-administrator refusals stay
+     * under test alongside the elevated ones. */
+    private static final String SUPERUSER_EMAIL = "super@student.kit.edu";
+
     @Autowired MockMvc mockMvc;
     @Autowired CapturingLoginCodeDelivery codeDelivery;
     @Autowired StudentRepository studentRepository;
@@ -161,6 +167,22 @@ class AdminApiIntegrationTests {
                 "$.authToken"
         );
 
+        Token issuedToken = tokenRepository
+                .findByHashAndRevokedFalseAndExpiresAtAfter(
+                        HashGenerator.hashToken(token),
+                        LocalDateTime.now(java.time.Clock.systemUTC())
+                )
+                .orElseThrow();
+        assertEquals(SessionType.ADMIN, issuedToken.getSessionType());
+        long remainingSeconds = java.time.Duration.between(
+                LocalDateTime.now(java.time.Clock.systemUTC()),
+                issuedToken.getExpiresAt()
+        ).toSeconds();
+        org.junit.jupiter.api.Assertions.assertTrue(
+                remainingSeconds >= java.time.Duration.ofDays(1).minusSeconds(5).toSeconds()
+                        && remainingSeconds <= java.time.Duration.ofDays(1).toSeconds()
+        );
+
         mockMvc.perform(get("/auth/me").header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Authenticated"))
@@ -185,6 +207,95 @@ class AdminApiIntegrationTests {
                         .filter(log -> log.getAction() == AuditAction.ADMIN_LOGIN)
                         .count()
         );
+    }
+
+    @Test
+    void appLoginGivesAdminAccountYearLongStudentOnlySession() throws Exception {
+        requestCode("admin@student.kit.edu");
+        String rawToken = com.jayway.jsonpath.JsonPath.read(
+                mockMvc.perform(post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {"email":"admin@student.kit.edu","loginToken":"%s","sessionType":"APP"}
+                                        """.formatted(codeDelivery.codeFor("admin@student.kit.edu"))))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(),
+                "$.authToken"
+        );
+
+        Token issuedToken = tokenRepository
+                .findByHashAndRevokedFalseAndExpiresAtAfter(
+                        HashGenerator.hashToken(rawToken),
+                        LocalDateTime.now(java.time.Clock.systemUTC())
+                )
+                .orElseThrow();
+        assertEquals(SessionType.APP, issuedToken.getSessionType());
+        long remainingSeconds = java.time.Duration.between(
+                LocalDateTime.now(java.time.Clock.systemUTC()),
+                issuedToken.getExpiresAt()
+        ).toSeconds();
+        org.junit.jupiter.api.Assertions.assertTrue(
+                remainingSeconds >= java.time.Duration.ofDays(365).minusSeconds(5).toSeconds()
+                        && remainingSeconds <= java.time.Duration.ofDays(365).toSeconds()
+        );
+
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(rawToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("STUDENT"));
+        mockMvc.perform(get("/users").header("Authorization", bearer(rawToken)))
+                .andExpect(status().isForbidden());
+        assertEquals(
+                1,
+                auditLogRepository.findAll().stream()
+                        .filter(log -> log.getAction() == AuditAction.USER_LOGIN)
+                        .count()
+        );
+        assertEquals(
+                0,
+                auditLogRepository.findAll().stream()
+                        .filter(log -> log.getAction() == AuditAction.ADMIN_LOGIN)
+                        .count()
+        );
+    }
+
+    @Test
+    void appLoginGivesStudentAccountYearLongSession() throws Exception {
+        requestCode("mobile-student@student.kit.edu");
+        String rawToken = com.jayway.jsonpath.JsonPath.read(
+                mockMvc.perform(post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {"email":"mobile-student@student.kit.edu","loginToken":"%s","sessionType":"APP"}
+                                        """.formatted(codeDelivery.codeFor("mobile-student@student.kit.edu"))))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(),
+                "$.authToken"
+        );
+
+        Token issuedToken = tokenRepository
+                .findByHashAndRevokedFalseAndExpiresAtAfter(
+                        HashGenerator.hashToken(rawToken),
+                        LocalDateTime.now(java.time.Clock.systemUTC())
+                )
+                .orElseThrow();
+        assertEquals(SessionType.APP, issuedToken.getSessionType());
+        long remainingSeconds = java.time.Duration.between(
+                LocalDateTime.now(java.time.Clock.systemUTC()),
+                issuedToken.getExpiresAt()
+        ).toSeconds();
+        org.junit.jupiter.api.Assertions.assertTrue(
+                remainingSeconds >= java.time.Duration.ofDays(365).minusSeconds(5).toSeconds()
+                        && remainingSeconds <= java.time.Duration.ofDays(365).toSeconds()
+        );
+    }
+
+    @Test
+    void legacyAdminTokenWithoutSessionTypeKeepsAdminAccessUntilExpiry() throws Exception {
+        Session legacyAdmin = createSession("legacy-admin@student.kit.edu", true);
+
+        org.junit.jupiter.api.Assertions.assertNull(legacyAdmin.token().getSessionType());
+        mockMvc.perform(get("/users").header("Authorization", bearer(legacyAdmin.rawToken())))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -254,6 +365,23 @@ class AdminApiIntegrationTests {
         Session admin = createSession("admin@student.kit.edu", true);
         mockMvc.perform(get("/users").header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
+
+        // Elevation is not a role. The panel's role union is STUDENT | ADMIN, so an
+        // elevated operator has to keep answering ADMIN and carry the distinction in a
+        // separate field, under exactly this key.
+        Session elevated = createSession(SUPERUSER_EMAIL, true);
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(elevated.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("ADMIN"))
+                .andExpect(jsonPath("$.user.isSuperAdmin").value(true));
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("ADMIN"))
+                .andExpect(jsonPath("$.user.isSuperAdmin").value(false));
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("STUDENT"))
+                .andExpect(jsonPath("$.user.isSuperAdmin").value(false));
 
         mockMvc.perform(get("/missing-api-path"))
                 .andExpect(status().isNotFound())
@@ -385,6 +513,10 @@ class AdminApiIntegrationTests {
         );
     }
 
+    /**
+     * The plain-administrator case: elevation is what lifts these refusals, and this
+     * account is not configured as an elevated operator, so every one of them stands.
+     */
     @Test
     void adminAccountsAndEmptyWarningsAreProtected() throws Exception {
         Session admin = createSession("admin@student.kit.edu", true);
@@ -409,6 +541,133 @@ class AdminApiIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"message\":\"  \"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void elevatedAdminModeratesOtherAdminAccounts() throws Exception {
+        Session elevated = createSession(SUPERUSER_EMAIL, true);
+        Session otherAdmin = createSession("other-admin@student.kit.edu", true);
+        UUID targetId = otherAdmin.student().getId();
+
+        mockMvc.perform(patch("/users/{id}/block", targetId)
+                        .header("Authorization", bearer(elevated.rawToken())))
+                .andExpect(status().isOk());
+        assertEquals(UserStatus.BLOCKED, reloadStudent(otherAdmin).getStatus());
+
+        mockMvc.perform(patch("/users/{id}/unblock", targetId)
+                        .header("Authorization", bearer(elevated.rawToken())))
+                .andExpect(status().isOk());
+        assertEquals(UserStatus.ACTIVE, reloadStudent(otherAdmin).getStatus());
+
+        mockMvc.perform(post("/users/{id}/warnings", targetId)
+                        .header("Authorization", bearer(elevated.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Reviewed a report they filed\"}"))
+                .andExpect(status().isOk());
+        assertEquals(1, warningRepository.countByStudent(reloadStudent(otherAdmin)));
+
+        // Field edits an ordinary administrator is refused on an administrator target.
+        mockMvc.perform(patch("/users/{id}", targetId)
+                        .header("Authorization", bearer(elevated.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"BLOCKED\",\"credibilityScore\":42}"))
+                .andExpect(status().isOk());
+        Student edited = reloadStudent(otherAdmin);
+        assertEquals(UserStatus.BLOCKED, edited.getStatus());
+        assertEquals(42, edited.getCredibilityScore());
+
+        // The audit entry the panel renders: the actor role stays ADMIN, and the fact
+        // that elevation was what allowed this travels in the metadata instead.
+        AuditLog blocked = auditLogRepository.findAll().stream()
+                .filter(log -> log.getAction() == AuditAction.USER_BLOCKED)
+                .findFirst()
+                .orElseThrow();
+        assertEquals("ADMIN", blocked.getActorRole());
+        assertEquals(AuditActorType.ADMIN, blocked.getActorType());
+        assertEquals(elevated.student().getId(), blocked.getActorId());
+        assertEquals(Boolean.TRUE, blocked.getMetadata().get("elevated"));
+
+        mockMvc.perform(delete("/users/{id}", targetId)
+                        .header("Authorization", bearer(elevated.rawToken())))
+                .andExpect(status().isOk());
+        assertEquals(UserStatus.DELETED, reloadStudent(otherAdmin).getStatus());
+    }
+
+    /**
+     * Elevation lifts the protection of other administrator accounts, never of the
+     * caller's own. Before elevation existed these four endpoints refused self only
+     * because the caller is necessarily an administrator and the admin-target guard
+     * caught it; this is the regression that guards the explicit self-check.
+     */
+    @Test
+    void elevatedAdminStillCannotModerateItself() throws Exception {
+        Session elevated = createSession(SUPERUSER_EMAIL, true);
+        UUID selfId = elevated.student().getId();
+        String token = bearer(elevated.rawToken());
+
+        mockMvc.perform(delete("/users/{id}", selfId).header("Authorization", token))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch("/users/{id}/block", selfId).header("Authorization", token))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch("/users/{id}/unblock", selfId).header("Authorization", token))
+                .andExpect(status().isConflict());
+        mockMvc.perform(post("/users/{id}/warnings", selfId)
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Not allowed\"}"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch("/users/{id}", selfId)
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"BLOCKED\"}"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch("/users/{id}", selfId)
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"STUDENT\"}"))
+                .andExpect(status().isConflict());
+
+        assertEquals(UserStatus.ACTIVE, reloadStudent(elevated).getStatus());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                adminRepository.findByStudent(reloadStudent(elevated)).isPresent(),
+                "an elevated operator cannot demote itself out of admins"
+        );
+    }
+
+    /**
+     * Elevation is keyed on the address, so an ordinary administrator must not be able
+     * to move it or to demote the account that holds it — either would hand elevation
+     * over or take it away entirely.
+     */
+    @Test
+    void elevatedOperatorIdentityIsProtected() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session elevated = createSession(SUPERUSER_EMAIL, true);
+        UUID elevatedId = elevated.student().getId();
+
+        mockMvc.perform(patch("/users/{id}", elevatedId)
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kitEmail\":\"moved@student.kit.edu\"}"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch("/users/{id}", elevatedId)
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"STUDENT\"}"))
+                .andExpect(status().isConflict());
+
+        Student unchanged = reloadStudent(elevated);
+        assertEquals(SUPERUSER_EMAIL, unchanged.getKitEmail());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                adminRepository.findByStudent(unchanged).isPresent()
+        );
+
+        // An ordinary administrator target is still editable the way it always was.
+        mockMvc.perform(patch("/users/{id}", admin.student().getId())
+                        .header("Authorization", bearer(elevated.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"Renamed Admin\"}"))
+                .andExpect(status().isOk());
     }
 
     @Test

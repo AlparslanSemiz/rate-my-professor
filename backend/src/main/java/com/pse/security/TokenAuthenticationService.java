@@ -1,6 +1,7 @@
 package com.pse.security;
 
 import com.pse.auth.model.Token;
+import com.pse.auth.model.SessionType;
 import com.pse.auth.repository.TokenRepository;
 import com.pse.moderation.model.Admin;
 import com.pse.moderation.repository.AdminRepository;
@@ -71,7 +72,13 @@ public class TokenAuthenticationService {
 
         touchLastSeen(token.getStudent(), now);
 
-        Admin admin = adminRepository.findByStudent(token.getStudent()).orElse(null);
+        SessionType sessionType = token.getSessionType();
+        Admin admin = sessionType == SessionType.APP
+                ? null
+                : adminRepository.findByStudent(token.getStudent()).orElse(null);
+        if (sessionType == SessionType.ADMIN && admin == null) {
+            return Optional.empty();
+        }
         return Optional.of(new AuthenticatedUser(token.getStudent(), token, admin));
     }
 

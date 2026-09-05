@@ -207,3 +207,14 @@ public record StudentProfileResponse(
         int commentsWritten,
         int credibilityScore
 ) {}
+
+
+
+
+///// 5.09
+
+
+Changed Signature 
+Was: "/ratingsown/{lectureId}"
+Now: "/ratings/own/{lectureId}"
+

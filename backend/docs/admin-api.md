@@ -57,11 +57,33 @@ No authentication.
 }
 ```
 
+The optional `sessionType` request field accepts `APP` or `ADMIN`. `APP` sessions always
+have student privileges, even when the account is also an administrator. Omitting the
+field preserves the legacy role-based selection, so existing admin clients receive an
+admin session and existing student clients receive an app session.
+
 The opaque token is returned once; only its SHA-256 hash is persisted. Admin sessions
-expire after 12 hours and student sessions after 365 days by default. An eligible email
+expire after one day and app sessions after 365 days by default. An eligible email
 in `ADMIN_BOOTSTRAP_EMAILS` is provisioned into `admins` at startup, and again after
 successful OTP verification if the row is missing. Admin token creation and `ADMIN_LOGIN` audit insertion share one
 transaction.
+
+#### Elevated operators
+
+`ADMIN_SUPERUSER_EMAILS` is a comma-separated list of addresses, trimmed and lowercased
+the way the panel normalizes them. An elevated operator is the only caller that may
+moderate **another administrator account** — block, unblock, warn, delete, or edit its
+`status`. Everyone else still gets `409` against an administrator target, and nobody
+moderates their own account, elevated or not.
+
+Being listed grants nothing on its own: the address must already be an administrator,
+which is what `ADMIN_BOOTSTRAP_EMAILS` is for. The two lists overlap without being the
+same thing.
+
+**Elevation is not a role.** `/auth/me`, `GET /users`, `GET /users/{id}` and every audit
+`actor.role` keep reporting `ADMIN` for these accounts. The distinction reaches clients
+in two separate places: the `isSuperAdmin` boolean on `GET /auth/me`, and `elevated: true`
+in the `metadata` of the audit entries that only an elevated operator could have written.
 
 ### `POST /auth/logout`
 
@@ -75,7 +97,7 @@ Admin authentication; no body. Revokes the current token and writes
 **Not every `ADMIN_LOGIN` has a matching `ADMIN_LOGOUT`, and that is the intended
 behaviour.** A session ends without one whenever the client never calls this endpoint: a
 closed tab, or a request that came back `401` on an already-rejected token, where there is
-nothing left to revoke. A session that reaches its TTL (`AUTH_ADMIN_SESSION_TTL`, 12 hours
+nothing left to revoke. A session that reaches its TTL (`AUTH_ADMIN_SESSION_TTL`, one day
 by default) simply stops authenticating — there is no request at that moment and no actor to
 attribute an entry to, and this log records what someone did, not what a clock did.
 
@@ -115,10 +137,16 @@ Any authenticated user.
     "username":"Administrator",
     "kitEmail":"admin@student.kit.edu",
     "role":"ADMIN",
-    "status":"ACTIVE"
+    "status":"ACTIVE",
+    "isSuperAdmin":true
   }
 }
 ```
+
+`isSuperAdmin` is whether this account is an [elevated operator](#elevated-operators). It
+is `false` for every student and for an ordinary administrator, and it is a separate field
+rather than a third `role` value on purpose — the panel's role union is `STUDENT | ADMIN`.
+A client should read the permission from here instead of keeping its own address list.
 
 The legacy `/auth/validate`, `/account/logout`, and student API contracts remain
 available.
@@ -208,7 +236,8 @@ Mutation endpoints:
 | `DELETE /users/{id}/warnings/{warningId}` | none | `Deleted warning successfully` |
 
 The target is always the path ID and the actor is always the token principal.
-Self and other admin accounts cannot be deleted, blocked, unblocked, or warned.
+No account can be deleted, blocked, unblocked or warned by itself. Another admin account
+is `409` for an ordinary administrator, and permitted for an elevated operator.
 Repeated block/unblock requests are successful no-ops and create no new audit event.
 Delete is a soft delete and revokes the target's sessions.
 
@@ -231,10 +260,20 @@ field that actually changed.
   working until it expired. Demoting is `409` once the account has moderation history —
   a warning it issued or a report it reviewed points at its `admins` row, and that
   attribution is not thrown away to satisfy a role change.
-- Two guards return `409`, both about not locking anyone out of an API with no other
-  recovery path: an admin cannot change **its own** status or role, and another admin
-  account's `status` is protected exactly as block/unblock/delete protect it. Profile
-  fields of an admin account are editable.
+- The guards return `409`, all about not locking anyone out of an API with no other
+  recovery path:
+  - an admin cannot change **its own** status or role;
+  - another admin account's `status` is protected exactly as block/unblock/delete
+    protect it — lifted for an elevated operator;
+  - an elevated operator's `kitEmail` cannot be changed by anyone, because the address is
+    what elevation is keyed on, and moving it is how the account would be taken over;
+  - an elevated operator's `role` cannot be changed by an ordinary administrator.
+  `username`, `biography` and `credibilityScore` of an admin account are editable, as
+  they always have been.
+- Reverting a field edit routes back through this endpoint and so meets the same guards:
+  an elevated operator's `status` change on an admin target can be reverted by an elevated
+  operator, and an ordinary administrator's revert of it is refused with the same `409` the
+  direct edit would have been.
 
 `PATCH`/`DELETE /users/{id}/warnings/{warningId}` correct or withdraw a warning that was
 already issued. The student is not re-notified: the notification went out when the
@@ -719,6 +758,12 @@ or `actorType` instead.
 Actor and target display data is copied into each event, so later lifecycle changes do
 not make old records unreadable. Domain mutations and audit inserts run in the same
 transaction.
+
+`USER_BLOCKED`, `USER_UNBLOCKED`, `USER_WARNING_CREATED`, `USER_DELETED` and
+`USER_UPDATED` carry `metadata.elevated = true` when the target was itself an
+administrator and the actor was an [elevated operator](#elevated-operators) — that is,
+when elevation is what allowed the action. `actor.role` stays `"ADMIN"`: elevation is not
+a role, and this is where the distinction is recorded instead.
 
 ### Student activity
 

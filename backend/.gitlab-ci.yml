@@ -1,6 +1,7 @@
 workflow:
   rules:
-    # Scheduled pipelines only run health:check; every other job opts out of them below.
+    # Scheduled pipelines only run health:check and backup:offsite; every other job opts
+    # out of them below.
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -82,6 +83,7 @@ server:deploy:staging:
     # 403 "Invalid CORS request". Both values below therefore carry an explicit default.
     DEFAULT_FRONTEND_ORIGINS: "https://server.example.org"
     DEFAULT_BOOTSTRAP_EMAILS: "u-kisi4@student.kit.edu:Alparslan,u-kisi5@student.kit.edu:Bob,u-kisi6@student.kit.edu:Cem,u-kisi7@student.kit.edu:Dan,u-kisi8@student.kit.edu:Eva,u-kisi9@student.kit.edu:Fin"
+    DEFAULT_SUPERUSER_EMAILS: "u-kisi4@student.kit.edu"
   before_script:
     - apk add --no-cache openssh-client
     - chmod 400 "$SSH_PRIVATE_KEY"
@@ -101,15 +103,20 @@ server:deploy:staging:
       chmod 600 .deploy.env
       write_env BACKEND_IMAGE "$IMAGE_TAG"
       write_env SERVER_PORT "8080"
-      write_env BACKEND_PUBLISHED_PORT "8080"
+      # The loopback prefix is load-bearing, not decoration. Without it Docker publishes the
+      # backend on 0.0.0.0:8080 and the API answers plain HTTP straight from the internet,
+      # bypassing nginx: no TLS, no HSTS, no edge access log. Every real request already
+      # arrives over 443, so nothing legitimate reaches port 8080 from outside.
+      write_env BACKEND_PUBLISHED_PORT "127.0.0.1:8080"
       write_env SPRING_DATASOURCE_URL "${SPRING_DATASOURCE_URL:-jdbc:postgresql://host.docker.internal:5432/postgres}"
       write_env SPRING_DATASOURCE_USERNAME "${SPRING_DATASOURCE_USERNAME:-postgres}"
       write_env SPRING_DATASOURCE_PASSWORD "${SPRING_DATASOURCE_PASSWORD}"
       write_env ADMIN_FRONTEND_ORIGINS "${ADMIN_FRONTEND_ORIGINS:-$DEFAULT_FRONTEND_ORIGINS}"
       write_env ADMIN_BOOTSTRAP_EMAILS "${ADMIN_BOOTSTRAP_EMAILS:-$DEFAULT_BOOTSTRAP_EMAILS}"
+      write_env ADMIN_SUPERUSER_EMAILS "${ADMIN_SUPERUSER_EMAILS:-$DEFAULT_SUPERUSER_EMAILS}"
       write_env AUTH_RATE_LIMIT_HMAC_KEY "${AUTH_RATE_LIMIT_HMAC_KEY}"
       write_env AUTH_OTP_TTL "${AUTH_OTP_TTL:-PT5M}"
-      write_env AUTH_ADMIN_SESSION_TTL "${AUTH_ADMIN_SESSION_TTL:-PT12H}"
+      write_env AUTH_ADMIN_SESSION_TTL "${AUTH_ADMIN_SESSION_TTL:-P1D}"
       write_env AUTH_STUDENT_SESSION_TTL "${AUTH_STUDENT_SESSION_TTL:-P365D}"
       write_env AUTH_RATE_LIMIT_WINDOW "${AUTH_RATE_LIMIT_WINDOW:-PT15M}"
       write_env AUTH_RATE_LIMIT_REQUEST_EMAIL "${AUTH_RATE_LIMIT_REQUEST_EMAIL:-3}"
@@ -188,3 +195,63 @@ health:check:
         exit 1
       fi
       echo "API is healthy."
+
+# Also schedule-only. The nightly pg_dumpall on the server is sound, but every copy of it
+# lives on the same disk as the database it came from -- a lost instance takes the backups
+# with it. This job is the off-machine copy, and it deliberately reuses the deploy key and
+# host variables rather than introducing a second credential to keep in sync.
+#
+# The dump carries real student e-mail addresses, so it is encrypted before it ever becomes
+# a job artifact: artifacts are downloadable by everyone with Reporter access to the project,
+# which is a wider audience than the database itself has.
+backup:offsite:
+  stage: test
+  image: alpine:3.20
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  cache: []
+  before_script:
+    - apk add --no-cache openssh-client gnupg
+  script:
+    - |
+      # Refuse to run rather than publish a readable dump. An empty passphrase would make
+      # gpg fall back to no protection at all, which is the one outcome worth failing over.
+      if [ -z "$BACKUP_PASSPHRASE" ]; then
+        echo "BACKUP_PASSPHRASE is not set -- refusing to export the database unencrypted."
+        echo "Add it under Settings > CI/CD > Variables (masked)."
+        exit 1
+      fi
+    - |
+      chmod 400 "$SSH_PRIVATE_KEY"
+      mkdir -p ~/.ssh
+      chmod 700 ~/.ssh
+      ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+    - |
+      SSH="ssh -i $SSH_PRIVATE_KEY -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST"
+
+      # The backup directory is 0700 root, so this reads through sudo. Newest first, and the
+      # glob is resolved on the server rather than here.
+      LATEST=$($SSH "sudo ls -1t /var/backups/postgres/pgdumpall-*.sql.gz 2>/dev/null | head -1")
+      if [ -z "$LATEST" ]; then
+        echo "No dump found in /var/backups/postgres -- has pg-backup.timer run?"
+        exit 1
+      fi
+      echo "Newest dump on the server: $LATEST"
+
+      $SSH "sudo cat '$LATEST'" > dump.sql.gz
+      # A dump that arrives truncated is worse than none, because it looks like a backup.
+      gzip -t dump.sql.gz
+      zcat dump.sql.gz | grep -q 'PostgreSQL database cluster dump complete'
+      echo "Transferred and verified: $(du -h dump.sql.gz | cut -f1)"
+
+      gpg --batch --yes --symmetric --cipher-algo AES256 \
+          --passphrase "$BACKUP_PASSPHRASE" \
+          --output "pgdumpall-$(date -u +%Y%m%d).sql.gz.gpg" dump.sql.gz
+      rm -f dump.sql.gz
+      ls -la ./*.gpg
+    - echo "Restore with:  gpg -d pgdumpall-YYYYMMDD.sql.gz.gpg | gunzip | psql -U postgres"
+  artifacts:
+    name: "pg-backup-$CI_PIPELINE_ID"
+    paths:
+      - "*.sql.gz.gpg"
+    expire_in: 30 days

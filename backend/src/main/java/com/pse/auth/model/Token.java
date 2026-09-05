@@ -7,6 +7,8 @@ import com.pse.user.model.Student;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -47,6 +49,14 @@ public class Token {
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
+
+    /**
+     * Null only for sessions issued before session types were introduced. Those
+     * legacy sessions keep their original role-based behaviour until they expire.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "session_type")
+    private SessionType sessionType;
 
     @Column(nullable = false)
     private boolean revoked = false;

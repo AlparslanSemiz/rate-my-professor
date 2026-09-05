@@ -11,6 +11,7 @@ import com.pse.auth.dto.response.AuthUserResponse;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.LoginResponse;
 import com.pse.auth.exception.InvalidAuthTokenException;
+import com.pse.auth.model.SessionType;
 import com.pse.auth.model.Token;
 import com.pse.auth.repository.TokenRepository;
 import com.pse.moderation.model.Admin;
@@ -52,6 +53,7 @@ public class AuthService {
     private final RateLimitService rateLimitService;
     private final LoginCodeDelivery loginCodeDelivery;
     private final AdminBootstrapPolicy bootstrapPolicy;
+    private final AdminSuperuserPolicy superuserPolicy;
     private final AuditWriter auditWriter;
     private final TokenAuthenticationService tokenAuthenticationService;
     private final ApplicationEventPublisher eventPublisher;
@@ -71,11 +73,12 @@ public class AuthService {
             RateLimitService rateLimitService,
             LoginCodeDelivery loginCodeDelivery,
             AdminBootstrapPolicy bootstrapPolicy,
+            AdminSuperuserPolicy superuserPolicy,
             AuditWriter auditWriter,
             TokenAuthenticationService tokenAuthenticationService,
             ApplicationEventPublisher eventPublisher,
             Clock clock,
-            @Value("${app.auth.admin-session-ttl:PT12H}") Duration adminSessionTtl,
+            @Value("${app.auth.admin-session-ttl:P1D}") Duration adminSessionTtl,
             @Value("${app.auth.student-session-ttl:P365D}") Duration studentSessionTtl,
             @Value("${app.auth.rate-limit.request-email:3}") int requestEmailLimit,
             @Value("${app.auth.rate-limit.request-ip:20}") int requestIpLimit,
@@ -89,6 +92,7 @@ public class AuthService {
         this.rateLimitService = rateLimitService;
         this.loginCodeDelivery = loginCodeDelivery;
         this.bootstrapPolicy = bootstrapPolicy;
+        this.superuserPolicy = superuserPolicy;
         this.auditWriter = auditWriter;
         this.tokenAuthenticationService = tokenAuthenticationService;
         this.eventPublisher = eventPublisher;
@@ -169,15 +173,20 @@ public class AuthService {
             admin = adminRepository.save(admin);
         }
 
+        SessionType sessionType = resolveSessionType(request.sessionType(), admin);
+
         String rawToken = TokenGenerator.generateToken();
         Token token = new Token();
         token.setEmail(email);
         token.setStudent(student);
         token.setHash(HashGenerator.hashToken(rawToken));
-        token.setExpiresAt(LocalDateTime.now(clock).plus(admin == null ? studentSessionTtl : adminSessionTtl));
+        token.setSessionType(sessionType);
+        token.setExpiresAt(LocalDateTime.now(clock).plus(
+                sessionType == SessionType.ADMIN ? adminSessionTtl : studentSessionTtl
+        ));
         token = tokenRepository.save(token);
 
-        if (admin != null) {
+        if (sessionType == SessionType.ADMIN) {
             auditWriter.write(
                     admin,
                     AuditAction.ADMIN_LOGIN,
@@ -304,6 +313,22 @@ public class AuthService {
         );
     }
 
+    public AuthMeResponse me(AuthenticatedUser principal) {
+        Student student = principal.student();
+        return new AuthMeResponse(
+                "Authenticated",
+                true,
+                new AuthUserResponse(
+                        student.getId(),
+                        student.getUsername(),
+                        student.getKitEmail(),
+                        principal.isAdmin() ? UserRole.ADMIN : UserRole.STUDENT,
+                        student.getStatus(),
+                        principal.isAdmin()
+                                && superuserPolicy.isSuperuser(student.getKitEmail())
+                )
+        );
+    }
 
 
     public BasicResponse validate(String authHeader, ValidateCredentialsRequest request) {
@@ -349,6 +374,16 @@ public class AuthService {
         student.setCredibilityScore(0);
         student.setStatus(UserStatus.ACTIVE);
         return studentRepository.save(student);
+    }
+
+    private SessionType resolveSessionType(SessionType requestedSessionType, Admin admin) {
+        if (requestedSessionType == null) {
+            return admin == null ? SessionType.APP : SessionType.ADMIN;
+        }
+        if (requestedSessionType == SessionType.ADMIN && admin == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Admin access required");
+        }
+        return requestedSessionType;
     }
 
     private static boolean isLoginAllowed(UserStatus status) {
