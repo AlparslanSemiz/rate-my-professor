@@ -55,6 +55,8 @@ Do not commit real secret values. `.env` is ignored by `.gitignore`.
 | `SPRING_DATASOURCE_URL` | PostgreSQL JDBC URL. | Defaults to `jdbc:postgresql://localhost:5432/postgres`. CI staging defaults to `jdbc:postgresql://host.docker.internal:5432/postgres`. |
 | `SPRING_DATASOURCE_USERNAME` | PostgreSQL username. | Defaults to `postgres`. |
 | `SPRING_DATASOURCE_PASSWORD` | PostgreSQL password. | Defaults to empty. Treat as secret. |
+| `SPRING_FLYWAY_ENABLED` | Enables versioned Flyway migrations during backend startup. | Defaults to `true`. CI staging also defaults to `true`. |
+| `SPRING_FLYWAY_BASELINE_ON_MIGRATE` | Allows the first Flyway deployment to baseline an existing non-empty database previously managed by Hibernate. | Defaults to `true`. Set to `false` after every persistent environment has `flyway_schema_history`. |
 | `ADMIN_FRONTEND_ORIGINS` | Comma-separated exact browser origins allowed by CORS. | Local default is `http://localhost:5173,http://127.0.0.1:5173`. Wildcards are rejected. |
 | `ADMIN_BOOTSTRAP_EMAILS` | Comma-separated `email` or `email:Display Name` entries promoted to admin on startup. | `application.properties` contains project defaults; `.env.example` contains an example admin email. |
 | `ADMIN_SUPERUSER_EMAILS` | Comma-separated addresses of administrators that may also moderate other administrator accounts. | Must already be administrators; this list does not create them. Defaults to `u-kisi4@student.kit.edu`. Not a role: these accounts still report `ADMIN`. |
@@ -106,6 +108,8 @@ The deployment job uses these custom CI/CD variables:
 | `SPRING_DATASOURCE_URL` | Optional override for the deployed container datasource URL. |
 | `SPRING_DATASOURCE_USERNAME` | Optional override for the deployed container datasource username. |
 | `SPRING_DATASOURCE_PASSWORD` | Deployed container datasource password. Secret. |
+| `SPRING_FLYWAY_ENABLED` | Optional override for Flyway startup migrations. Defaults to `true` in CI. |
+| `SPRING_FLYWAY_BASELINE_ON_MIGRATE` | Optional override for initial baselining of pre-Flyway databases. Defaults to `true` in CI. |
 | `ADMIN_FRONTEND_ORIGINS` | Optional override for allowed frontend origins. |
 | `ADMIN_BOOTSTRAP_EMAILS` | Optional override for admin bootstrap accounts. |
 | `ADMIN_SUPERUSER_EMAILS` | Optional override for the administrators that may moderate other administrators. |
@@ -255,22 +259,33 @@ extra_hosts:
 
 ### Schema Management
 
-The runtime schema is managed by Spring/JPA:
+The runtime schema is managed by Flyway. Production migrations live under:
 
-```properties
-spring.jpa.hibernate.ddl-auto=update
+```text
+src/main/resources/db/migration/postgresql
 ```
 
-`docs/admin-api.md` states that deployments should point the backend at the
-target PostgreSQL database and take a database backup before deploying against an
-existing database. Hibernate then applies additive schema updates required by the
-current JPA entities when the backend starts.
+Test migrations for H2 live under:
 
-The repository also contains `prisma/migrations` directories:
+```text
+src/test/resources/db/migration/h2
+```
 
-- `20260723000000_existing_schema_baseline`
-- `20260723235500_admin_api`
-- `20260729120000_moderation_effects`
+The first migration, `V1__existing_schema_baseline.sql`, creates the current
+schema for fresh databases. Existing non-empty databases from the pre-Flyway
+period are baselined at version `1` on first startup. Flyway records applied
+migrations in `flyway_schema_history`.
+
+Hibernate no longer changes the schema at runtime:
+
+```properties
+spring.jpa.hibernate.ddl-auto=validate
+```
+
+Startup fails if the Flyway-managed schema does not match the current JPA
+entities. Before deploying against an existing database, take a database backup.
+After every persistent environment has a `flyway_schema_history` table, set
+`SPRING_FLYWAY_BASELINE_ON_MIGRATE=false` for that environment.
 
 ## Deployment to BW Cloud or Staging
 
@@ -294,9 +309,11 @@ The job:
 10. Removes the legacy standalone `app-server` container if present, so the
     first Compose deployment can claim the same container name.
 11. Starts or replaces the detached Compose service with
-    `docker compose up -d --remove-orphans`.
+    `docker compose up -d --remove-orphans`. Flyway runs before the backend
+    starts serving requests.
 12. Polls `http://localhost:8080/health` inside the Compose service up to 30
-    times.
+    times. The health endpoint checks database reachability and verifies that
+    Flyway has no failed or pending migrations.
 13. Prints recent Compose service logs and fails the job if health never
     succeeds.
 
@@ -347,6 +364,10 @@ Use the checks that are explicitly supported by the source and CI configuration:
    {"message":"API healthy","success":true}
    ```
 
+   In CD this is the migration gate: the endpoint fails when the database is
+   unreachable, when Flyway reports a failed migration, when Flyway has pending
+   migrations, or when no migration has been applied or baselined.
+
 2. For the BW Cloud/staging URL referenced by CI, confirm:
 
    ```bash
@@ -371,6 +392,18 @@ Use the checks that are explicitly supported by the source and CI configuration:
    after a successful health check and the last 200 lines after a failed health
    check.
 
+6. When you have direct database access, inspect Flyway's migration history:
+
+   ```sql
+   select installed_rank, version, description, type, success
+   from flyway_schema_history
+   order by installed_rank;
+   ```
+
+   On existing databases adopted by Flyway, version `1` may appear as a
+   `BASELINE` row. On fresh databases, version `1` appears as a normal SQL
+   migration. Future schema changes should appear as `V2`, `V3`, and so on.
+
 ## Updating and Restarting
 
 ### Through CI
@@ -380,7 +413,9 @@ The confirmed update path is:
 1. Merge or push the desired commit to `main`.
 2. Let `server:test` and `server:package` run.
 3. Start the manual `server:deploy:staging` job.
-4. Wait for the job's `/health` polling loop to succeed.
+4. Wait for the job's `/health` polling loop to succeed. If Flyway migration or
+   Hibernate schema validation fails, the backend does not become healthy and
+   the deployment job fails.
 
 The deployment job updates the Compose-managed `backend` service from the
 current commit image tag. The first Compose deployment removes the previous
@@ -414,7 +449,7 @@ docker compose logs backend
 | --- | --- |
 | Application fails during startup with `AUTH_RATE_LIMIT_HMAC_KEY must contain at least 32 characters` | Set `AUTH_RATE_LIMIT_HMAC_KEY` to an unpredictable value with at least 32 characters. |
 | Browser requests fail with `403 Invalid CORS request` | Set `ADMIN_FRONTEND_ORIGINS` to the exact Admin Web origin, including scheme and port. Wildcards are rejected. |
-| `GET /health` returns 503 | The backend could not run `SELECT 1` against the configured database. Check datasource URL, username, password, PostgreSQL reachability, and port `5432`. |
+| `GET /health` returns 503 | The backend could not run `SELECT 1` against the configured database, or Flyway reports failed/pending migrations. Check datasource URL, username, password, PostgreSQL reachability, migration logs, `flyway_schema_history`, and port `5432`. |
 | `GET /system/status` reports database down or degraded | The database probe or follow-up reads failed. Check database availability and backend logs. |
 | GitLab issue creation returns 503 | `GITLAB_BASE_URL`, `GITLAB_PROJECT_ID`, or `GITLAB_TOKEN` is unset, so the integration is disabled. |
 | GitLab issue creation returns bad gateway | The backend could not reach GitLab or GitLab did not return the expected issue payload. Check `GITLAB_BASE_URL`, token permissions, network access, and `GITLAB_TIMEOUT`. |

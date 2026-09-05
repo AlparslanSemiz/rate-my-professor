@@ -878,14 +878,16 @@ whether an action taken in the panel actually reached the database.
 
 ## Health
 
-`GET /health` is public and performs `SELECT 1`:
+`GET /health` is public and performs `SELECT 1`, then verifies that Flyway has
+no failed or pending migrations and has a current migration or baseline:
 
 ```json
 {"message":"API healthy","success":true}
 ```
 
-It answers `503 {"message":"API unhealthy","success":false}` when that query fails. This
-is the liveness probe for deployment tooling; the admin panel's status page uses
+It answers `503 {"message":"API unhealthy","success":false}` when the database
+query fails or Flyway does not report a clean migration state. This is the
+liveness probe for deployment tooling; the admin panel's status page uses
 `GET /system/status` instead, which stays `200` so it can render the failure.
 
 ## Configuration
@@ -941,11 +943,14 @@ For a reverse proxy that exposes this backend under `/api`, use
 
 ## Schema management
 
-The backend schema is managed by Spring/JPA. The runtime uses
-`spring.jpa.hibernate.ddl-auto=update`, so deployments should point the backend at the
-target PostgreSQL database with `SPRING_DATASOURCE_URL`,
-`SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD`.
+The backend schema is managed by Flyway migrations under
+`src/main/resources/db/migration/postgresql`. Flyway runs during backend startup,
+records state in `flyway_schema_history`, and Hibernate validates the result with
+`spring.jpa.hibernate.ddl-auto=validate`.
 
-Before deploying against an existing database, take a database backup. Hibernate then
-applies the additive schema updates required by the current JPA entities when the
-backend starts.
+Deployments should point the backend at the target PostgreSQL database with
+`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, and
+`SPRING_DATASOURCE_PASSWORD`. Before deploying against an existing database, take
+a database backup. Existing non-empty databases from the pre-Flyway period are
+baselined at version `1` on first startup; after every persistent environment has
+that history table, set `SPRING_FLYWAY_BASELINE_ON_MIGRATE=false`.
