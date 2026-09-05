@@ -82,9 +82,10 @@ const users: User[] = [
   },
 ]
 
-// The address decides what the operator may do; `u-kisi4@student.kit.edu` is the one allowed to
-// act on admin accounts, and it is still reported as a plain ADMIN.
-const superAdminUser = { ...authUser, email: 'u-kisi4@student.kit.edu' }
+// The backend decides what the operator may do, and reports it as `isSuperAdmin` on
+// `/auth/me`. The address is deliberately an ordinary one: nothing about the permission is
+// derived from it any more, and the account is still reported as a plain ADMIN.
+const superAdminUser = { ...authUser, isSuperAdmin: true }
 
 function renderUsers(sessionUser = authUser) {
   localStorage.setItem('token', 'admin-token')
@@ -330,15 +331,19 @@ describe('Users page', () => {
     expect(screen.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument()
   })
 
-  it('locks the KIT email always, and the credibility score only for a protected account', async () => {
+  it('locks the status but not the credibility score of another admin account', async () => {
     const user = userEvent.setup()
     renderUsers()
 
     await user.click(await screen.findByText('Alice Smith'))
     await user.click(await screen.findByRole('button', { name: 'Edit' }))
 
+    // The backend reserves an admin account's status for an elevated operator, but takes a
+    // credibility score from any admin — locking both hid an edit it would have accepted.
     expect(await screen.findByLabelText('KIT email')).toBeDisabled()
-    expect(screen.getByLabelText('Credibility score')).toBeDisabled()
+    const dialog = within(screen.getByRole('dialog'))
+    expect(dialog.getByLabelText('Status')).toBeDisabled()
+    expect(dialog.getByLabelText('Credibility score')).toBeEnabled()
   })
 
   it('leaves the credibility score editable for a non-protected account', async () => {
@@ -528,6 +533,7 @@ describe('Users page', () => {
   describe('signed in as an operator who may act on admins', () => {
     it('offers the moderation actions on another admin account', async () => {
       const user = userEvent.setup()
+      // The permission rides on the flag alone: this operator's address is on no list.
       renderUsers(superAdminUser)
 
       await user.click(await screen.findByText('Alice Smith'))

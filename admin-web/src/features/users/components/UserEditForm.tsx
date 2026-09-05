@@ -34,7 +34,7 @@ interface UserEditFormProps {
   user: User
   /** True when the profile belongs to the signed-in admin, who cannot change its own access. */
   isSelf: boolean
-  /** True when the signed-in admin may also change the access of other admin accounts. */
+  /** True when the signed-in admin may also change the status of other admin accounts. */
   canActOnAdmins: boolean
   loading: boolean
   onCancel: () => void
@@ -62,21 +62,22 @@ export default function UserEditForm({
   const [error, setError] = useState('')
 
   const trimmedUsername = username.trim()
-  const accessLocked = isSelf || (user.role === 'ADMIN' && !canActOnAdmins)
+  // Only the status of an admin account is reserved for an elevated operator. Username,
+  // biography, role and credibility score are accepted from any admin against an admin
+  // target, so locking them here only hid edits the backend would have taken.
+  const statusLocked = isSelf || (user.role === 'ADMIN' && !canActOnAdmins)
 
   const update: UserUpdate = {}
   if (trimmedUsername !== user.username) update.username = trimmedUsername
   if (biography !== user.biography) update.biography = biography
-  if (!accessLocked && isEditableStatus(status) && status !== user.status) {
+  if (!statusLocked && isEditableStatus(status) && status !== user.status) {
     update.status = status
   }
   if (!isSelf && isRole(role) && role !== user.role) update.role = role
   // Compared against the seeded value so re-entering the stored number is not sent as an edit.
-  if (!accessLocked && credibilityScore !== null && credibilityScore !== user.credibilityScore) {
+  if (!isSelf && credibilityScore !== null && credibilityScore !== user.credibilityScore) {
     update.credibilityScore = credibilityScore
   }
-
-  const credibilityDescription = accessLocked ? 'Admin accounts are protected here.' : undefined
 
   const canSave = trimmedUsername.length > 0 && Object.keys(update).length > 0
 
@@ -134,9 +135,9 @@ export default function UserEditForm({
           onChange={(value) => {
             if (value !== null && isEditableStatus(value)) setStatus(value)
           }}
-          disabled={accessLocked}
+          disabled={statusLocked}
           description={
-            accessLocked ? 'Admin accounts are protected here.' : 'Deleting is a separate action.'
+            statusLocked ? 'Admin accounts are protected here.' : 'Deleting is a separate action.'
           }
           size="sm"
           clearable={false}
@@ -165,8 +166,8 @@ export default function UserEditForm({
           value={credibilityScore ?? ''}
           onChange={(value) => setCredibilityScore(typeof value === 'number' ? value : null)}
           allowDecimal={false}
-          disabled={accessLocked}
-          description={credibilityDescription}
+          disabled={isSelf}
+          description={isSelf ? 'You cannot change your own score.' : undefined}
           size="sm"
           styles={darkInputStyles}
         />
