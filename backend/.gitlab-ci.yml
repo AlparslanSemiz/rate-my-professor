@@ -229,9 +229,11 @@ backup:offsite:
     - |
       SSH="ssh -i $SSH_PRIVATE_KEY -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST"
 
-      # The backup directory is 0700 root, so this reads through sudo. Newest first, and the
-      # glob is resolved on the server rather than here.
-      LATEST=$($SSH "sudo ls -1t /var/backups/postgres/pgdumpall-*.sql.gz 2>/dev/null | head -1")
+      # The backup directory is 0700 root, so this reads through sudo -- and the glob has to be
+      # expanded inside that root shell, not by the login shell. As the login user the pattern
+      # matches nothing, and an unmatched glob is passed through literally, so a plain
+      # `sudo ls <pattern>` fails on every run.
+      LATEST=$($SSH "sudo sh -c 'ls -1t /var/backups/postgres/pgdumpall-*.sql.gz' 2>/dev/null | head -1")
       if [ -z "$LATEST" ]; then
         echo "No dump found in /var/backups/postgres -- has pg-backup.timer run?"
         exit 1
