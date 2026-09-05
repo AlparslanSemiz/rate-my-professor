@@ -30,9 +30,9 @@ async function resolveAdminUser(): Promise<AuthUser> {
 
 async function readSessionUser(): Promise<AuthUser | null> {
   try {
-    const session = await authService.me()
-    const user = session.user
-    return user && typeof user.id === 'string' && user.id.trim() ? user : null
+    // `me()` already refuses a payload that names no usable id, so an answer here is either
+    // a real account or nothing at all.
+    return (await authService.me()).user ?? null
   } catch {
     // The sign-in itself succeeded; only this read failed. Passing its own message on would
     // describe the login as the thing that went wrong.

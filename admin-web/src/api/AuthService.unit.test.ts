@@ -79,10 +79,18 @@ describe('AuthService', () => {
     )
   })
   it('reports the signed-in user when /auth/me carries one', async () => {
+    // The names the backend actually uses, the same ones it uses on `/users`.
     fetchMock.mockResolvedValueOnce(jsonResponse({
       success: true,
-      message: 'OK',
-      user: { id: 'admin-1', name: 'Admin User', email: 'admin@student.kit.edu', role: 'ADMIN' },
+      message: 'Authenticated',
+      user: {
+        id: 'admin-1',
+        username: 'Admin User',
+        kitEmail: 'admin@student.kit.edu',
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        isSuperAdmin: true,
+      },
     }))
     const service = createAuthService()
 
@@ -93,11 +101,55 @@ describe('AuthService', () => {
       name: 'Admin User',
       email: 'admin@student.kit.edu',
       role: 'ADMIN',
+      isSuperAdmin: true,
     })
     expect(fetchMock).toHaveBeenCalledWith(
       `${TEST_API_BASE_URL}/auth/me`,
       expect.objectContaining({ method: 'GET' })
     )
+  })
+
+  it('accepts the older name / email spelling too', async () => {
+    // Which of the two the endpoint uses is not worth depending on: the panel reads either.
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      success: true,
+      message: 'Authenticated',
+      user: { id: 'admin-1', name: 'Admin User', email: 'admin@student.kit.edu', role: 'ADMIN' },
+    }))
+    const service = createAuthService()
+
+    expect((await service.me()).user).toEqual({
+      id: 'admin-1',
+      name: 'Admin User',
+      email: 'admin@student.kit.edu',
+      role: 'ADMIN',
+      isSuperAdmin: false,
+    })
+  })
+
+  it('reports an unelevated operator when the flag is absent', async () => {
+    // A backend that does not report it grants nothing: the permission is never assumed.
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      success: true,
+      message: 'Authenticated',
+      user: { id: 'admin-1', username: 'Admin User', kitEmail: 'a@b.de', role: 'ADMIN' },
+    }))
+    const service = createAuthService()
+
+    expect((await service.me()).user?.isSuperAdmin).toBe(false)
+  })
+
+  it('names nobody when the reported account carries no id', async () => {
+    // The id is the value that comes back as the actor on an audit entry. Without one there
+    // is no account to act as, so a half-filled payload is no better than an absent one.
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      success: true,
+      message: 'Authenticated',
+      user: { id: '  ', username: 'Admin User', kitEmail: 'a@b.de', role: 'ADMIN' },
+    }))
+    const service = createAuthService()
+
+    expect((await service.me()).user).toBeUndefined()
   })
 
   it('resolves without a user when /auth/me confirms the token but names nobody', async () => {
@@ -106,7 +158,11 @@ describe('AuthService', () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, message: 'Authenticated' }))
     const service = createAuthService()
 
-    await expect(service.me()).resolves.toEqual({ success: true, message: 'Authenticated' })
+    await expect(service.me()).resolves.toEqual({
+      success: true,
+      message: 'Authenticated',
+      user: undefined,
+    })
   })
 
   it('rejects a refused token with a 401 ApiError', async () => {

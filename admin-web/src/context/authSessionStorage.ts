@@ -3,7 +3,7 @@ import type { AuthUser } from './AuthContextValue'
 
 const TOKEN_STORAGE_KEY = 'token'
 const USER_STORAGE_KEY = 'user'
-const AUTH_USER_FIELDS = ['id', 'name', 'email', 'role'] as const
+const AUTH_USER_STRING_FIELDS = ['id', 'name', 'email', 'role'] as const
 
 export interface AuthState {
   token: string | null
@@ -16,10 +16,16 @@ function isAuthUser(value: unknown): value is AuthUser {
   if (!value || typeof value !== 'object') return false
 
   const candidate = value as Record<string, unknown>
-  return AUTH_USER_FIELDS.every((field) => {
+  const hasFields = AUTH_USER_STRING_FIELDS.every((field) => {
     const fieldValue = candidate[field]
     return typeof fieldValue === 'string' && fieldValue.trim().length > 0
   })
+  if (!hasFields) return false
+
+  // Optional on purpose: a session stored before the backend reported the flag is still a
+  // valid session, and an absent flag simply means "not elevated" until `/auth/me` says
+  // otherwise. Anything that is neither absent nor a boolean is a payload we did not write.
+  return candidate.isSuperAdmin === undefined || typeof candidate.isSuperAdmin === 'boolean'
 }
 
 export function clearStoredSession(): void {

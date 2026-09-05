@@ -23,6 +23,7 @@ const sessionUser = {
   name: 'Alparslan',
   email: ADMIN_EMAIL,
   role: 'STUDENT',
+  isSuperAdmin: true,
 }
 
 describe('authenticateAdmin', () => {
@@ -44,6 +45,8 @@ describe('authenticateAdmin', () => {
       email: ADMIN_EMAIL,
       // The account is a STUDENT to the backend; the panel's own admin list decides otherwise.
       role: 'ADMIN',
+      // Carried through untouched: only the backend decides this one.
+      isSuperAdmin: true,
     })
   })
 

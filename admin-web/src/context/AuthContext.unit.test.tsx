@@ -105,6 +105,26 @@ describe('AuthProvider', () => {
     expect(localStorage.getItem('user')).toBeNull()
   })
 
+  it('keeps a stored session that carries the elevated flag', () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify({ ...testUser, isSuperAdmin: true }))
+
+    renderAuthHarness()
+
+    expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated')
+  })
+
+  it('rejects a stored session whose elevated flag is not a boolean', () => {
+    // Not a payload this panel ever wrote, so nothing about it can be trusted.
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify({ ...testUser, isSuperAdmin: 'yes' }))
+
+    renderAuthHarness()
+
+    expect(screen.getByTestId('auth-state')).toHaveTextContent('anonymous')
+    expect(localStorage.getItem('user')).toBeNull()
+  })
+
   it('replaces the stored user with the one /auth/me reports', async () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(testUser))
@@ -117,6 +137,19 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(screen.getByTestId('user-name')).toHaveTextContent('Renamed Admin'))
     // And persisted, so the next load starts from the corrected copy rather than the stale one.
     expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(current)
+  })
+
+  it('withdraws an elevation /auth/me no longer reports', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify({ ...testUser, isSuperAdmin: true }))
+    const current = { ...testUser, isSuperAdmin: false }
+    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'ok', user: current })
+
+    renderAuthHarness()
+
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(current)
+    )
   })
 
   it('keeps the stored user when /auth/me names nobody', async () => {
