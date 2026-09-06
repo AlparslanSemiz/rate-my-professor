@@ -454,6 +454,20 @@ docker compose ps
 docker compose logs backend
 ```
 
+## Server Maintenance Units
+
+Three systemd units run on the deployment host. None of them is part of an image or of this
+pipeline: they exist only on that machine, so a rebuilt host needs them recreated by hand.
+
+| Unit | Schedule | What it does |
+| --- | --- | --- |
+| `pg-backup.timer` → `/usr/local/bin/pg-backup.sh` | Daily | `pg_dumpall` of the `pse-postgres` container into `/var/backups/postgres`. Written under a `.partial` name and published only after `gzip -t` and the cluster-dump completion marker both pass, so a truncated file never looks like a backup. Keeps 14 days. |
+| `docker-image-gc.timer` → `/usr/local/bin/docker-image-gc.sh` | Weekly | Removes images that no container references and that are older than `KEEP_HOURS` (72). Every deploy pulls another SHA-tagged image onto an 11 GB disk and nothing else deleted the old ones. Volumes are deliberately not pruned. |
+| `app-server-netfix.service` | At boot | Reattaches `app-server` to the Docker bridge and restarts it. Its veth does not always come back cleanly after a host reboot. |
+
+The scheduled `backup:offsite` job above is the off-machine half of the first row: every
+dump `pg-backup.sh` writes lives on the same disk as the database it came from.
+
 ## Basic Troubleshooting
 
 | Symptom | Confirmed cause or check |
