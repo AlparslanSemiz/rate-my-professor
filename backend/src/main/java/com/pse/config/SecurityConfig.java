@@ -38,9 +38,18 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/auth/request-login",
                                 "/auth/login",
-                                "/auth/validate"
+                                "/auth/validate",
+                                "/admin/auth/request-login",
+                                "/admin/auth/login"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/health").permitAll()
+                        // The admin API is one surface with one rule. The two login routes above
+                        // are its only anonymous entries and are matched first; everything else
+                        // under /admin needs an admin session. Kept here, ahead of every other
+                        // matcher, so no later rule -- least of all anyRequest().permitAll() --
+                        // can widen an /admin path by accident. It does not capture /admins/**:
+                        // patterns match whole segments, and "admins" is not "admin".
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/account/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/data/lectures").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/social/notifications").authenticated()

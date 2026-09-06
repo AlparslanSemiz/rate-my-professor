@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/comments")
+@RequestMapping({"/admin/comments", "/comments"})
 public class ModerationCommentController {
 
     private final ModerationCommentService service;

@@ -136,7 +136,12 @@ public class AuditRevertService {
         for (AuditLog log : page) {
             Map<UUID, Map<String, Object>> current =
                     currentByType.getOrDefault(log.getTargetType(), Map.of());
-            result.put(log.getId(), evaluate(log, current.get(log.getTargetId()), reverted, cutoff));
+            // A refusal -- LOGIN_REFUSED, ACCESS_REFUSED -- records something that did not
+            // happen and so carries no target id. Asking an immutable empty map for a null
+            // key throws, which turned a page holding one refusal into a 500.
+            Map<String, Object> currentValues =
+                    log.getTargetId() == null ? null : current.get(log.getTargetId());
+            result.put(log.getId(), evaluate(log, currentValues, reverted, cutoff));
         }
         return result;
     }

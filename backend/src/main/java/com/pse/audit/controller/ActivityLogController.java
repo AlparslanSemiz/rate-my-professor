@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
  * the backend refused. Administrative actions are served by {@code /audit-logs}.
  */
 @RestController
-@RequestMapping("/activity-logs")
+@RequestMapping({"/admin/activity-logs", "/activity-logs"})
 public class ActivityLogController {
 
     private final AuditLogService service;

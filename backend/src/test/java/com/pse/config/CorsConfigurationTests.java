@@ -61,6 +61,32 @@ class CorsConfigurationTests {
                 .andExpect(header().string("Access-Control-Allow-Origin", ALLOWED_ORIGIN));
     }
 
+    /**
+     * The same for the prefixed admin API, where a single {@code /admin/**} rule stands in
+     * front of every panel route.
+     */
+    @Test
+    @WithAnonymousUser
+    void preflightForAdminPrefixedRouteIsNotRejectedAsUnauthenticated() throws Exception {
+        mockMvc.perform(options("/admin/users")
+                        .header("Origin", ALLOWED_ORIGIN)
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", ALLOWED_ORIGIN));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void preflightForAdminLoginIsAllowedForConfiguredOrigin() throws Exception {
+        mockMvc.perform(options("/admin/auth/login")
+                        .header("Origin", ALLOWED_ORIGIN)
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "content-type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", ALLOWED_ORIGIN));
+    }
+
     @Test
     @WithAnonymousUser
     void preflightFromUnknownOriginIsRejected() throws Exception {

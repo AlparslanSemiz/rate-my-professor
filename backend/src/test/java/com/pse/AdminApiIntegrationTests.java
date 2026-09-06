@@ -179,8 +179,8 @@ class AdminApiIntegrationTests {
                 issuedToken.getExpiresAt()
         ).toSeconds();
         org.junit.jupiter.api.Assertions.assertTrue(
-                remainingSeconds >= java.time.Duration.ofDays(1).minusSeconds(5).toSeconds()
-                        && remainingSeconds <= java.time.Duration.ofDays(1).toSeconds()
+                remainingSeconds >= java.time.Duration.ofDays(365).minusSeconds(5).toSeconds()
+                        && remainingSeconds <= java.time.Duration.ofDays(365).toSeconds()
         );
 
         mockMvc.perform(get("/auth/me").header("Authorization", bearer(token)))
@@ -953,6 +953,23 @@ class AdminApiIntegrationTests {
         mockMvc.perform(get("/activity-logs").header("Authorization", bearer(student.rawToken())))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/activity-logs")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void activityLogStaysListableWithARefusalOnThePage() throws Exception {
+        // A refusal records something that did not happen, so it carries no target id. The
+        // revertibility pass asked an empty immutable map for that null id, which throws, and
+        // the panel saw a 500 on its activity log instead of a page with one unrevertible row.
+        Session refused = createSession("refused@student.kit.edu", false);
+        mockMvc.perform(get("/users").header("Authorization", bearer(refused.rawToken())))
+                .andExpect(status().isForbidden());
+
+        Session admin = createSession("admin@student.kit.edu", true);
+        mockMvc.perform(get("/activity-logs").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activityLogs", hasSize(1)))
+                .andExpect(jsonPath("$.activityLogs[0].action").value("ACCESS_REFUSED"))
+                .andExpect(jsonPath("$.activityLogs[0].revertible").value(false));
     }
 
     @Test

@@ -289,6 +289,74 @@ class LectureApiIntegrationTests {
                         .value(professor.getId().toString()));
     }
 
+    /**
+     * The same write on the admin API, which is where the panel moves to. The legacy
+     * {@code /data/lectures} test above stays until it has.
+     */
+    @Test
+    void adminCanAddLectureThroughAdminApi() throws Exception {
+
+        Session admin = createSession("admin@student.kit.edu", true);
+
+        Professor professor = new Professor();
+        professor.setFirstName("Petra");
+        professor.setLastName("Weber");
+        professor = professorRepository.saveAndFlush(professor);
+
+        mockMvc.perform(
+                        post("/admin/data/lectures")
+                                .header("Authorization", bearer(admin.rawToken()))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+        {
+          "name": "Analysis 1",
+          "code": "ANA1",
+          "semesterYear": 2026,
+          "semesterSeason": "SUMMER",
+          "active": true,
+          "professorIds": [
+            "%s"
+          ]
+        }
+        """.formatted(professor.getId()))
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        assertTrue(lectureRepository.findByName("Analysis 1").isPresent());
+    }
+
+    /**
+     * On the admin API the security chain answers first, so this is a plain 403 rather
+     * than the legacy 200 with {@code success: false}.
+     */
+    @Test
+    void nonAdminCannotAddLectureThroughAdminApi() throws Exception {
+
+        Session student = createSession("student@student.kit.edu", false);
+
+        mockMvc.perform(
+                        post("/admin/data/lectures")
+                                .header("Authorization", bearer(student.rawToken()))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+        {
+          "name": "Analysis 1",
+          "code": "ANA1",
+          "semesterYear": 2026,
+          "semesterSeason": "SUMMER",
+          "active": true,
+          "professorIds": []
+        }
+        """)
+                )
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Could not authenticate Admin"));
+
+        assertTrue(lectureRepository.findByName("Analysis 1").isEmpty());
+    }
+
     @Test
     void nonAdminCannotAddLecture() throws Exception {
 

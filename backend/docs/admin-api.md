@@ -1,8 +1,10 @@
 # Admin Web API
 
-The service has no global path prefix. All paths below are the complete backend paths.
-JSON field names are camelCase, IDs are UUID strings, and response timestamps are UTC
-ISO 8601 strings with milliseconds (for example, `2026-07-23T10:30:00.000Z`).
+The Admin Web API lives under `/admin`. Every path in this document is a complete
+backend path, and the unprefixed paths this document used to carry are still served for
+the panel's migration — see [Path migration](#path-migration). JSON field names are
+camelCase, IDs are UUID strings, and response timestamps are UTC ISO 8601 strings with
+milliseconds (for example, `2026-07-23T10:30:00.000Z`).
 
 Except for the two login operations and health, the Admin Web endpoints require:
 
@@ -22,9 +24,48 @@ Validation errors return `400`, missing records `404`, protected admin-account s
 conflicts `409`, rate limits `429` with `Retry-After`, unexpected failures `500`, and a
 failed database readiness check `503`.
 
+## Path migration
+
+Every administrative route now answers under `/admin` as well as on its old path. The rule
+is mechanical: the new path is `/admin` plus the old one. The legacy paths still work so
+the panel can move at its own pace, and they are removed once it has.
+
+| Old | New |
+| --- | --- |
+| `/auth/request-login`, `/auth/login`, `/auth/logout`, `/auth/logout-all`, `/auth/me` | `/admin/auth/...` |
+| `/users/**` | `/admin/users/**` |
+| `/comments/**`, `/answers/**` | `/admin/comments/**`, `/admin/answers/**` |
+| `GET /ratings`, `DELETE /ratings/{id}` | `/admin/ratings...` |
+| `/audit-logs/**`, `/activity-logs/**` | `/admin/audit-logs/**`, `/admin/activity-logs/**` |
+| `/system/status` | `/admin/system/status` |
+| `GET /data/lectures/all`, `GET /data/professor/all`, `PATCH`/`DELETE /data/lectures/{id}`, `PATCH`/`DELETE /data/professor/{id}` | `/admin/data/...` |
+| `POST /data/lectures`, `POST /data/professor` | `POST /admin/data/lectures`, `POST /admin/data/professor` |
+| `GET /reports`, `PATCH`/`DELETE /reports/{id}`, `POST /reports/{id}/gitlab-issue` | `/admin/reports...` |
+
+Three things deliberately do **not** move:
+
+- **`POST /reports`** is the student's bug submission on the app API. There is no
+  `POST /admin/reports`, and a request to it answers `404`.
+- **The public catalogue reads** — `GET /data/lectures`, `GET /data/lectures/{id}`,
+  `GET /data/professor`, `GET /data/professor/{id}`, `GET /data/professor/id` — stay on the
+  app API. The panel calls them there. Serving the same rows under `/admin` would put one
+  resource behind two different authorization outcomes, and the `/admin/data/.../all`
+  listings already cover what the panel needs beyond them.
+- **`GET /admins/validate`** is legacy and undocumented; `GET /admin/auth/me` answers the
+  same question with more. It is being retired, not moved. `/admin/**` matches whole
+  segments, so it is untouched by the new prefix.
+
 ## Authentication
 
-### `POST /auth/request-login`
+**Which API you logged in through decides the session.** Session type and lifetime are
+properties of the endpoint, not of the account: `POST /admin/auth/login` mints an
+administrator session on the admin schedule and refuses anyone without an `admins` row,
+while `POST /auth/login` on the app API mints an app session that lasts a year for every
+account, administrators included. An administrator logging in from the mobile app is
+therefore not on the panel's expiry schedule — deriving the lifetime from the account
+instead is what used to put one there.
+
+### `POST /admin/auth/request-login`
 
 No authentication. Email is trimmed, lowercased, and must be a
 `@student.kit.edu` address.
@@ -41,7 +82,7 @@ The code is six characters, Argon2-hashed, single-use, and expires after five mi
 by default. Request limits default to 3 per email and 20 per source IP in 15 minutes.
 Codes are delivered through SMTP and are never returned or logged.
 
-### `POST /auth/login`
+### `POST /admin/auth/login`
 
 No authentication.
 
@@ -53,17 +94,22 @@ No authentication.
 {
   "message":"Login successful",
   "success":true,
-  "authToken":"opaque-random-token"
+  "authToken":"opaque-random-token",
+  "expiresAt":"2026-07-24T10:30:00.000Z"
 }
 ```
 
-The optional `sessionType` request field accepts `APP` or `ADMIN`. `APP` sessions always
-have student privileges, even when the account is also an administrator. Omitting the
-field preserves the legacy role-based selection, so existing admin clients receive an
-admin session and existing student clients receive an app session.
+An account without an `admins` row is refused with `403 Admin access required`, and the
+refusal costs the caller a login-failure slot and is recorded as `LOGIN_REFUSED` with
+`reason = NOT_AN_ADMIN`. A `sessionType` field in the body is ignored here: this endpoint
+only ever mints an administrator session. On the legacy `POST /auth/login` it still
+selects between `APP` and `ADMIN`, and omitting it there still gives an account with an
+`admins` row an admin session, which is what keeps an un-migrated panel working.
 
-The opaque token is returned once; only its SHA-256 hash is persisted. Admin sessions
-expire after one day and app sessions after 365 days by default. An eligible email
+The opaque token is returned once; only its SHA-256 hash is persisted. This session
+expires after `AUTH_ADMIN_SESSION_TTL`, one day by default, which `expiresAt` reports so
+the panel can warn an operator instead of discovering it as a `401` mid-form. A session
+from the app API lasts `AUTH_APP_SESSION_TTL`, 365 days by default. An eligible email
 in `ADMIN_BOOTSTRAP_EMAILS` is provisioned into `admins` at startup, and again after
 successful OTP verification if the row is missing. Admin token creation and `ADMIN_LOGIN` audit insertion share one
 transaction.
@@ -80,12 +126,12 @@ Being listed grants nothing on its own: the address must already be an administr
 which is what `ADMIN_BOOTSTRAP_EMAILS` is for. The two lists overlap without being the
 same thing.
 
-**Elevation is not a role.** `/auth/me`, `GET /users`, `GET /users/{id}` and every audit
+**Elevation is not a role.** `/admin/auth/me`, `GET /admin/users`, `GET /admin/users/{id}` and every audit
 `actor.role` keep reporting `ADMIN` for these accounts. The distinction reaches clients
-in two separate places: the `isSuperAdmin` boolean on `GET /auth/me`, and `elevated: true`
+in two separate places: the `isSuperAdmin` boolean on `GET /admin/auth/me`, and `elevated: true`
 in the `metadata` of the audit entries that only an elevated operator could have written.
 
-### `POST /auth/logout`
+### `POST /admin/auth/logout`
 
 Admin authentication; no body. Revokes the current token and writes
 `ADMIN_LOGOUT` in the same transaction.
@@ -102,14 +148,14 @@ by default) simply stops authenticating — there is no request at that moment a
 attribute an entry to, and this log records what someone did, not what a clock did.
 
 The one case where the backend itself ends an *admin's* session is a role change through
-`PATCH /users/{id}`; blocking and deleting refuse administrator targets outright. That case
+`PATCH /admin/users/{id}`; blocking and deleting refuse administrator targets outright. That case
 is already in the log, as the `USER_UPDATED` entry carrying `metadata.sessionsRevoked = true`
 — with its `changes.role` saying why. An `ADMIN_LOGOUT` written there would be attributed to
 the admin who made the change rather than to the one whose session died, which is a worse
 record than none. So treat a missing `ADMIN_LOGOUT` as ordinary, and never read the absence
 of one as evidence that a session is still live.
 
-### `POST /auth/logout-all`
+### `POST /admin/auth/logout-all`
 
 Any authenticated user; no body. Revokes every token of the calling account — including
 the token used to make the request — so no session of that account passes authentication
@@ -124,7 +170,7 @@ email + OTP flow. For an admin caller an `ADMIN_LOGOUT` entry is written with
 A missing or invalid `Authorization` header returns
 `401 {"message":"Not logged in","success":false}`.
 
-### `GET /auth/me`
+### `GET /admin/auth/me`
 
 Any authenticated user.
 
@@ -153,7 +199,7 @@ available.
 
 ## Users
 
-All operations require an admin token. `GET /users` omits soft-deleted users and
+All operations require an admin token. `GET /admin/users` omits soft-deleted users and
 includes the authenticated admin:
 
 ```json
@@ -177,10 +223,10 @@ includes the authenticated admin:
 }
 ```
 
-`GET /users/{id}` returns that user object directly, **without a wrapper** — it is the one
+`GET /admin/users/{id}` returns that user object directly, **without a wrapper** — it is the one
 read in this API that does not wrap. `warnings` is the persisted warning count; `reports`
 counts reports against comments authored by the user; `credibilityScore` is the value
-`PATCH /users/{id}` writes, returned by both reads so an edit form can seed its input.
+`PATCH /admin/users/{id}` writes, returned by both reads so an edit form can seed its input.
 
 `lastOnline` is **last API activity, not last login**. It is refreshed as authenticated
 requests come in, which is what makes it meaningful for accounts that stay signed in for
@@ -190,7 +236,7 @@ ago", not as a live online indicator. A request that is refused (blocked or dele
 expired token) does not count as activity. Accounts that have signed in but never called
 anything else fall back to `joined`, so the field is never null.
 
-**Soft-deleted accounts are excluded from both reads.** `DELETE /users/{id}` anonymises the
+**Soft-deleted accounts are excluded from both reads.** `DELETE /admin/users/{id}` anonymises the
 account, and it then disappears from the listing and `404`s by id, so a "total users" counter
 built on this listing does not over-report the platform.
 
@@ -218,7 +264,7 @@ Bad parameters answer `400` with a specific message rather than a generic failur
 `A cursor requires a limit`, `Deleted users are not listed`, `Invalid user status`,
 `Invalid user role`, `Invalid user sort`, `User search is too long`.
 
-For dashboard counters, prefer `GET /system/status` — its `counts` block already carries
+For dashboard counters, prefer `GET /admin/system/status` — its `counts` block already carries
 users, active users, admins, lectures, comments, answers, ratings, open reports and audit
 events, and `counts.users` excludes soft-deleted accounts. Polling the full user listing for
 a handful of numbers is a full-table read per poll.
@@ -227,13 +273,13 @@ Mutation endpoints:
 
 | Method and path | Body | Success message |
 | --- | --- | --- |
-| `PATCH /users/{id}` | any subset of `{"username","kitEmail","biography","status","role","credibilityScore"}` | `Updated user successfully` |
-| `DELETE /users/{id}` | none | `Deleted user successfully` |
-| `PATCH /users/{id}/block` | none | `Student blocked successfully` |
-| `PATCH /users/{id}/unblock` | none | `Student unblocked successfully` |
-| `POST /users/{id}/warnings` | `{"message":"Reason"}` | `Student warned successfully` |
-| `PATCH /users/{id}/warnings/{warningId}` | `{"message":"Corrected reason"}` | `Updated warning successfully` |
-| `DELETE /users/{id}/warnings/{warningId}` | none | `Deleted warning successfully` |
+| `PATCH /admin/users/{id}` | any subset of `{"username","kitEmail","biography","status","role","credibilityScore"}` | `Updated user successfully` |
+| `DELETE /admin/users/{id}` | none | `Deleted user successfully` |
+| `PATCH /admin/users/{id}/block` | none | `Student blocked successfully` |
+| `PATCH /admin/users/{id}/unblock` | none | `Student unblocked successfully` |
+| `POST /admin/users/{id}/warnings` | `{"message":"Reason"}` | `Student warned successfully` |
+| `PATCH /admin/users/{id}/warnings/{warningId}` | `{"message":"Corrected reason"}` | `Updated warning successfully` |
+| `DELETE /admin/users/{id}/warnings/{warningId}` | none | `Deleted warning successfully` |
 
 The target is always the path ID and the actor is always the token principal.
 No account can be deleted, blocked, unblocked or warned by itself. Another admin account
@@ -243,7 +289,7 @@ Delete is a soft delete and revokes the target's sessions.
 
 ### Editing a user
 
-`PATCH /users/{id}` is how a wrong name, a typo'd address or a stale biography gets
+`PATCH /admin/users/{id}` is how a wrong name, a typo'd address or a stale biography gets
 fixed. An omitted field is left alone, an empty body is `400`, and a request that changes
 nothing is a successful no-op with no audit event. One `USER_UPDATED` event records every
 field that actually changed.
@@ -253,7 +299,7 @@ field that actually changed.
 - Changing `kitEmail` **revokes the account's sessions** — the address is the login
   identity, so the old sessions no longer correspond to how the account signs in.
 - `status` accepts `ACTIVE` and `BLOCKED`. `DELETED` is `400`: deleting anonymizes the
-  account, which is `DELETE /users/{id}` and not a field edit. For the same reason a
+  account, which is `DELETE /admin/users/{id}` and not a field edit. For the same reason a
   deleted account cannot be restored — its identifying fields are already scrubbed.
 - `role` moves the account in and out of the `admins` table. Demoting also revokes its
   sessions, because an admin session outlives a student one and the panel would keep
@@ -275,12 +321,12 @@ field that actually changed.
   operator, and an ordinary administrator's revert of it is refused with the same `409` the
   direct edit would have been.
 
-`PATCH`/`DELETE /users/{id}/warnings/{warningId}` correct or withdraw a warning that was
+`PATCH`/`DELETE /admin/users/{id}/warnings/{warningId}` correct or withdraw a warning that was
 already issued. The student is not re-notified: the notification went out when the
 warning was created, and rewording it corrects the record rather than warning again. A
 warning addressed under the wrong student is `404`.
 
-`GET /users/{id}/warnings` returns:
+`GET /admin/users/{id}/warnings` returns:
 
 ```json
 {
@@ -300,11 +346,11 @@ warning addressed under the wrong student is `404`.
 }
 ```
 
-`id` is the warning's own id and is what `PATCH`/`DELETE /users/{id}/warnings/{warningId}`
+`id` is the warning's own id and is what `PATCH`/`DELETE /admin/users/{id}/warnings/{warningId}`
 address.
 
 `createdFrom` identifies the issuing admin. `id` is that admin's **student** id — the same
-value `GET /auth/me` returns as `user.id`, so a client can tell whether it issued a warning
+value `GET /admin/auth/me` returns as `user.id`, so a client can tell whether it issued a warning
 itself by comparing the two. `name` is the admin's display name. `createdFrom.createdAt` is
 when the warning was issued and therefore repeats the outer `createdAt`.
 
@@ -315,7 +361,7 @@ and a caller still sending them is unaffected because unknown JSON fields are ig
 
 ## Comments
 
-`GET /comments` returns every comment, not only reported ones — this is what the panel
+`GET /admin/comments` returns every comment, not only reported ones — this is what the panel
 edits or removes content from independent of any report:
 
 ```json
@@ -336,7 +382,7 @@ edits or removes content from independent of any report:
 }
 ```
 
-`PATCH /comments/{id}` accepts any subset of `{"content","status"}`, at least one
+`PATCH /admin/comments/{id}` accepts any subset of `{"content","status"}`, at least one
 required:
 
 ```json
@@ -348,14 +394,14 @@ required:
 whether a report exists. Returns `{"message":"Updated comment successfully","success":true}`;
 an unchanged request is a no-op with no audit event.
 
-`DELETE /comments/{id}` is a real delete, not a hide — it removes the comment, its
+`DELETE /admin/comments/{id}` is a real delete, not a hide — it removes the comment, its
 answers, votes and reports. Use `status = HIDDEN` to take content out of the student
 app while keeping its history. Returns
 `{"message":"Deleted comment successfully","success":true}`.
 
 ## Comment reports
 
-`GET /comments/reported` returns every report:
+`GET /admin/comments/reported` returns every report:
 
 ```json
 {
@@ -382,7 +428,7 @@ deleting the content the report is about addresses — without it the reports ta
 change a report's status, and acting on the content means finding it by eye in the content
 tab.
 
-`PATCH /comments/reported/{id}` accepts a `ReportStatus`:
+`PATCH /admin/comments/reported/{id}` accepts a `ReportStatus`:
 
 ```json
 {"status":"REVIEWED"}
@@ -393,7 +439,7 @@ audits-free no-op. Moving a report to `ACTION_TAKEN` hides the comment (and its
 answers, which nest under it in the student read path); moving it to any other status
 puts the comment back.
 
-`DELETE /comments/reported/{id}` withdraws the report record itself — the reported
+`DELETE /admin/comments/reported/{id}` withdraws the report record itself — the reported
 comment is untouched, since retracting a report that should not have been filed is not
 a judgement on the content. Returns `{"message":"Deleted report successfully","success":true}`.
 
@@ -401,7 +447,7 @@ a judgement on the content. Returns `{"message":"Deleted report successfully","s
 
 Mirrors comments in every respect, including `content`/`status` validation.
 
-`GET /answers` returns every answer:
+`GET /admin/answers` returns every answer:
 
 ```json
 {
@@ -421,17 +467,17 @@ Mirrors comments in every respect, including `content`/`status` validation.
 }
 ```
 
-`PATCH /answers/{id}` body and behavior are identical to `PATCH /comments/{id}`, and
+`PATCH /admin/answers/{id}` body and behavior are identical to `PATCH /admin/comments/{id}`, and
 returns `{"message":"Updated answer successfully","success":true}`.
 
-`DELETE /answers/{id}` deletes the answer and its votes/reports. Returns
+`DELETE /admin/answers/{id}` deletes the answer and its votes/reports. Returns
 `{"message":"Deleted answer successfully","success":true}`.
 
 ## Answer reports
 
 Mirrors comment reports for answers.
 
-`GET /answers/reported` returns every report:
+`GET /admin/answers/reported` returns every report:
 
 ```json
 {
@@ -458,13 +504,13 @@ As with comment reports, `id` is the report's id; `answerId` is the reported ans
 `commentId` is the thread it sits in, so both the content and its context can be opened
 directly.
 
-`PATCH /answers/reported/{id}` accepts `{"status":"<ReportStatus>"}` and
-`DELETE /answers/reported/{id}` withdraws the report — both behave exactly like the
+`PATCH /admin/answers/reported/{id}` accepts `{"status":"<ReportStatus>"}` and
+`DELETE /admin/answers/reported/{id}` withdraws the report — both behave exactly like the
 comment-report equivalents, hiding/restoring the answer on `ACTION_TAKEN` transitions.
 
 ## Ratings
 
-`GET /ratings` returns every rating individually, not aggregated into a lecture
+`GET /admin/ratings` returns every rating individually, not aggregated into a lecture
 average — this is what a bogus rating gets identified and deleted by id from:
 
 ```json
@@ -484,15 +530,16 @@ average — this is what a bogus rating gets identified and deleted by id from:
 ```
 
 Accepts `limit` (1–100), `cursor` and `lectureId`, with the same opt-in pagination as
-`GET /users`: no `limit` returns every rating and a null cursor. `lectureId` is a query
-parameter rather than a path segment because `GET /ratings/{lectureId}` is the public
-per-lecture averages read on the same base path. A malformed `lectureId` is
+`GET /admin/users`: no `limit` returns every rating and a null cursor. `lectureId` is a query
+parameter rather than a path segment for a reason that no longer applies on this path —
+`GET /ratings/{lectureId}` is the app API's per-lecture averages read, which used to sit on
+the same base path. It stays a query parameter; changing it is its own decision. A malformed `lectureId` is
 `400 Invalid lecture id`; a malformed cursor is `400 Invalid rating cursor`.
 
 `category` is a `RatingCategory` (see `LectureType` below for which categories a given
 lecture offers); `value` is the score the student gave that category.
 
-`DELETE /ratings/{id}` discards the rating. Deliberately delete-only: rewriting
+`DELETE /admin/ratings/{id}` discards the rating. Deliberately delete-only: rewriting
 someone's scores would put an opinion they never gave into the lecture average, so a
 bogus rating is removed rather than corrected. Returns
 `{"message":"Deleted rating successfully","success":true}`.
@@ -512,18 +559,20 @@ admin-only and return every row regardless of `active`.
 | Method and path | Body | Notes |
 | --- | --- | --- |
 | `GET /data/lectures` | — | Public. Active lectures only. |
-| `GET /data/lectures/all` | — | Admin-only. Every lecture, active or not. |
+| `GET /admin/data/lectures/all` | — | Admin-only. Every lecture, active or not. |
 | `GET /data/lectures/{id}` | — | Public. `404`-shaped as `{"message":"...","success":false,"lecture":null}` rather than an HTTP 404 if not found. |
-| `POST /data/lectures` | `{"name","code","semesterYear","semesterSeason","active","professorIds"}` | Admin only in practice — checks the caller is an admin internally rather than through the security chain, and answers `200 {"success":false}` (not `403`) when the caller is not one. `active` is currently ignored; new lectures are always created active. `409`-shaped as `{"success":false}` on a duplicate name, not an HTTP `409`. |
-| `PATCH /data/lectures/{id}` | any subset of `{"name","code","semesterYear","semesterSeason","active","lectureType","professorIds"}` | `LECTURE_UPDATED` audit event. |
-| `DELETE /data/lectures/{id}` | none | Deletes the lecture and every comment, answer and rating filed under it. Use `active = false` instead to take a lecture out of the app while keeping its history. `LECTURE_DELETED` audit event. |
+| `POST /admin/data/lectures` | `{"name","code","semesterYear","semesterSeason","active","professorIds"}` | Refused with a plain `403` by the security chain when the caller is not an admin. `active` is currently ignored; new lectures are always created active. `409`-shaped as `{"success":false}` on a duplicate name, not an HTTP `409`. |
+| `POST /data/lectures` | same | **Legacy, removed once the panel has moved.** Same write, but it checks the caller internally rather than through the security chain and answers `200 {"success":false}` — not `403` — when the caller is not an admin. |
+| `PATCH /admin/data/lectures/{id}` | any subset of `{"name","code","semesterYear","semesterSeason","active","lectureType","professorIds"}` | `LECTURE_UPDATED` audit event. |
+| `DELETE /admin/data/lectures/{id}` | none | Deletes the lecture and every comment, answer and rating filed under it. Use `active = false` instead to take a lecture out of the app while keeping its history. `LECTURE_DELETED` audit event. |
 | `GET /data/professor` | — | Public. Active professors only. |
-| `GET /data/professor/all` | — | Admin-only. Every professor, active or not. |
+| `GET /admin/data/professor/all` | — | Admin-only. Every professor, active or not. |
 | `GET /data/professor/{id}` | — | Public. |
 | `GET /data/professor/id?firstName=&lastName=` | — | Public. Returns a bare UUID string, or `null` if no match — not wrapped in a response object. |
-| `POST /data/professor` | `{"firstName","lastName","lectureIDs"}` | Same non-standard auth/error shape as `POST /data/lectures`. |
-| `PATCH /data/professor/{id}` | any subset of `{"firstName","lastName","active","lectureIds"}` | `PROFESSOR_UPDATED` audit event. |
-| `DELETE /data/professor/{id}` | none | Detaches the professor from every lecture; the lectures themselves survive. `PROFESSOR_DELETED` audit event. |
+| `POST /admin/data/professor` | `{"firstName","lastName","lectureIDs"}` | Refused with a plain `403`, like `POST /admin/data/lectures`. |
+| `POST /data/professor` | same | **Legacy, removed once the panel has moved.** Same non-standard auth/error shape as the legacy `POST /data/lectures`. |
+| `PATCH /admin/data/professor/{id}` | any subset of `{"firstName","lastName","active","lectureIds"}` | `PROFESSOR_UPDATED` audit event. |
+| `DELETE /admin/data/professor/{id}` | none | Detaches the professor from every lecture; the lectures themselves survive. `PROFESSOR_DELETED` audit event. |
 
 `LectureResponse` (returned by the lecture reads, and nested in `LectureDetailResponse`
 as `lecture`):
@@ -544,7 +593,7 @@ as `lecture`):
 ```
 
 `lectureType` is `LECTURE_ONLY` or `LECTURE_AND_EXERCISE`; it decides which
-`RatingCategory` values the lecture offers on `GET /ratings`. Changing it does not
+`RatingCategory` values the lecture offers on `GET /admin/ratings`. Changing it does not
 rewrite ratings already submitted — they keep the categories they were given.
 
 `ProfessorResponse` (returned by the professor reads, and nested in
@@ -562,7 +611,7 @@ rewrite ratings already submitted — they keep the categories they were given.
 }
 ```
 
-`lectureIds` is the professor's own view of the assignment that `PATCH /data/professor/{id}`
+`lectureIds` is the professor's own view of the assignment that `PATCH /admin/data/professor/{id}`
 writes. Read it from here rather than reverse-indexing it out of `GET /data/lectures`: the
 lecture listing is the other direction of the same relation, and reverse-indexing it returns
 partial results the moment that listing is filtered or paginated — a professor would appear
@@ -572,14 +621,14 @@ to have stopped teaching the lectures that fell outside the page.
 Its `success` was previously hard-coded `false` on the success path, so a client that
 trusted the flag treated every found professor as a miss.
 
-`PATCH /data/lectures/{id}` and `PATCH /data/professor/{id}` validate names and years
-the same way `PATCH /users/{id}` validates a username: trimmed, non-empty,
+`PATCH /admin/data/lectures/{id}` and `PATCH /admin/data/professor/{id}` validate names and years
+the same way `PATCH /admin/users/{id}` validates a username: trimmed, non-empty,
 length-capped, `400` on violation. `professorIds`/`lectureIds` replace the assignment
 wholesale — pass `[]` to clear it — and a `404` if any id in the list does not resolve.
 
 ## Bug reports
 
-`GET /reports` returns:
+`GET /admin/reports` returns:
 
 ```json
 {
@@ -602,7 +651,7 @@ wholesale — pass `[]` to clear it — and a `404` if any id in the list does n
 `issueState` is `NONE`, `CREATED` or `FAILED`, and with `issueUrl` is what decides whether a
 client shows a link to the tracker issue, an action to open one, or a retry.
 
-`PATCH /reports/{id}` accepts any subset of `{"status","severity","title","description"}`,
+`PATCH /admin/reports/{id}` accepts any subset of `{"status","severity","title","description"}`,
 at least one required:
 
 ```json
@@ -613,14 +662,14 @@ Only changed fields are persisted. A request changing several fields creates one
 `BUG_REPORT_UPDATED` event. `title` and `description` are trimmed and length-capped
 (500 and 10000 characters) the same way a comment's content is.
 
-`DELETE /reports/{id}` discards the report — a duplicate, or one filed by mistake.
+`DELETE /admin/reports/{id}` discards the report — a duplicate, or one filed by mistake.
 Returns `{"message":"Deleted bug report successfully","success":true}` and a
 `BUG_REPORT_DELETED` audit event.
 
-`POST /reports` remains the legacy authenticated-student submission endpoint, and stays open
-to students.
+`POST /reports` is the authenticated-student submission endpoint and stays open to
+students on the app API. It has no `/admin` twin: `POST /admin/reports` answers `404`.
 
-### `POST /reports/{id}/gitlab-issue`
+### `POST /admin/reports/{id}/gitlab-issue`
 
 Admin only. Opens a GitLab issue for the bug report and stores where it landed.
 
@@ -644,7 +693,7 @@ arrives would make student-facing bug reporting depend on GitLab being reachable
 file the duplicates and the spam into the tracker alongside the real bugs.
 
 - `503 GitLab integration is not configured` when the credentials are unset. Read
-  `gitlabEnabled` from `GET /system/status` to hide the action rather than discover this by
+  `gitlabEnabled` from `GET /admin/system/status` to hide the action rather than discover this by
   pressing it.
 - `502` when GitLab refuses or cannot be reached. The report is left at `issueState:"FAILED"`
   so the attempt is visible and can be retried by calling again.
@@ -659,7 +708,7 @@ at all: a token that reaches the browser is a leaked token.
 This is the activity log: it holds both administrative actions and what users did in
 the student app, separated by `actor.type`.
 
-`GET /audit-logs` accepts `limit` (1–100, default 50), opaque `cursor`, `q`,
+`GET /admin/audit-logs` accepts `limit` (1–100, default 50), opaque `cursor`, `q`,
 `actorId`, `actorType`, `action`, `targetType`, and inclusive ISO date-time `from`/`to`.
 Results use stable keyset ordering by `(createdAt DESC, id DESC)`. `q` searches the
 snapshotted actor name/email and target label case-insensitively.
@@ -692,7 +741,7 @@ window or the staleness rule — two copies of that rule would drift apart. When
 explanation covers both the hidden control and the control clicked after the entry went
 stale. `revertedByAuditId` names the entry that already reversed this one.
 
-`POST /audit-logs/{id}/revert` applies the inverse of one entry. Admin only.
+`POST /admin/audit-logs/{id}/revert` applies the inverse of one entry. Admin only.
 
 ```json
 {"message":"Reverted USER_UPDATED","success":true}
@@ -732,7 +781,7 @@ nothing in the log carries the removed data, so there is nothing to restore from
 the only field added to any error body in this API, and it is omitted entirely when absent, so
 every other error response is unchanged.
 
-`GET /audit-logs/meta` returns actor snapshots plus these enums:
+`GET /admin/audit-logs/meta` returns actor snapshots plus these enums:
 
 - Actor types: `ADMIN`, `USER`
 - Administrative actions: `ADMIN_LOGIN`, `ADMIN_LOGOUT`, `USER_UPDATED`,
@@ -784,8 +833,11 @@ and `metadata` carries the detail:
 ```
 
 `contentPreview` is the first 120 characters of the submitted text; the full body stays
-in its own table. `USER_LOGIN` carries `{"method":"EMAIL_OTP","newAccount":<bool>}` and
-targets the created session. Votes are not recorded: they carry no content and would
+in its own table. `USER_LOGIN` carries
+`{"method":"EMAIL_OTP","newAccount":<bool>,"api":"APP"}` and targets the created session.
+`ADMIN_LOGIN` carries `{"method":"EMAIL_OTP","api":"APP"|"ADMIN"}`, where `api` names the
+login endpoint the session came from — an `ADMIN_LOGIN` with `"api":"APP"` is a panel that
+has not moved to `/admin/auth/login` yet. Votes are not recorded: they carry no content and would
 outnumber every other event.
 
 ### Refusals
@@ -795,7 +847,7 @@ record survives the rollback of the request it describes:
 
 | Action | When | `metadata` |
 | --- | --- | --- |
-| `LOGIN_REFUSED` | `POST /auth/login` answered `403` or `401` | `reason` is `INVALID_CODE` or `ACCOUNT_<status>`, plus `method` |
+| `LOGIN_REFUSED` | `POST /admin/auth/login` answered `403` or `401` | `reason` is `INVALID_CODE` or `ACCOUNT_<status>`, plus `method` |
 | `ACCESS_REFUSED` | an authenticated caller was answered `403` | `method`, `path`, `status` |
 
 Only refusals attributable to a known account are recorded. A login attempt for an
@@ -813,7 +865,7 @@ answering `403` indefinitely.
 
 ## System
 
-`GET /system/status` requires an admin token and answers `200` whenever the API is
+`GET /admin/system/status` requires an admin token and answers `200` whenever the API is
 serving, reporting a failing database in `status` rather than in the HTTP code — a page
 that has to show "the API is up but the database is not" cannot do that if the request
 itself fails.
@@ -860,15 +912,15 @@ hide the "create issue" action instead of discovering it is unavailable by press
 - `DOWN` — the database is unreachable; `database.error` names the failure class and
   `counts`/`lastWrite` are `null`
 
-`counts.users` excludes soft-deleted accounts, matching `GET /users`, and
+`counts.users` excludes soft-deleted accounts, matching `GET /admin/users`, and
 `counts.activeUsers` narrows that to `status == ACTIVE`; the two differ by the `INACTIVE`
 and `BLOCKED` accounts, so a dashboard can show both without reading the user listing.
 
-`counts.admins` counts the accounts that hold the administrator role — the rows `GET /users`
+`counts.admins` counts the accounts that hold the administrator role — the rows `GET /admin/users`
 returns with `role: "ADMIN"` — and not `ADMIN_BOOTSTRAP_EMAILS`. The two overlap without
 being the same. A bootstrap address counts without anyone having signed in, because the
 startup runner creates and promotes those accounts. An account promoted through
-`PATCH /users/{id}` counts from that moment, configured or not. And a demotion that leaves
+`PATCH /admin/users/{id}` counts from that moment, configured or not. And a demotion that leaves
 the address in `ADMIN_BOOTSTRAP_EMAILS` is undone by the next restart or that account's next
 sign-in, either of which re-promotes it, so the count climbs back on its own — removing the
 address from the configuration is what makes a demotion stick.
@@ -888,7 +940,7 @@ no failed or pending migrations and has a current migration or baseline:
 It answers `503 {"message":"API unhealthy","success":false}` when the database
 query fails or Flyway does not report a clean migration state. This is the
 liveness probe for deployment tooling; the admin panel's status page uses
-`GET /system/status` instead, which stays `200` so it can render the failure.
+`GET /admin/system/status` instead, which stays `200` so it can render the failure.
 
 ## Configuration
 
@@ -900,7 +952,7 @@ credentials are read only from environment variables.
 
 `ADMIN_FRONTEND_ORIGINS` must list every origin the panel is served from, scheme and
 port included. A browser call from an origin outside the list is answered with
-`403 Invalid CORS request` before it reaches a controller, so `POST /auth/request-login`
+`403 Invalid CORS request` before it reaches a controller, so `POST /admin/auth/request-login`
 fails and the panel cannot be logged into. An empty value falls back to the local
 development origins and logs a warning at startup; it does not disable the check.
 
@@ -912,7 +964,7 @@ cross-origin one when the list does not contain the host. Confirm a deployment w
 
 ```bash
 curl -i -X POST -H "Origin: <panel origin>" -H "Content-Type: application/json" \
-  -d '{"email":"nobody@example.invalid"}' <api base>/auth/request-login
+  -d '{"email":"nobody@example.invalid"}' <api base>/admin/auth/request-login
 ```
 
 `400 Invalid KIT email` means the origin is accepted and the request reached the
@@ -929,7 +981,7 @@ controller. `403 Invalid CORS request` means it did not.
 | `AUDIT_REVERT_WINDOW` | `P7D` | How long an administrative field edit stays reversible |
 
 With any of the three GitLab values unset the integration reports itself as disabled:
-`GET /system/status` returns `gitlabEnabled:false` and `POST /reports/{id}/gitlab-issue`
+`GET /admin/system/status` returns `gitlabEnabled:false` and `POST /admin/reports/{id}/gitlab-issue`
 answers `503`. Everything else works unchanged.
 
 The Admin Web setting is:
