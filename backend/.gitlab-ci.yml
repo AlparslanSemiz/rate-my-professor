@@ -112,6 +112,18 @@ server:deploy:staging:
     - ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
   script:
     - |
+      # DEPLOY_PATH reaches the server through ssh and scp, where a relative value is
+      # resolved against the login directory. "home/ubuntu/deployAdress" therefore
+      # deployed into /home/ubuntu/home/ubuntu/deployAdress for months, and nothing in a
+      # diff could show it: the value lives in the settings page, not in this file. Fix it
+      # here rather than trusting that whoever fills that page in types a leading slash.
+      case "$DEPLOY_PATH" in
+        /*) ;;
+        "") echo "DEPLOY_PATH is not set" >&2; exit 1 ;;
+        *)  echo "DEPLOY_PATH '$DEPLOY_PATH' is relative -- deploying to '/$DEPLOY_PATH'"
+            DEPLOY_PATH="/$DEPLOY_PATH" ;;
+      esac
+    - |
       write_env() {
         key="$1"
         value="$2"

@@ -103,7 +103,7 @@ Deployment and scheduled maintenance jobs use these custom CI/CD variables:
 | `DEPLOY_HOST` | Deployment host. |
 | `DEPLOY_PORT` | SSH port for the deployment host. |
 | `DEPLOY_USER` | SSH user for the deployment host. |
-| `DEPLOY_PATH` | Directory created and entered on the deployment host. |
+| `DEPLOY_PATH` | Directory created and entered on the deployment host. Must be absolute: the value is used over SSH, where a relative path resolves against the login directory. The deploy job prepends a missing leading slash and says so in its log. |
 | `BACKEND_PUBLISHED_PORT` | Optional host port for the Compose-managed backend. Defaults to `8080`. |
 | `SPRING_DATASOURCE_URL` | Optional override for the deployed container datasource URL. |
 | `SPRING_DATASOURCE_USERNAME` | Optional override for the deployed container datasource username. |
