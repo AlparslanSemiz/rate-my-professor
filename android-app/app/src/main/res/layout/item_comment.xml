@@ -58,7 +58,7 @@
         android:layout_marginTop="8dp"
         android:layout_marginRight="16dp"
         android:src="@drawable/comment_bubble_icon"
-        app:layout_constraintRight_toLeftOf="@id/reply_button"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/content_text" />
 
     <TextView
@@ -120,17 +120,6 @@
         app:layout_constraintEnd_toStartOf="@+id/downvote_icon"
         app:layout_constraintTop_toTopOf="@+id/comments_icon" />
 
-    <TextView
-        android:id="@+id/reply_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:fontFamily="@font/inter_bold"
-        android:text="Reply"
-        android:textColor="@color/text_primary"
-        android:textSize="20sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/comments_icon" />
 
     <include
         android:id="@+id/comment_box"
@@ -141,7 +130,7 @@
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/reply_button" />
+        app:layout_constraintTop_toBottomOf="@+id/comments_icon" />
 
     <ImageButton
         android:id="@+id/report_button"
@@ -150,7 +139,7 @@
         android:layout_marginEnd="8dp"
         android:background="#333333"
         app:layout_constraintEnd_toStartOf="@+id/downvotes_num"
-        app:layout_constraintTop_toTopOf="@+id/reply_button"
+        app:layout_constraintTop_toTopOf="@+id/comments_icon"
         app:srcCompat="@android:drawable/stat_sys_warning" />
 
 

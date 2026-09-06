@@ -70,13 +70,6 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
         holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
 
-        holder.replyButton.setOnClickListener(v -> {
-            if (!AuthManager.getInstance().isLoggedIn()) {
-                Toast.makeText(context, "You are not logged in.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            holder.commentBox.setVisibility(View.VISIBLE);
-        });
         holder.cancelButton.setOnClickListener(v -> holder.commentBox.setVisibility(View.GONE));
         holder.sendReply.setOnClickListener(v ->
                 {
@@ -113,7 +106,6 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             listener.vote(comment.commentID(), VoteType.DOWN, type);
         });
         if (type == CommentType.REPLY) {
-            holder.replyButton.setVisibility(View.INVISIBLE);
             holder.showCommentButton.setVisibility(View.INVISIBLE);
             holder.commentsNum.setVisibility(View.GONE);
             holder.reportButton.setOnClickListener(v ->listener.reportReply(comment.commentID()));
@@ -132,6 +124,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
      * and moved before the click happens.</p>
      */
     private void openReplies(Comment comment) {
+        System.out.println("openReplies");
         listener.onOpenReplies(comment);
     }
 
@@ -147,7 +140,6 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
 
         final TextView userName;
         final TextView commentContent;
-        final TextView replyButton;
         final TextView sendReply;
         final TextView cancelButton;
         final EditText replyText;
@@ -176,7 +168,6 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             profilePicture = binding.profilePicture;
             userName = binding.userName;
             commentContent = binding.contentText;
-            replyButton = binding.replyButton;
             sendReply = replyBinding.sendReply;
             cancelButton = replyBinding.cancelButton;
             replyText = replyBinding.replyText;
