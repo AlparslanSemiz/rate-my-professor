@@ -51,6 +51,28 @@ server:test:
         path: target/site/jacoco/jacoco.xml
     expire_in: 1 week
 
+server:docker-smoke:
+  stage: test
+  image: docker:27-cli
+  services:
+    - name: docker:27-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_DRIVER: overlay2
+  cache: []
+  before_script:
+    - apk add --no-cache bash curl docker-cli-compose
+    - docker version
+    - docker compose version
+  script:
+    - ./scripts/docker-smoke-test.sh
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
+
 server:package:
   stage: package
   image:
