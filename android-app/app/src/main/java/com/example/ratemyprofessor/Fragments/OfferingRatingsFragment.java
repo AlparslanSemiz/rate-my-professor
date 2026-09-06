@@ -611,7 +611,6 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                 .setView(dialogBinding.getRoot())
                 .create();
 
-        dialogBinding.bugReportClose.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.bugReportCancel.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.bugReportSubmit.setOnClickListener(v -> submitCommentReport(dialogBinding, dialog, commentID, type));
         dialogBinding.commentReportInput.addTextChangedListener(new TextWatcher() {
@@ -651,7 +650,6 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                 ? ""
                 : dialogBinding.commentReportInput.getText().toString().trim();
 
-        // There is no bug-report endpoint yet, so this only validates local input.
         if (report.isEmpty()) {
             dialogBinding.bugReportInputLayout.setError(getString(R.string.bug_report_empty_error));
             return;

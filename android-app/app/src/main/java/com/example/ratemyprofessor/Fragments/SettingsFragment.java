@@ -9,9 +9,11 @@ import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -23,12 +25,15 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.ratemyprofessor.Activities.LoginActivity;
+import com.example.ratemyprofessor.DomainModel.BugSeverity;
 import com.example.ratemyprofessor.RateMyProfessorApplication;
 import com.example.ratemyprofessor.R;
 import com.example.ratemyprofessor.ServerCommunication.APIService;
 import com.example.ratemyprofessor.ServerCommunication.AuthManager;
 import com.example.ratemyprofessor.ServerCommunication.NetworkUtils;
 import com.example.ratemyprofessor.ServerCommunication.LoginSession;
+import com.example.ratemyprofessor.ServerCommunication.ReportReason;
+import com.example.ratemyprofessor.ServerCommunication.Requests.BugReportRequest;
 import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
 import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
 import com.example.ratemyprofessor.databinding.DialogBugReportBinding;
@@ -47,6 +52,8 @@ public class SettingsFragment extends Fragment {
 
     private FragmentSettingsBinding binding;
 
+    private APIService apiService;
+
     /**
      * Inflates the settings layout and prepares the click actions.
      */
@@ -58,6 +65,7 @@ public class SettingsFragment extends Fragment {
             @Nullable Bundle savedInstanceState
     ) {
         binding = FragmentSettingsBinding.inflate(inflater, container, false);
+        apiService = RetrofitClient.getClient().create(APIService.class);
         applyStatusBarInset();
         setUpClickListeners();
         return binding.getRoot();
@@ -153,14 +161,40 @@ public class SettingsFragment extends Fragment {
     private void showBugReportDialog() {
         DialogBugReportBinding dialogBinding = DialogBugReportBinding.inflate(getLayoutInflater());
 
+        BugSeverity[] severityLevels = BugSeverity.values();
+
+        ArrayAdapter<BugSeverity> adapter = new ArrayAdapter<>(
+                getContext(),
+                android.R.layout.simple_spinner_item,
+                severityLevels
+        );
+
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
         Dialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setView(dialogBinding.getRoot())
                 .create();
 
-        dialogBinding.bugReportClose.setOnClickListener(v -> dialog.dismiss());
+        dialogBinding.bugSeverity.setAdapter(adapter);
         dialogBinding.bugReportCancel.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.bugReportSubmit.setOnClickListener(v -> submitBugReport(dialogBinding, dialog));
-        dialogBinding.commentReportInput.addTextChangedListener(new TextWatcher() {
+        dialogBinding.bugReportTitleInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                dialogBinding.bugReportTitleInput.setError(null);
+            }
+        });
+        dialogBinding.bugReportInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
@@ -187,24 +221,55 @@ public class SettingsFragment extends Fragment {
     }
 
     /**
-     * Validates the bug report text before closing the dialog.
+     * Validates and submits the bug report text before closing the dialog.
      *
      * @param dialogBinding the views of the bug report dialog
      * @param dialog        the dialog to close once the report is accepted
      */
     private void submitBugReport(DialogBugReportBinding dialogBinding, Dialog dialog) {
-        String report = dialogBinding.commentReportInput.getText() == null
+        String title = dialogBinding.bugReportTitleInput.getText() == null
                 ? ""
-                : dialogBinding.commentReportInput.getText().toString().trim();
+                : dialogBinding.bugReportTitleInput.getText().toString().trim();
 
-        // There is no bug-report endpoint yet, so this only validates local input.
+        String report = dialogBinding.bugReportInput.getText() == null
+                ? ""
+                : dialogBinding.bugReportInput.getText().toString().trim();
+
+        BugSeverity severity = (BugSeverity) dialogBinding.bugSeverity.getSelectedItem();
+
+        BugReportRequest request = new BugReportRequest(title, report, severity);
+        String token = LoginSession.from(requireContext()).bearerToken();
+
+        Call<BasicResponse> reportCall = apiService.reportBug(token, request);
+
+        if (title.isEmpty()) {
+            dialogBinding.bugReportTitleInput.setError(getString(R.string.bug_report_empty_title_error));
+            return;
+        }
         if (report.isEmpty()) {
             dialogBinding.bugReportInputLayout.setError(getString(R.string.bug_report_empty_error));
             return;
         }
 
+        reportCall.enqueue(new Callback<BasicResponse>() {
+            @Override
+            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                BasicResponse body = response.body();
+                if (!response.isSuccessful() || body == null || !body.success()) {
+                    Log.println(Log.DEBUG, "bug report", "failure: " + response.code());
+                    Toast.makeText(requireContext(),"Something went wrong", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Toast.makeText(requireContext(), R.string.bug_report_submitted, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                Log.println(Log.DEBUG, "comment report", "failure: " + throwable.getMessage());
+            }
+        });
+
         dialogBinding.bugReportInputLayout.setError(null);
-        Toast.makeText(requireContext(), R.string.bug_report_submitted, Toast.LENGTH_SHORT).show();
         dialog.dismiss();
     }
 

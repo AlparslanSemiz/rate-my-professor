@@ -1,5 +1,6 @@
 package com.example.ratemyprofessor.ServerCommunication;
 
+import com.example.ratemyprofessor.ServerCommunication.Requests.BugReportRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.CommentReportRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.SubmitAnswerRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.VoteRequest;
@@ -240,4 +241,15 @@ public interface APIService {
 
     @GET("/ratings/{lectureId}/categories")
     Call<RatingCategoriesResponse> getCategories(@Path("lectureId") String lectureId);
+
+    /**
+     * Interface used for bug reports
+     */
+    @POST("/reports")
+    Call<BasicResponse> reportBug(
+            @Header("Authorization") String token,
+            @Body BugReportRequest request
+    );
+
+
 }

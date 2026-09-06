@@ -31,10 +31,14 @@
     <string name="settings_delete_account">Delete Account</string>
 
     <string name="bug_report_prompt">What went wrong?</string>
+    <string name="bug_severity">Choose Bug Severity</string>
+    <string name="bug_report_title_hint">Give your report a title</string>
     <string name="comment_report_prompt">Please select Reason of Report and give and explanation.</string>
     <string name="bug_report_hint">Describe the bug</string>
     <string name="comment_report_hint">Explain the report reason</string>
     <string name="bug_report_empty_error">Please describe the bug before submitting.</string>
+    <string name="bug_report_empty_title_error">Please give your bug report a title.</string>
+    <string name="severity_missing_error">Please choose a severity level for your bug.</string>
     <string name="bug_report_submitted">Thanks for the report.</string>
     <string name="logout_all_devices_title">Log Out On All Devices?</string>
     <string name="logout_all_devices_message">This signs you out here and on every other device. You will need your KIT email to log in again.</string>
