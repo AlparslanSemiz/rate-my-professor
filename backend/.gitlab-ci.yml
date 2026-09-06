@@ -51,6 +51,26 @@ server:test:
         path: target/site/jacoco/jacoco.xml
     expire_in: 1 week
 
+server:postgres-migration-smoke:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  services:
+    - name: postgres:16
+      alias: postgres
+  variables:
+    POSTGRES_DB: postgres_smoke
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres_smoke_password
+    POSTGRES_SMOKE_JDBC_URL: jdbc:postgresql://postgres:5432/postgres_smoke
+    POSTGRES_SMOKE_USERNAME: postgres
+    POSTGRES_SMOKE_PASSWORD: postgres_smoke_password
+  script:
+    - ./mvnw -Dtest=PostgreSqlMigrationSmokeTests test
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
+
 server:package:
   stage: package
   image:

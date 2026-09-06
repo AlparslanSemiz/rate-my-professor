@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16
-    container_name: backend-postgres
+    container_name: "${POSTGRES_CONTAINER_NAME:-backend-postgres}"
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: src/Dockerfile
-    container_name: backend-app
+    container_name: "${BACKEND_CONTAINER_NAME:-backend-app}"
     depends_on:
       postgres:
         condition: service_healthy
