@@ -57,14 +57,26 @@ server:docker-smoke:
   services:
     - name: docker:27-dind
       alias: docker
+      command: ["--tls=false", "--host=tcp://0.0.0.0:2375"]
+      variables:
+        HEALTHCHECK_TCP_PORT: "2375"
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
     DOCKER_DRIVER: overlay2
+    SMOKE_HEALTH_URL: http://docker:8080/health
   cache: []
   before_script:
     - apk add --no-cache bash curl docker-cli-compose
-    - docker version
+    - |
+      for attempt in $(seq 1 30); do
+        if docker info >/dev/null 2>&1; then
+          break
+        fi
+        echo "Waiting for Docker daemon at $DOCKER_HOST ($attempt/30)..."
+        sleep 2
+      done
+      docker info
     - docker compose version
   script:
     - ./scripts/docker-smoke-test.sh

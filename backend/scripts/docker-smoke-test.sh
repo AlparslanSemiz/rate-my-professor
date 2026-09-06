@@ -9,6 +9,7 @@ fi
 POSTGRES_CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-${COMPOSE_PROJECT_NAME}-postgres}"
 BACKEND_CONTAINER_NAME="${BACKEND_CONTAINER_NAME:-${COMPOSE_PROJECT_NAME}-app}"
 export COMPOSE_PROJECT_NAME POSTGRES_CONTAINER_NAME BACKEND_CONTAINER_NAME
+SMOKE_HEALTH_URL="${SMOKE_HEALTH_URL:-http://localhost:8080/health}"
 
 cleanup() {
   docker compose down --remove-orphans --volumes >/dev/null 2>&1 || true
@@ -28,7 +29,7 @@ docker compose down --remove-orphans --volumes >/dev/null 2>&1 || true
 docker compose up --build -d
 
 for attempt in {1..60}; do
-  if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
+  if curl -fsS "$SMOKE_HEALTH_URL" >/dev/null 2>&1; then
     echo "Docker smoke test passed: /health returned a successful response."
     exit 0
   fi
