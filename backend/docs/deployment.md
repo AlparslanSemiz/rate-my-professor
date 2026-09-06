@@ -95,7 +95,7 @@ Notes:
 
 ### GitLab CI/CD Variables
 
-The deployment job uses these custom CI/CD variables:
+Deployment and scheduled maintenance jobs use these custom CI/CD variables:
 
 | Variable | Purpose |
 | --- | --- |
@@ -129,6 +129,7 @@ The deployment job uses these custom CI/CD variables:
 | `GITLAB_PROJECT_ID` | Optional GitLab project id/path for issue creation. |
 | `GITLAB_TOKEN` | Optional GitLab API token for issue creation. Secret when set. |
 | `GITLAB_TIMEOUT` | Optional GitLab timeout override. Defaults to `PT10S`. |
+| `BACKUP_PASSPHRASE` | Required by scheduled `backup:offsite`. Used to encrypt database backup artifacts before upload. Secret; configure as a masked CI/CD variable. |
 
 GitLab built-in variables used by the pipeline include `CI_REGISTRY`,
 `CI_REGISTRY_USER`, `CI_REGISTRY_PASSWORD`, `CI_REGISTRY_IMAGE`,
@@ -342,11 +343,17 @@ Jobs:
 | Job | When it runs | What it does |
 | --- | --- | --- |
 | `server:test` | Push and merge request pipelines | Runs `./mvnw verify`, then `java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"`. Publishes JUnit and JaCoCo artifacts. |
+| `server:postgres-migration-smoke` | Push and merge request pipelines | Starts the Spring Boot app test context against a `postgres:16` CI service, checks `/health`, and exercises the PostgreSQL Flyway migrations from `src/main/resources/db/migration/postgresql`. |
 | `server:package` | `main` branch, non-scheduled pipelines | Uses Kaniko to build `src/Dockerfile` and push `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`. |
 | `server:deploy:staging` | Manual job on `main`, non-scheduled pipelines | SSHes to the deployment host and replaces the Compose-managed `backend` service. |
 | `health:check` | Scheduled pipelines only | Curls the configured BW Cloud/staging `/health` URL and expects HTTP 200. |
+| `backup:offsite` | Scheduled pipelines only | Copies the newest server-side PostgreSQL dump, verifies it, encrypts it with `BACKUP_PASSPHRASE`, and stores only the encrypted `.gpg` artifact. |
 
 The changed-code coverage threshold is configured as `COVERAGE_THRESHOLD: "30"`.
+
+Scheduled `backup:offsite` is expected to fail when `BACKUP_PASSPHRASE` is not
+configured. This prevents CI from uploading a readable dump that contains real
+student email addresses.
 
 ## Verifying a Successful Deployment
 
