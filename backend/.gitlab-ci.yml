@@ -179,7 +179,10 @@ server:deploy:staging:
       write_env ADMIN_SUPERUSER_EMAILS "${ADMIN_SUPERUSER_EMAILS:-$DEFAULT_SUPERUSER_EMAILS}"
       write_env AUTH_RATE_LIMIT_HMAC_KEY "${AUTH_RATE_LIMIT_HMAC_KEY}"
       write_env AUTH_OTP_TTL "${AUTH_OTP_TTL:-PT5M}"
-      write_env AUTH_ADMIN_SESSION_TTL "${AUTH_ADMIN_SESSION_TTL:-P1D}"
+      # TEMPORARY: two-minute admin sessions, to watch whether a short admin lifetime can
+      # still reach the app. It cannot -- the lifetime follows the endpoint now -- and this
+      # line goes back to P1D once that has been seen on the deployment.
+      write_env AUTH_ADMIN_SESSION_TTL "${AUTH_ADMIN_SESSION_TTL:-PT2M}"
       write_env AUTH_APP_SESSION_TTL "${AUTH_APP_SESSION_TTL:-${AUTH_STUDENT_SESSION_TTL:-P365D}}"
       write_env AUTH_RATE_LIMIT_WINDOW "${AUTH_RATE_LIMIT_WINDOW:-PT15M}"
       write_env AUTH_RATE_LIMIT_REQUEST_EMAIL "${AUTH_RATE_LIMIT_REQUEST_EMAIL:-3}"
