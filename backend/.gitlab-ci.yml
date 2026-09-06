@@ -144,7 +144,11 @@ server:deploy:staging:
       write_env SPRING_DATASOURCE_USERNAME "${SPRING_DATASOURCE_USERNAME:-postgres}"
       write_env SPRING_DATASOURCE_PASSWORD "${SPRING_DATASOURCE_PASSWORD}"
       write_env SPRING_FLYWAY_ENABLED "${SPRING_FLYWAY_ENABLED:-true}"
-      write_env SPRING_FLYWAY_BASELINE_ON_MIGRATE "${SPRING_FLYWAY_BASELINE_ON_MIGRATE:-true}"
+      # false, not true: this database was baselined on 2026-09-05 and has a
+      # flyway_schema_history. Left at true, a deploy pointed at some other database with
+      # a schema but no history would quietly stamp it as version 1 and carry on, which
+      # is the one case where stopping and complaining is the useful behaviour.
+      write_env SPRING_FLYWAY_BASELINE_ON_MIGRATE "${SPRING_FLYWAY_BASELINE_ON_MIGRATE:-false}"
       write_env ADMIN_FRONTEND_ORIGINS "${ADMIN_FRONTEND_ORIGINS:-$DEFAULT_FRONTEND_ORIGINS}"
       write_env ADMIN_BOOTSTRAP_EMAILS "${ADMIN_BOOTSTRAP_EMAILS:-$DEFAULT_BOOTSTRAP_EMAILS}"
       write_env ADMIN_SUPERUSER_EMAILS "${ADMIN_SUPERUSER_EMAILS:-$DEFAULT_SUPERUSER_EMAILS}"

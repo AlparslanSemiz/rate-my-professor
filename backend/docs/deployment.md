@@ -56,7 +56,7 @@ Do not commit real secret values. `.env` is ignored by `.gitignore`.
 | `SPRING_DATASOURCE_USERNAME` | PostgreSQL username. | Defaults to `postgres`. |
 | `SPRING_DATASOURCE_PASSWORD` | PostgreSQL password. | Defaults to empty. Treat as secret. |
 | `SPRING_FLYWAY_ENABLED` | Enables versioned Flyway migrations during backend startup. | Defaults to `true`. CI staging also defaults to `true`. |
-| `SPRING_FLYWAY_BASELINE_ON_MIGRATE` | Allows the first Flyway deployment to baseline an existing non-empty database previously managed by Hibernate. | Defaults to `true`. Set to `false` after every persistent environment has `flyway_schema_history`. |
+| `SPRING_FLYWAY_BASELINE_ON_MIGRATE` | Allows the first Flyway deployment to baseline an existing non-empty database previously managed by Hibernate. | The application defaults to `true` for the pre-Flyway case. CI writes `false` for the deployed environment, which was baselined on 2026-09-05. |
 | `ADMIN_FRONTEND_ORIGINS` | Comma-separated exact browser origins allowed by CORS. | Local default is `http://localhost:5173,http://127.0.0.1:5173`. Wildcards are rejected. |
 | `ADMIN_BOOTSTRAP_EMAILS` | Comma-separated `email` or `email:Display Name` entries promoted to admin on startup. | `application.properties` contains project defaults; `.env.example` contains an example admin email. |
 | `ADMIN_SUPERUSER_EMAILS` | Comma-separated addresses of administrators that may also moderate other administrator accounts. | Must already be administrators; this list does not create them. Defaults to `u-kisi4@student.kit.edu`. Not a role: these accounts still report `ADMIN`. |
@@ -109,7 +109,7 @@ Deployment and scheduled maintenance jobs use these custom CI/CD variables:
 | `SPRING_DATASOURCE_USERNAME` | Optional override for the deployed container datasource username. |
 | `SPRING_DATASOURCE_PASSWORD` | Deployed container datasource password. Secret. |
 | `SPRING_FLYWAY_ENABLED` | Optional override for Flyway startup migrations. Defaults to `true` in CI. |
-| `SPRING_FLYWAY_BASELINE_ON_MIGRATE` | Optional override for initial baselining of pre-Flyway databases. Defaults to `true` in CI. |
+| `SPRING_FLYWAY_BASELINE_ON_MIGRATE` | Optional override for initial baselining of pre-Flyway databases. Defaults to `false` in CI. |
 | `ADMIN_FRONTEND_ORIGINS` | Optional override for allowed frontend origins. |
 | `ADMIN_BOOTSTRAP_EMAILS` | Optional override for admin bootstrap accounts. |
 | `ADMIN_SUPERUSER_EMAILS` | Optional override for the administrators that may moderate other administrators. |
@@ -285,8 +285,12 @@ spring.jpa.hibernate.ddl-auto=validate
 
 Startup fails if the Flyway-managed schema does not match the current JPA
 entities. Before deploying against an existing database, take a database backup.
-After every persistent environment has a `flyway_schema_history` table, set
-`SPRING_FLYWAY_BASELINE_ON_MIGRATE=false` for that environment.
+
+The deployed database was baselined on 2026-09-05 and has a `flyway_schema_history`
+table, so CI writes `SPRING_FLYWAY_BASELINE_ON_MIGRATE=false`. A deployment aimed at a
+database that has a schema but no history now fails instead of silently declaring that
+schema to be version `1`. Set the variable back to `true` only for the single deployment
+that adopts a new pre-Flyway database, then remove it again.
 
 ## Deployment to BW Cloud or Staging
 
