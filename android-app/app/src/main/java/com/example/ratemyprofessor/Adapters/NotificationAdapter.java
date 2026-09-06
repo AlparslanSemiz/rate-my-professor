@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.ratemyprofessor.DomainModel.Notification;
 import com.example.ratemyprofessor.R;
+import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationType;
 import com.example.ratemyprofessor.databinding.ItemNotificationBinding;
 
 import java.text.DateFormat;
@@ -19,7 +20,7 @@ import java.util.List;
  * Binds comment-reply notifications and forwards item clicks to the hosting fragment.
  *
  * <p>Unread entries are marked twice, with a dot and with a bold title, so the state is also
- * recognisable without relying on colour alone.</p>
+ * recognisable without relying on color alone.</p>
  */
 public class NotificationAdapter
         extends RecyclerView.Adapter<NotificationAdapter.NotificationViewHolder> {
@@ -92,12 +93,20 @@ public class NotificationAdapter
                 DateFormat dateFormat,
                 OnNotificationClickListener listener
         ) {
-            binding.notificationTitle.setText(
-                    binding.getRoot().getContext().getString(
-                            R.string.notification_reply_title,
-                            notification.actorUsername
-                    )
-            );
+
+            boolean isWaringin = NotificationType.WARNING.name().equals(notification.message);
+
+            if (isWaringin) {
+                binding.notificationTitle.setText(R.string.notification_warning_title);
+            } else {
+                binding.notificationTitle.setText(
+                        binding.getRoot().getContext().getString(
+                                R.string.notification_reply_title,
+                                notification.actorUsername
+                        )
+                );
+            }
+
             binding.notificationOffering.setText(notification.lectureOfferingLabel);
             binding.notificationPreview.setText(notification.replyPreview);
             binding.notificationDate.setText(
