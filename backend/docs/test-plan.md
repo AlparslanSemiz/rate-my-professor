@@ -14,14 +14,15 @@ Kapsam ölçütü LINE coverage, hedef %90. Batch 1'in sonucu:
 | `OtpService` | 100.0% | 100% | 13 |
 | `RateLimitService` | 98.2% | 93% | 26 |
 | `AuditRevertService` | 100.0% | 92% | 30 |
-| `LoginLocationService` | 98.6% | 90% | 36 |
+| `LoginLocationService` | 98.8% | 91% | 39 |
 
-**Toplam 188 test (good 79 / bad 109).** Tüm suite: 356 test, 0 hata.
+**Toplam 191 test (good 80 / bad 111).** Tüm suite: 359 test, 0 hata.
 Sayılar parametreli testlerin açılmış hâlidir.
 
 Ortak kurallar: saf JUnit + AssertJ + Mockito, Spring context yok, veritabanı/ağ/dosya
 sistemi yok, saat enjekte edildiği her yerde `Clock.fixed`. Testler mirror paketlerde —
-`RateLimitService.validateConfiguration()` paket-private olduğu için gerekli.
+`RateLimitService.validateConfiguration()` ve `LoginLocationService.warnIfTokenMissing()`
+paket-private olduğu için gerekli.
 
 ---
 
@@ -51,24 +52,27 @@ olarak sabitlendi; sorun büyük olasılıkla panel tarafında.
    `catch (Exception) → LoginLocation("Unknown", null, null)`.
 2. **En olası üretim nedeni:** `ipinfo.token=${IPINFO_TOKEN:}` boşa düşüyor ve
    `getLoginLocation`, `ipInfoToken.isBlank()` üzerinden hiç HTTP çağrısı yapmadan
-   `"Unknown"` dönüyor — **hiçbir log satırı bırakmadan**.
+   `"Unknown"` dönüyor. Bu yol istek başına hâlâ sessiz, ama artık açılışta bir kez
+   `warnIfTokenMissing()` (`@PostConstruct`) WARN düşüyor — token ayarlanmamışsa hiçbir iz
+   bırakmayan tek başarısızlık olmaktan çıktı.
 3. **Yutulan exception loglanıyor.** `LOGGER.warn("Could not determine location for IP {}",
    ip, exception)` stack trace ile birlikte yazıyor (`8d18abb` bunu ekledi). Yani 401/403/429
-   ve timeout loglardan ayırt edilebiliyor; sessiz olan tek yol boş token yolu.
+   ve timeout loglardan ayırt edilebiliyor; istek sırasında sessiz olan tek yol boş token
+   yolu, o da açılıştaki uyarıdan tanınıyor.
 
-### Yeni bulunan kusur — `normalizeIp` çöküyor
+### Yeni bulunan kusur — `normalizeIp` çöküyordu (düzeltildi)
 
 `","` (yalnızca virgülden oluşan bir `X-Forwarded-For`) `normalizeIp`'i
-`ArrayIndexOutOfBoundsException` ile düşürüyor: Java `split(",")` sonucundaki sondaki boş
-parçaları attığı için dizi boş kalıyor ve `[0]` patlıyor. `normalizeIp`, `try` bloğundan
-**önce** çalıştığı için bu, geniş `catch`'in yakalamadığı tek girdi — exception
-`getLoginLocation`'dan dışarı çıkıyor ve `AFTER_COMMIT` dinleyicisindeki login e-postasında
-yakalanmamış hata olarak yüzeye vuruyor. Login'in kendisi başarılı olmaya devam ediyor.
+`ArrayIndexOutOfBoundsException` ile düşürüyordu: Java `split(",")` sonucundaki sondaki boş
+parçaları attığı için dizi boş kalıyor ve `[0]` patlıyordu. `normalizeIp`, `try` bloğundan
+**önce** çalıştığı için bu, geniş `catch`'in yakalamadığı tek girdiydi — exception
+`getLoginLocation`'dan dışarı çıkıp `AFTER_COMMIT` dinleyicisindeki login e-postasında
+yakalanmamış hata olarak yüzeye vuruyordu. Login'in kendisi başarılı olmaya devam ediyordu.
 
-Önerilen düzeltme (uygulanmadı): `rawIp.split(",", -1)` — sonuç `[""]` olur ve mevcut boşluk
-kontrolüne düşer. `getLoginLocation_addressOfOnlyCommas_throwsArrayIndexOutOfBounds` bu
-davranışı işaretleyici olarak sabitliyor; düzeltme geldiğinde o test kırmızıya döner, amaç
-budur.
+Düzeltme: `rawIp.split(",", -1)`. Negatif limit boş parçaları koruduğu için sonuç `[""]`
+oluyor ve mevcut boşluk kontrolüne düşüyor. İşaretleyici test
+`getLoginLocation_addressOfOnlyCommas_returnsUnknownWithoutCallingIpInfo` adıyla artık
+düzeltilmiş davranışı sabitliyor.
 
 ### Prompt/kod uyuşmazlıkları
 
@@ -269,7 +273,9 @@ değiştirir — integration batch'inin kararı.
     (`SocketTimeoutException`), DNS hatası (`UnknownHostException`), deserialize edilemeyen
     gövde, `null` gövde, bogon adres (tüm alanlar null), çözülemeyen `loc`
   - Her birinde dönen değerin **tam olarak** `LoginLocation("Unknown", null, null)` olduğu ve
-    log'a WARN düştüğü; boş token yolunda ise **hiç log olmadığı**
+    log'a WARN düştüğü; boş token yolunda ise istek sırasında **hiç log olmadığı**
+  - `warnIfTokenMissing()`: token boş ya da yalnızca boşluk iken açılışta `IPINFO_TOKEN` adını
+    içeren bir WARN, token varken hiç log
   - `createStaticMap`: geçerli koordinat + anahtar (`lonlat` sırası ters), boş Geoapify
     anahtarı, geçersiz koordinat formatları (parametreli), koordinat ve URL yokken boş çıktı,
     HTML kaçışı
@@ -283,13 +289,12 @@ değiştirir — integration batch'inin kararı.
   (`RestClientConfig`); davranış değişmedi. Ayrıca Logback `ListAppender`, çünkü sessiz
   başarısızlık ile loglanan başarısızlık arasındaki fark bu batch'in ana bulgusu.
 - **Kalan risk:**
-  - **`IPINFO_TOKEN` ayarlanmadığında hiçbir uyarı yok.** Önerilen (uygulanmadı): token boşsa
-    açılışta bir WARN.
+  - **`IPINFO_TOKEN` uyarısı yalnızca açılışta düşüyor.** Token sonradan iptal edilirse tek
+    iz 401/403 WARN'ları olur; istek başına uyarı bilinçli olarak eklenmedi (her login için
+    log gürültüsü).
   - **Geniş `catch (Exception)`** 401/403/429/timeout'u çağıran açısından ayırt edilemez
     kılıyor; ayrım yalnızca logda. Önerilen (uygulanmadı): catch'in daraltılması.
-  - **`normalizeIp` yalnızca virgülden oluşan girdide çöküyor** (yukarıdaki yeni kusur);
-    işaretleyici test mevcut davranışı sabitliyor.
   - Koordinat regex'i virgül etrafındaki boşluğu reddediyor (`"49.0, 8.4"` geçersiz). Bugün
     IPinfo boşluksuz döndüğü için sorun değil, ama sağlayıcı formatı değişirse sessizce
     haritayı düşürür.
-- **Test sayısı:** 36 (good: 9, bad: 27)
+- **Test sayısı:** 39 (good: 10, bad: 29)
