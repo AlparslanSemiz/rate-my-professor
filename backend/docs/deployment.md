@@ -433,6 +433,32 @@ current commit image tag. The first Compose deployment removes the previous
 standalone `app-server` container so the Compose service can reuse the existing
 container name.
 
+### Host reboot
+
+`unattended-upgrades` installs kernel updates but cannot apply them, so
+`/var/run/reboot-required` accumulates until the host restarts. The restart is short and
+self-healing: all three containers are `restart=unless-stopped`, and
+`app-server-netfix.service` reattaches the backend to the Docker bridge on the way up.
+
+Measured on 2026-09-06, going from kernel `6.8.0-134` to `6.8.0-139`:
+
+| Elapsed | Event |
+| --- | --- |
+| 0s | `systemctl reboot`; shutdown begins |
+| 13s | New kernel starts. The host is unreachable only for these thirteen seconds. |
+| 26s | Docker is up; `pse-postgres` and `admin-web-prod` are running |
+| 31s | `app-server-netfix.service` finished, having restarted `app-server` |
+| 36s | Flyway reports the schema up to date, no migration to run |
+| 44s | Tomcat is listening on 8080 and the API answers again |
+
+So the API is gone for **about 45 seconds**, not the several minutes a maintenance window
+would suggest. Systemd itself reported `3.0s (kernel) + 20.6s (userspace)`.
+
+Before rebooting, confirm the day's dump is in `/var/backups/postgres`. Afterwards check
+`/health` over HTTPS, `/admin/`, and that `journalctl -u app-server-netfix.service -b 0`
+shows a run that exited 0 — a failure there is the case where `app-server` comes back
+without a working bridge attachment.
+
 ### Local Docker Compose
 
 Rebuild and restart the local stack:
@@ -457,12 +483,14 @@ docker compose logs backend
 ## Server Maintenance Units
 
 Three systemd units run on the deployment host. None of them is part of an image or of this
-pipeline: they exist only on that machine, so a rebuilt host needs them recreated by hand.
+pipeline. They are version-controlled in `scripts/ops/`, which also carries the install
+commands; before that directory existed they lived only on the host, where a rebuilt
+instance would have lost them without anything failing loudly.
 
 | Unit | Schedule | What it does |
 | --- | --- | --- |
-| `pg-backup.timer` → `/usr/local/bin/pg-backup.sh` | Daily | `pg_dumpall` of the `pse-postgres` container into `/var/backups/postgres`. Written under a `.partial` name and published only after `gzip -t` and the cluster-dump completion marker both pass, so a truncated file never looks like a backup. Keeps 14 days. |
-| `docker-image-gc.timer` → `/usr/local/bin/docker-image-gc.sh` | Weekly | Removes images that no container references and that are older than `KEEP_HOURS` (72). Every deploy pulls another SHA-tagged image onto an 11 GB disk and nothing else deleted the old ones. Volumes are deliberately not pruned. |
+| `pg-backup.timer` → `/usr/local/bin/pg-backup.sh` | Daily, 00:00 UTC + up to 15 min | `pg_dumpall` of the `pse-postgres` container into `/var/backups/postgres`. Written under a `.partial` name and published only after `gzip -t` and the cluster-dump completion marker both pass, so a truncated file never looks like a backup. Keeps 14 days. |
+| `docker-image-gc.timer` → `/usr/local/bin/docker-image-gc.sh` | Weekly, Monday 00:00 UTC + up to 1 h | Removes images that no container references and that are older than `KEEP_HOURS` (72). Every deploy pulls another SHA-tagged image onto an 11 GB disk and nothing else deleted the old ones. Volumes are deliberately not pruned. |
 | `app-server-netfix.service` | At boot | Reattaches `app-server` to the Docker bridge and restarts it. Its veth does not always come back cleanly after a host reboot. |
 
 The scheduled `backup:offsite` job above is the off-machine half of the first row: every
