@@ -132,8 +132,8 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         binding = FragmentOfferingRatingsBinding.inflate(inflater, container, false);
-        binding.name.setText(professor.firstName);
-        binding.surname.setText(professor.lastName);
+        binding.lectureTitle.setText(lecture.name);
+        binding.term.setText(semester.getSemesterName());
         binding.commentList.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.backButton.setOnClickListener(v -> requireActivity().getOnBackPressedDispatcher().onBackPressed());
 

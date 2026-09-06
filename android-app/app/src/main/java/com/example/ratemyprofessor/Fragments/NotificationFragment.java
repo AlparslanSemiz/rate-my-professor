@@ -17,6 +17,7 @@ import com.example.ratemyprofessor.Adapters.NotificationAdapter;
 import com.example.ratemyprofessor.DomainModel.Notification;
 import com.example.ratemyprofessor.ServerCommunication.APIService;
 import com.example.ratemyprofessor.ServerCommunication.LoginSession;
+import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LectureResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationType;
@@ -41,8 +42,6 @@ import retrofit2.Response;
 /**
  * Displays replies to comments of the current user.
  *
- * The local data returned by {@link #createTemporaryNotifications()} is a temporary stand-in
- * until the notification endpoint is available.
  */
 public class NotificationFragment extends Fragment {
 
@@ -67,7 +66,7 @@ public class NotificationFragment extends Fragment {
         binding.notificationList.setLayoutManager(new LinearLayoutManager(requireContext()));
 
         loadNotifications();
-        //setUpNotificationList();
+
         binding.backButton.setOnClickListener(v ->
                 requireActivity().getSupportFragmentManager().popBackStack()
         );
@@ -119,9 +118,9 @@ public class NotificationFragment extends Fragment {
 
                 showNotifications(notifications);
 
-                if (!notifications.isEmpty()) {
-                    //markNotificationsAsSeen();
-                }
+//                if (!notifications.isEmpty()) {
+//                    //markNotificationsAsSeen();
+//                }
             }
 
             @Override
@@ -244,7 +243,8 @@ public class NotificationFragment extends Fragment {
      */
     @SuppressLint("NotifyDataSetChanged")
     private void onNotificationClicked(Notification notification) {
-        notification.markAsRead();
+        markNotificationsAsSeen(notification);
+
         if (binding.notificationList.getAdapter() != null) {
             // The unread marker of the tapped row has to disappear, and redrawing the whole
             // short list is cheaper than tracking its position.
@@ -266,8 +266,54 @@ public class NotificationFragment extends Fragment {
                 notification.lectureOfferingId,
                 notification.parentCommentId
         );
+
     }
 
+    private void markNotificationsAsSeen(Notification notification) {
+        String token = LoginSession.from(requireContext()).bearerToken();
+
+
+        apiService.markNotificationsAsSeen(token, notification.notificationId)
+                .enqueue(new Callback<BasicResponse>() {
+                    @Override
+                    public void onResponse(
+                            Call<BasicResponse> call,
+                            Response<BasicResponse> response
+                    ) {
+                        BasicResponse body = response.body();
+
+                        if (!response.isSuccessful()
+                            || body == null
+                            || !body.success()) {
+
+                            Log.w(TAG, "Notifications could not be marked as seen " + response.code());
+                            return;
+                        }
+
+                        Log.w(TAG, "Notification was marked as seen " + notification.notificationId);
+
+                        notification.markAsRead();
+
+                        if (binding != null
+                                && binding.notificationList.getAdapter()
+                                instanceof NotificationAdapter adapter) {
+
+                            adapter.notifyNotificationChanged(
+                                    notification.notificationId
+                            );
+                        }
+                    }
+
+
+                    @Override
+                    public void onFailure(
+                            Call<BasicResponse> call,
+                            Throwable throwable
+                    ) {
+                        Log.e(TAG, "Could not mark notifications as seen", throwable);
+                    }
+                });
+    }
     private void loadAndOpenCommentThread(String lectureId, String commentId) {
         commentThreadCall = apiService.getComments(lectureId);
 
@@ -330,15 +376,6 @@ public class NotificationFragment extends Fragment {
         }
 
         return null;
-    }
-    /**
-     * @param hours how far in the past the returned date should lie
-     * @return the point in time that many hours before now
-     */
-    private Date hoursAgo(int hours) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.HOUR, -hours);
-        return calendar.getTime();
     }
 
     @Override
