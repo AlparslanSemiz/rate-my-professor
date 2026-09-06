@@ -37,15 +37,25 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
     /**
      * Used to keep track of changes the User made to his ratings, so they can be submitted later
      */
-    private final Map<RatingCategory, Double> changedRatings = new HashMap<>();
+    private Map<RatingCategory, Double> changedRatings;
 
     public RatingAdapter(List<TopicAverageResponse> ratings, List<TopicAverageResponse> userRatings) {
         this.ratings = ratings;
         this.userRatings = userRatings;
+        changedRatings = new HashMap<>();
+        if (userRatings != null) {
+            for (TopicAverageResponse rating : userRatings) {
+                changedRatings.put(rating.category(), rating.value());
+            }
+        }
     }
 
     public Map<RatingCategory, Double> getChangedRatings() {
         return changedRatings;
+    }
+
+    public List<TopicAverageResponse> getRatings() {
+        return ratings;
     }
 
     @Override

@@ -434,13 +434,28 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         binding.submitRating.setOnClickListener(v -> {
 
 
-            // Creating the Request
+            // Check if all categories have been rated by the user
+            List<TopicAverageResponse> allRatings = ratingAdapter.getRatings();
             Map<RatingCategory, Double> changedRatings = ratingAdapter.getChangedRatings();
+            boolean check = false;
+            for (TopicAverageResponse rating : allRatings) {
+                if (!changedRatings.containsKey(rating.category())) {
+                    check = true;
+                }
+            }
+            if (check) {
+                Toast.makeText(getContext(), "Please rate all categories before submitting.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+
+
             List<RatingTopicRequest> requestList = new ArrayList<>();
             for (Map.Entry<RatingCategory, Double> entry : changedRatings.entrySet()) {
                 requestList.add(new RatingTopicRequest(entry.getKey(), entry.getValue()));
             }
 
+            // Creating the Request
             RatingRequest request = new RatingRequest(lecture.id, requestList);
             String token = LoginSession.from(requireContext()).bearerToken();
 
