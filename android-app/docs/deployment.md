@@ -144,12 +144,18 @@ Do not put real token values or user data in documentation, CI logs, or committe
 Confirmed Android app configuration is currently source-code based:
 
 - Backend base URL is hardcoded in `RetrofitClient.BASE_URL`.
-- `BuildConfig.SKIP_LOGIN` is set to `false` for both `debug` and `release` build types.
+- `BuildConfig.SKIP_LOGIN` is set to `false` for `debug` builds.
+- `BuildConfig.SKIP_LOGIN` is set to `true` for `release` builds in
+  `app/build.gradle.kts`.
 - Release minification is disabled with `isMinifyEnabled = false`.
 - No signing configuration is defined in `app/build.gradle.kts`.
 - No `.env` or environment-variable example file is present.
 
 To change the backend target, update `RetrofitClient.BASE_URL` and rebuild the APK.
+
+Treat the current release `SKIP_LOGIN=true` value as a release blocker unless it
+is intentional for the chosen distribution channel. It bypasses the normal login
+screen in release artifacts produced by `app:assembleRelease`.
 
 TODO: Replace or document the hardcoded base URL strategy if different environments are needed.
 TODO: Confirm release signing, keystore handling, and app distribution channel.
@@ -404,6 +410,7 @@ Local data issues:
 Release issues:
 
 - No signing configuration is present in `app/build.gradle.kts`.
+- `BuildConfig.SKIP_LOGIN=true` is currently set for the `release` build type.
 - Release minification is disabled.
 - TODO: Confirm signing, obfuscation, and distribution requirements.
 
