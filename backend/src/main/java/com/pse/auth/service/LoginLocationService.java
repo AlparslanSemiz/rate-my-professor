@@ -24,15 +24,13 @@ public class LoginLocationService {
     private final String geoapifyApiKey;
 
     public LoginLocationService(
+            RestClient ipInfoRestClient,
             @Value("${ipinfo.token:}") String ipInfoToken,
             @Value("${geoapify.api.key:}") String geoapifyApiKey
     ) {
+        this.ipInfoClient = ipInfoRestClient;
         this.ipInfoToken = ipInfoToken;
         this.geoapifyApiKey = geoapifyApiKey;
-
-        this.ipInfoClient = RestClient.builder()
-                .baseUrl("https://ipinfo.io")
-                .build();
     }
 
     /**
