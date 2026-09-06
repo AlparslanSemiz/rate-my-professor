@@ -1,5 +1,7 @@
 package com.example.ratemyprofessor.Fragments;
 
+import static android.view.View.INVISIBLE;
+
 import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
@@ -31,6 +33,7 @@ import com.example.ratemyprofessor.ServerCommunication.AuthManager;
 import com.example.ratemyprofessor.ServerCommunication.LoginSession;
 import com.example.ratemyprofessor.ServerCommunication.ReportReason;
 import com.example.ratemyprofessor.ServerCommunication.Requests.CommentReportRequest;
+import com.example.ratemyprofessor.ServerCommunication.Requests.SubmitAnswerRequest;
 import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
 import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
 import com.example.ratemyprofessor.ServerCommunication.Requests.VoteRequest;
@@ -91,24 +94,40 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         mainComment.upvotesNum.setText(String.valueOf(comment.upVotes()));
         mainComment.downvotesNum.setText(String.valueOf(comment.downVotes()));
 
-        mainComment.replyButton.setOnClickListener(v -> {
-            if (!AuthManager.getInstance().isLoggedIn()) {
-                Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            mainComment.commentBox.getRoot().setVisibility(View.VISIBLE);
-        });
-        mainComment.commentBox.cancelButton.setOnClickListener(v -> mainComment.commentBox.getRoot().setVisibility(View.GONE));
-        mainComment.commentBox.sendReply.setOnClickListener(v ->{
+        binding.cancelReply.setVisibility(INVISIBLE);
+        binding.submitReply.setEnabled(false);
 
-                    onReplySend(comment.commentID(), mainComment.commentBox.replyText.getText().toString());
-                    mainComment.commentBox.replyText.getText().clear();
-                    mainComment.commentBox.replyText.clearFocus();
-                    InputMethodManager imm =
-                            (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-                    imm.hideSoftInputFromWindow(mainComment.commentBox.replyText.getWindowToken(), 0);
-                }
-        );
+        binding.inputReply.setOnFocusChangeListener((view, hasFocus) -> {
+            binding.cancelReply.setVisibility(
+                    hasFocus ? View.VISIBLE : View.INVISIBLE
+            );
+        });
+        binding.inputReply.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence text, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence text, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable text) {
+                boolean hasText = !text.toString().trim().isEmpty();
+
+                binding.submitReply.setEnabled(hasText);
+            }
+        });
+
+        binding.submitReply.setOnClickListener(v ->
+                onReplySend(comment.commentID(), binding.inputReply.getText().toString()));
+        binding.cancelReply.setOnClickListener(v -> {
+            binding.inputReply.getText().clear();
+            binding.inputReply.clearFocus();
+            InputMethodManager imm = (InputMethodManager)
+                    requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(binding.inputReply.getWindowToken(), 0);
+        });
 
 
         mainComment.commentsIcon.setOnClickListener(v -> onOpenReplies(comment));
@@ -131,7 +150,6 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
             mainComment.downvotesNum.setText(String.valueOf(comment.downVotes() + 1));
             vote(comment.commentID(), VoteType.DOWN, CommentType.COMMENT);
         });
-        mainComment.replyButton.setVisibility(View.INVISIBLE);
         mainComment.commentsIcon.setOnClickListener(v -> {});
         mainComment.commentsNum.setText(String.valueOf(comment.answers().size()));
         mainComment.reportButton.setOnClickListener(v ->reportComment(comment.commentID()));
@@ -145,6 +163,50 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
 
     @Override
     public void onReplySend(String commentId, String reply) {
+        String trimmedReply = reply.trim();
+        if (trimmedReply.isEmpty()) {
+            binding.inputReply.setError("Please enter a reply.");
+            return;
+        }
+
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            Toast.makeText(requireContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String token = LoginSession.from(requireContext()).bearerToken();
+        binding.submitReply.setEnabled(false);
+        apiService.postAnswer(token, new SubmitAnswerRequest(commentId, trimmedReply))
+                .enqueue(new Callback<BasicResponse>() {
+                    @Override
+                    public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                        if (!isAdded() || binding == null) {
+                            return;
+                        }
+                        binding.submitReply.setEnabled(true);
+                        BasicResponse body = response.body();
+                        if (!response.isSuccessful() || body == null || !body.success()) {
+                            Toast.makeText(requireContext(), "Reply couldn't be sent.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        binding.inputReply.getText().clear();
+                        binding.inputReply.clearFocus();
+                        InputMethodManager imm = (InputMethodManager)
+                                requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                        imm.hideSoftInputFromWindow(binding.inputReply.getWindowToken(), 0);
+                        Toast.makeText(requireContext(), "Reply sent.", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                        if (!isAdded() || binding == null) {
+                            return;
+                        }
+                        binding.submitReply.setEnabled(true);
+                        Toast.makeText(requireContext(), "Reply couldn't be sent.", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     @Override

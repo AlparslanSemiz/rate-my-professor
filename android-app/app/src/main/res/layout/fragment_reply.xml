@@ -44,7 +44,71 @@
         android:textColor="@color/text_primary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/main_comment" />
+        app:layout_constraintTop_toBottomOf="@+id/reply_input" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/reply_input"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/rounded_box"
+        android:padding="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/main_comment">
+
+        <EditText
+            android:id="@+id/input_reply"
+            android:layout_width="0dp"
+            android:layout_height="100dp"
+            android:background="@drawable/rounded_box_dark"
+            android:fontFamily="@font/inter_bold"
+            android:gravity="top|start"
+            android:hint="write a reply..."
+            android:paddingStart="8dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="8dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/submit_reply"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter_bold"
+            android:letterSpacing="0"
+            android:text="Submit Reply"
+            android:textAllCaps="false"
+            android:textColor="#282828"
+            android:textSize="16sp"
+            android:typeface="normal"
+            app:backgroundTint="#CFCFCF"
+            app:cornerRadius="24dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/input_reply" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cancel_reply"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:fontFamily="@font/inter_bold"
+            android:letterSpacing="0"
+            android:text="Cancel"
+            android:textAllCaps="false"
+            android:textColor="#282828"
+            android:textSize="16sp"
+            android:typeface="normal"
+            app:backgroundTint="#CFCFCF"
+            app:cornerRadius="24dp"
+            app:layout_constraintBottom_toBottomOf="@id/submit_reply"
+            app:layout_constraintEnd_toStartOf="@id/submit_reply"
+            app:layout_constraintTop_toTopOf="@id/submit_reply" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/answer_list"

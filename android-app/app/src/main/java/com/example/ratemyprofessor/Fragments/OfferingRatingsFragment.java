@@ -1,5 +1,7 @@
 package com.example.ratemyprofessor.Fragments;
 
+import static android.view.View.INVISIBLE;
+
 import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.Context;
@@ -137,6 +139,16 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
         binding.commentList.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.backButton.setOnClickListener(v -> requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
+        binding.cancelComment.setVisibility(INVISIBLE);
+        binding.submitComment.setEnabled(false);
+
+        binding.inputComment.setOnFocusChangeListener((view, hasFocus) -> {
+            binding.cancelComment.setVisibility(
+                    hasFocus ? View.VISIBLE : View.INVISIBLE
+            );
+        });
+
+
         getComments();
         setSubmitCommentListener();
 
@@ -210,6 +222,32 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
      */
     private void setSubmitCommentListener() {
         EditText commentInput = binding.inputComment;
+
+        // checking if user is currently writing a comment
+        binding.inputComment.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence text, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence text, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable text) {
+                boolean hasText = !text.toString().trim().isEmpty();
+
+                binding.submitComment.setEnabled(hasText);
+            }
+        });
+        binding.cancelComment.setOnClickListener(v -> {
+            commentInput.getText().clear();
+            commentInput.clearFocus();
+            InputMethodManager imm = (InputMethodManager)
+                    requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(commentInput.getWindowToken(), 0);
+        });
+
         binding.submitComment.setOnClickListener(v -> {
             String comment = commentInput.getText().toString();
             Log.d(TAG, "submit " + comment);
@@ -483,6 +521,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
     @SuppressLint("NotifyDataSetChanged")
     @Override
     public void onOpenReplies(Comment comment) {
+        System.out.println("onOpenReplies");
         flowInterface.openReplyFragment(comment);
     }
 

@@ -191,7 +191,6 @@
                     android:id="@+id/submit_comment"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:backgroundTint="@color/surface_container"
                     android:textAllCaps="false"
                     android:fontFamily="@font/inter_bold"
                     android:letterSpacing="0"
@@ -203,6 +202,24 @@
                     app:cornerRadius="24dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/input_comment" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/cancel_comment"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:fontFamily="@font/inter_bold"
+                    android:letterSpacing="0"
+                    android:text="Cancel"
+                    android:textAllCaps="false"
+                    android:textColor="#282828"
+                    android:textSize="16sp"
+                    android:typeface="normal"
+                    app:backgroundTint="#CFCFCF"
+                    app:cornerRadius="24dp"
+                    app:layout_constraintBottom_toBottomOf="@id/submit_comment"
+                    app:layout_constraintEnd_toStartOf="@id/submit_comment"
+                    app:layout_constraintTop_toTopOf="@id/submit_comment" />
 
 
             </androidx.constraintlayout.widget.ConstraintLayout>
