@@ -6,59 +6,71 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="@color/surface">
 
-    <TextView
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/header_background"
         android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="-24dp"
+        android:layout_marginTop="72dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginBottom="-24dp"
         android:background="@drawable/rounded_box"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
-        app:layout_constraintBottom_toBottomOf="@+id/average_lecture_rating"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/average_lecture_rating" />
+        app:layout_constraintTop_toTopOf="parent">
 
-    <TextView
-        android:id="@+id/average_lecture_rating"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="96dp"
-        android:layout_marginEnd="8dp"
-        android:background="@drawable/rounded_box_light"
-        android:fontFamily="@font/inter_bold"
-        android:text="0,0"
-        android:textColor="@color/accent_positive"
-        android:textSize="60sp"
-        app:layout_constraintEnd_toEndOf="@+id/header_background"
-        app:layout_constraintTop_toTopOf="parent" />
+        <LinearLayout
+            android:id="@+id/lecture_details"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="24dp"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/average_lecture_rating"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-    <TextView
-        android:id="@+id/name"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:fontFamily="@font/inter_bold"
-        android:text="Firstname"
-        android:textColor="@color/text_primary"
-        android:textSize="30sp"
-        app:layout_constraintStart_toStartOf="@+id/header_background"
-        app:layout_constraintTop_toTopOf="@+id/average_lecture_rating" />
+            <TextView
+                android:id="@+id/lecture_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter_bold"
+                android:text="Lecture title"
+                android:textColor="@color/text_primary"
+                android:textSize="30sp" />
 
-    <TextView
-        android:id="@+id/surname"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:fontFamily="@font/inter_bold"
-        android:text="Surname"
-        android:textColor="@color/text_primary"
-        android:textSize="30sp"
-        app:layout_constraintBottom_toBottomOf="@+id/average_lecture_rating"
-        app:layout_constraintStart_toStartOf="@+id/header_background" />
+            <TextView
+                android:id="@+id/term"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="@font/inter_bold"
+                android:text="Semester"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/average_lecture_rating"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/rounded_box_light"
+            android:fontFamily="@font/inter_bold"
+            android:gravity="center"
+            android:text="0,0"
+            android:textColor="@color/accent_positive"
+            android:textSize="60sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <com.example.liquidglass.LiquidGlassFab
         android:id="@+id/back_Button"

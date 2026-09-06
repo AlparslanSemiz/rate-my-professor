@@ -9,4 +9,8 @@ package com.example.ratemyprofessor.DomainModel;
 public record Semester (
     int semesterYear,
     SemesterSeason semesterSeason
-) {}
+) {
+    public String getSemesterName() {
+        return semesterSeason.toString() + semesterYear;
+    }
+}
