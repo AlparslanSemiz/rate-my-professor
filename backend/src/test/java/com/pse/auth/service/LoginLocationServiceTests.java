@@ -46,8 +46,8 @@ import static org.mockito.Mockito.when;
  *
  * <p>These tests pin each cause separately and assert what is logged, because that turns out
  * to be the only thing distinguishing them. Two paths reach the same value: the HTTP failures
- * log a WARN with the cause, while the blank-token short circuit logs nothing at all -- which
- * makes an unset IPINFO_TOKEN the one failure that leaves no trace.
+ * log a WARN with the cause, while the blank-token short circuit stays silent per request --
+ * that one is announced once at startup by {@code warnIfTokenMissing} instead.
  *
  * <p>There is no second geolocation provider. Geoapify only renders the static map image, so
  * the fallback chain is exactly one step long.
@@ -198,29 +198,22 @@ class LoginLocationServiceTests {
     }
 
     /**
-     * DEFECT, pinned as current behaviour rather than fixed here.
-     *
-     * <p>{@code ",".split(",")} is an empty array -- Java drops trailing empty strings, and
-     * here every element is empty -- so {@code rawIp.split(",")[0]} throws. normalizeIp runs
-     * before the try block, so this is the one input that escapes the blanket catch and
-     * propagates out of getLoginLocation.
-     *
-     * <p>It reaches the login-success mail on an AFTER_COMMIT listener, so the login itself
-     * still succeeds and the failure surfaces as an unhandled exception in the listener.
-     *
-     * <p>Proposed fix (not applied): {@code rawIp.split(",", -1)}, which yields {@code [""]}
-     * and falls through to the existing blank check. This test will fail once that lands,
-     * which is the intent -- it is a marker, not an endorsement.
+     * Kept separate from the case above because it is the one that used to crash.
+     * {@code ",".split(",")} is an empty array -- Java drops trailing empty strings, and here
+     * every element is empty -- so {@code [0]} threw, before the try block and therefore
+     * outside the blanket catch, all the way out into the AFTER_COMMIT mail listener. The
+     * negative limit in {@code split(",", -1)} keeps the empty parts, so the value reaching
+     * the blank check is {@code ""} and this is now just another address that resolves to
+     * nothing.
      */
     @ParameterizedTest
     @CsvSource({"','", "',,'", "',,,'"})
-    void getLoginLocation_addressOfOnlyCommas_throwsArrayIndexOutOfBounds(String rawIp) {
-        // Given
-        LoginLocationService service = serviceWith(TOKEN, GEOAPIFY_KEY);
+    void getLoginLocation_addressOfOnlyCommas_returnsUnknownWithoutCallingIpInfo(String rawIp) {
+        // When
+        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(rawIp);
 
-        // When / Then
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.getLoginLocation(rawIp))
-                .isInstanceOf(ArrayIndexOutOfBoundsException.class);
+        // Then
+        assertThat(location).isEqualTo(UNKNOWN);
         verifyNoInteractions(restClient);
     }
 
@@ -236,8 +229,8 @@ class LoginLocationServiceTests {
 
     /**
      * The suspected production cause. IPINFO_TOKEN defaults to empty, so an unset environment
-     * variable turns every lookup into "Unknown" before any request is made -- and, unlike
-     * every other failure below, it says nothing at all in the log.
+     * variable turns every lookup into "Unknown" before any request is made. The request path
+     * stays silent by design; the trace is the startup warning pinned in the next section.
      */
     @Test
     void getLoginLocation_blankToken_returnsUnknownSilentlyWithoutCallingIpInfo() {
@@ -248,7 +241,7 @@ class LoginLocationServiceTests {
         assertThat(location).isEqualTo(UNKNOWN);
         verifyNoInteractions(restClient);
         assertThat(logs.list)
-                .as("nothing is logged, which is why an unset token is invisible in production")
+                .as("the request path stays silent -- warnIfTokenMissing is what speaks up")
                 .isEmpty();
     }
 
@@ -260,6 +253,36 @@ class LoginLocationServiceTests {
         // When / Then
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.getLoginLocation(IP))
                 .isInstanceOf(NullPointerException.class);
+    }
+
+    // ---------- warnIfTokenMissing: the startup counterpart ----------
+
+    /**
+     * Without this the blank-token path above leaves no trace anywhere, which is what made an
+     * unset IPINFO_TOKEN the hardest of these failures to see in production.
+     */
+    @ParameterizedTest
+    @CsvSource({"''", "'   '"})
+    void warnIfTokenMissing_blankToken_logsAWarningNamingTheVariable(String token) {
+        // When
+        serviceWith(token, GEOAPIFY_KEY).warnIfTokenMissing();
+
+        // Then
+        assertThat(logs.list)
+                .as("an unset token has to be visible in the log at least once")
+                .anySatisfy(event -> {
+                    assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                    assertThat(event.getFormattedMessage()).contains("IPINFO_TOKEN");
+                });
+    }
+
+    @Test
+    void warnIfTokenMissing_tokenPresent_logsNothing() {
+        // When
+        serviceWith(TOKEN, GEOAPIFY_KEY).warnIfTokenMissing();
+
+        // Then
+        assertThat(logs.list).isEmpty();
     }
 
     // ---------- getLoginLocation: every way the lookup fails ----------
