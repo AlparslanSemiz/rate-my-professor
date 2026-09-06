@@ -104,7 +104,7 @@ Deployment and scheduled maintenance jobs use these custom CI/CD variables:
 | `DEPLOY_PORT` | SSH port for the deployment host. |
 | `DEPLOY_USER` | SSH user for the deployment host. |
 | `DEPLOY_PATH` | Directory created and entered on the deployment host. Must be absolute: the value is used over SSH, where a relative path resolves against the login directory. The deploy job prepends a missing leading slash and says so in its log. |
-| `BACKEND_PUBLISHED_PORT` | Optional host port for the Compose-managed backend. Defaults to `8080`. |
+| `BACKEND_PUBLISHED_PORT` | Optional host bind address and port for the Compose-managed backend. Defaults to `127.0.0.1:8080` in `docker-compose.prod.yml` and is also written that way by CI. |
 | `SPRING_DATASOURCE_URL` | Optional override for the deployed container datasource URL. |
 | `SPRING_DATASOURCE_USERNAME` | Optional override for the deployed container datasource username. |
 | `SPRING_DATASOURCE_PASSWORD` | Deployed container datasource password. Secret. |
@@ -140,7 +140,7 @@ variables.
 
 | Port or variable | Direction | Purpose | Confirmed source |
 | --- | --- | --- | --- |
-| `8080` | Inbound to backend container/app | Backend HTTP server. Dockerfile exposes it, Compose publishes it, and CI deploy maps it. | `application.properties`, `src/Dockerfile`, `docker-compose.yml`, `.gitlab-ci.yml` |
+| `8080` | Inbound to backend container/app | Backend HTTP server. Dockerfile exposes it and the app listens on it by default. Production Compose publishes it on the host loopback address by default through `BACKEND_PUBLISHED_PORT=127.0.0.1:8080`. | `application.properties`, `src/Dockerfile`, `docker-compose.yml`, `docker-compose.prod.yml`, `.gitlab-ci.yml` |
 | `5432` | Inbound to PostgreSQL | Local Compose publishes PostgreSQL. CI staging defaults the backend datasource to `host.docker.internal:5432`. | `application.properties`, `docker-compose.yml`, `.gitlab-ci.yml` |
 | `5173` | Browser origin | Local Admin Web origins in CORS defaults. | `application.properties`, `.env.example`, `CorsConfig` |
 | `25` | Outbound from backend | Default SMTP port. | `application.properties` |
@@ -214,7 +214,7 @@ container:
 - Image: `${BACKEND_IMAGE}`, set by CI to
   `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`
 - Restart policy: `unless-stopped`
-- Published port: `${BACKEND_PUBLISHED_PORT:-8080}:${SERVER_PORT:-8080}`
+- Published port: `${BACKEND_PUBLISHED_PORT:-127.0.0.1:8080}:${SERVER_PORT:-8080}`
 - Host gateway: `host.docker.internal:host-gateway`
 - Health check: `GET /health` inside the container
 - Volumes: none
