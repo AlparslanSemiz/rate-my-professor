@@ -25,15 +25,6 @@
             android:textColor="@color/text_primary"
             android:textSize="22sp" />
 
-        <ImageButton
-            android:id="@+id/bug_report_close"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:background="@drawable/settings_circle_button"
-            android:contentDescription="@string/close"
-            android:padding="12dp"
-            android:src="@drawable/close_icon"
-            app:tint="@color/icon_tint" />
     </LinearLayout>
 
     <TextView
@@ -62,6 +53,8 @@
         app:boxCornerRadiusBottomStart="20dp"
         app:boxCornerRadiusTopEnd="20dp"
         app:boxCornerRadiusTopStart="20dp"
+        app:boxStrokeWidth="0dp"
+        app:boxStrokeWidthFocused="0dp"
         app:boxStrokeColor="@color/outline"
         app:errorTextColor="@color/danger"
         app:hintTextColor="@color/text_muted">
@@ -95,6 +88,8 @@
         app:boxCornerRadiusBottomStart="20dp"
         app:boxCornerRadiusTopEnd="20dp"
         app:boxCornerRadiusTopStart="20dp"
+        app:boxStrokeWidth="0dp"
+        app:boxStrokeWidthFocused="0dp"
         app:boxStrokeColor="@color/outline"
         app:errorTextColor="@color/danger"
         app:hintTextColor="@color/text_muted">

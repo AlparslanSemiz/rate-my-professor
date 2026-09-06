@@ -176,7 +176,6 @@ public class SettingsFragment extends Fragment {
                 .create();
 
         dialogBinding.bugSeverity.setAdapter(adapter);
-        dialogBinding.bugReportClose.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.bugReportCancel.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.bugReportSubmit.setOnClickListener(v -> submitBugReport(dialogBinding, dialog));
         dialogBinding.bugReportTitleInput.addTextChangedListener(new TextWatcher() {

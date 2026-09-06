@@ -611,7 +611,6 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                 .setView(dialogBinding.getRoot())
                 .create();
 
-        dialogBinding.bugReportClose.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.bugReportCancel.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.bugReportSubmit.setOnClickListener(v -> submitCommentReport(dialogBinding, dialog, commentID, type));
         dialogBinding.commentReportInput.addTextChangedListener(new TextWatcher() {
