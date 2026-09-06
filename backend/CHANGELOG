@@ -218,3 +218,32 @@ Changed Signature
 Was: "/ratingsown/{lectureId}"
 Now: "/ratings/own/{lectureId}"
 
+
+
+
+///// 6.09
+
+
+Split the Admin Web API from the app API.
+
+The session you get now depends on which login you called, not on whether the account
+is an admin. This is what fixes admins being logged out of the app on the admin schedule.
+
+New: "/admin/auth/login"  -> admins only, admin session, expires after 1 day
+     "/admin/auth/request-login", "/admin/auth/logout", "/admin/auth/logout-all", "/admin/auth/me"
+
+Unchanged for the app: "/auth/login" -> everyone, admin or not, gets 365 days.
+Nothing to change in the app. The "sessionType" field still works but is no longer needed.
+
+Every admin route also answers under "/admin" now: the new path is "/admin" + the old one.
+Old paths still work until the panel has moved. Exceptions that do NOT move:
+  "POST /reports"                  student bug submission, app API
+  "GET /data/lectures", "GET /data/professor", and the single-item reads   public
+
+LoginResponse gained a field:
+public record LoginResponse(
+        String message,
+        boolean success,
+        String authToken,
++++     String expiresAt
+) {}

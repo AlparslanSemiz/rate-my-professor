@@ -3,6 +3,10 @@ workflow:
     # Scheduled pipelines only run health:check and backup:offsite; every other job opts
     # out of them below.
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    # A push to a branch with an open merge request already gets a merge_request_event
+    # pipeline. Without this, both run: two full Maven builds and two statuses per push.
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_OPEN_MERGE_REQUESTS'
+      when: never
     - if: '$CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
@@ -13,6 +17,10 @@ stages:
 
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  # mvnw unpacks its Maven distribution under $MAVEN_USER_HOME/wrapper/dists, which
+  # defaults to ~/.m2 -- outside the cache below. Every job re-downloaded the same 9 MB
+  # Maven zip, for no reason and with a network failure to lose to.
+  MAVEN_USER_HOME: "$CI_PROJECT_DIR/.m2"
   IMAGE_TAG: "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
   COVERAGE_THRESHOLD: "30"
   GIT_DEPTH: "0"
@@ -22,6 +30,7 @@ default:
     key: "maven-${CI_COMMIT_REF_SLUG}"
     paths:
       - .m2/repository/
+      - .m2/wrapper/
     policy: pull-push
 
 server:test:
@@ -30,12 +39,12 @@ server:test:
   before_script:
     - |
       if [ -n "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" ]; then
-        git fetch --no-tags origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME:refs/remotes/origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+        git fetch --no-tags origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME:refs/remotes/origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" || true
       elif [ -n "$CI_DEFAULT_BRANCH" ]; then
         git fetch --no-tags origin "$CI_DEFAULT_BRANCH:refs/remotes/origin/$CI_DEFAULT_BRANCH" || true
       fi
   script:
-    - ./mvnw verify
+    - ./mvnw -B -ntp verify
     - java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"
   coverage: '/Changed code line coverage:\s*([0-9]+(?:\.[0-9]+)?)%/'
   artifacts:
@@ -50,6 +59,10 @@ server:test:
         coverage_format: jacoco
         path: target/site/jacoco/jacoco.xml
     expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
 
 server:postgres-migration-smoke:
   stage: test
@@ -65,7 +78,7 @@ server:postgres-migration-smoke:
     POSTGRES_SMOKE_USERNAME: postgres
     POSTGRES_SMOKE_PASSWORD: postgres_smoke_password
   script:
-    - ./mvnw -Dtest=PostgreSqlMigrationSmokeTests test
+    - ./mvnw -B -ntp -Dtest=PostgreSqlMigrationSmokeTests test
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: never
@@ -124,10 +137,22 @@ server:deploy:staging:
             DEPLOY_PATH="/$DEPLOY_PATH" ;;
       esac
     - |
+      # docker-compose.prod.yml declares both of these as ${VAR:?...}, which rejects an
+      # empty value as well as an unset one. Written empty they still reach the server and
+      # the deploy dies further down inside "docker compose pull", with a message naming
+      # neither the CI/CD variable nor this job.
+      for required in SPRING_DATASOURCE_PASSWORD AUTH_RATE_LIMIT_HMAC_KEY; do
+        eval "value=\${$required}"
+        if [ -z "$value" ]; then
+          echo "$required is empty. Set it under Settings > CI/CD > Variables." >&2
+          exit 1
+        fi
+      done
+    - |
       write_env() {
         key="$1"
         value="$2"
-        escaped="$(printf '%s' "$value" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+        escaped="$(printf '%s' "$value" | sed 's/\\/\\\\/g; s/"/\\"/g; s/[$]/\$/g')"
         printf '%s="%s"\n' "$key" "$escaped" >> .deploy.env
       }
 
@@ -154,8 +179,11 @@ server:deploy:staging:
       write_env ADMIN_SUPERUSER_EMAILS "${ADMIN_SUPERUSER_EMAILS:-$DEFAULT_SUPERUSER_EMAILS}"
       write_env AUTH_RATE_LIMIT_HMAC_KEY "${AUTH_RATE_LIMIT_HMAC_KEY}"
       write_env AUTH_OTP_TTL "${AUTH_OTP_TTL:-PT5M}"
-      write_env AUTH_ADMIN_SESSION_TTL "${AUTH_ADMIN_SESSION_TTL:-P1D}"
-      write_env AUTH_STUDENT_SESSION_TTL "${AUTH_STUDENT_SESSION_TTL:-P365D}"
+      # TEMPORARY: two-minute admin sessions, to watch whether a short admin lifetime can
+      # still reach the app. It cannot -- the lifetime follows the endpoint now -- and this
+      # line goes back to P1D once that has been seen on the deployment.
+      write_env AUTH_ADMIN_SESSION_TTL "${AUTH_ADMIN_SESSION_TTL:-PT2M}"
+      write_env AUTH_APP_SESSION_TTL "${AUTH_APP_SESSION_TTL:-${AUTH_STUDENT_SESSION_TTL:-P365D}}"
       write_env AUTH_RATE_LIMIT_WINDOW "${AUTH_RATE_LIMIT_WINDOW:-PT15M}"
       write_env AUTH_RATE_LIMIT_REQUEST_EMAIL "${AUTH_RATE_LIMIT_REQUEST_EMAIL:-3}"
       write_env AUTH_RATE_LIMIT_REQUEST_IP "${AUTH_RATE_LIMIT_REQUEST_IP:-20}"
@@ -199,7 +227,7 @@ server:deploy:staging:
           docker compose -f \"$DEPLOY_COMPOSE_FILE\" --env-file .env logs --tail 100 backend;
           exit 0;
         fi;
-        sleep 2;
+        sleep 4;
       done;
       docker compose -f \"$DEPLOY_COMPOSE_FILE\" --env-file .env ps;
       docker compose -f \"$DEPLOY_COMPOSE_FILE\" --env-file .env logs --tail 200 backend;

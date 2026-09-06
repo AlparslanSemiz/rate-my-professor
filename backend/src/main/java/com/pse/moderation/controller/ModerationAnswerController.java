@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/answers")
+@RequestMapping({"/admin/answers", "/answers"})
 public class ModerationAnswerController {
 
     private final ModerationContentService contentService;

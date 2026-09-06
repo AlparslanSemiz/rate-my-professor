@@ -46,10 +46,14 @@ public final class CheckChangedCoverage {
             return;
         }
 
-        String mergeBase = git("merge-base", compareRef.get(), "HEAD").trim();
-        if (mergeBase.isBlank()) {
-            fail("Could not resolve merge base against " + compareRef.get());
+        Optional<String> mergeBaseOutput = gitQuietly("merge-base", compareRef.get(), "HEAD");
+        if (mergeBaseOutput.isEmpty() || mergeBaseOutput.get().isBlank()) {
+            System.out.println("Skipping changed-code coverage check: no merge base between "
+                    + compareRef.get() + " and HEAD.");
+            return;
         }
+        String mergeBase = mergeBaseOutput.get().trim();
+        System.out.println("Comparing against " + compareRef.get() + " (merge base " + mergeBase + ").");
 
         Map<String, Set<Integer>> addedLines = readAddedLines(mergeBase, config.sourceRoots());
         if (addedLines.isEmpty()) {
@@ -82,25 +86,42 @@ public final class CheckChangedCoverage {
     private static Optional<String> inferCompareRef() {
         String mergeRequestTarget = getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME");
         if (!mergeRequestTarget.isBlank()) {
-            return Optional.of("origin/" + mergeRequestTarget);
+            Optional<String> target = resolvable("origin/" + mergeRequestTarget);
+            if (target.isPresent()) {
+                return target;
+            }
         }
 
         String beforeSha = getenv("CI_COMMIT_BEFORE_SHA");
         if (!beforeSha.isBlank() && !ZERO_SHA.equals(beforeSha)) {
-            return Optional.of(beforeSha);
+            Optional<String> before = resolvable(beforeSha);
+            if (before.isPresent()) {
+                return before;
+            }
         }
 
         String defaultBranch = getenv("CI_DEFAULT_BRANCH");
         String currentBranch = getenv("CI_COMMIT_BRANCH");
         if (!defaultBranch.isBlank() && !defaultBranch.equals(currentBranch)) {
-            return Optional.of("origin/" + defaultBranch);
+            Optional<String> base = resolvable("origin/" + defaultBranch);
+            if (base.isPresent()) {
+                return base;
+            }
         }
 
-        if (gitSucceeds("rev-parse", "--verify", "HEAD~1")) {
-            return Optional.of("HEAD~1");
-        }
+        return resolvable("HEAD~1");
+    }
 
-        return Optional.empty();
+    /**
+     * A candidate is only usable if this clone actually has it. A force-pushed
+     * {@code CI_COMMIT_BEFORE_SHA}, or a branch whose fetch failed, otherwise reached
+     * {@code git merge-base} and took the whole job down on a git error with no coverage
+     * output at all -- a missing comparison point reported as a failed build.
+     */
+    private static Optional<String> resolvable(String ref) {
+        return gitQuietly("rev-parse", "--verify", "--quiet", ref + "^{commit}").isPresent()
+                ? Optional.of(ref)
+                : Optional.empty();
     }
 
     private static Map<String, Set<Integer>> readAddedLines(String mergeBase, List<String> sourceRoots) throws IOException, InterruptedException {
@@ -249,12 +270,22 @@ public final class CheckChangedCoverage {
         return output;
     }
 
-    private static boolean gitSucceeds(String... arguments) {
+    /** Git that reports failure instead of ending the process. Empty when the command failed. */
+    private static Optional<String> gitQuietly(String... arguments) {
+        List<String> command = new ArrayList<>();
+        command.add("git");
+        command.addAll(List.of(arguments));
         try {
-            git(arguments);
-            return true;
-        } catch (Exception ignored) {
-            return false;
+            Process process = new ProcessBuilder(command)
+                    .redirectErrorStream(true)
+                    .start();
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            return process.waitFor() == 0 ? Optional.of(output) : Optional.empty();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return Optional.empty();
+        } catch (IOException exception) {
+            return Optional.empty();
         }
     }
 

@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping({"/admin/users", "/users"})
 public class ModerationUserController {
 
     private final ModerationUserService service;

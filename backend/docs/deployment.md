@@ -62,8 +62,8 @@ Do not commit real secret values. `.env` is ignored by `.gitignore`.
 | `ADMIN_SUPERUSER_EMAILS` | Comma-separated addresses of administrators that may also moderate other administrator accounts. | Must already be administrators; this list does not create them. Defaults to `u-kisi4@student.kit.edu`. Not a role: these accounts still report `ADMIN`. |
 | `AUTH_RATE_LIMIT_HMAC_KEY` | HMAC key for rate-limit subject hashes. | Must contain at least 32 characters or startup fails. Treat as secret. |
 | `AUTH_OTP_TTL` | OTP lifetime. | Defaults to `PT5M`. |
-| `AUTH_ADMIN_SESSION_TTL` | Admin session lifetime. | Defaults to `P1D`. |
-| `AUTH_STUDENT_SESSION_TTL` | Student session lifetime. | Defaults to `P365D`. |
+| `AUTH_ADMIN_SESSION_TTL` | Lifetime of a session issued by the admin API (`POST /admin/auth/login`). | Defaults to `P1D`. |
+| `AUTH_APP_SESSION_TTL` | Lifetime of a session issued by the app API (`POST /auth/login`), for every account including administrators. | Defaults to `P365D`. `AUTH_STUDENT_SESSION_TTL`, the former name, is still read when this one is unset. |
 | `AUTH_RATE_LIMIT_WINDOW` | Rate-limit window. | Defaults to `PT15M`. |
 | `AUTH_RATE_LIMIT_REQUEST_EMAIL` | OTP request limit per email. | Defaults to `3`. |
 | `AUTH_RATE_LIMIT_REQUEST_IP` | OTP request limit per IP. | Defaults to `20`. |
@@ -90,7 +90,7 @@ Notes:
 - `ADMIN_FRONTEND_ORIGINS` must include the exact scheme, host, and port of each
   Admin Web origin.
 - A CORS mismatch causes `403 Invalid CORS request` before controller logic runs.
-- With any required `GITLAB_*` value empty, `GET /system/status` reports
+- With any required `GITLAB_*` value empty, `GET /admin/system/status` reports
   `gitlabEnabled:false` and issue creation returns 503.
 
 ### GitLab CI/CD Variables
@@ -114,6 +114,8 @@ Deployment and scheduled maintenance jobs use these custom CI/CD variables:
 | `ADMIN_BOOTSTRAP_EMAILS` | Optional override for admin bootstrap accounts. |
 | `ADMIN_SUPERUSER_EMAILS` | Optional override for the administrators that may moderate other administrators. |
 | `AUTH_RATE_LIMIT_HMAC_KEY` | Required deployed rate-limit HMAC key. Secret. |
+| `AUTH_ADMIN_SESSION_TTL` | Optional override for the admin API session lifetime. Defaults to `P1D` in CI. |
+| `AUTH_APP_SESSION_TTL` | Optional override for the app API session lifetime. Defaults to `P365D` in CI, falling back to `AUTH_STUDENT_SESSION_TTL` if that is what is set. |
 | `SPRING_MAIL_HOST` | SMTP host. |
 | `SPRING_MAIL_PORT` | SMTP port. |
 | `SPRING_MAIL_USERNAME` | SMTP username. Secret when used. |
@@ -201,7 +203,11 @@ from `src/Dockerfile`, starts `postgres:16`, waits for PostgreSQL health, and
 publishes backend port `8080` and PostgreSQL port `5432`.
 
 `scripts/docker-smoke-test.sh` runs `docker compose config`, starts the stack,
-checks `GET /health`, and tears the stack down on exit.
+checks `GET /health`, and tears the stack down on exit. It is a **local** helper: no CI
+job calls it. The pipeline's equivalent is `server:postgres-migration-smoke`, which runs
+the app test context against a `postgres:16` service instead of building the image. Run it
+from the repository root, and note that it stops the stack and removes its volumes on
+exit.
 
 ### Production Docker Compose Stack
 
@@ -307,7 +313,11 @@ The job:
    `DEPLOY_PATH` to connect to the target server.
 4. Creates `$DEPLOY_PATH` on the server.
 5. Copies `docker-compose.prod.yml` to `$DEPLOY_PATH/docker-compose.yml`.
-6. Writes the deployment `.env` file from CI/CD variables.
+6. Writes the deployment `.env` file from CI/CD variables. Every variable in that
+   block is written unconditionally, using the job's own fallback when the CI/CD
+   variable is unset. A value set as a CI/CD variable therefore overrides both
+   `application.properties` and the Compose defaults, and changing a default in the
+   repository has no effect on the deployment until `.gitlab-ci.yml` changes with it.
 7. Logs in to the GitLab Container Registry on the server.
 8. Confirms `docker compose` is available on the server.
 9. Pulls the image tag for the current commit through Compose.
@@ -346,7 +356,7 @@ Jobs:
 
 | Job | When it runs | What it does |
 | --- | --- | --- |
-| `server:test` | Push and merge request pipelines | Runs `./mvnw verify`, then `java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"`. Publishes JUnit and JaCoCo artifacts. |
+| `server:test` | Push and merge request pipelines, never scheduled | Runs `./mvnw -B -ntp verify`, then `java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"`. Publishes JUnit and JaCoCo artifacts. The coverage gate needs a comparison ref; when it cannot resolve one it says so and passes, rather than failing a build over a missing base commit. |
 | `server:postgres-migration-smoke` | Push and merge request pipelines | Starts the Spring Boot app test context against a `postgres:16` CI service, checks `/health`, and exercises the PostgreSQL Flyway migrations from `src/main/resources/db/migration/postgresql`. |
 | `server:package` | `main` branch, non-scheduled pipelines | Uses Kaniko to build `src/Dockerfile` and push `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`. |
 | `server:deploy:staging` | Manual job on `main`, non-scheduled pipelines | SSHes to the deployment host and replaces the Compose-managed `backend` service. |
@@ -385,25 +395,32 @@ Use the checks that are explicitly supported by the source and CI configuration:
    curl -fsS https://server.example.org/health
    ```
 
-3. For an authenticated admin deployment, use `GET /system/status` from the
+3. For an authenticated admin deployment, use `GET /admin/system/status` from the
    Admin Web or an authenticated client. It reports overall status, database
    reachability, counts, last write metadata, and `gitlabEnabled`.
 
-4. Verify CORS for the Admin Web origin:
+4. Confirm the two APIs hand out the sessions they should. Log in through
+   `POST /admin/auth/request-login` and `POST /admin/auth/login` with an administrator
+   address: the response `expiresAt` should be about a day out. The same address through
+   `POST /auth/request-login` and `POST /auth/login` should come back with an `expiresAt`
+   about a year out, and a non-administrator address on `/admin/auth/login` should be
+   refused with `403 Admin access required`.
+
+5. Verify CORS for the Admin Web origin, on the path the panel actually calls:
 
    ```bash
-   curl -i -X POST -H "Origin: <panel origin>" -H "Content-Type: application/json" -d '{"email":"nobody@example.invalid"}' <api base>/auth/request-login
+   curl -i -X POST -H "Origin: <panel origin>" -H "Content-Type: application/json" -d '{"email":"nobody@example.invalid"}' <api base>/admin/auth/request-login
    ```
 
    `400 Invalid KIT email` means the origin was accepted and the request reached
    controller validation. `403 Invalid CORS request` means the origin is not in
    `ADMIN_FRONTEND_ORIGINS`.
 
-5. Check recent deployment logs. The CI deployment job prints the last 100 lines
+6. Check recent deployment logs. The CI deployment job prints the last 100 lines
    after a successful health check and the last 200 lines after a failed health
    check.
 
-6. When you have direct database access, inspect Flyway's migration history:
+7. When you have direct database access, inspect Flyway's migration history:
 
    ```sql
    select installed_rank, version, description, type, success
@@ -503,8 +520,8 @@ dump `pg-backup.sh` writes lives on the same disk as the database it came from.
 | Application fails during startup with `AUTH_RATE_LIMIT_HMAC_KEY must contain at least 32 characters` | Set `AUTH_RATE_LIMIT_HMAC_KEY` to an unpredictable value with at least 32 characters. |
 | Browser requests fail with `403 Invalid CORS request` | Set `ADMIN_FRONTEND_ORIGINS` to the exact Admin Web origin, including scheme and port. Wildcards are rejected. |
 | `GET /health` returns 503 | The backend could not run `SELECT 1` against the configured database, or Flyway reports failed/pending migrations. Check datasource URL, username, password, PostgreSQL reachability, migration logs, `flyway_schema_history`, and port `5432`. |
-| `GET /system/status` reports database down or degraded | The database probe or follow-up reads failed. Check database availability and backend logs. |
+| `GET /admin/system/status` reports database down or degraded | The database probe or follow-up reads failed. Check database availability and backend logs. |
 | GitLab issue creation returns 503 | `GITLAB_BASE_URL`, `GITLAB_PROJECT_ID`, or `GITLAB_TOKEN` is unset, so the integration is disabled. |
 | GitLab issue creation returns bad gateway | The backend could not reach GitLab or GitLab did not return the expected issue payload. Check `GITLAB_BASE_URL`, token permissions, network access, and `GITLAB_TIMEOUT`. |
 | Admin API rejects every caller | `ADMIN_BOOTSTRAP_EMAILS` may be empty. The startup runner logs a warning when no administrator emails are configured. |
-| `scripts/docker-smoke-test.sh` fails | The script checks `GET /health`, the same endpoint used by the Dockerfile, CI deploy, and scheduled CI health checks. Check PostgreSQL reachability first because `/health` performs `SELECT 1`. |
+| `scripts/docker-smoke-test.sh` fails | Local helper only, not a CI job. It checks `GET /health`, the same endpoint used by the Dockerfile, CI deploy, and scheduled CI health checks. Check PostgreSQL reachability first because `/health` performs `SELECT 1`. |
