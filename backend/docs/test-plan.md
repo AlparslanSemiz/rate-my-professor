@@ -1,7 +1,29 @@
 # Test plan
 
-Layers: **unit → API/role → integration → E2E**. This document currently covers batches 1
-and 2 of the unit layer; every batch adds its own section.
+Layers: **unit → API/role → integration → E2E**. Every batch adds its own section. The unit
+layer is covered by batches 1–4, the API/role layer by the authorization, protocol and
+ownership sweeps below. The integration and E2E layers have not been started; what blocks the
+first of them is the Testcontainers question under [Open questions](#open-questions).
+
+### Where it stands
+
+**666 tests, 0 failures**, 2 skipped (the `@Disabled` `DemoApplicationTests`, and
+`PostgreSqlMigrationSmokeTests`, which runs on CI only). Bundle **94.02% LINE** (3161/3362),
+**84.20% BRANCH** (959/1139), against gates of 0.92 and 0.82.
+
+| Layer | State |
+|---|---|
+| Unit | Batches 1–4 done. |
+| API / role | The three sweeps below. |
+| Integration | **Not started** — blocked on the Testcontainers decision. |
+| E2E | **Not started.** |
+
+The spread between LINE and BRANCH was 15 points before batch 4 and is **9.8** after it. What
+is left is spread thin rather than concentrated, with one exception: `RestClientGitLabClient`
+still has 18 missed branches of 22 and is the only untested adapter with no principled reason
+(see *Deliberately uncovered*).
+
+### The metric
 
 The coverage metric is LINE coverage, target 90%. Batch 1's result:
 
@@ -93,11 +115,179 @@ untested method left.
 To keep them apart: the three numbers measure three separate things; this is not an
 inconsistency.
 
-- **pom `jacoco:check` (LINE 0.90 / BRANCH 0.73)** — the bundle regression gate. The floor
-  it must not fall below again.
-- **The 90% target in this document** — the level batches aim for.
+- **pom `jacoco:check` (LINE 0.92 / BRANCH 0.82 since batch 4)** — the bundle regression
+  gate. The floor it must not fall below again; it is raised as batches clear it, never
+  lowered to make a build pass.
+- **The target in this document** — the level batches aim for. It was 90% LINE through
+  batches 1–3; batch 4 was chosen by the BRANCH counter instead, because every class it
+  touched was already above 82% LINE and a line target would never have picked them.
 - **`scripts/CheckChangedCoverage.java --threshold 30`** — the MR gate, which looks only
   at the coverage of *changed* code. Unrelated to the bundle.
+
+---
+
+## Batch 3 — the last two revert handlers
+
+Target: the two handlers in `com.pse.audit.revert` that batches 1 and 2 did not reach, which
+closes the package.
+
+| Class | LINE | BRANCH | Tests |
+|---|---|---|---|
+| `BugReportRevertHandler` | 100.0% | 100% | 6 |
+| `ContentRevertHandler.CommentHandler` | 100.0% | 100% | 5 |
+| `ContentRevertHandler.AnswerHandler` | 100.0% | 100% | 4 |
+
+**15 tests in total.** There are **nine** handler beans in the package; batch 2 covered six of
+them and these are the last three. Every one of the nine, plus `AuditRevertService` and
+`RevertValues`, now has **0 missed lines**. Branches are not quite there: `AuditRevertService`
+still has 5 missed and `RevertValues` 1.
+
+What these tests added is not LINE coverage — the three handlers were already reachable through
+`AdminApiIntegrationTests`, which is [P-2](test-findings.md#p-2--integration-tests-hide-unit-targets)
+exactly: an integration test can hold a unit target at 100% while nothing states what the unit
+is supposed to do. What they added is the statement of intent, at the level where a wrong answer
+is cheap to see.
+
+These arrived on the `bugreports` branch (`05a9eac`) rather than as a planned batch, which is
+why they were in `src` without being in this document until now. They follow the batch 2 shape
+exactly: a manual constructor factory rather than `@InjectMocks`, mocked repository plus mocked
+moderation service, and the same four questions per handler — the target type, the field map,
+a deleted row being **absent** rather than mapped to null, and `applyInverse` replaying through
+the service the panel itself calls.
+
+## Batch 4 — the moderation services
+
+Target: the branch gap. Three classes held 128 of the module's missed branches between them,
+and unlike the earlier batches this one was chosen by the BRANCH counter rather than by LINE —
+all three were already above 82% LINE and would never have been picked by a line-coverage
+target.
+
+| Class | LINE missed | BRANCH missed | Tests |
+|---|---|---|---|
+| `ModerationCatalogService` | 30 → **0** | 48 → **8** | 29 |
+| `ModerationUserService` | 26 → **13** | 51 → **27** | 49 |
+| `ModerationContentService` | 23 → **17** | 29 → **12** | 29 |
+
+**107 tests in total.** Bundle: 92.56% → **94.02% LINE**, 77.09% → **84.20% BRANCH**. Seven
+points of branch coverage from three classes, which is what "the gap is concentrated" meant.
+
+### What the tests are organised around
+
+All three classes have the same shape — validate, walk the request field by field, record a
+change only where the value actually differs, and write nothing at all when nothing did. That
+last property gets the most tests, and deliberately: a method that saves and writes an audit
+entry for an edit that changed nothing fills the moderation trail with events nobody
+performed. There are now tests for a resubmitted name, year, season, type, active flag,
+professor assignment, username, biography, credibility score, content and status.
+
+The second theme is the **protection matrix** in `updateStudent`. Three guards overlap on
+every field — is the target an administrator, is the target the caller, is the target the
+elevated operator — and the answers differ per field: a status change refuses self, a role
+change refuses self, an address change refuses neither but refuses an elevated target
+outright, for everybody including an elevated caller. Driving that through `MockMvc` means
+minting a different session per case; at the unit level it is a boolean, which is the whole
+argument for testing this class here rather than through the API.
+
+### BUG-3's write side, closed
+
+The deterministic write-side test that batch 2 deferred to this batch now exists.
+`updateLecture` builds `before` from a `Set` — which defines no order — and `after` from
+whatever order `findAllById` returns, then compares them position by position, so an
+unchanged assignment records a bogus change and a bogus audit event. The test states that with
+a `LinkedHashSet` and a stubbed repository order rather than relying on real `HashSet`
+iteration: `Professor` overrides neither `equals` nor `hashCode`, so real order varies per run
+and the flakiness would end up in the test instead of in the defect. The finding itself stays
+open — the fix is a product decision about `RevertValues`'s contract.
+
+### The gates moved
+
+`jacoco:check` went LINE `0.90` → **`0.92`** and BRANCH `0.73` → **`0.82`**, following the rule
+the batch 2 writeup set: about one and a half points below what is measured, so the gate stops
+a regression without breaking an unrelated MR. Verified green at those values.
+
+
+## The API / role batch
+
+A different layer with a different metric. Coverage is not the measure here: these tests drive
+the whole application through `MockMvc` against a real Spring context, and what they assert is
+the **shape of the API surface**, not the lines of one class.
+
+Three sweeps, all built the same way — the route list is read from Spring's own
+`RequestMappingHandlerMapping` rather than kept by hand. That choice is the point of the batch.
+A list maintained by a person goes stale silently and the sweep then passes because it is
+looking at less than it thinks; a list read from the mapping cannot, and a new endpoint has to
+be classified by whoever adds it.
+
+| Test class | Question it asks | Tests |
+|---|---|---|
+| `ApiAuthorizationMatrixTests` | May an **anonymous** caller in? | 6 |
+| `ApiProtocolContractTests` | Does the API answer with the **right status code**? | 5 |
+| `ApiOwnershipMatrixTests` | May an **authenticated** caller touch somebody else's row? | 7 |
+
+### The authorization matrix
+
+The security chain ends in `anyRequest().permitAll()`, so an endpoint is anonymous unless some
+matcher names it. Reading `SecurityConfig` alone therefore cannot distinguish "deliberately
+public" from "nobody thought about it", and a new controller method inherits the open default
+in silence. `everyRouteIsEitherDeclaredPublicOrRefusesAnonymousCallers` closes that: every one
+of the 122 mapped routes must either refuse an anonymous caller with 401 or appear in
+`PUBLIC_ROUTES`, a list of 14 entries that someone had to write deliberately.
+
+The reverse direction is tested too — a route declared public has to stay reachable — so the
+list cannot be used to wave a route through after it has been accidentally locked down.
+
+Three findings came out of it, all recorded in [test-findings.md](test-findings.md): the
+missing slash in the `/vote/answer` route (F-4, fixed), a missing bearer token answering 500
+rather than 401, and `POST /data/professor` answering `200 {"success": false}` to a non-admin
+instead of a real 403.
+
+### The protocol sweep
+
+The same idea applied to status codes rather than to authorization. It found F-14 through F-17;
+F-17 is fixed, the rest are pinned as they are:
+
+- **F-16** — a path that exists, called with a verb it does not map, answers **404 instead of
+  405**, on all 122 routes. Pinned, not fixed: it is a contract change with two documented
+  dependents and an unknown Android dependency, so it belongs in its own conversation with the
+  team rather than in a test batch.
+- **F-17** — a body in a media type no converter can read answered **500 instead of 415** on
+  all 37 body-reading routes. **Fixed** with one narrow `@ExceptionHandler`; the writeup in the
+  findings document records why extending `ResponseEntityExceptionHandler` was the wrong fix
+  and what the red run proved before the pin was flipped.
+- **F-14, F-15** — a missing required query parameter and the category list of an unknown
+  lecture both answer 500. Open.
+
+The two statuses that are wrong but pinned live in `com.pse.support.ApiContract` rather than in
+the sweep, because `AdminApiPathSplitTests` asserts one of them incidentally. Deciding to fix
+one is then a single edit, and the sweep tells you every route the decision touches.
+
+### The ownership sweep
+
+The half the authorization matrix does not cover: a valid token is not permission to touch a
+row belonging to somebody else. All 61 id-taking routes are classified into four sets —
+owner-scoped (1), cross-user by design (2), admin tier (52), and ids that name no user's row
+(6) — and the ratchet requires every id-taking route to be in exactly one of them.
+
+**It found no IDOR.** The negative result and the evidence behind it are written up under
+[Negative results](test-findings.md#negative-results); the short version is that the app tier
+takes the caller's identity only from `@AuthenticationPrincipal`, which
+`noAppTierHandlerTakesACallerIdentityFromTheRequest` now pins by reflection over every app-tier
+handler and its `@RequestBody` type. That invariant, not the individual probes, is what keeps
+the owner-scoped column one line long.
+
+## Deliberately uncovered
+
+Three classes are visibly low and none of them is an oversight. Saying so here is the point:
+an unexplained 0% reads as neglect, and the next person re-derives the reason or, worse,
+writes a test that pins an adapter's plumbing.
+
+| Class | LINE | Why |
+|---|---|---|
+| `MailService` | **0.0%** (0/46) | An SMTP adapter behind `LoginCodeDelivery` / `LoginSuccessDelivery`. Every test substitutes `CapturingLoginCodeDelivery` through `TestDeliveryConfig`, so the real class is never constructed. Testing it means mocking `JavaMailSender` and asserting on a `MimeMessageHelper` — that is, asserting that the adapter calls the library the way the library documents. Its logic worth testing (the location lookup, the template fill) already lives in `LoginLocationService` and `MailTemplateService`. |
+| `MailTemplateService` | **7.7%** (1/13) | Its entire job is reading template files from `static/mail/` off the classpath and substituting `{{placeholders}}`. The house rule for unit tests is no file system; a test here would either break that rule or assert over its own fixture. It is a candidate for the integration layer, not this one. |
+| `RestClientGitLabClient` | **23.1%** (9/39, 4/22 branch) | An HTTP adapter behind `GitLabClient`, substituted in tests by `RecordingGitLabClient` (`@Primary`). Unlike the two above, **this one has no principled excuse** — `LoginLocationServiceTests` shows exactly how to test a `RestClient` caller by mocking the fluent chain, and the same could be done here. It is simply not done yet, and at 18 missed branches it is the largest single branch gap outside the moderation services. |
+
+The distinction matters more than the numbers: the first two are decisions, the third is debt.
 
 ---
 
@@ -175,7 +365,7 @@ two elements in reverse order as **different** — pinned separately.
 
 Not fixed — order-insensitive comparison for set fields is a product decision and changes
 `RevertValues`'s contract. The deterministic test for the write side (with a stubbed
-`findAllById` order) was left to the `ModerationCatalogService` batch.
+`findAllById` order) was written in batch 4.
 
 ### Four gaps on the voting path
 
@@ -656,3 +846,177 @@ dependency changes the CI contract — a decision for the integration batch.
   throws an NPE on `getId()`/`getKitEmail()` if `student` arrives as `null`; not tested,
   because the principal is supplied by the security chain.
 - **Test count:** 6 (good: 4, bad: 2)
+
+### BugReportRevertHandler
+
+- **Responsibility:** reverts an administrator's edit to a bug report — status, severity and
+  the fields the moderation panel can change on one.
+- **Behaviours tested:** the declared target type; `currentValues` mapping every field the
+  handler can revert; an id with **no surviving row** being absent from the map rather than
+  mapped to `null`; an empty target list; `applyInverse` replaying the recorded values through
+  `ModerationBugReportService`; and a `before` half carrying one field leaving the others
+  `null`.
+- **Deliberately not tested:** `ModerationBugReportService.update` itself, and the GitLab issue
+  the report may be linked to — `RestClientGitLabClient` is a separate class and is not covered
+  at all (see *Deliberately uncovered*).
+- **Mocks used:** `BugReportRepository` and `ModerationBugReportService`. The service is mocked
+  rather than stubbed because what has to be verified is the delegation: the handler does not
+  write the fields itself, it calls the same path the panel calls, so the revert inherits that
+  path's validation.
+- **Residual risk:** the same check/apply race as `WarningRevertHandler` (F-11) applies in
+  principle — nothing holds a lock between the revertibility check and the revert — but this
+  handler does not re-query inside `applyInverse`, so it cannot refuse; it would replay onto
+  whatever the row has become.
+- **Test count:** 6
+
+### ContentRevertHandler.CommentHandler / .AnswerHandler
+
+- **Responsibility:** reverts a moderator's edit to a comment or an answer: the content text
+  and the `ContentStatus`. Why it matters: status is what hides a post from students, so a
+  status set by mistake removes content from the app until it is reverted.
+- **Behaviours tested:** for both handlers, the declared target type, `content` and `status`
+  mapped by name, a deleted row being absent from the map, `applyInverse` replaying both
+  fields through `ModerationContentService`, and — on the comment side — a `before` half
+  carrying only `status` leaving `content` `null`.
+- **Deliberately not tested:** that the status change actually hides or restores the content;
+  that is `ModerationContentService`'s job and an integration concern. The two handlers live in
+  one class because they share the field mapping, and the tests keep them apart the way the
+  class does.
+- **Mocks used:** `CommentRepository`, `AnswerRepository` and `ModerationContentService` — all
+  three together, because in a handler pair this thin the mistake worth catching is a
+  copy-paste one: a handler wired to the wrong repository reverts the wrong row.
+- **Residual risk:** negligible at the unit level; both handlers are at 100% LINE and BRANCH.
+  `ModerationContentService` itself is the class carrying the risk, and it still has 23 missed
+  lines and 29 missed branches.
+- **Test count:** 9 — CommentHandler 5, AnswerHandler 4
+
+### ApiAuthorizationMatrixTests
+
+- **Responsibility:** the anonymous boundary across the whole published surface, plus the
+  `authenticated()` tier, which had no role coverage before this batch.
+- **Behaviours tested:** every mapped route either refusing an anonymous caller with 401 or
+  being declared public; the declared public routes staying reachable; an anonymous caller
+  never being able to provoke a 403 (which would mean the entry point is being bypassed); bug
+  submission without a header answering 401 rather than 500; the legacy professor create
+  refusing a student with 403; a student session reaching the endpoints the app needs; and
+  that no handler relies on `@PreAuthorize` and friends, which are **inert** here because the
+  application has no `@EnableMethodSecurity`.
+- **Deliberately not tested:** the admin tier by role — that is `AdminApiPathSplitTests`, which
+  mints its sessions through the real login endpoints because the older helper writes tokens
+  with no session type and would stay green with the admin path broken.
+- **Mocks used:** none. A real context, a real security chain, a real database; only mail
+  delivery and the GitLab client are substituted.
+- **Residual risk:** the sweep proves a route *refuses* an anonymous caller, not that the rule
+  behind the refusal is the right one. A route locked to admins that should be open to students
+  passes this test and fails nobody until a user complains.
+- **Test count:** 6
+
+### ApiProtocolContractTests
+
+- **Responsibility:** the status codes the API answers with, swept across the surface rather
+  than asserted one endpoint at a time.
+- **Behaviours tested:** every body-reading route answering an unreadable media type with the
+  declared status (415 since F-17 was fixed) and carrying the project's `BasicResponse` body
+  rather than a `ProblemDetail`; malformed JSON in the *right* media type still being a clean
+  400; a path called with a verb it does not map answering the pinned status, with the project
+  error body.
+- **Deliberately not tested:** the `Allow` header a correct 405 would carry — there is no 405
+  to carry it yet (F-16). When that changes, `WRONG_VERB_STATUS` becomes 405 and
+  `wrongVerbCarriesTheProjectErrorBody` gains the header assertion; the constant's javadoc says
+  so.
+- **Mocks used:** none, as above.
+- **Residual risk:** F-16 stays wrong on all 122 routes by decision, not by omission. The
+  pinned constant is what keeps that decision visible instead of letting it read as an
+  oversight.
+- **Test count:** 5
+
+### ApiOwnershipMatrixTests
+
+- **Responsibility:** horizontal authorization — whether an authenticated caller can reach a
+  row belonging to another student.
+- **Behaviours tested:** the classification ratchet over all 61 id-taking routes; the
+  cross-user probe on the one owner-scoped route, asserted on the **row** rather than the
+  status; the owner's own call still working; `/ratings/own` being scoped by the principal
+  rather than the path; the notification list not leaking another student's rows; the
+  administrative routes refusing a student who carries a **real** victim id; and the structural
+  invariant that no app-tier handler takes a caller identity from the request.
+- **Deliberately not tested:** the admin tier by role, again `AdminApiPathSplitTests`. The vote
+  routes are classified cross-user *by design* and are not probed for refusal, because
+  refusing there would be the defect.
+- **Mocks used:** none.
+- **Residual risk:** the ratchet forces a new id-taking route to be classified, but nothing
+  forces the classification to be **honest** — an owner-scoped route dropped into
+  `NOT_OWNED_BY_A_USER` would pass. The invariant test is the backstop, and it is the one to
+  keep working if the sets ever have to be trimmed.
+- **Test count:** 7
+
+### ModerationCatalogService
+
+- **Responsibility:** the catalogue behind the ratings — correcting a lecture or a professor
+  that was entered wrong, and the assignment between them.
+- **Behaviours tested:**
+  - Both rejection gates: a `null` request and a request whose every field is `null`, each
+    refused **before** the row is looked up
+  - Every validation bound, at the bound and past it: name 300, code 100, professor names
+    200, semester year 1900 and 2200 at both ends
+  - Trimming before comparison — a name resubmitted with surrounding whitespace is not a
+    change
+  - Every field resubmitted unchanged recording nothing, and the whole method then saving
+    nothing and writing no audit entry
+  - `professorIds` and `lectureIds`: an id that does not resolve being a 404, an empty list
+    clearing the assignment, and a reassignment being written **from the owning (lecture)
+    side** with the detach and attach loops verified on both lectures
+  - **BUG-3's write side**: the same professors in a different order recording a bogus change
+  - The audit entry: action, target type and the label built from the row *after* the edit
+- **Deliberately not tested:** `deleteLecture` / `deleteProfessor`, which were already
+  covered; the cascade behaviour they rely on is an integration concern.
+- **Mocks used:** the five constructor dependencies. `AuditWriter` is mocked and captured
+  rather than stubbed, because the field diff it receives *is* the observable behaviour of
+  these methods — the response says only "Updated … successfully" either way.
+- **Residual risk:** 8 branches remain, in the delete paths and the label helpers. BUG-3
+  itself is open: the test pins the defect, it does not fix it.
+- **Test count:** 29
+
+### ModerationUserService
+
+- **Responsibility:** the administrator's view of an account — listing, filtering, and the
+  field edit with its protection rules.
+- **Behaviours tested:**
+  - Every query-parameter rejection, each verified to happen **before the first repository
+    call**: limit out of range or not a number, a cursor with no limit (refused before the
+    cursor is even decoded), an unknown status, role or sort, a search over 200 characters,
+    and the refusal to filter for `DELETED` at all
+  - The accepted sort spellings, since the parser trims and ignores case — a blank value is
+    the default rather than an error
+  - The protection matrix on `updateStudent`: self-status, self-role, an administrator
+    target for an ordinary caller, and the elevated operator's address, which is refused for
+    **everybody including an elevated caller**
+  - Promotion saving the admin row and demotion deleting it, with the moderation-history
+    refusal checked up front rather than left to the constraint
+  - Session revocation on a changed address, on a block, and on either role change, asserted
+    through the token rows and the `sessionsRevoked` metadata
+  - `blockedAt` stamped from the injected `Clock` and cleared again on unblock
+  - The `biography == null → ""` normalization, the same one `UserRevertHandler` depends on
+- **Deliberately not tested:** the Criteria predicates (`rolePredicate`, `cursorPredicate`),
+  which build a query rather than compute an answer — they belong to the integration layer,
+  and mocking `CriteriaBuilder` would assert the shape of a query nobody runs.
+- **Mocks used:** all ten constructor dependencies, plus a `Clock.fixed`.
+- **Residual risk:** 27 branches remain, most of them in `getStudents`'s two ordering modes
+  and the predicates above.
+- **Test count:** 49
+
+### ModerationContentService
+
+- **Responsibility:** moderating a comment or an answer — editing the text, and the
+  visibility switch the student app reads.
+- **Behaviours tested:** the shared `contentChanges` guard from both sides; blank and
+  overlong content; content and status resubmitted unchanged writing nothing; the audit
+  preview being truncated to 120 characters **with a visible ellipsis** and left whole at the
+  boundary; the lecture label with a code, with a blank code and with no code at all; and the
+  answer path being audited as an `ANSWER_UPDATED` labelled through its parent comment.
+- **Deliberately not tested:** the listing methods' response assembly, which is mapping; the
+  rating deletion path, already covered.
+- **Mocks used:** all ten constructor dependencies.
+- **Residual risk:** 12 branches remain, in `getRatings`'s specification lambda and the
+  listing helpers.
+- **Test count:** 29

@@ -28,7 +28,7 @@ really recorded if it lives in a test.
 | [F-14](#f-14--500-when-a-required-query-parameter-is-missing) | 500 when a required query parameter is missing | Medium — wrong HTTP code | Open, put under test |
 | [F-15](#f-15--500-for-the-category-list-of-an-unknown-lecture) | 500 for the category list of an unknown lecture | Medium — wrong HTTP code | Open, put under test |
 | [F-16](#f-16--the-wrong-http-method-returns-404-instead-of-405) | The wrong HTTP method returns 404 instead of 405 | Medium — wrong HTTP code, on all 122 routes | Open, put under test |
-| [F-17](#f-17--an-unsupported-media-type-returns-500-instead-of-415) | An unsupported media type returns 500 instead of 415 | Medium — wrong HTTP code, on every route that reads a body | Open, put under test |
+| [F-17](#f-17--an-unsupported-media-type-returns-500-instead-of-415) | An unsupported media type returns 500 instead of 415 | Medium — wrong HTTP code, on every route that reads a body | **Fixed** |
 | [P-1](#p-1--the-coverage-baseline-number-was-wrong) | The coverage baseline number was wrong | Process | **Fixed** (re-measured) |
 | [P-2](#p-2--integration-tests-hide-unit-targets) | Integration tests hide unit targets | Process | **Fixed** (method changed) |
 | [P-3](#p-3--lombok-is-not-filtered-in-jacoco) | Lombok is not filtered in JaCoCo | Process | Open, deliberate |
@@ -36,6 +36,10 @@ really recorded if it lives in a test.
 BUG-1 and BUG-2 (the cursor and approximate-location bug reports) are in
 [test-plan.md](test-plan.md#findings); neither was reproducible on the backend and they stay
 there.
+
+The numbers stop at F-17 on purpose. The ownership / IDOR sweep ran and raised nothing — what
+it covered and how is under [Negative results](#negative-results), because a sweep that finds
+nothing is only worth something if its coverage is written down.
 
 ---
 
@@ -78,7 +82,11 @@ reverse order as different (while they are equal as sets).
 
 **Status.** Open. The fix (order-insensitive comparison for set fields) changes
 `RevertValues`'s contract and is a product decision. The deterministic test for the write
-side — with a stubbed `findAllById` order — was left to the `ModerationCatalogService` batch.
+side — with a stubbed `findAllById` order — now exists as
+`ModerationCatalogServiceTests.updateLecture_sameProfessorsInAnotherOrder_recordsABogusChange`,
+added in batch 4. It pins the bogus `professors` change and the bogus audit event that follow
+from comparing an unordered `Set` position by position. The finding stays **open**: the fix is
+a product decision about `RevertValues`'s contract, not a test gap.
 
 ---
 
@@ -598,8 +606,11 @@ every body-reading route with `text/plain` and all of them return 500.
 
 **Same root cause, seen in production.** In the production logs,
 `MaxUploadSizeExceededException` and Tomcat's 512-byte multipart header limit fall into the same
-catch-all branch. Same cause: no handler for body/transport layer exceptions. That will be
-measured separately as F-18.
+catch-all branch. Same cause: no handler for body/transport layer exceptions. Still to be
+measured separately, and **F-18 is still free for it**: the ownership sweep that was going to
+claim that number found nothing to record (see *Negative results* below). Fixing F-17 does
+**not** cover it: the narrow handler claims one exception type and these are different types,
+still falling to the catch-all.
 
 **⚠ Do NOT fix this by extending `ResponseEntityExceptionHandler`.**
 
@@ -636,8 +647,80 @@ were verified against this project's version — Spring Framework **7.0.7** (Boo
 and return 415 with the project's existing `BasicResponse` body. It touches neither of the other
 two findings and does not change the body shape.
 
-**Status.** Open, put under test. The expected code lives in a single constant:
-`com.pse.support.ApiContract.UNSUPPORTED_MEDIA_TYPE_STATUS = 500`.
+**Status. Fixed** — that narrow handler, `GlobalExceptionHandler.handleUnsupportedMediaType`,
+and nothing else. `ApiContract.UNSUPPORTED_MEDIA_TYPE_STATUS` is now `415`.
+
+How it was verified, in the order it was done: the handler was added **first**, with the pin
+left at `500`. `everyBodyReadingRouteAnswersAnUnsupportedMediaTypeWithTheDeclaredStatus` then
+went red and named **all 37** body-reading routes as having moved `500 → 415` — more than the
+26 the finding first counted, because the legacy and `/admin` paths of the same handler are
+separate mappings. That red run is the evidence the handler reaches every route rather than the
+one probed by hand; only then was the constant flipped.
+
+The other three tests in the class stayed green throughout, which is the part that matters for
+the neighbouring findings: **F-16's 404 is untouched** and malformed JSON in the right media
+type is still 400. The two answers did not collapse into each other.
+
+One test was added rather than edited: `unsupportedMediaTypeCarriesTheProjectErrorBody` asserts
+`{message: "Unsupported media type", success: false}`. The sweep only reads statuses, so it
+would stay green if someone later replaced the narrow handler with
+`ResponseEntityExceptionHandler` — the status would still be 415 while the body silently became
+`application/problem+json`. That is reason 3 above, and now it has a test rather than a warning.
+
+---
+
+## Negative results
+
+A sweep that finds nothing is only worth something if what it covered is written down.
+Otherwise the next person repeats it, or worse, assumes it was never done.
+
+### The ownership / IDOR sweep found no defect
+
+`ApiOwnershipMatrixTests` asks the question `ApiAuthorizationMatrixTests` does not: once a
+caller *is* authenticated, can they reach a row belonging to somebody else? **No route was
+found that lets them.** No finding was raised, which is why the F-numbers stop at F-17 and
+F-18 is still free.
+
+**What was covered.** All 61 id-taking routes, read from Spring's handler mappings rather
+than listed by hand, each classified into one of four sets with the reason recorded next to
+it:
+
+| Class | Count | Why cross-user access is or is not possible |
+|---|---|---|
+| Owner-scoped | 1 | `PATCH /social/notifications/{id}` — the one per-user row the app tier addresses by id |
+| Cross-user by design | 2 | The two vote routes; voting on somebody else's comment is the feature |
+| Admin tier | 52 | Governed by role, not ownership; acting on another account is the job |
+| Not owned by a user | 6 | The id names a lecture or a professor — catalogue rows belong to nobody |
+
+**Why the owner-scoped column is one line long, and why that is not luck.** In the app tier
+the caller's identity comes only from `@AuthenticationPrincipal`. No handler takes a student
+id as a path variable, a query parameter or a body field — checked by reflection over every
+app-tier handler method and its `@RequestBody` type, not by reading the code. There is simply
+nothing for a caller to tamper with. `noAppTierHandlerTakesACallerIdentityFromTheRequest` is
+the test that keeps it that way; it is the one worth having, because the individual probes
+only cover today's routes while the invariant covers tomorrow's.
+
+**What was verified positively, not just asserted:**
+
+- `PATCH /social/notifications/{id}` with the wrong student's token leaves the row untouched
+  (`findByRecipientAndId` scopes the lookup to the caller), while the owner's own call still
+  works — both directions, so the refusal is not "broken for everybody".
+- `GET /ratings/own/{lectureId}` is scoped by the principal, not by the path. Tested by
+  giving two students the same lecture id rather than by swapping ids, because the path
+  offers no way to name another student.
+- `GET /social/notifications` returns an empty list to a student whose notifications belong
+  to someone else. It takes no id at all, which is exactly why it earned a test: the scoping
+  is invisible in the route and lives entirely in the query.
+- The administrative routes refuse a student **with a real victim id** with 403, and the
+  victim's row is unchanged afterwards. Knowing a real id buys nothing over knowing a random
+  one, which is what it means for the refusal to happen before the handler looks the id up.
+
+**One thing the sweep will not tell you, deliberately.** The notification refusal comes back
+as HTTP **200** with `success:false` — the refusal is real, the status code is not. So
+`markingAnotherStudentsNotificationAsSeenDoesNotTouchTheRow` asserts on the *row*, never on
+the status: a status is not evidence of anything on this endpoint. That is [F-5](#f-5--failures-come-back-with-http-200),
+already open, and this sweep is a second place it hurts — a client cannot distinguish
+"refused, not yours" from "done".
 
 ---
 

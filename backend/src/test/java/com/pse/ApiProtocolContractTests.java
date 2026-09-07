@@ -96,16 +96,18 @@ class ApiProtocolContractTests {
     private static final int WRONG_VERB_STATUS = ApiContract.WRONG_VERB_STATUS;
 
     /**
-     * A body in a media type the handler cannot read -- F-17.
+     * A body in a media type the handler cannot read -- F-17, fixed.
      *
-     * <p>The correct answer is 415. {@code GlobalExceptionHandler} declares no handler for
-     * {@code HttpMediaTypeNotSupportedException} and does not extend
-     * {@code ResponseEntityExceptionHandler}, so {@code @ExceptionHandler(Exception.class)}
-     * claims it before Spring's own resolver can answer 415, and the caller is told the
-     * backend broke.
+     * <p>{@code GlobalExceptionHandler.handleUnsupportedMediaType} now answers 415 with the
+     * project's {@code BasicResponse} body. Before it existed,
+     * {@code @ExceptionHandler(Exception.class)} claimed
+     * {@code HttpMediaTypeNotSupportedException} before Spring's own resolver could answer
+     * 415, and all 37 body-reading routes told the caller the backend broke.
      *
-     * <p>Extending {@code ResponseEntityExceptionHandler} is <b>not</b> the fix -- see the
-     * finding. The narrow handler is.
+     * <p>The fix is one narrow {@code @ExceptionHandler}. Extending
+     * {@code ResponseEntityExceptionHandler} was <b>not</b> the fix -- it maps this type
+     * together with F-16's and F-14's, clashes with {@code handleWrongMethod}, and returns
+     * {@code ProblemDetail} instead of {@code BasicResponse}. See the finding.
      */
     private static final int UNSUPPORTED_MEDIA_TYPE_STATUS = ApiContract.UNSUPPORTED_MEDIA_TYPE_STATUS;
 
@@ -258,15 +260,39 @@ class ApiProtocolContractTests {
 
         assertTrue(wrong.isEmpty(),
                 "these routes did not answer an unreadable media type with "
-                        + UNSUPPORTED_MEDIA_TYPE_STATUS + ". If the handler has gained a case for "
-                        + "HttpMediaTypeNotSupportedException, change UNSUPPORTED_MEDIA_TYPE_STATUS "
-                        + "and close the finding: " + wrong);
+                        + UNSUPPORTED_MEDIA_TYPE_STATUS + ". A route answering 500 here means "
+                        + "GlobalExceptionHandler.handleUnsupportedMediaType no longer claims "
+                        + "HttpMediaTypeNotSupportedException and the catch-all took it back "
+                        + "(F-17 regressed): " + wrong);
     }
 
     /**
-     * The distinction that makes the media-type answer a bug rather than a quirk: an
-     * unreadable body in the <em>right</em> media type is a clean 400, so the 500 is not
-     * "this endpoint rejects junk loudly", it is one specific exception going unhandled.
+     * The 415 carries the project's own error body, not a {@code ProblemDetail}.
+     *
+     * <p>Separate from the sweep above, which only reads statuses. This is the assertion
+     * that would go red if someone "simplified" the narrow handler into extending
+     * {@code ResponseEntityExceptionHandler}: the status would stay 415 and the sweep would
+     * stay green while the body silently became {@code application/problem+json}, which the
+     * Android client does not parse. Mirrors {@link #wrongVerbCarriesTheProjectErrorBody()}.
+     */
+    @Test
+    void unsupportedMediaTypeCarriesTheProjectErrorBody() throws Exception {
+        String adminToken = adminSession();
+
+        mockMvc.perform(post("/admin/data/professor")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("this is not json"))
+                .andExpect(status().is(UNSUPPORTED_MEDIA_TYPE_STATUS))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Unsupported media type"));
+    }
+
+    /**
+     * The distinction that made the media-type answer a bug rather than a quirk: an
+     * unreadable body in the <em>right</em> media type is a clean 400. Kept after the fix
+     * because it is what keeps the two paths apart -- a wrong media type is 415, wrong
+     * content in the right media type is 400, and neither may collapse into the other.
      */
     @Test
     void malformedJsonInTheRightMediaTypeIsStillABadRequest() throws Exception {
