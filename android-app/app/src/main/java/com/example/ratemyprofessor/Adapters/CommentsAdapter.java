@@ -4,8 +4,6 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -21,7 +19,6 @@ import com.example.ratemyprofessor.DomainModel.VoteType;
 import com.example.ratemyprofessor.Fragments.RatingsFragment;
 import com.example.ratemyprofessor.ServerCommunication.AuthManager;
 import com.example.ratemyprofessor.databinding.ItemCommentBinding;
-import com.example.ratemyprofessor.databinding.ItemReplyBinding;
 
 import java.util.List;
 
@@ -70,19 +67,6 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         holder.commentContent.setText(comment.content());
         holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
         holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
-
-        holder.cancelButton.setOnClickListener(v -> holder.commentBox.setVisibility(View.GONE));
-        holder.sendReply.setOnClickListener(v ->
-                {
-                    listener.onReplySend(comment.commentID(), holder.replyText.getText().toString());
-                    holder.replyText.getText().clear();
-                    holder.replyText.clearFocus();
-                    InputMethodManager imm =
-                            (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
-                    imm.hideSoftInputFromWindow(holder.replyText.getWindowToken(), 0);
-                    holder.commentBox.setVisibility(View.GONE);
-                }
-        );
 
 
         holder.itemView.setOnClickListener(v -> openReplies(comment));
@@ -141,10 +125,6 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
 
         final TextView userName;
         final TextView commentContent;
-        final TextView sendReply;
-        final TextView cancelButton;
-        final EditText replyText;
-        final View commentBox;
         final ImageView showCommentButton;
         final ImageView upVoteButton;
         final ImageView downVoteButton;
@@ -154,28 +134,16 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         final ImageButton reportButton;
         final ImageView profilePicture;
 
-        /**
-         * Whether the answers of this comment are currently folded out.
-         */
-        boolean repliesVisible;
 
         public CommentViewHolder(ItemCommentBinding binding) {
             super(binding.getRoot());
 
-            // The reply box is an included layout, so its views come from their own binding.
-            ItemReplyBinding replyBinding = binding.commentBox;
-            commentBox = replyBinding.getRoot();
-
             profilePicture = binding.profilePicture;
             userName = binding.userName;
             commentContent = binding.contentText;
-            sendReply = replyBinding.sendReply;
-            cancelButton = replyBinding.cancelButton;
-            replyText = replyBinding.replyText;
             showCommentButton = binding.commentsIcon;
             upVoteButton = binding.upvoteIcon;
             downVoteButton = binding.downvoteIcon;
-            repliesVisible = false;
             upVoteCount = binding.upvotesNum;
             downVoteCount = binding.downvotesNum;
             commentsNum = binding.commentsNum;
@@ -189,14 +157,6 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
      * out, since answering needs a server request and folding needs the comment list itself.
      */
     public interface OnCommentClickListener {
-
-        /**
-         * Called when the user submitted an answer.
-         *
-         * @param commentId the id of the answered comment
-         * @param reply     the text the user wrote
-         */
-        void onReplySend(String commentId, String reply);
 
         /**
          * Called when the answers of a comment should be shown.

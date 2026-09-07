@@ -161,7 +161,6 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         return binding.getRoot();
     }
 
-    @Override
     public void onReplySend(String commentId, String reply) {
         String trimmedReply = reply.trim();
         if (trimmedReply.isEmpty()) {

@@ -121,17 +121,6 @@
         app:layout_constraintTop_toTopOf="@+id/comments_icon" />
 
 
-    <include
-        android:id="@+id/comment_box"
-        layout="@layout/item_reply"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/comments_icon" />
-
     <ImageButton
         android:id="@+id/report_button"
         android:layout_width="31dp"

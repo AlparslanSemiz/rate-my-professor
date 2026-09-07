@@ -103,10 +103,6 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     FragmentRatingsBinding binding;
 
-    /**
-     * The displayed comments. Answers are inserted into and removed from this same list when
-     * the user folds them out, which is why it has to stay modifiable.
-     */
     List<Comment> comments;
     CommentsAdapter commentsAdapter;
 
@@ -503,37 +499,11 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         );
     }
 
-    @Override
-    public void onReplySend(String commentId, String reply) {
-        String token = LoginSession.from(requireContext()).bearerToken();
-        Log.d(TAG, "reply send " + commentId + ":" + reply);
 
-        Call<BasicResponse> call = apiService.postAnswer(token, new SubmitAnswerRequest(commentId, reply));
-        if (!AuthManager.getInstance().isLoggedIn()) {
-            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
-        } else {
-            call.enqueue(new Callback<BasicResponse>() {
-                @Override
-                public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
-                    if (!response.isSuccessful()) {
-                        showToast("Error while replying.");
-                    } else {
-                        showToast("Reply sent.");
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<BasicResponse> call, Throwable throwable) {
-                    showToast("Couldn't connect the server.");
-                }
-            });
-        }
-    }
 
     /**
      * Inserts the answers of a comment right below it.
      */
-    @SuppressLint("NotifyDataSetChanged")
     @Override
     public void onOpenReplies(Comment comment) {
         System.out.println("onOpenReplies");
