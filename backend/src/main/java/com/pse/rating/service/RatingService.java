@@ -18,7 +18,6 @@ import com.pse.rating.dto.response.RatingCategoriesResponse;
 import com.pse.rating.dto.response.RatingCategoryResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
 import com.pse.rating.model.RatingCategory;
-import com.pse.user.service.StudentService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

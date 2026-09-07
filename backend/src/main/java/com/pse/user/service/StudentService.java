@@ -168,52 +168,6 @@ public class StudentService {
         return true;
     }
 
-    //TODO: Why arent they in use?
-    public boolean deleteUser(UUID studentId) {
-        Student student = studentRepository.findById(studentId).orElse(null);
-
-        if(student == null) {
-            return false;
-        }
-
-        student.setStatus(UserStatus.DELETED);
-        studentRepository.save(student);
-        return true;
-    }
-
-    public boolean blockStudent(UUID studentId) {
-        Student student = studentRepository.findById(studentId).orElse(null);
-
-        if(student == null) {
-            return false;
-        }
-        student.setStatus(UserStatus.BLOCKED);
-        studentRepository.save(student);
-        return true;
-    }
-
-    public boolean unblockStudent(UUID studentId) {
-        Student student = studentRepository.findById(studentId).orElse(null);
-
-        if(student == null) {
-            return false;
-        }
-        student.setStatus(UserStatus.ACTIVE);
-        studentRepository.save(student);
-        return true;
-    }
-
-
-    //Repository Methods
-
-
-    public Student findByKitEmail(String kitEmail){
-        return studentRepository.findByKitEmail(kitEmail).orElse(null);
-    }
-
-    public void addStudent(Student student) {
-        studentRepository.save(student);
-    }
 
     public double getAverageRating(Student student) {
         if (student.getRatings().isEmpty()) {
@@ -228,15 +182,5 @@ public class StudentService {
 
         return sum / student.getRatings().size();
     }
-
-    public List<Student> getAllUsers() {
-        return studentRepository.findAll();
-
-    }
-
-    public Student getUser(UUID studentId) {
-        return studentRepository.findById(studentId).orElse(null);
-    }
-
 
 }
