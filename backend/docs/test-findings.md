@@ -21,7 +21,7 @@ yaşıyorsa gerçekten kayıtlıdır.
 | [F-7](#f-7--normalizeip-tek-virgülde-çöküyordu) | `normalizeIp` tek virgülde çöküyordu | Orta — login e-postasında hata | **Çözüldü** (`8fc2901`) |
 | [F-8](#f-8--ipinfo_token-boşken-sessiz-başarısızlık) | `IPINFO_TOKEN` boşken sessiz başarısızlık | Orta — teşhis edilemiyordu | **Kısmen çözüldü** |
 | [F-9](#f-9--readonly-transaction-içinde-yazma) | `readOnly` transaction içinde alan yazma | Düşük — integration sorusu | Açık, kayda geçti |
-| [F-10](#f-10--istemciye-giden-yazım-hataları) | İstemciye giden yazım hataları | Düşük — kozmetik, ama sözleşme | **Çözüldü** (`edaf2bc`), beşi açık |
+| [F-10](#f-10--istemciye-giden-yazım-hataları) | İstemciye giden yazım hataları | Düşük — kozmetik, ama sözleşme | **Çözüldü** (`edaf2bc`, `57658c3`) |
 | [F-11](#f-11--uyarı-geri-almada-kontroluygulama-yarışı) | Uyarı geri almada kontrol/uygulama yarışı | Düşük — nadir | Açık, kayda geçti |
 | [F-12](#f-12--boş-hedef-listesinde-gereksiz-yönetici-sorgusu) | Boş hedef listesinde gereksiz yönetici sorgusu | Çok düşük | Açık, karakterize edildi |
 | [F-13](#f-13--token-iptali-tek-bir-koşula-bağlı) | Token iptali tek bir koşula bağlı | Bilgi — koruma mevcut | Test altına alındı |
@@ -347,21 +347,23 @@ zaten metnin sessizce değişmemesi için varlar, yani metinle birlikte değişm
 `AccountServiceTests` de `StudentService`'in başarısızlık mesajını stub'ladığı için o stub
 da taşındı; bırakılsa artık var olmayan bir dizgiyi belgelerdi.
 
-**Beşi hâlâ açık.** `src/main`'de aynı yazım hatası sekiz yerde vardı; bu bulgu yalnızca
-`deleteAccount`'un üçünü kapsıyordu. Kalanlar:
+**Kalan beşi de kapandı** — commit `57658c3`. `src/main`'de aynı yazım hatası sekiz yerde
+vardı; ilk commit yalnızca `deleteAccount`'un üçünü kapsıyordu, ikincisi geri kalanını:
 
-| Yer | Dizgi |
-|---|---|
-| `ProfessorController:55` | `"Error, couldnt authenticate Admin"` |
-| `RatingService:168` | `"Error, couldnt find rating for Lecture: "` |
-| `SocialService:184` | `"Error, couldnt finde comment"` — ayrıca `finde` |
-| `SocialService:257` | `"Error, couldnt finde comment"` — ayrıca `finde` |
-| `SocialService:299` | `"Error, couldnt find answer"` |
+| Yer | Önce | Sonra |
+|---|---|---|
+| `ProfessorController:55` | `couldnt authenticate Admin` | `couldn't authenticate Admin` |
+| `RatingService:168` | `couldnt find rating for Lecture: ` | `couldn't find rating for Lecture: ` |
+| `SocialService:184` | `couldnt finde comment` | `couldn't find comment` |
+| `SocialService:257` | `couldnt finde comment` | `couldn't find comment` |
+| `SocialService:299` | `couldnt find answer` | `couldn't find answer` |
 
-Bunlar bilinçli olarak kapsam dışı bırakıldı ki metin geçişi tek ve gözden geçirilebilir bir
-değişiklik olsun. `ProfessorController:55` dizgisinin iki testi var
-(`ProfessorControllerTests:119`, `ProfessorApiIntegrationTests:450`), yani onu düzeltmek de
-test güncellemesi gerektiriyor.
+İki `SocialService` mesajı `finde` de diyordu, o yüzden yalnızca kesme işareti almakla
+kalmayıp `find`'e döndüler. `ProfessorController`'ın mesajını sabitleyen iki test
+(`ProfessorControllerTests:119`, `ProfessorApiIntegrationTests:450`) mesajla birlikte
+güncellendi; `RatingService` ve `SocialService` dizgilerini hiçbir test assert etmiyordu.
+
+`src/main` artık ne `couldnt` ne `finde` içeriyor.
 
 ---
 

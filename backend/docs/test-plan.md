@@ -615,8 +615,8 @@ değiştirir — integration batch'inin kararı.
     `student.setCredibilityScore(...)` yapıyor. Unit seviyede zararsız; gerçek bir
     persistence context'te dirty-checking'in ne yaptığı integration sorusu.
   - Mesaj dizgilerindeki yazım hataları (`couldnt`, `succesfully`) istemciye gidiyordu;
-    `deleteAccount`'un üçü `edaf2bc` ile düzeltildi ve testler birlikte güncellendi.
-    `src/main`'de beş örnek daha duruyor (F-10).
+    `deleteAccount`'un üçü `edaf2bc`, `src/main`'deki kalan beşi `57658c3` ile düzeltildi ve
+    onları sabitleyen testler birlikte güncellendi (F-10 kapandı).
 - **Test sayısı:** 12 (good: 6, bad: 6)
 
 ### AccountService
