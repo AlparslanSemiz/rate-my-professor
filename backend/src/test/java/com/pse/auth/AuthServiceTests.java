@@ -410,8 +410,6 @@ class AuthServiceTests {
                 Optional.of(student)
         );
 
-        when(student.getId())
-                .thenReturn(studentId);
 
         when(student.getStatus())
                 .thenReturn(UserStatus.ACTIVE);
