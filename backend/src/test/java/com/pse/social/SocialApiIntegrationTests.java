@@ -480,6 +480,311 @@ class SocialApiIntegrationTests {
     }
 
 
+    /**
+     * A null voteType used to reach the vote row and only fail at flush, surfacing as a 409
+     * "State conflict" for what is really a malformed request. The @NotNull on the request
+     * record now stops it at the boundary. See F-2 in docs/test-findings.md.
+     */
+    @Test
+    void voteWithoutAVoteTypeIsRejectedAsABadRequest() throws Exception {
+
+        Session author =
+                createSession(
+                        "author@student.kit.edu"
+                );
+
+        Session voter =
+                createSession(
+                        "voter@student.kit.edu"
+                );
+
+        Lecture lecture =
+                createLecture();
+
+        Comment comment =
+                createComment(
+                        author.student(),
+                        lecture,
+                        "A comment to vote on"
+                );
+
+
+        mockMvc.perform(
+                        post(
+                                "/social/comments/vote/comment/{commentId}",
+                                comment.getId()
+                        )
+                                .header(
+                                        "Authorization",
+                                        bearer(
+                                                voter.rawToken()
+                                        )
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                        {
+                                          "voteType":null
+                                        }
+                                        """)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath("$.success")
+                                .value(false)
+                )
+                .andExpect(
+                        jsonPath("$.message")
+                                .value("Invalid request")
+                );
+
+
+        // An absent field is the same case as an explicit null.
+        mockMvc.perform(
+                        post(
+                                "/social/comments/vote/comment/{commentId}",
+                                comment.getId()
+                        )
+                                .header(
+                                        "Authorization",
+                                        bearer(
+                                                voter.rawToken()
+                                        )
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("{}")
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath("$.message")
+                                .value("Invalid request")
+                );
+    }
+
+
+    @Test
+    void votingOnAnAnswerWithoutAVoteTypeIsRejectedAsABadRequest() throws Exception {
+
+        Session author =
+                createSession(
+                        "author@student.kit.edu"
+                );
+
+        Session voter =
+                createSession(
+                        "voter@student.kit.edu"
+                );
+
+        Lecture lecture =
+                createLecture();
+
+        Comment comment =
+                createComment(
+                        author.student(),
+                        lecture,
+                        "A comment"
+                );
+
+        Answer answer =
+                createAnswer(
+                        author.student(),
+                        comment,
+                        "An answer to vote on"
+                );
+
+
+        mockMvc.perform(
+                        post(
+                                "/social/comments/vote/answer/{answerId}",
+                                answer.getId()
+                        )
+                                .header(
+                                        "Authorization",
+                                        bearer(
+                                                voter.rawToken()
+                                        )
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                        {
+                                          "voteType":null
+                                        }
+                                        """)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath("$.message")
+                                .value("Invalid request")
+                );
+    }
+
+
+    /** The guard must not reject a legitimate vote. */
+    @Test
+    void aVoteCarryingAVoteTypeIsStillAccepted() throws Exception {
+
+        Session author =
+                createSession(
+                        "author@student.kit.edu"
+                );
+
+        Session voter =
+                createSession(
+                        "voter@student.kit.edu"
+                );
+
+        Lecture lecture =
+                createLecture();
+
+        Comment comment =
+                createComment(
+                        author.student(),
+                        lecture,
+                        "A comment to vote on"
+                );
+
+
+        mockMvc.perform(
+                        post(
+                                "/social/comments/vote/comment/{commentId}",
+                                comment.getId()
+                        )
+                                .header(
+                                        "Authorization",
+                                        bearer(
+                                                voter.rawToken()
+                                        )
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                        {
+                                          "voteType":"UP"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.success")
+                                .value(true)
+                )
+                .andExpect(
+                        jsonPath("$.message")
+                                .value("Comment vote saved successfully")
+                );
+    }
+
+
+    @Test
+    void studentCannotMarkAnotherStudentsNotificationAsSeen() throws Exception {
+
+        Session target =
+                createSession(
+                        "target@student.kit.edu"
+                );
+
+        Session answerAuthor =
+                createSession(
+                        "answerer@student.kit.edu"
+                );
+
+        Session other =
+                createSession(
+                        "other@student.kit.edu"
+                );
+
+        Lecture lecture =
+                createLecture();
+
+        Comment comment =
+                createComment(
+                        target.student(),
+                        lecture,
+                        "Original comment"
+                );
+
+
+        mockMvc.perform(
+                        post("/social/answers")
+                                .header(
+                                        "Authorization",
+                                        bearer(
+                                                answerAuthor.rawToken()
+                                        )
+                                )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content("""
+                                        {
+                                          "commentID":"%s",
+                                          "content":"An answer"
+                                        }
+                                        """.formatted(
+                                        comment.getId()
+                                ))
+                )
+                .andExpect(status().isOk());
+
+
+        Notification notification =
+                notificationRepository
+                        .findAll()
+                        .getFirst();
+
+
+        mockMvc.perform(
+                        patch(
+                                "/social/notifications/{notificationId}",
+                                notification.getId()
+                        )
+                                .header(
+                                        "Authorization",
+                                        bearer(
+                                                other.rawToken()
+                                        )
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.success")
+                                .value(false)
+                );
+
+
+        assertFalse(
+                notificationRepository
+                        .findById(
+                                notification.getId()
+                        )
+                        .orElseThrow()
+                        .isSeen()
+        );
+
+
+        mockMvc.perform(
+                        get("/social/notifications")
+                                .header(
+                                        "Authorization",
+                                        bearer(
+                                                target.rawToken()
+                                        )
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.notifications",
+                                hasSize(1))
+                );
+    }
+
+
     @Test
     void studentsCanReportCommentAndAnswer() throws Exception {
 

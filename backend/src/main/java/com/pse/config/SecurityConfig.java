@@ -51,9 +51,13 @@ public class SecurityConfig {
                         // patterns match whole segments, and "admins" is not "admin".
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/account/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/data/lectures").hasRole("ADMIN")
+                        // Both /data creates are admin-only and are answered here. The professor
+                        // route used to carry its own isAdmin() check in the handler instead,
+                        // which answered an authenticated non-admin with 200 {"success": false}
+                        // and an anonymous caller with a 500 -- it dereferenced a null principal.
+                        .requestMatchers(HttpMethod.POST, "/data/lectures", "/data/professor")
+                        .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/social/notifications").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/social/notifications").authenticated()
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/social/comments",
@@ -62,7 +66,6 @@ public class SecurityConfig {
                                 "/social/comments/report",
                                 "/social/answers/report"
                         ).authenticated()
-                        .requestMatchers(HttpMethod.GET, "/social/notifications").authenticated()
                         .requestMatchers(
                                 HttpMethod.PATCH,
                                 "/social/notifications/all",

@@ -22,6 +22,7 @@ import com.pse.social.repository.AnswerVoteRepository;
 import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.NotificationRepository;
+import com.pse.support.ApiContract;
 import com.pse.support.TestDeliveryConfig;
 import com.pse.support.TestDeliveryConfig.CapturingLoginCodeDelivery;
 import com.pse.user.repository.StudentRepository;
@@ -34,16 +35,21 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -222,6 +228,92 @@ class AdminApiPathSplitTests {
         }
     }
 
+    /**
+     * The same matrix for the writes, which the listing matrix above cannot reach.
+     *
+     * <p>It matters more here than for the reads. The {@code /admin} prefix is guarded by
+     * one blanket rule, but every legacy twin is an individual per-verb matcher, and the
+     * chain ends in {@code anyRequest().permitAll()} -- so a verb missing from one of those
+     * dozen rules does not deny, it opens. {@code POST /data/professor} is the precedent:
+     * it had no matcher at all and was answered inside the handler instead.
+     *
+     * <p>The admin expectation is "not refused" rather than 200 deliberately. These ids do
+     * not exist, so a permitted call lands on a 400 or a 404; that it got that far is the
+     * assertion.
+     */
+    @Test
+    void adminWriteVerbsAreRefusedByRoleOnBothPrefixes() throws Exception {
+        String adminToken = JsonPath.read(loginThrough("/admin/auth", ADMIN_EMAIL, ""), "$.authToken");
+        String studentToken = JsonPath.read(loginThrough("/auth", STUDENT_EMAIL, ""), "$.authToken");
+
+        for (Route route : writeRoutes()) {
+            String label = route.method() + " " + route.path();
+
+            assertEquals(401, statusOf(route, null), label + " without a token");
+            assertEquals(403, statusOf(route, studentToken), label + " with a student session");
+
+            int admin = statusOf(route, adminToken);
+            assertTrue(admin != 401 && admin != 403,
+                    label + " refused an admin session with " + admin);
+        }
+    }
+
+    private record Route(String method, String path) {
+    }
+
+    /** Every administrative write, under the /admin prefix and under its legacy twin. */
+    private List<Route> writeRoutes() {
+        String id = UUID.randomUUID().toString();
+        List<Route> routes = new ArrayList<>();
+
+        for (String prefix : List.of("/admin", "")) {
+            routes.add(new Route("PATCH", prefix + "/users/" + id));
+            routes.add(new Route("DELETE", prefix + "/users/" + id));
+            routes.add(new Route("PATCH", prefix + "/users/" + id + "/block"));
+            routes.add(new Route("PATCH", prefix + "/users/" + id + "/unblock"));
+            routes.add(new Route("POST", prefix + "/users/" + id + "/warnings"));
+            routes.add(new Route("PATCH", prefix + "/users/" + id + "/warnings/" + id));
+            routes.add(new Route("DELETE", prefix + "/users/" + id + "/warnings/" + id));
+            routes.add(new Route("PATCH", prefix + "/comments/" + id));
+            routes.add(new Route("DELETE", prefix + "/comments/" + id));
+            routes.add(new Route("PATCH", prefix + "/comments/reported/" + id));
+            routes.add(new Route("DELETE", prefix + "/comments/reported/" + id));
+            routes.add(new Route("PATCH", prefix + "/answers/" + id));
+            routes.add(new Route("DELETE", prefix + "/answers/" + id));
+            routes.add(new Route("PATCH", prefix + "/answers/reported/" + id));
+            routes.add(new Route("DELETE", prefix + "/answers/reported/" + id));
+            routes.add(new Route("DELETE", prefix + "/ratings/" + id));
+            routes.add(new Route("POST", prefix + "/data/lectures"));
+            routes.add(new Route("PATCH", prefix + "/data/lectures/" + id));
+            routes.add(new Route("DELETE", prefix + "/data/lectures/" + id));
+            routes.add(new Route("POST", prefix + "/data/professor"));
+            routes.add(new Route("PATCH", prefix + "/data/professor/" + id));
+            routes.add(new Route("DELETE", prefix + "/data/professor/" + id));
+            routes.add(new Route("PATCH", prefix + "/reports/" + id));
+            routes.add(new Route("DELETE", prefix + "/reports/" + id));
+            routes.add(new Route("POST", prefix + "/reports/" + id + "/gitlab-issue"));
+            routes.add(new Route("POST", prefix + "/audit-logs/" + id + "/revert"));
+        }
+
+        return routes;
+    }
+
+    private int statusOf(Route route, String rawToken) throws Exception {
+        MockHttpServletRequestBuilder request = switch (route.method()) {
+            case "POST" -> post(route.path());
+            case "PATCH" -> patch(route.path());
+            case "DELETE" -> delete(route.path());
+            default -> throw new IllegalArgumentException("unhandled verb " + route.method());
+        };
+
+        request = request.contentType(MediaType.APPLICATION_JSON).content("{}");
+        if (rawToken != null) {
+            request = request.header("Authorization", bearer(rawToken));
+        }
+
+        return mockMvc.perform(request).andReturn().getResponse().getStatus();
+    }
+
     @Test
     void adminPrefixDoesNotCaptureAdminsValidate() throws Exception {
         // /admin/** matches whole segments, so the older /admins/** route is untouched by it.
@@ -232,6 +324,27 @@ class AdminApiPathSplitTests {
                 .andExpect(jsonPath("$.message").value("Is Admin"));
     }
 
+    /**
+     * The student's bug submission is the one app route with no administrative twin.
+     *
+     * <p>The refusal it asserts is not the mechanism the test name suggests. Two different
+     * things answer 404 here and {@code GlobalExceptionHandler} gives them <b>byte-identical
+     * bodies</b> -- same status, same {@code "Not found"} message -- so the response alone
+     * cannot tell them apart:
+     *
+     * <ul>
+     *   <li>{@code NoResourceFoundException}, meaning no such path, from
+     *       {@code handleNotFound}; and</li>
+     *   <li>{@code HttpRequestMethodNotSupportedException}, meaning the path exists but not
+     *       for this verb, from {@code handleWrongMethod} -- F-16 in docs/test-findings.md,
+     *       where 405 belongs.</li>
+     * </ul>
+     *
+     * <p>This route's 404 is the second one: {@code /admin/reports} very much exists, it
+     * just only maps GET. The GET assertion below is the distinguishing signal, since the
+     * bodies are no help -- and it is what stops the test from silently passing for the
+     * wrong reason if the path were ever removed outright.
+     */
     @Test
     void studentBugSubmissionHasNoAdminTwin() throws Exception {
         String studentToken = JsonPath.read(loginThrough("/auth", STUDENT_EMAIL, ""), "$.authToken");
@@ -249,7 +362,13 @@ class AdminApiPathSplitTests {
                         .header("Authorization", bearer(adminToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(report))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is(ApiContract.WRONG_VERB_STATUS));
+
+        // The path exists -- so the refusal above is about the verb, not the path. Without
+        // this the test would read as "there is no /admin/reports at all", which is false.
+        mockMvc.perform(get("/admin/reports").header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bugReports").isArray());
 
         assertEquals(1, bugReportRepository.count());
     }

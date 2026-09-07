@@ -1,11 +1,11 @@
-# Test planı
+# Test plan
 
-Katmanlar: **unit → API/rol → integration → E2E**. Bu belge şu an unit katmanının 1. ve 2.
-batch'ini kapsıyor; her batch kendi bölümünü ekler.
+Layers: **unit → API/role → integration → E2E**. This document currently covers batches 1
+and 2 of the unit layer; every batch adds its own section.
 
-Kapsam ölçütü LINE coverage, hedef %90. Batch 1'in sonucu:
+The coverage metric is LINE coverage, target 90%. Batch 1's result:
 
-| Sınıf | LINE | BRANCH | Test |
+| Class | LINE | BRANCH | Tests |
 |---|---|---|---|
 | `KeysetCursorCodec` | 100.0% | 100% | 23 |
 | `AuditCursorCodec` | 100.0% | — | 5 |
@@ -16,19 +16,19 @@ Kapsam ölçütü LINE coverage, hedef %90. Batch 1'in sonucu:
 | `AuditRevertService` | 100.0% | 92% | 30 |
 | `LoginLocationService` | 98.8% | 91% | 39 |
 
-**Toplam 191 test (good 80 / bad 111).** Tüm suite: 359 test, 0 hata.
-Sayılar parametreli testlerin açılmış hâlidir.
+**191 tests in total (good 80 / bad 111).** Whole suite: 359 tests, 0 failures.
+The counts are parameterized tests expanded into their individual cases.
 
-Ortak kurallar: saf JUnit + AssertJ + Mockito, Spring context yok, veritabanı/ağ/dosya
-sistemi yok, saat enjekte edildiği her yerde `Clock.fixed`. Testler mirror paketlerde —
-`RateLimitService.validateConfiguration()` ve `LoginLocationService.warnIfTokenMissing()`
-paket-private olduğu için gerekli.
+Shared rules: plain JUnit + AssertJ + Mockito, no Spring context, no database/network/file
+system, `Clock.fixed` everywhere a clock is injected. Tests live in mirror packages — this
+is required because `RateLimitService.validateConfiguration()` and
+`LoginLocationService.warnIfTokenMissing()` are package-private.
 
 ## Batch 2
 
-Hedef: `com.pse.audit.revert` handler'larının tamamı, hesap yaşam döngüsü ve oy verme.
+Target: all of the `com.pse.audit.revert` handlers, the account lifecycle, and voting.
 
-| Sınıf | LINE | BRANCH | Test |
+| Class | LINE | BRANCH | Tests |
 |---|---|---|---|
 | `CatalogueRevertHandler.LectureHandler` | 100.0% | 100% | 9 |
 | `CatalogueRevertHandler.ProfessorHandler` | 100.0% | 100% | 6 |
@@ -36,608 +36,623 @@ Hedef: `com.pse.audit.revert` handler'larının tamamı, hesap yaşam döngüsü
 | `ReportStatusRevertHandler.AnswerReportHandler` | 100.0% | 100% | 4 |
 | `WarningRevertHandler` | 100.0% | 100% | 6 |
 | `UserRevertHandler` | 100.0% | 100% | 9 |
-| `SocialService` (yalnızca oy metotları) | 91.8%* | 67%* | 9 |
+| `SocialService` (vote methods only) | 91.8%* | 67%* | 9 |
 | `StudentService` | 100.0% | 94% | 12 |
 | `AccountService` | 100.0% | 100% | 6 |
 
-\* Sınıfın tamamının sayısı. Batch'in hedeflediği `voteComment` / `voteAnswer` **tam**
-kapsandı (0 açık satır); kalan 16 satır `submit*` ve rapor metotlarına ait ve sonraki bir
-batch'e bırakıldı.
+\* The number for the whole class. The `voteComment` / `voteAnswer` methods this batch
+targeted are covered **completely** (0 missed lines); the remaining 16 lines belong to the
+`submit*` and report methods and were left to a later batch.
 
-**Toplam 67 test (good 34 / bad 33).** Tüm suite: 439 test, 0 hata (2 atlanan: `@Disabled`
-`DemoApplicationTests` ve yalnızca CI'da koşan `PostgreSqlMigrationSmokeTests`).
-Sayılar parametreli testlerin açılmış hâlidir.
+**67 tests in total (good 34 / bad 33).** Whole suite: 439 tests, 0 failures (2 skipped:
+the `@Disabled` `DemoApplicationTests` and `PostgreSqlMigrationSmokeTests`, which runs on
+CI only). The counts are parameterized tests expanded into their individual cases.
 
-Bu batch ile `com.pse.audit.revert` paketinin **dokuz handler bean'inin tamamı** ve
-`AuditRevertService` + `RevertValues` %100 LINE'a ulaştı; pakette açık satır kalmadı.
+With this batch **all nine handler beans** in the `com.pse.audit.revert` package, plus
+`AuditRevertService` and `RevertValues`, reached 100% LINE; no missed lines are left in
+the package.
 
-### Bundle ve eşik
+### Bundle and thresholds
 
-Ölçülen bundle: **%91.41 LINE** (3054/3341), **%75.51 BRANCH** (845/1119).
-Batch öncesi ölçüm %87.76 LINE / %72.83 BRANCH idi.
+Measured bundle: **91.41% LINE** (3054/3341), **75.51% BRANCH** (845/1119).
+Before the batch the measurement was 87.76% LINE / 72.83% BRANCH.
 
-`jacoco:check` iki limite çekildi: LINE `0.85` → **`0.90`**, ve yeni bir **BRANCH `0.73`**
-tabanı. İkisi de ölçülenin yaklaşık bir buçuk puan altında — kural ölçülene pay bırakmak,
-kaba bir hedefe sabitlemek değil. Gerekçe: `check` `test` değil `verify` fazına bağlı, yani
-payı olmayan bir eşik CI'da, başkasının MR'ında, testlerle ilgisiz bir değişiklikte
-patlar — pom'daki yorumun tam da önlemek için seçildiğini söylediği başarısızlık biçimi.
-BRANCH bir taban, hedef değil: yalnız-LINE kapısı, çok dallı bir metodun tek mutlu-yol
-testiyle gelmesine ve branch kapsamının sessizce düşmesine izin veriyordu.
+`jacoco:check` was pulled up to two limits: LINE `0.85` → **`0.90`**, plus a new **BRANCH
+`0.73`** floor. Both sit about one and a half points below what is measured — the rule is
+to leave the measurement some headroom, not to pin it to a round target. The reason:
+`check` is bound to the `verify` phase rather than `test`, so a threshold with no headroom
+breaks on CI, in somebody else's MR, on a change that has nothing to do with tests — which
+is exactly the failure mode the comment in the pom says it was chosen to avoid. BRANCH is
+a floor, not a target: a LINE-only gate let a method with many branches arrive with a
+single happy-path test while branch coverage quietly dropped.
 
-Eşiğin gerçekten kapı olduğu doğrulandı: LINE geçici olarak `0.95`'e çekildiğinde
-`./mvnw verify` "lines covered ratio is 0.91, but expected minimum is 0.95" ile kırmızıya
-düştü, `0.90` ile yeşil.
+The threshold really is a gate, and that was verified: with LINE temporarily raised to
+`0.95`, `./mvnw verify` went red with "lines covered ratio is 0.91, but expected minimum
+is 0.95", and green at `0.90`.
 
-**Bilinçli olarak yapılmayanlar** — üçü de sayıyı test yazmadan zıplatan, yani ratchet'i
-geçmek yerine yeniden tanımlayan kısayollar:
+**Deliberately not done** — all three are shortcuts that raise the number without writing
+a test, which redefines the ratchet instead of clearing it:
 
-- `<excludes>` listesi genişletilmedi. `**/model/**` ya da `**/dto/**` eklemek tek test
-  yazmadan birkaç puan kazandırırdı.
-- `lombok.config` eklenip Lombok filtrelenmedi. Repo'da `lombok.config` yok ve
-  `addLombokGeneratedAnnotation` default `false`, yani üretilen tüm getter/setter'lar
-  bundle'da sayılıyor. Accessor'lar serileştirme ile yoğun kapsandığı için filtrelemek
-  *kapsanan*ı kapsanmayandan daha çok silip oranı düşürebilirdi — üstelik sayının ne
-  ölçtüğünü sessizce değiştirirdi.
-- Statik-only sınıfların private constructor'ları için reflection testi yazılmadı; JaCoCo
-  0.8.0'dan beri bunları zaten filtreliyor.
+- The `<excludes>` list was not widened. Adding `**/model/**` or `**/dto/**` would have
+  bought several points without a single test.
+- No `lombok.config` was added to filter Lombok out. The repo has no `lombok.config` and
+  `addLombokGeneratedAnnotation` defaults to `false`, so every generated getter/setter
+  counts towards the bundle. Because accessors are heavily covered through serialization,
+  filtering them could delete more *covered* lines than uncovered ones and lower the
+  ratio — and it would quietly change what the number measures.
+- No reflection tests were written for the private constructors of static-only classes;
+  JaCoCo has filtered those since 0.8.0.
 
-`ModerationCatalogService.updateLecture` / `updateProfessor` (31 açık satır, 57/106 branch)
-bu batch'in koşullu 4. grubuydu: bundle %91'i geçtiği için gerekmedi. Geriye kalan en
-dal-yoğun test edilmemiş metot olduğu için sonraki batch'in ilk adayı.
+`ModerationCatalogService.updateLecture` / `updateProfessor` (31 missed lines, 57/106
+branches) was this batch's conditional fourth group: it was not needed because the bundle
+passed 91%. It is the first candidate for the next batch, being the most branch-heavy
+untested method left.
 
-### Üç farklı kapsam sayısı
+### Three different coverage numbers
 
-Karıştırmamak için: üç sayı üç ayrı şeyi ölçüyor, tutarsızlık değil.
+To keep them apart: the three numbers measure three separate things; this is not an
+inconsistency.
 
-- **pom `jacoco:check` (LINE 0.90 / BRANCH 0.73)** — bundle regresyon kapısı. Bir daha
-  düşmemesi gereken taban.
-- **Bu belgedeki %90 hedefi** — batch'lerin nişan aldığı seviye.
-- **`scripts/CheckChangedCoverage.java --threshold 30`** — yalnızca *değişen* kodun
-  kapsamına bakan MR kapısı. Bundle ile ilgisi yok.
+- **pom `jacoco:check` (LINE 0.90 / BRANCH 0.73)** — the bundle regression gate. The floor
+  it must not fall below again.
+- **The 90% target in this document** — the level batches aim for.
+- **`scripts/CheckChangedCoverage.java --threshold 30`** — the MR gate, which looks only
+  at the coverage of *changed* code. Unrelated to the bundle.
 
 ---
 
-## Bulgular
+## Findings
 
-### BUG-1 — "Backend'de cursor çalışıyor mu?"
+### BUG-1 — "Does the cursor work on the backend?"
 
-**Backend'de yeniden üretilemedi.** Uçtan uca izlendi ve her adım doğru bulundu: wire formatı
-(`base64url_nopad("1|<Instant>|<UUID>")`), `decode`'un yedi ayrı reddi, `AuditLogService`
-içindeki keyset predicate'i (`createdAt < c.createdAt OR (createdAt = c.createdAt AND id <
-c.id)`) ile `ORDER BY createdAt DESC, id DESC` sıralamasının uyumu, `limit + 1` sonda-satır
-sondası, controller `@RequestParam cursor` bağlantısı ve DTO'daki `nextCursor` alanı.
-`AuditLog.createdAt` bir `Instant` ve `Instant` overload'ını kullanıyor; `LocalDateTime`
-saklayan iki moderasyon listesi ise doğru şekilde `Cursor.createdAtLocal()` çağırıyor —
-karışık tip karşılaştırması hiçbir yerde yok. `096a484` numaralı çıkarma commit'i de birebir
-sadık.
+**Not reproducible on the backend.** It was traced end to end and every step came out
+correct: the wire format (`base64url_nopad("1|<Instant>|<UUID>")`), `decode`'s seven
+separate rejections, the agreement between the keyset predicate in `AuditLogService`
+(`createdAt < c.createdAt OR (createdAt = c.createdAt AND id < c.id)`) and the
+`ORDER BY createdAt DESC, id DESC` ordering, the `limit + 1` last-row probe, the controller
+`@RequestParam cursor` binding, and the `nextCursor` field in the DTO. `AuditLog.createdAt`
+is an `Instant` and uses the `Instant` overload; the two moderation lists that store
+`LocalDateTime` correctly call `Cursor.createdAtLocal()` — there is no mixed-type
+comparison anywhere. The extraction commit `096a484` is faithful line for line.
 
-Karar: kırmızı test yok, karakterizasyon testleri var. Format ve her ret bir regresyon ağı
-olarak sabitlendi; sorun büyük olasılıkla panel tarafında.
+Decision: no red test, characterization tests instead. The format and every rejection were
+pinned as a regression net; the problem is most likely on the panel side.
 
-### BUG-2 — "Yaklaşık konum artık çalışmıyor"
+### BUG-2 — "Approximate location stopped working"
 
-Üç bulgu:
+Three findings:
 
-1. **Sağlayıcı zinciri yok.** Geoapify yalnızca statik harita görselini üretiyor
-   (`createStaticMapUrl`); hiçbir zaman bir geolokasyon yedeği değil. Tek yedek
+1. **There is no provider chain.** Geoapify only renders the static map image
+   (`createStaticMapUrl`); it was never a geolocation fallback. The only fallback is
    `catch (Exception) → LoginLocation("Unknown", null, null)`.
-2. **En olası üretim nedeni:** `ipinfo.token=${IPINFO_TOKEN:}` boşa düşüyor ve
-   `getLoginLocation`, `ipInfoToken.isBlank()` üzerinden hiç HTTP çağrısı yapmadan
-   `"Unknown"` dönüyor. Bu yol istek başına hâlâ sessiz, ama artık açılışta bir kez
-   `warnIfTokenMissing()` (`@PostConstruct`) WARN düşüyor — token ayarlanmamışsa hiçbir iz
-   bırakmayan tek başarısızlık olmaktan çıktı.
-3. **Yutulan exception loglanıyor.** `LOGGER.warn("Could not determine location for IP {}",
-   ip, exception)` stack trace ile birlikte yazıyor (`8d18abb` bunu ekledi). Yani 401/403/429
-   ve timeout loglardan ayırt edilebiliyor; istek sırasında sessiz olan tek yol boş token
-   yolu, o da açılıştaki uyarıdan tanınıyor.
+2. **The most likely production cause:** `ipinfo.token=${IPINFO_TOKEN:}` falls back to
+   empty and `getLoginLocation` returns `"Unknown"` through `ipInfoToken.isBlank()` without
+   making any HTTP call at all. That path is still silent per request, but it now logs a
+   WARN once at startup via `warnIfTokenMissing()` (`@PostConstruct`) — it is no longer the
+   one failure that leaves no trace when the token is unset.
+3. **The swallowed exception is logged.** `LOGGER.warn("Could not determine location for IP
+   {}", ip, exception)` writes it with the stack trace (`8d18abb` added this). So 401/403/429
+   and timeouts can be told apart in the logs; the only path that is silent during a request
+   is the empty-token path, and that one is recognizable from the startup warning.
 
-### Yeni bulunan kusur — `normalizeIp` çöküyordu (düzeltildi)
+### Newly found defect — `normalizeIp` was crashing (fixed)
 
-`","` (yalnızca virgülden oluşan bir `X-Forwarded-For`) `normalizeIp`'i
-`ArrayIndexOutOfBoundsException` ile düşürüyordu: Java `split(",")` sonucundaki sondaki boş
-parçaları attığı için dizi boş kalıyor ve `[0]` patlıyordu. `normalizeIp`, `try` bloğundan
-**önce** çalıştığı için bu, geniş `catch`'in yakalamadığı tek girdiydi — exception
-`getLoginLocation`'dan dışarı çıkıp `AFTER_COMMIT` dinleyicisindeki login e-postasında
-yakalanmamış hata olarak yüzeye vuruyordu. Login'in kendisi başarılı olmaya devam ediyordu.
+`","` (an `X-Forwarded-For` consisting of nothing but a comma) took `normalizeIp` down with
+an `ArrayIndexOutOfBoundsException`: Java's `split(",")` drops trailing empty pieces, so the
+array came back empty and `[0]` blew up. Because `normalizeIp` runs **before** the `try`
+block, this was the one input the broad `catch` did not catch — the exception escaped
+`getLoginLocation` and surfaced as an uncaught error in the login email sent from the
+`AFTER_COMMIT` listener. The login itself kept succeeding.
 
-Düzeltme: `rawIp.split(",", -1)`. Negatif limit boş parçaları koruduğu için sonuç `[""]`
-oluyor ve mevcut boşluk kontrolüne düşüyor. İşaretleyici test
-`getLoginLocation_addressOfOnlyCommas_returnsUnknownWithoutCallingIpInfo` adıyla artık
-düzeltilmiş davranışı sabitliyor.
+Fix: `rawIp.split(",", -1)`. The negative limit keeps empty pieces, so the result is `[""]`
+and falls into the existing blank check. The marker test
+`getLoginLocation_addressOfOnlyCommas_returnsUnknownWithoutCallingIpInfo` now pins the
+fixed behaviour.
 
-### BUG-3 — Profesör ataması sırası geri almayı sessizce reddediyor
+### BUG-3 — Professor assignment order silently refuses a revert
 
-`Lecture.professors` bir `Set<Professor>` — sıra tanımlamayan bir tip — ama
-`CatalogueRevertHandler.LectureHandler.currentValues` onu **sıralı** bir `List`'e çeviriyor
-ve `RevertValues.sameValue` iki koleksiyonu `asStrings(left).equals(asStrings(right))`
-üzerinden, yani pozisyon pozisyon karşılaştırıyor. Sonuç: profesör ataması hiç değişmemiş
-bir ders, yalnızca kümenin iterasyon sırası audit JSON'una yazılan sırayla uyuşmadığı için
-`VALUE_CHANGED` alıp meşru bir geri almayı reddedebilir.
+`Lecture.professors` is a `Set<Professor>` — a type that defines no order — but
+`CatalogueRevertHandler.LectureHandler.currentValues` turns it into an **ordered** `List`,
+and `RevertValues.sameValue` compares two collections through
+`asStrings(left).equals(asStrings(right))`, that is, position by position. The result: a
+lecture whose professor assignment never changed can be marked `VALUE_CHANGED` and refuse a
+legitimate revert, purely because the set's iteration order does not match the order written
+into the audit JSON.
 
-Aynı sıra duyarlılığı yazma tarafında da var: `ModerationCatalogService.updateLecture`
-`before`'u `Set`'ten, `after`'ı `professorRepository.findAllById(...)` sırasından üretip
-`!before.equals(after)` ile karşılaştırıyor — yani değişmemiş bir atama sahte bir
-`professors` değişikliği ve sahte bir audit olayı yazabiliyor.
+The same order sensitivity exists on the write side: `ModerationCatalogService.updateLecture`
+builds `before` from the `Set` and `after` from the order of
+`professorRepository.findAllById(...)` and compares them with `!before.equals(after)` — so an
+unchanged assignment can write a bogus `professors` change and a bogus audit event.
 
-**Neden gerçek `HashSet` sırasıyla test edilmedi.** `Professor` ne `equals` ne `hashCode`
-override ediyor, yani kimlik hash'i kullanılıyor ve bucket dağılımı nesne adreslerine
-bağlı: sıra **her çalıştırmada** değişebiliyor. UUID seçerek sırayı zorlamak işe yaramaz,
-çünkü UUID'ler hiç `hashCode`'a girmiyor. Böyle bir test kararsız olur ve kararsızlık
-kusura değil teste yazılırdı. Bunun yerine kusur iki deterministik olguya ayrıldı:
-`LinkedHashSet` fixture'ı ile handler'ın **bildirilen tipin tanımlamadığı bir sıra
-ürettiği**, ve `sameValue`'nun aynı iki elemanı ters sırada **farklı** saydığı ayrı ayrı
-sabitlendi.
+**Why it was not tested against real `HashSet` order.** `Professor` overrides neither
+`equals` nor `hashCode`, so identity hashing is used and bucket distribution depends on
+object addresses: the order can differ **on every run**. Picking UUIDs to force an order
+does not help, because the UUIDs never enter `hashCode` at all. Such a test would be flaky,
+and the flakiness would be written into the test rather than into the defect. The defect was
+split into two deterministic facts instead: with a `LinkedHashSet` fixture, that the handler
+**produces an order the declared type does not define**, and that `sameValue` counts the same
+two elements in reverse order as **different** — pinned separately.
 
-Düzeltilmedi — küme alanları için sırasız karşılaştırma bir ürün kararı ve `RevertValues`'ın
-sözleşmesini değiştiriyor. Yazma tarafının deterministik testi (stub'lanmış `findAllById`
-sırası ile) `ModerationCatalogService` batch'ine bırakıldı.
+Not fixed — order-insensitive comparison for set fields is a product decision and changes
+`RevertValues`'s contract. The deterministic test for the write side (with a stubbed
+`findAllById` order) was left to the `ModerationCatalogService` batch.
 
-### Oy verme yolundaki dört boşluk
+### Four gaps on the voting path
 
-`SocialService.voteComment` / `voteAnswer` karakterizasyon testlerinde sabitlenen, bilinçli
-olmadığı belli olan dört davranış:
+Four behaviours pinned in the `SocialService.voteComment` / `voteAnswer` characterization
+tests, none of which look deliberate:
 
-1. **Audit yazılmıyor.** Aynı sınıftaki `submitComment` / `submitAnswer` / `submit*Report`
-   metotlarının hepsi `auditWriter.writeStudentAction(...)` çağırıyor; iki oy metodu
-   çağırmıyor. Yani moderasyon izinde oy manipülasyonu görünmüyor.
-2. **`voteType` doğrulanmıyor.** `null` bir oy tipi `setVote(null)`'a kadar gidiyor ve
-   `save`'e veriliyor; tek durduran `nullable = false` kolonu, o da flush'ta — bu metodun
-   açtığı bir transaction'ın dışında, yani çağıranın müdahale edebileceği yerde değil.
-   Metot bu arada `success = true` dönüyor.
-3. **Hiçbiri `@Transactional` değil.** Sınıftaki diğer yazma metotları öyle.
-4. **Toggle-off yolu yok.** Aynı yönde ikinci oy, oyu kaldırmak yerine yeniden yazıyor ve
-   `VoteType`'ın (`UP`, `DOWN`) kaldırmak için üçüncü bir değeri yok. Oy geri çekmek
-   bugün mümkün değil.
+1. **No audit is written.** `submitComment` / `submitAnswer` / `submit*Report` in the same
+   class all call `auditWriter.writeStudentAction(...)`; the two vote methods do not. So
+   vote manipulation does not appear in the moderation trail.
+2. **`voteType` is not validated.** A `null` vote type travels all the way to
+   `setVote(null)` and is handed to `save`; the only thing that stops it is the
+   `nullable = false` column, and only at flush time — outside a transaction this method
+   opened, that is, not somewhere the caller can intervene. The method returns
+   `success = true` in the meantime.
+3. **Neither is `@Transactional`.** The other write methods in the class are.
+4. **There is no toggle-off path.** A second vote in the same direction rewrites the vote
+   instead of removing it, and `VoteType` (`UP`, `DOWN`) has no third value for removal.
+   Withdrawing a vote is not possible today.
 
-### `SocialController` rota hatası — `/vote/answer` eğik çizgisi eksik
+### `SocialController` route defect — the slash is missing from `/vote/answer`
 
-`SocialController:96` mapping'i `"/social/comments/vote/answer{answer_id}"`. Path
-değişkeninden önce eğik çizgi yok, yani gerçek rota `/social/comments/vote/answer<id>`.
-Yorum tarafındaki kardeş endpoint (`:73`) doğru yazılmış (`.../vote/comment/{comment_id}`).
-Controller seviyesi bir kusur, unit katmanının dışında; bu batch'te düzeltilmedi, kayda
-geçti.
+The mapping at `SocialController:96` is `"/social/comments/vote/answer{answer_id}"`. There
+is no slash before the path variable, so the real route is
+`/social/comments/vote/answer<id>`. The sibling endpoint on the comment side (`:73`) is
+written correctly (`.../vote/comment/{comment_id}`). This is a controller-level defect,
+outside the unit layer; it was not fixed in this batch, only recorded. (Fixed in the
+API/role batch — see F-4 for the current state.)
 
-### Silinen ölü kod — `StudentService`'in ikinci moderasyon yolu
+### Deleted dead code — `StudentService`'s second moderation path
 
-`StudentService`'te çağıranı olmayan yedi metot silindi: `deleteUser`, `blockStudent`,
-`unblockStudent`, `findByKitEmail`, `addStudent`, `getAllUsers`, `getUser`. Kodun kendisi
-zaten soruyordu: `//TODO: Why arent they in use?`.
+Seven methods with no callers were deleted from `StudentService`: `deleteUser`,
+`blockStudent`, `unblockStudent`, `findByKitEmail`, `addStudent`, `getAllUsers`, `getUser`.
+The code was already asking the question itself: `//TODO: Why arent they in use?`.
 
-Test yazmak yerine silmenin nedeni, salt kapsam aritmetiği değil. Canlı yönetici akışı
-`ModerationUserService` (`blockStudent` :591, `unblockStudent` :617) ve o ayrıca
-`protectAdministrator`, idempotency kısa devresi, `blockedAt`/`blockedReason` bilgisi,
-`revokeTokens(target)` ve `auditWriter.write(... USER_BLOCKED ...)` yapıyor.
-`StudentService`'in kopyaları bunların **hiçbirini** yapmıyordu — yalnızca `setStatus` +
-`save`. Yani token iptali yok, audit kaydı yok, yönetici koruması yok. Bunlara test yazmak,
-kimsenin dayanmadığı ve moderasyonun sessizce zayıf ikinci bir yolunu, kod tek yola
-indirilmeye çalışılırken çivilemek olurdu.
+The reason for deleting rather than testing is not just coverage arithmetic. The live
+administrator flow is `ModerationUserService` (`blockStudent` :591, `unblockStudent` :617),
+and that one also does `protectAdministrator`, an idempotency short-circuit, the
+`blockedAt`/`blockedReason` bookkeeping, `revokeTokens(target)` and
+`auditWriter.write(... USER_BLOCKED ...)`. `StudentService`'s copies did **none** of that —
+only `setStatus` + `save`. No token revocation, no audit record, no administrator
+protection. Writing tests for those would have nailed down a second, quietly weaker
+moderation path that nobody depends on, at the very moment the code is being reduced to a
+single path.
 
-Ayrıca `RatingService`'teki kullanılmayan `import com.pse.user.service.StudentService;`
-kaldırıldı. `StudentService`'in `src/main`'deki tek tüketicisi artık `AccountService` ve tam
-üç metot kullanıyor.
+The unused `import com.pse.user.service.StudentService;` in `RatingService` was removed as
+well. `StudentService`'s only consumer in `src/main` is now `AccountService`, and it uses
+exactly three methods.
 
-Silme paydayı düşürdüğü için ölçüm batch'in *başında*, silmeden **sonra** alındı; belgedeki
-3341 sayısı bu yüzden Batch 1'in 3403'ünden küçük.
+Because the deletion lowers the denominator, the measurement was taken at the *start* of the
+batch, **after** the deletion; that is why the 3341 in this document is smaller than batch
+1's 3403.
 
-### Yanlış pakette duran test dosyası
+### A test file in the wrong package
 
-`StudentServiceTests` `com.pse` kökünde duruyordu, oysa sınıf `com.pse.user.service`
-içinde. `com/pse/user/service/`'e taşındı ve ev stiline çevrildi: `@InjectMocks` yerine
-manuel constructor factory, JUnit `assertEquals` yerine AssertJ. `1cd449b`
-(ProfessorServiceTests) ile aynı hamle. Mevcut iki credibility testi korundu, yalnızca
-`metot_senaryo_beklenti` adlandırmasına geçirildi.
+`StudentServiceTests` sat in the `com.pse` root while the class lives in
+`com.pse.user.service`. It was moved to `com/pse/user/service/` and converted to the house
+style: a manual constructor factory instead of `@InjectMocks`, AssertJ instead of JUnit
+`assertEquals`. The same move as `1cd449b` (ProfessorServiceTests). The two existing
+credibility tests were kept, only renamed into the `method_scenario_expectation` scheme.
 
-### Prompt/kod uyuşmazlıkları
+### Prompt/code mismatches
 
-Hepsinde kod esas alındı: `AuditCursorCodec` `com.pse.audit.service` içinde;
-`AuditRevertService` `com.pse.audit.revert` içinde ve `Map` değil `List<AuditRevertHandler>`
-alıyor; `RateLimitService` `TransactionTemplate` değil `PlatformTransactionManager` alıyor;
-`LoginLocationService` `RestClient`'ı enjekte etmiyordu.
-
----
-
-## Açık sorular
-
-### BUG-1 nanosaniye hipotezi
-
-**Hipotez.** `AuditLog.@PrePersist` `Instant.now()` ile nanosaniye hassasiyeti yazıyor;
-Postgres `timestamptz` sütunu ise mikrosaniyeye kırpıyor. Persistence context'te duran, DB'den
-yeniden okunmamış bir entity'den üretilen cursor `…123456789` taşırken satır `…123456`
-tutar. `.123456 < .123456789` doğru olduğu için keyset predicate'i aynı satırı bir daha
-eşler ve satır sonraki sayfanın başında **tekrar eder**.
-
-**Neden unit testle doğrulanamaz.** Kırpma codec'in değil, JDBC sürücüsünün ve sütun tipinin
-davranışı. `KeysetCursorCodec` nanosaniyeyi kayıpsız round-trip ediyor — bir unit test
-yalnızca bunu kanıtlayabilir. Kusuru üretmek gerçek bir yazma, gerçek bir sütun ve gerçek bir
-geri okuma gerektiriyor.
-
-**Nerede test edilecek.** Integration batch'inde, Testcontainers ile gerçek Postgres'e karşı:
-tek transaction içinde iki satır yaz, `limit=1` ile sayfala, hiçbir satırın iki sayfada birden
-görünmediğini doğrula.
-
-**Önce çözülmesi gereken gerilim:** Testcontainers şu an bağımlılık değil ve `CLAUDE.md`
-testlerin bilinçli olarak Docker gerektirmediğini söylüyor (H2, Flyway'in H2
-migration'ları, `ddl-auto=validate`, `test` profili). H2, PostgreSQL modunda `timestamptz` hassasiyetini aynı şekilde modellemiyor,
-yani mevcut test profili bu soruyu karara bağlayamaz. Bağımlılığı eklemek CI sözleşmesini
-değiştirir — integration batch'inin kararı.
+The code won in every case: `AuditCursorCodec` is in `com.pse.audit.service`;
+`AuditRevertService` is in `com.pse.audit.revert` and takes a `List<AuditRevertHandler>`
+rather than a `Map`; `RateLimitService` takes a `PlatformTransactionManager` rather than a
+`TransactionTemplate`; `LoginLocationService` was not injecting `RestClient`.
 
 ---
 
-## Sınıflar
+## Open questions
+
+### The BUG-1 nanosecond hypothesis
+
+**Hypothesis.** `AuditLog.@PrePersist` writes nanosecond precision through `Instant.now()`,
+while the Postgres `timestamptz` column truncates to microseconds. A cursor built from an
+entity that is still in the persistence context and has not been re-read from the DB carries
+`…123456789` while the row holds `…123456`. Since `.123456 < .123456789` is true, the keyset
+predicate matches the same row again and the row **repeats** at the top of the next page.
+
+**Why a unit test cannot confirm it.** The truncation is the behaviour of the JDBC driver
+and the column type, not of the codec. `KeysetCursorCodec` round-trips nanoseconds without
+loss — a unit test can only prove that. Producing the defect requires a real write, a real
+column and a real read-back.
+
+**Where it will be tested.** In the integration batch, against a real Postgres via
+Testcontainers: write two rows inside one transaction, page with `limit=1`, and verify that
+no row shows up on two pages.
+
+**A tension to settle first:** Testcontainers is not a dependency today, and `CLAUDE.md`
+says tests deliberately do not require Docker (H2, Flyway's H2 migrations,
+`ddl-auto=validate`, the `test` profile). H2 in PostgreSQL mode does not model `timestamptz`
+precision the same way, so the current test profile cannot settle this question. Adding the
+dependency changes the CI contract — a decision for the integration batch.
+
+---
+
+## Classes
 
 ### KeysetCursorCodec
 
-- **Sorumluluk:** `(createdAt DESC, id DESC)` sıralaması üzerinde keyset sayfalaması için
-  opak cursor'u kodlar ve çözer.
-- **Test edilen davranışlar:**
-  - `encode → decode` round-trip'i, nanosaniye hassasiyeti dâhil
-  - Wire formatı: `1|<Instant>|<UUID>`, URL-safe ve padding'siz base64
-  - `LocalDateTime` overload'ının UTC `Instant` overload'ı ile aynı sonucu vermesi ve
-    `Cursor.createdAtLocal()`'ın tam tersi olması
-  - Yedi ret yolu: null, boş, 512 karakter sınırı, base64 olmayan, yanlış sürüm, yanlış parça
-    sayısı, çözülemeyen `Instant`/`UUID` — hepsi 400
-  - Hata mesajının çağıranın verdiği metin olması
-- **Bilinçli test edilmeyenler:** Cursor'un veritabanı sorgusundaki etkisi — bu bir Criteria
-  predicate'i ve integration katmanına ait. Nanosaniye/mikrosaniye kırpması (yukarıdaki açık
-  soru).
-- **Kullanılan mock'lar:** Yok; sınıfın bağımlılığı yok.
-- **Kalan risk:** Cursor'un doğru üretilmesi ile doğru *uygulanması* ayrı şeyler; predicate
-  ve sayfa sınırı integration katmanında.
-- **Test sayısı:** 23 (good: 6, bad: 17)
+- **Responsibility:** encodes and decodes the opaque cursor for keyset pagination over the
+  `(createdAt DESC, id DESC)` ordering.
+- **Behaviours tested:**
+  - The `encode → decode` round trip, nanosecond precision included
+  - The wire format: `1|<Instant>|<UUID>`, URL-safe base64 without padding
+  - That the `LocalDateTime` overload gives the same result as the UTC `Instant` overload
+    and is the exact inverse of `Cursor.createdAtLocal()`
+  - The seven rejection paths: null, empty, the 512-character limit, non-base64, wrong
+    version, wrong number of parts, undecodable `Instant`/`UUID` — all 400
+  - That the error message is the text the caller supplied
+- **Deliberately not tested:** the cursor's effect on the database query — that is a Criteria
+  predicate and belongs to the integration layer. Nanosecond/microsecond truncation (the open
+  question above).
+- **Mocks used:** none; the class has no dependencies.
+- **Residual risk:** producing a cursor correctly and *applying* it correctly are separate
+  things; the predicate and the page boundary belong to the integration layer.
+- **Test count:** 23 (good: 6, bad: 17)
 
 ### AuditCursorCodec
 
-- **Sorumluluk:** Paylaşılan codec'in audit'e özel hata mesajını bağlayan ince bir delege.
-- **Test edilen davranışlar:** `encode`/`decode`'un değiştirmeden iletilmesi, `decode`'a
-  `"Invalid audit cursor"` mesajının geçirilmesi, delegenin fırlattığı `ApiException`'ın
-  sarılmadan yayılması, gerçek codec üzerinden round-trip.
-- **Bilinçli test edilmeyenler:** Codec mantığının kendisi — `KeysetCursorCodecTests`'te.
-  `encode(LocalDateTime, …)` overload'ı bu sınıfta açığa çıkmıyor.
-- **Kullanılan mock'lar:** `KeysetCursorCodec` — delegasyonun gerçekten olduğunu ancak
-  mock'layarak doğrulayabiliyoruz; iki test ise gerçek codec ile uçtan uca bakıyor.
-- **Kalan risk:** Yok denecek kadar az; sınıf 5 satır.
-- **Test sayısı:** 5 (good: 3, bad: 2)
+- **Responsibility:** a thin delegate that binds the audit-specific error message onto the
+  shared codec.
+- **Behaviours tested:** that `encode`/`decode` are forwarded unchanged, that
+  `"Invalid audit cursor"` is passed into `decode`, that an `ApiException` thrown by the
+  delegate propagates unwrapped, and a round trip through the real codec.
+- **Deliberately not tested:** the codec logic itself — that is in `KeysetCursorCodecTests`.
+  The `encode(LocalDateTime, …)` overload is not exposed on this class.
+- **Mocks used:** `KeysetCursorCodec` — mocking is the only way to verify that delegation
+  actually happens; two tests go end to end with the real codec instead.
+- **Residual risk:** negligible; the class is 5 lines.
+- **Test count:** 5 (good: 3, bad: 2)
 
 ### RevertValues
 
-- **Sorumluluk:** Audit girdisinin JSON sütunundan dönen `before`/`after` değerlerini tip
-  duyarsız biçimde okur ve karşılaştırır.
-- **Test edilen davranışlar:**
-  - `sameValue`: iki null, tek null, enum ↔ adı, `Integer` ↔ `Long`, sayı ↔ metin, sıralı
-    liste eşitliği, sıra değişiminin fark sayılması
-  - `asString` / `asInteger` / `asBoolean` / `asEnum` / `asIds`: mevcut, eksik, yanlış tip,
-    bozuk değer
-  - Exception'lar: `NumberFormatException`, `IllegalArgumentException` (`No enum constant`,
+- **Responsibility:** reads and compares the `before`/`after` values coming back from an
+  audit entry's JSON column, insensitive to type.
+- **Behaviours tested:**
+  - `sameValue`: two nulls, one null, enum ↔ name, `Integer` ↔ `Long`, number ↔ text,
+    ordered list equality, a change of order counting as a difference
+  - `asString` / `asInteger` / `asBoolean` / `asEnum` / `asIds`: present, missing, wrong
+    type, malformed value
+  - Exceptions: `NumberFormatException`, `IllegalArgumentException` (`No enum constant`,
     `Invalid UUID string`)
-- **Bilinçli test edilmeyenler:** Gerçek Jackson serileştirmesi — burada girdi zaten
-  deserialize edilmiş `Map`. Hangi handler hangi alanı okuyor sorusu handler'ların kendi işi.
-- **Kullanılan mock'lar:** Yok; statik yardımcı sınıf.
-- **Kalan risk:** İki davranış bilinçli olarak "olduğu gibi" sabitlendi ve gerçekten
-  istenmiyor olabilir: sayı karşılaştırması `longValue()` üzerinden yapıldığı için `1` ile
-  `1.9` eşit sayılıyor; `Boolean.valueOf` `"yes"` değerini sessizce `false` yapıyor. Bugün
-  kayıtlı hiçbir alan kesirli değil ve hiçbir alan `"yes"` yazmıyor, ama yeni bir alan bunu
-  değiştirebilir.
-- **Test sayısı:** 37 (good: 20, bad: 17)
+- **Deliberately not tested:** real Jackson serialization — the input here is an already
+  deserialized `Map`. Which handler reads which field is each handler's own business.
+- **Mocks used:** none; a static helper class.
+- **Residual risk:** two behaviours were deliberately pinned "as is" and may not actually be
+  wanted: because number comparison goes through `longValue()`, `1` and `1.9` count as
+  equal; `Boolean.valueOf` quietly turns `"yes"` into `false`. No recorded field is
+  fractional today and no field writes `"yes"`, but a new field could change that.
+- **Test count:** 37 (good: 20, bad: 17)
 
 ### AdminBootstrapPolicy
 
-- **Sorumluluk:** Yapılandırılan `email` / `email:Ad` listesini çözerek hangi hesapların
-  başlangıçta yönetici yapılacağını söyler.
-- **Test edilen davranışlar:** Boş yapılandırma, adlı/adsız giriş, birden çok giriş,
-  büyük/küçük harf normalizasyonu, boşluk kırpma, boş girişlerin atılması, ilk iki nokta ile
-  bölme, e-postasız giriş, yinelenen e-posta, dönen kümenin değiştirilemezliği.
-- **Bilinçli test edilmeyenler:** `AdminBootstrapRunner`'ın hesabı gerçekten oluşturması —
-  başka bir sınıf ve integration konusu. `Map.copyOf` sıralamayı korumadığı için
-  `bootstrapEmails()` sırası test edilmiyor; sözleşmenin parçası değil.
-- **Kullanılan mock'lar:** Yok; tek `String` parametreli constructor.
-- **Kalan risk:** Argüman normalize **edilmiyor** — `shouldBootstrap` tam eşleşme yapıyor, bu
-  yüzden normalize edilmemiş bir adres sessizce ıskalar. Sözleşme parametre adında
-  (`normalizedEmail`) ve çağıran `AuthService` küçük harfe çeviriyor; test bunu sabitliyor.
-  `null` argüman `Map.copyOf` nedeniyle `NullPointerException` atıyor — kararlaştırıldığı
-  gibi mevcut davranış olarak sabitlendi.
-- **Test sayısı:** 18 (good: 6, bad: 12)
+- **Responsibility:** resolves the configured `email` / `email:Name` list into the set of
+  accounts to be made administrators at startup.
+- **Behaviours tested:** empty configuration, entries with and without a name, several
+  entries, case normalization, whitespace trimming, dropping empty entries, splitting on the
+  first colon, an entry without an email, a duplicate email, immutability of the returned set.
+- **Deliberately not tested:** `AdminBootstrapRunner` actually creating the account — a
+  different class and an integration concern. The order of `bootstrapEmails()` is not tested
+  because `Map.copyOf` does not preserve ordering; it is not part of the contract.
+- **Mocks used:** none; a constructor with a single `String` parameter.
+- **Residual risk:** the argument is **not** normalized — `shouldBootstrap` does an exact
+  match, so an unnormalized address misses silently. The contract lives in the parameter name
+  (`normalizedEmail`) and the caller, `AuthService`, lowercases; the test pins that. A `null`
+  argument throws `NullPointerException` via `Map.copyOf` — pinned as the current behaviour,
+  as agreed.
+- **Test count:** 18 (good: 6, bad: 12)
 
 ### OtpService
 
-- **Sorumluluk:** Tek kullanımlık login kodunu üretir, hash'leyerek saklar ve tek seferlik
-  olarak tüketir.
-- **Test edilen davranışlar:** Yeni kod üretmeden önce açık kodların iptali (`InOrder`),
-  `expiresAt = now + ttl` (varsayılan ve özel TTL, `Clock.fixed`), düz metnin saklanmaması,
-  doğru kodun `used = true` yapması, yanlış kod, aday olmaması, legacy düz metin eşleşmesi,
-  ne hash ne legacy değeri olan aday, birden çok adaydan yalnızca eşleşenin işaretlenmesi,
-  sorguya geçirilen zamanın enjekte edilen saatten gelmesi.
-- **Bilinçli test edilmeyenler:** `TokenGenerator`'ın rastgeleliği (`TokenGeneratorTests`
-  kapsıyor) ve Argon2'nin kendisi. **TTL sınırındaki gerçek filtreleme repository
-  sorgusunun işi** (`…AndExpiresAtAfter…`), bu yüzden burada yalnızca yazılan `expiresAt` ve
-  sorguya verilen an doğrulanıyor.
-- **Kullanılan mock'lar:** `OneTimePasswordRepository` — veritabanına gitmemek ve aday
-  listesini kurgulamak için. `HashGenerator` statik olduğu için mock'lanamıyor; Argon2
-  (m=32768, t=3) pahalı olduğundan gerçek hash yalnızca sınıf başına bir kez hesaplanıyor,
-  diğer `consume` testleri legacy düz metin dalını kullanıyor.
-- **Kalan risk:** Süresi dolmuş ve kullanılmış kodların gerçekten elenmesi integration
-  katmanına ait; unit seviyede bunlar "boş aday listesi" olarak temsil ediliyor. Pessimistic
-  lock davranışı da test edilmiyor.
-- **Test sayısı:** 13 (good: 9, bad: 4)
+- **Responsibility:** generates the one-time login code, stores it hashed, and consumes it
+  exactly once.
+- **Behaviours tested:** invalidation of outstanding codes before a new one is generated
+  (`InOrder`), `expiresAt = now + ttl` (default and custom TTL, `Clock.fixed`), that the
+  plaintext is not stored, that the correct code sets `used = true`, a wrong code, no
+  candidate, a legacy plaintext match, a candidate with neither a hash nor a legacy value,
+  and that only the matching one of several candidates is marked. Also that the time passed
+  into the query comes from the injected clock.
+- **Deliberately not tested:** `TokenGenerator`'s randomness (covered by
+  `TokenGeneratorTests`) and Argon2 itself. **The real filtering at the TTL boundary is the
+  repository query's job** (`…AndExpiresAtAfter…`), so only the written `expiresAt` and the
+  instant handed to the query are verified here.
+- **Mocks used:** `OneTimePasswordRepository` — to stay off the database and to compose the
+  candidate list. `HashGenerator` is static and cannot be mocked; because Argon2
+  (m=32768, t=3) is expensive, a real hash is computed only once per class and the other
+  `consume` tests use the legacy plaintext branch.
+- **Residual risk:** that expired and used codes really are filtered out belongs to the
+  integration layer; at the unit level they are represented as "an empty candidate list".
+  Pessimistic lock behaviour is not tested either.
+- **Test count:** 13 (good: 9, bad: 4)
 
 ### RateLimitService
 
-- **Sorumluluk:** Operasyon ve HMAC'lenmiş özne başına sabit pencereli kova tutarak kod
-  isteme ve login denemelerini sınırlar.
-- **Test edilen davranışlar:**
-  - Özne hash'i: kararlılık, e-posta/IP ad alanı ayrımı, 64 karakter hex, `null` IP'nin
-    `"unknown"` olması, boş anahtarda `IllegalStateException`
-  - `validateConfiguration`: 31 / 32 / `null` anahtar
-  - `consume`: kova yokken oluşturma, sınır altı artırma, **kovanın tam dolduğu an** (hâlâ
-    başarılı), **dolduktan sonraki istek** (`RateLimitException`, kayıt yok), süresi geçmiş
-    pencerede sıfırlanma, penceresi tam şimdi biten kova, iki çakışmadan sonra başarı, üç
-    çakışmada yeniden fırlatma, reddin yeniden denenmemesi, farklı öznelerin ayrı kovaları
-  - `ensureAllowed`: kova yok / sınır altı / sınırda / süresi geçmiş, hiç yazmaması,
-    `Retry-After` değerinin en az 1 saniye olması
-  - `reset`: yalnızca o kovanın silinmesi
-- **Bilinçli test edilmeyenler:** Gerçek `REQUIRES_NEW` transaction semantiği ve unique
-  constraint yarışı — mock'lanmış bir yönetici propagation'ı gerçekten uygulamaz. `AuthService`
-  içindeki limit değerleri de burada okunmuyor.
-- **Kullanılan mock'lar:** `AuthRateLimitBucketRepository` (veritabanı yok) ve
-  `PlatformTransactionManager`. Servis `TransactionTemplate`'i kendisi kurduğu için yönetici
-  mock'lanıyor; gerçek template callback'i böylece gerçekten çalıştırıyor.
-- **Kalan risk:** Eşzamanlı iki isteğin aynı kovayı doğru saydığı yalnızca integration
-  katmanında gösterilebilir; buradaki üç denemelik yeniden deneme döngüsü mock ile
-  simüle ediliyor.
-- **Test sayısı:** 26 (good: 18, bad: 8)
+- **Responsibility:** limits code requests and login attempts by keeping a fixed-window
+  bucket per operation and HMAC'd subject.
+- **Behaviours tested:**
+  - The subject hash: stability, email/IP namespace separation, 64 hex characters,
+    `null` IP becoming `"unknown"`, `IllegalStateException` on an empty key
+  - `validateConfiguration`: 31 / 32 / `null` key
+  - `consume`: creating a bucket when none exists, incrementing below the limit, **the exact
+    moment the bucket fills** (still successful), **the request after it fills**
+    (`RateLimitException`, no record), reset in an expired window, a bucket whose window ends
+    exactly now, success after two collisions, a rethrow on three collisions, no retry on a
+    rejection, separate buckets for different subjects
+  - `ensureAllowed`: no bucket / below the limit / at the limit / expired, that it never
+    writes, and that the `Retry-After` value is at least 1 second
+  - `reset`: that only that bucket is deleted
+- **Deliberately not tested:** real `REQUIRES_NEW` transaction semantics and the unique
+  constraint race — a mocked manager does not actually apply propagation. The limit values in
+  `AuthService` are not read here either.
+- **Mocks used:** `AuthRateLimitBucketRepository` (no database) and
+  `PlatformTransactionManager`. The manager is mocked because the service builds the
+  `TransactionTemplate` itself, which means the real template does run the callback.
+- **Residual risk:** that two concurrent requests count the same bucket correctly can only be
+  shown at the integration layer; the three-attempt retry loop here is simulated with mocks.
+- **Test count:** 26 (good: 18, bad: 8)
 
 ### AuditRevertService
 
-- **Sorumluluk:** Bir audit girdisinin geri alınabilir olup olmadığına karar verir ve tek bir
-  alan düzenlemesini tersine çevirir.
-- **Test edilen davranışlar:**
-  - `describe`: boş sayfa, temiz alan diff'i, geri alınamayan aksiyon, handler'sız hedef tipi,
-    yaşam döngüsü anahtarı (`exists`), `before`/`after` olmayan değişiklik, boş `changes`,
-    **hedef id'si olmayan refusal girdisi** (eski 500 regresyonu), zaten geri alınmış girdi
-    (+ geri alan girdinin id'si), pencere dışı, **tam cutoff üzerinde** (hâlâ geri alınabilir),
-    cutoff'un bir nanosaniye ötesi, kaybolmuş hedef, değişmiş değer, handler'ın bilmediği alan
-  - Toplu çalışma: aynı tipteki iki girdi için `currentValues` **tek çağrı**; aday içermeyen
-    sayfada hiç sorgu yok; karışık sayfada her girdiye bir karar
-  - `revert`: `before` değerlerinin uygulanması, `AuditRevertContext`'in handler çalışırken
-    dolu ve sonrasında boş olması, handler patlasa bile temizlenmesi, 404, ve beş refusal'ın
-    her biri için 409 + mesaj + `reason.name()` kodu
-  - Handler kablolaması: aynı hedef tipini iddia eden iki handler'da `IllegalStateException`,
-    doğru handler'a yönlendirme, hiç handler olmaması
-- **Bilinçli test edilmeyenler:** Handler implementasyonlarının kendisi (`UserRevertHandler`
-  vb.) ve tersine çevirmenin veritabanına yansıması — ayrı sınıflar, integration konusu.
-  `@Transactional` semantiği burada yok.
-- **Kullanılan mock'lar:** `AuditLogRepository` (veritabanı yok, `findReversalsOf` satırlarını
-  kurgulamak için) ve `AuditRevertHandler` — gerçek bir `List` içinde mock handler'lar, çünkü
-  servis haritayı `Collectors.toMap` ile kendisi kuruyor.
-- **Kalan risk:** Pencere `Duration.toString()` ile mesaja giriyor, yani `P7D` kullanıcıya
-  `PT168H` olarak görünüyor. Test bunu sabitliyor ama bu bir ürün kararı; panelde okunabilir
-  bir metin isteniyorsa mesaj değişmeli.
-- **Test sayısı:** 30 (good: 8, bad: 22)
+- **Responsibility:** decides whether an audit entry can be reverted and reverses a single
+  field edit.
+- **Behaviours tested:**
+  - `describe`: an empty page, a clean field diff, a non-revertible action, a target type
+    with no handler, the lifecycle key (`exists`), a change without `before`/`after`, empty
+    `changes`, **a refusal entry with no target id** (an old 500 regression), an already
+    reverted entry (plus the id of the reversing entry), outside the window, **exactly on the
+    cutoff** (still revertible), one nanosecond past the cutoff, a vanished target, a changed
+    value, a field the handler does not know
+  - Batch behaviour: a **single** `currentValues` call for two entries of the same type; no
+    query at all on a page with no candidates; one decision per entry on a mixed page
+  - `revert`: applying the `before` values, `AuditRevertContext` being populated while the
+    handler runs and empty afterwards, being cleared even if the handler blows up, 404, and
+    409 + message + `reason.name()` code for each of the five refusals
+  - Handler wiring: `IllegalStateException` for two handlers claiming the same target type,
+    routing to the correct handler, and no handler at all
+- **Deliberately not tested:** the handler implementations themselves (`UserRevertHandler`
+  and friends) and the reversal reaching the database — separate classes, an integration
+  concern. `@Transactional` semantics are absent here.
+- **Mocks used:** `AuditLogRepository` (no database, and to compose the `findReversalsOf`
+  rows) and `AuditRevertHandler` — mock handlers inside a real `List`, because the service
+  builds the map itself with `Collectors.toMap`.
+- **Residual risk:** the window enters the message through `Duration.toString()`, so `P7D`
+  reaches the user as `PT168H`. The test pins that, but it is a product decision; if the
+  panel wants readable text the message has to change.
+- **Test count:** 30 (good: 8, bad: 22)
 
 ### LoginLocationService
 
-- **Sorumluluk:** Bir IP adresi için yaklaşık konumu çözer ve login bildirim e-postasına
-  gömülecek harita HTML'ini üretir.
-- **Test edilen davranışlar:**
-  - Çözülen yol: tam yanıt, yalnızca şehir, boş bölge (çift virgül yok), X-Forwarded-For
-    listesinde **yalnızca ilk adresin** sorgulanması (yakalanan `UriBuilder` fonksiyonu gerçek
-    bir factory ile çözülerek doğrulanıyor)
-  - Ağa hiç çıkılmayan yollar: null/boş adres, boş token
-  - **Başarısızlığın her biri ayrı ayrı:** 401, 403, 429, 5xx, timeout
-    (`SocketTimeoutException`), DNS hatası (`UnknownHostException`), deserialize edilemeyen
-    gövde, `null` gövde, bogon adres (tüm alanlar null), çözülemeyen `loc`
-  - Her birinde dönen değerin **tam olarak** `LoginLocation("Unknown", null, null)` olduğu ve
-    log'a WARN düştüğü; boş token yolunda ise istek sırasında **hiç log olmadığı**
-  - `warnIfTokenMissing()`: token boş ya da yalnızca boşluk iken açılışta `IPINFO_TOKEN` adını
-    içeren bir WARN, token varken hiç log
-  - `createStaticMap`: geçerli koordinat + anahtar (`lonlat` sırası ters), boş Geoapify
-    anahtarı, geçersiz koordinat formatları (parametreli), koordinat ve URL yokken boş çıktı,
-    HTML kaçışı
-- **Bilinçli test edilmeyenler:** Gerçek IPinfo/Geoapify çağrıları. Üretilen HTML'in tam
-  metni — kırılgan olurdu; bunun yerine ayırt edici parçalar doğrulanıyor. **Sağlayıcı yedek
-  zinciri test edilmedi çünkü yok:** Geoapify yalnızca statik görsel üretiyor, tek yedek
-  `catch (Exception) → "Unknown"`.
-- **Kullanılan mock'lar:** `RestClient` ve fluent zincirinin üç seviyesi
-  (`RequestHeadersUriSpec`, `RequestHeadersSpec`, `ResponseSpec`) — gerçek HTTP yapmamak için.
-  Bunu mümkün kılmak adına `RestClient` artık constructor'dan enjekte ediliyor
-  (`RestClientConfig`); davranış değişmedi. Ayrıca Logback `ListAppender`, çünkü sessiz
-  başarısızlık ile loglanan başarısızlık arasındaki fark bu batch'in ana bulgusu.
-- **Kalan risk:**
-  - **`IPINFO_TOKEN` uyarısı yalnızca açılışta düşüyor.** Token sonradan iptal edilirse tek
-    iz 401/403 WARN'ları olur; istek başına uyarı bilinçli olarak eklenmedi (her login için
-    log gürültüsü).
-  - **Geniş `catch (Exception)`** 401/403/429/timeout'u çağıran açısından ayırt edilemez
-    kılıyor; ayrım yalnızca logda. Önerilen (uygulanmadı): catch'in daraltılması.
-  - Koordinat regex'i virgül etrafındaki boşluğu reddediyor (`"49.0, 8.4"` geçersiz). Bugün
-    IPinfo boşluksuz döndüğü için sorun değil, ama sağlayıcı formatı değişirse sessizce
-    haritayı düşürür.
-- **Test sayısı:** 39 (good: 10, bad: 29)
+- **Responsibility:** resolves the approximate location for an IP address and renders the map
+  HTML embedded in the login notification email.
+- **Behaviours tested:**
+  - The resolved path: a full response, city only, an empty region (no double comma), and
+    that **only the first address** in an X-Forwarded-For list is queried (verified by
+    resolving the captured `UriBuilder` function against a real factory)
+  - The paths that never touch the network: null/empty address, empty token
+  - **Each failure separately:** 401, 403, 429, 5xx, timeout (`SocketTimeoutException`), DNS
+    failure (`UnknownHostException`), an undeserializable body, a `null` body, a bogon
+    address (all fields null), an unparseable `loc`
+  - That each of those returns **exactly** `LoginLocation("Unknown", null, null)` and logs a
+    WARN, while the empty-token path logs **nothing at all** during the request
+  - `warnIfTokenMissing()`: a startup WARN containing the name `IPINFO_TOKEN` when the token
+    is empty or whitespace only, and no log at all when it is set
+  - `createStaticMap`: valid coordinates + key (`lonlat` order reversed), an empty Geoapify
+    key, invalid coordinate formats (parameterized), empty output when there are no
+    coordinates and no URL, HTML escaping
+- **Deliberately not tested:** real IPinfo/Geoapify calls. The full text of the generated
+  HTML — that would be brittle; distinguishing fragments are verified instead. **The provider
+  fallback chain was not tested because there is none:** Geoapify only renders the static
+  image, and the only fallback is `catch (Exception) → "Unknown"`.
+- **Mocks used:** `RestClient` and three levels of its fluent chain
+  (`RequestHeadersUriSpec`, `RequestHeadersSpec`, `ResponseSpec`) — to avoid real HTTP. To
+  make that possible, `RestClient` is now injected through the constructor
+  (`RestClientConfig`); behaviour did not change. Also Logback's `ListAppender`, because the
+  difference between a silent failure and a logged one is this batch's main finding.
+- **Residual risk:**
+  - **The `IPINFO_TOKEN` warning only fires at startup.** If the token is revoked later, the
+    only trace is the 401/403 WARNs; a per-request warning was deliberately not added (log
+    noise on every login).
+  - **The broad `catch (Exception)`** makes 401/403/429/timeout indistinguishable to the
+    caller; the distinction lives only in the log. Suggested (not implemented): narrow the
+    catch.
+  - The coordinate regex rejects whitespace around the comma (`"49.0, 8.4"` is invalid).
+    Harmless today because IPinfo returns no space, but it would silently drop the map if the
+    provider's format changed.
+- **Test count:** 39 (good: 10, bad: 29)
 
 ### CatalogueRevertHandler.LectureHandler / .ProfessorHandler
 
-- **Sorumluluk:** Ders ve profesör alan düzenlemelerini, karşılıklı atamaları dâhil, geri
-  alır. `com.pse.audit.revert`'te *koleksiyon* alanı bildiren tek handler çifti.
-- **Test edilen davranışlar:**
-  - `LectureHandler.currentValues`: yedi alanın tamamı (`professors` UUID string listesi
-    olarak), profesörsüz derste **boş liste** (eksik anahtar değil), silinmiş dersin
-    haritada bulunmaması, boş hedef listesi
-  - **BUG-3, iki deterministik yarım:** `LinkedHashSet` fixture'ı ile handler'ın
-    bildirilen `Set` tipinin tanımlamadığı bir sıra ürettiği; ve `RevertValues.sameValue`'nun
-    aynı iki elemanı ters sırada farklı saydığı (küme olarak eşitken)
-  - `LectureHandler.applyInverse`: yedi alanın çözülmesi — özellikle kayıttaki
-    `"professors"` anahtarının request'teki `professorIds` alanına eşlenmesi — ve tek
-    alanlı `before` yarısında diğerlerinin `null` kalması
-  - `ProfessorHandler`: dört alan + `lectures` listesi, silinmiş profesör, boş hedef
-    listesi, tam ve kısmi `applyInverse`, ve `updateLecture` değil **`updateProfessor`**'a
-    gitmesi
-- **Bilinçli test edilmeyenler:** `ModerationCatalogService`'in kendisi (ayrı sınıf, sonraki
-  batch). `lecture.getSemesterSeason().name()` ve `getLectureType().name()` null-guard'sız
-  ama iki kolon da `nullable = false`, yani kalıcı bir satırdan erişilemez durum — test
-  kurgu üzerine assert ederdi. Gerçek `HashSet` iterasyon sırası (BUG-3'te gerekçesi).
-- **Kullanılan mock'lar:** `LectureRepository`, `ProfessorRepository` (veritabanına
-  gitmemek ve "satır yok" hâlini kurgulamak için) ve `ModerationCatalogService` --
-  `applyInverse` alanları kendisi yazmıyor, panelin çağırdığı metodu çağırıyor, o yüzden
-  doğrulanacak şey delegasyonun kendisi.
-- **Kalan risk:** BUG-3 açık. Gerçek dünyadaki sıra `Professor`'ün `hashCode`'u olmadığı
-  için çalıştırma başına değişiyor, yani kusur üretimde **kararsız** görünür: aynı
-  düzenleme bir seferde geri alınabilir, diğerinde `VALUE_CHANGED` verir. Bu, bir hata
-  raporunun yeniden üretilememesinin en olası nedeni.
-- **Test sayısı:** 15 (good: 7, bad: 8) — LectureHandler 9, ProfessorHandler 6
+- **Responsibility:** reverts lecture and professor field edits, mutual assignments included.
+  The only handler pair in `com.pse.audit.revert` that declares a *collection* field.
+- **Behaviours tested:**
+  - `LectureHandler.currentValues`: all seven fields (`professors` as a list of UUID
+    strings), an **empty list** (not a missing key) for a lecture with no professors, a
+    deleted lecture not appearing in the map, an empty target list
+  - **BUG-3, in two deterministic halves:** with a `LinkedHashSet` fixture, that the handler
+    produces an order the declared `Set` type does not define; and that `RevertValues.sameValue`
+    counts the same two elements in reverse order as different (while they are equal as sets)
+  - `LectureHandler.applyInverse`: resolving all seven fields — in particular mapping the
+    record's `"professors"` key onto the request's `professorIds` field — and leaving the
+    others `null` in a single-field `before` half
+  - `ProfessorHandler`: four fields plus the `lectures` list, a deleted professor, an empty
+    target list, full and partial `applyInverse`, and that it goes to **`updateProfessor`**
+    rather than `updateLecture`
+- **Deliberately not tested:** `ModerationCatalogService` itself (a separate class, the next
+  batch). `lecture.getSemesterSeason().name()` and `getLectureType().name()` have no null
+  guard, but both columns are `nullable = false`, so the state is unreachable from a
+  persisted row — a test would assert over its own fixture. Real `HashSet` iteration order
+  (rationale in BUG-3).
+- **Mocks used:** `LectureRepository`, `ProfessorRepository` (to stay off the database and to
+  compose the "no row" case) and `ModerationCatalogService` — `applyInverse` does not write
+  the fields itself, it calls the method the panel calls, so what has to be verified is the
+  delegation.
+- **Residual risk:** BUG-3 is open. Real-world order varies per run because `Professor` has
+  no `hashCode`, so the defect looks **flaky** in production: the same edit reverts once and
+  gives `VALUE_CHANGED` the next time. This is the most likely reason a bug report could not
+  be reproduced.
+- **Test count:** 15 (good: 7, bad: 8) — LectureHandler 9, ProfessorHandler 6
 
 ### ReportStatusRevertHandler.CommentReportHandler / .AnswerReportHandler
 
-- **Sorumluluk:** Bir raporun durum değişikliğini geri alır. Önemi: `ACTION_TAKEN` raporun
-  konusu olan içeriği gizliyor, yani yanlışlıkla verilen bir durum bir gönderiyi
-  uygulamadan çıkarıyor.
-- **Test edilen davranışlar:** İki handler için de tek `status` alanının adıyla eşlenmesi,
-  silinmiş raporun haritada bulunmaması, boş hedef listesi, `updateReportStatus`'a geçen
-  enum, ve `status` içermeyen `before` yarısında `null` geçilmesi. Her iki `applyInverse`
-  testinde **diğer** servise hiç dokunulmadığı da doğrulanıyor.
-- **Bilinçli test edilmeyenler:** Durum değişikliğinin içeriği gerçekten gizlemesi/geri
-  getirmesi — `ModerationCommentService` / `ModerationAnswerReportService` işi, integration
-  konusu.
-- **Kullanılan mock'lar:** `CommentReportRepository`, `AnswerReportRepository`,
-  `ModerationCommentService`, `ModerationAnswerReportService`. Dördü birlikte, çünkü bu
-  kadar az mantık taşıyan bir handler çiftinde yakalanmaya değer hata kopyala-yapıştır
-  hatası: yanlış repository ya da yanlış servise bağlanmış bir handler yanlış raporu geri
-  alır — ya da hiçbir şeyi.
-- **Kalan risk:** Yok denecek kadar az; iki handler toplam 30 satır ve ikisi de %100.
-- **Test sayısı:** 10 (good: 6, bad: 4) — CommentReportHandler 6, AnswerReportHandler 4
+- **Responsibility:** reverts a report's status change. Why it matters: `ACTION_TAKEN` hides
+  the content the report is about, so a status given by mistake takes a post out of the app.
+- **Behaviours tested:** for both handlers, that the single `status` field is mapped by name,
+  that a deleted report does not appear in the map, an empty target list, the enum passed to
+  `updateReportStatus`, and `null` being passed for a `before` half without a `status`. Both
+  `applyInverse` tests also verify that the **other** service is never touched.
+- **Deliberately not tested:** the status change actually hiding or restoring the content —
+  `ModerationCommentService` / `ModerationAnswerReportService`'s job, an integration concern.
+- **Mocks used:** `CommentReportRepository`, `AnswerReportRepository`,
+  `ModerationCommentService`, `ModerationAnswerReportService`. All four together, because in
+  a handler pair carrying this little logic the mistake worth catching is a copy-paste one: a
+  handler wired to the wrong repository or the wrong service reverts the wrong report — or
+  nothing at all.
+- **Residual risk:** negligible; the two handlers are 30 lines together and both are at 100%.
+- **Test count:** 10 (good: 6, bad: 4) — CommentReportHandler 6, AnswerReportHandler 4
 
 ### WarningRevertHandler
 
-- **Sorumluluk:** Bir uyarı metnindeki düzeltmeyi geri alır. `applyInverse` içinde kendi
-  sorgusunu yapan **tek** handler: uyarı, verildiği öğrencinin alt kaynağı olarak
-  adreslendiği için sahibi önce çözülmek zorunda — ve bu yüzden reddedebilen tek handler.
-- **Test edilen davranışlar:** Tek `message` alanı, geri çekilmiş uyarının haritada
-  bulunmaması, boş hedef listesi, `updateWarning(principal, studentId, warningId, request)`
-  argüman sırasının uyarı satırından kurulması (audit girdisinden değil — sahip kayıtlı
-  alanlardan biri değil), ve kayıp uyarıda `ApiException` + `NOT_FOUND` +
-  `"Warning not found"` ile reddetmesi.
-- **Bilinçli test edilmeyenler:** `warning.getStudent()` NPE'si. `Warning.student`
-  `@ManyToOne(optional = false)`, yani null öğrencili bir satır var olamaz; test erişilemez
-  bir duruma assert ederdi.
-- **Kullanılan mock'lar:** `WarningRepository` (hem `findAllById` hem `findById` için,
-  ikinci si yalnızca bu handler'da var) ve `ModerationUserService`.
-- **Kalan risk:** Revertibility kontrolü ile revert'in kendisi arasında hiçbir şey kilit
-  tutmuyor, yani `NOT_FOUND` yolu gerçek bir yarış: kontrol satırı görüp "geri alınabilir"
-  der, revert anında satır gitmiş olabilir. Handler doğru davranıyor (patlamak yerine
-  reddediyor) ama kullanıcı geri alınabilir görünen bir girdide hata alıyor.
-- **Test sayısı:** 6 (good: 3, bad: 3)
+- **Responsibility:** reverts a correction to a warning's text. The **only** handler that
+  runs its own query inside `applyInverse`: a warning is addressed as a sub-resource of the
+  student it was issued to, so the owner has to be resolved first — and that makes it the
+  only handler that can refuse.
+- **Behaviours tested:** the single `message` field, a withdrawn warning not appearing in the
+  map, an empty target list, the `updateWarning(principal, studentId, warningId, request)`
+  argument order being built from the warning row (not from the audit entry — the owner is
+  not one of the recorded fields), and refusing a missing warning with `ApiException` +
+  `NOT_FOUND` + `"Warning not found"`.
+- **Deliberately not tested:** a `warning.getStudent()` NPE. `Warning.student` is
+  `@ManyToOne(optional = false)`, so a row with a null student cannot exist; a test would
+  assert over an unreachable state.
+- **Mocks used:** `WarningRepository` (for both `findAllById` and `findById`, the second of
+  which only this handler has) and `ModerationUserService`.
+- **Residual risk:** nothing holds a lock between the revertibility check and the revert
+  itself, so the `NOT_FOUND` path is a real race: the check sees the row and says
+  "revertible", and the row can be gone by the time the revert runs. The handler behaves
+  correctly (refusing rather than crashing) but the user gets an error on an entry that looked
+  revertible.
+- **Test count:** 6 (good: 3, bad: 3)
 
 ### UserRevertHandler
 
-- **Sorumluluk:** Öğrenci hesabı alan düzenlemelerini geri alır. En geniş handler: altı alan,
-  ve bildirdiği değer kümesini **iki tablodan** kuran tek handler — öğrenci satırı artı
-  yönetici id listesi, çünkü rol öğrencide bir kolon değil.
-- **Test edilen davranışlar:**
-  - Altı alanın tamamı; yönetici id kümesindeki öğrencide `role = ADMIN`, olmayanda
-    `STUDENT` (ternary'nin iki kolu ayrı ayrı)
-  - `biography == null → ""`: yük taşıyan normalizasyon, çünkü audit girdisi de `""`
-    kaydediyor — `null` bildirmek dokunulmamış bir biyografiyi değişmiş gibi gösterip
-    geri almayı reddederdi
-  - `UserStatus.DELETED` satırının **atlanması**: anonimleşmiş hesabın kayıtlı kullanıcı
-    adı ve adresi zaten gitmiş, o yüzden bayat değil **kayıp** hedef olarak okunmalı;
-    bildirmek anonim değerleri gerçekmiş gibi geri yazan bir revert önerirdi
-  - Hayatta kalmayan id'nin haritada bulunmaması
-  - Karakterizasyon: yönetici id listesinin döngüden önce çekilmesi, yani **boş id
-    listesinde bile** sorgulanması
-  - `applyInverse`: altı alan tam, ve tek alanlı `before` yarısında diğerlerinin `null`
-    kalması
-- **Bilinçli test edilmeyenler:** `ModerationUserService.updateStudent`'ın kendisi — rol
-  düşürme koruması ve doğrulama oraya ait. Handler bilinçli olarak o yolu çağırıyor ki
-  revert aynı korumaları miras alsın.
-- **Kullanılan mock'lar:** `StudentRepository`, `AdminRepository` (rol yalnızca buradan
-  türetilebiliyor) ve `ModerationUserService`.
-- **Kalan risk:** Bu handler'ın `currentValues` ve `applyInverse`'ü zaten
-  `AdminApiIntegrationTests.aFieldEditIsRevertibleAndTheReversalIsItsOwnAuditEvent`
-  tarafından uçtan uca sürülüyordu; unit testlerin gerçek katkısı yalnızca `DELETED` ve
-  `ADMIN` dallarıydı (batch öncesi 2 açık satır). Yani buradaki değer kapsam değil,
-  dalların **niçin** öyle olduğunun yazılı hâle gelmesi.
-- **Test sayısı:** 9 (good: 4, bad: 5)
+- **Responsibility:** reverts student account field edits. The widest handler: six fields, and
+  the only one that builds the value set it reports from **two tables** — the student row plus
+  the administrator id list, because the role is not a column on the student.
+- **Behaviours tested:**
+  - All six fields; `role = ADMIN` for a student in the administrator id set and `STUDENT`
+    for one that is not (both arms of the ternary, separately)
+  - `biography == null → ""`: a normalization that carries weight, because the audit entry
+    also records `""` — reporting `null` would make an untouched biography look changed and
+    refuse the revert
+  - **Skipping** a `UserStatus.DELETED` row: an anonymized account's recorded username and
+    address are already gone, so it must read as a **vanished** target rather than a stale
+    one; reporting it would suggest a revert that writes the anonymized values back as if
+    they were real
+  - An id that did not survive not appearing in the map
+  - Characterization: the administrator id list being fetched before the loop, meaning it is
+    queried **even for an empty id list**
+  - `applyInverse`: all six fields, and the others staying `null` in a single-field `before`
+    half
+- **Deliberately not tested:** `ModerationUserService.updateStudent` itself — role demotion
+  protection and validation belong there. The handler deliberately calls that path so the
+  revert inherits the same protections.
+- **Mocks used:** `StudentRepository`, `AdminRepository` (the role can only be derived from
+  it) and `ModerationUserService`.
+- **Residual risk:** this handler's `currentValues` and `applyInverse` were already driven end
+  to end by `AdminApiIntegrationTests.aFieldEditIsRevertibleAndTheReversalIsItsOwnAuditEvent`;
+  the unit tests' real contribution was only the `DELETED` and `ADMIN` branches (2 missed
+  lines before the batch). So the value here is not coverage but writing down **why** the
+  branches are the way they are.
+- **Test count:** 9 (good: 4, bad: 5)
 
 ### SocialService (voteComment / voteAnswer)
 
-- **Sorumluluk:** Bir yoruma ya da cevaba oy verir; aynı öğrencinin ikinci oyunda mevcut
-  satırı güncellemesi gerekiyor, çünkü tabloda `(student, comment)` üzerinde unique
-  constraint var.
-- **Test edilen davranışlar:** Bulunamayan hedefte oy tablosuna hiç dokunulmaması; ilk oyda
-  satırın `student` + `comment`/`answer` + `vote` ile kurulması; ikinci oyda **aynı
-  örneğin** mutasyona uğrayıp kaydedilmesi (`isSameAs`, ikinci satır eklenmemesi); cevap
-  yolunun yorum oy tablosuna dokunmaması. Ve karakterizasyon olarak **dört boşluk**:
-  toggle-off olmaması, `null` `voteType`'ın `success = true` ile kaydedilmesi (iki metot
-  için ayrı ayrı).
-- **Bilinçli test edilmeyenler:** `submitComment` / `submitAnswer` / rapor metotları ve
-  bildirim yolu — sınıfın kalan 16 açık satırı, sonraki batch. Unique constraint'in
-  gerçekten ikinci satırı engellemesi integration konusu; burada yalnızca kodun
-  `save`'e *ne verdiği* doğrulanıyor.
-- **Kullanılan mock'lar:** Yalnızca iki metodun dokunduğu dört repository
-  (`CommentRepository`, `AnswerRepository`, `CommentVoteRepository`,
-  `AnswerVoteRepository`). Constructor'ın kalan beş bağımlılığı (`LectureService`,
-  iki rapor repository'si, `NotificationRepository`, `AuditWriter`) mock değil **`null`**
-  geçiliyor: mock koymak, ileride bir düzenlemenin bu işbirlikçileri sessizce kullanmaya
-  başlamasına izin verirdi; `null` bunu metodun kendi testinde anında NPE'ye çeviriyor.
-  `AuditWriter`'ın o listede olması zaten bulgunun kendisi.
-- **Kalan risk:** Dört boşluğun hiçbiri düzeltilmedi — hepsi ürün kararı. En ciddisi
-  audit'in olmaması: oy manipülasyonu moderasyon izinde hiç görünmüyor. `null` `voteType`
-  ise `DataIntegrityViolationException` → 409 "State conflict" olarak yüzeye vuruyor, yani
-  istemci 400 beklerken 409 alıyor.
-- **Test sayısı:** 9 (good: 4, bad: 5)
+- **Responsibility:** votes on a comment or an answer; a second vote by the same student has
+  to update the existing row, because the table has a unique constraint on
+  `(student, comment)`.
+- **Behaviours tested:** that the vote table is never touched for a target that is not found;
+  that the first vote builds the row with `student` + `comment`/`answer` + `vote`; that the
+  second vote mutates and saves **the same instance** (`isSameAs`, no second row inserted);
+  that the answer path does not touch the comment vote table. And, as characterization, the
+  **four gaps**: no toggle-off, and a `null` `voteType` being saved with `success = true`
+  (separately for each of the two methods).
+- **Deliberately not tested:** `submitComment` / `submitAnswer` / the report methods and the
+  notification path — the class's remaining 16 missed lines, a later batch. That the unique
+  constraint really does prevent the second row is an integration concern; only *what the
+  code hands to* `save` is verified here.
+- **Mocks used:** only the four repositories the two methods touch (`CommentRepository`,
+  `AnswerRepository`, `CommentVoteRepository`, `AnswerVoteRepository`). The constructor's
+  other five dependencies (`LectureService`, the two report repositories,
+  `NotificationRepository`, `AuditWriter`) are passed as **`null`** rather than mocks:
+  putting mocks there would let a future edit start using these collaborators silently, while
+  `null` turns that into an immediate NPE in the method's own test. `AuditWriter` being on
+  that list is the finding itself.
+- **Residual risk:** none of the four gaps was fixed — all are product decisions. The most
+  serious is the missing audit: vote manipulation does not appear in the moderation trail at
+  all. A `null` `voteType` surfaces as `DataIntegrityViolationException` → 409 "State
+  conflict", so a client expecting 400 gets 409.
+- **Test count:** 9 (good: 4, bad: 5)
 
 ### StudentService
 
-- **Sorumluluk:** Profil bilgisini bir entity grafiğinden derler ve hesabı soft-delete eder.
-- **Test edilen davranışlar:**
-  - `getUserInformation`: credibility skorunun up eksi down olması, sıfıra denk gelen hâl,
-    ortalama puan + rating/yorum sayıları, rating yokken sıfır ortalama (sıfıra bölme
-    değil), ve bulunamayan öğrencide dönen tam başarısızlık şekli
-  - Skorun, içeriği yazan öğrenciye gelen **bütün** oyları, kimin verdiğine bakmadan
-    sayması (sabitlendi ki ileride "kendi oyunu sayma" değişikliği bilinçli olsun)
-  - `getUserRatings`: her rating'in `LectureResponse` + ortalama skora eşlenmesi, mesaja
-    gömülen sayı (`"Success, found 2 ratings."`), boş listede yine `success = true`, ve
-    bulunamayan öğrencide `null` değil **boş liste** dönmesi
-  - `deleteAccount`: `null` principal; e-postası tabloda olmayan principal (hiçbir şey
-    yazılmıyor); başarılı yolda `UserStatus.DELETED` yazılıp `save` edilmesi ve mesajın
-    e-postayı içermesi
-- **Bilinçli test edilmeyenler:** `softDeleteByKitEmail` ve `getAverageRating` için
-  doğrudan test yok — ikisinin de her dalı `deleteAccount` / `getUserInformation`
-  üzerinden geçiliyor, ayrı test yazmak aynı satırları ikinci kez saymak olurdu.
-  `ProfilePictureGenerator`, `LectureService.createLectureResponse` ve
-  `RatingService.calculateAverageScore` **statik**, mock'lanmıyorlar; `mockStatic` yeni bir
-  bağımlılık (mockito-inline) ve ev stilinden sapma olurdu, gerek de yok — sade fixture'lar
-  üçünü de sürüyor.
-- **Kullanılan mock'lar:** Yalnızca `StudentRepository`; sınıfın tek bağımlılığı.
-- **Kalan risk:**
-  - **Hiçbir yol exception atmıyor.** Her başarısızlık `success = false` taşıyan bir
-    response ve HTTP 200. Yani yalnızca atılan hataya bakan bir çağıran, bozuk bir
-    aramayı başarılı sanıyor. Testler bu sözleşmeyi sabitliyor, ama sözleşmenin kendisi
-    tartışmalı.
-  - `getUserInformation`, `readOnly = true` bir transaction içinde
-    `student.setCredibilityScore(...)` yapıyor. Unit seviyede zararsız; gerçek bir
-    persistence context'te dirty-checking'in ne yaptığı integration sorusu.
-  - Mesaj dizgilerindeki yazım hataları (`couldnt`, `succesfully`) istemciye gidiyordu;
-    `deleteAccount`'un üçü `edaf2bc`, `src/main`'deki kalan beşi `57658c3` ile düzeltildi ve
-    onları sabitleyen testler birlikte güncellendi (F-10 kapandı).
-- **Test sayısı:** 12 (good: 6, bad: 6)
+- **Responsibility:** assembles profile information from an entity graph and soft-deletes the
+  account.
+- **Behaviours tested:**
+  - `getUserInformation`: the credibility score being ups minus downs, the case that comes
+    out to zero, the average score plus the rating/comment counts, a zero average with no
+    ratings (rather than a division by zero), and the exact failure shape returned for a
+    student that is not found
+  - That the score counts **all** votes reaching the student who wrote the content,
+    regardless of who cast them (pinned so that a future "don't count your own vote" change
+    is a deliberate one)
+  - `getUserRatings`: each rating being mapped to a `LectureResponse` plus the average score,
+    the count embedded in the message (`"Success, found 2 ratings."`), `success = true` even
+    for an empty list, and an **empty list** rather than `null` for a student that is not
+    found
+  - `deleteAccount`: a `null` principal; a principal whose email is not in the table (nothing
+    is written); and on the happy path, `UserStatus.DELETED` being written and saved and the
+    message containing the email
+- **Deliberately not tested:** there are no direct tests for `softDeleteByKitEmail` and
+  `getAverageRating` — every branch of both is exercised through `deleteAccount` /
+  `getUserInformation`, and separate tests would only count the same lines twice.
+  `ProfilePictureGenerator`, `LectureService.createLectureResponse` and
+  `RatingService.calculateAverageScore` are **static** and are not mocked; `mockStatic` would
+  mean a new dependency (mockito-inline) and a departure from the house style, and it is not
+  needed — plain fixtures drive all three.
+- **Mocks used:** only `StudentRepository`; the class's single dependency.
+- **Residual risk:**
+  - **No path throws.** Every failure is a response carrying `success = false` and HTTP 200.
+    So a caller that only looks at thrown errors mistakes a broken lookup for a successful
+    one. The tests pin this contract, but the contract itself is debatable.
+  - `getUserInformation` calls `student.setCredibilityScore(...)` inside a
+    `readOnly = true` transaction. Harmless at the unit level; what dirty checking does in a
+    real persistence context is an integration question.
+  - Typos in the message strings (`couldnt`, `succesfully`) were going out to the client;
+    the three in `deleteAccount` were fixed in `edaf2bc` and the remaining five in `src/main`
+    in `57658c3`, with the tests that pin them updated alongside (F-10 closed).
+- **Test count:** 12 (good: 6, bad: 6)
 
 ### AccountService
 
-- **Sorumluluk:** `StudentService` üzerine ince bir cephe, kendine ait tek mantığı var:
-  hesap silinince ona verilmiş token'ları iptal etmek.
-- **Test edilen davranışlar:** İki okuma yolunun `student.getId()` ile değiştirmeden
-  delege etmesi; `deleteAccount`'ta **başarılı** silmede
-  `invalidateAllAuthTokensForEmail`'in çağrılması ve **başarısız** silmede
-  çağrılmaması; `requestLogout`'un dönen oturum sayısını mesaja gömmesi (üç oturum ve
-  sıfır oturum).
-- **Bilinçli test edilmeyenler:** `AuthService.invalidateAllAuthTokensForEmail`'in
-  gerçekten token'ları revoke etmesi — `AuthService`'in işi. Silinen bir hesabın
-  token'ıyla artık istek yapılamadığı integration konusu (`TokenAuthenticationService`
-  `DELETED`'ı reddediyor).
-- **Kullanılan mock'lar:** `AuthService` ve `StudentService`. `StudentService` mock'lanıyor
-  çünkü sınav edilen şey silmenin kendisi değil, silmenin **sonucuna göre** token iptalinin
-  yapılıp yapılmaması.
-- **Kalan risk:** `success` koşulu olmadan hesap `DELETED` olurken her token süresi
-  dolana kadar geçerli kalıyordu ve bir öğrenci token'ı bir yıl yaşıyor — bu yüzden
-  başarısız-silme dalı bu batch'in en değerli tek testi. Sınıf `student == null` gelirse
-  `getId()`/`getKitEmail()` üzerinde NPE atar; principal'ı security zinciri sağladığı için
-  test edilmedi.
-- **Test sayısı:** 6 (good: 4, bad: 2)
+- **Responsibility:** a thin facade over `StudentService` with exactly one piece of logic of
+  its own: revoking the tokens issued to an account when it is deleted.
+- **Behaviours tested:** the two read paths delegating unchanged with `student.getId()`; that
+  `invalidateAllAuthTokensForEmail` is called on a **successful** deletion and **not** called
+  on a failed one; and `requestLogout` embedding the returned session count in the message
+  (three sessions and zero sessions).
+- **Deliberately not tested:** `AuthService.invalidateAllAuthTokensForEmail` actually revoking
+  the tokens — `AuthService`'s job. That a deleted account's token can no longer make requests
+  is an integration concern (`TokenAuthenticationService` rejects `DELETED`).
+- **Mocks used:** `AuthService` and `StudentService`. `StudentService` is mocked because what
+  is under examination is not the deletion itself but whether token revocation happens
+  **based on its outcome**.
+- **Residual risk:** without the `success` condition the account would go `DELETED` while
+  every token stayed valid until it expired, and a student token lives for a year — which is
+  why the failed-deletion branch is the single most valuable test in this batch. The class
+  throws an NPE on `getId()`/`getKitEmail()` if `student` arrives as `null`; not tested,
+  because the principal is supplied by the security chain.
+- **Test count:** 6 (good: 4, bad: 2)
