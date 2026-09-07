@@ -2,7 +2,6 @@ package com.example.ratemyprofessor.Fragments;
 
 import static android.view.View.INVISIBLE;
 
-import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
@@ -48,7 +47,6 @@ import com.example.ratemyprofessor.ServerCommunication.Requests.CommentReportReq
 import com.example.ratemyprofessor.ServerCommunication.Requests.PostCommentRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.RatingRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.RatingTopicRequest;
-import com.example.ratemyprofessor.ServerCommunication.Requests.SubmitAnswerRequest;
 import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingAverageResponse;
@@ -60,6 +58,7 @@ import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
 import com.example.ratemyprofessor.ServerCommunication.Requests.VoteRequest;
 import com.example.ratemyprofessor.databinding.DialogCommentReportBinding;
 import com.example.ratemyprofessor.databinding.FragmentRatingsBinding;
+import com.example.ratemyprofessor.logic.CommentHelper;
 import com.example.ratemyprofessor.logic.RatingColorCalculator;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -455,12 +454,6 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             RatingRequest request = new RatingRequest(lecture.id, requestList);
             String token = LoginSession.from(requireContext()).bearerToken();
 
-//            for (Map.Entry<RatingCategory, Double> entry : changedRatings.entrySet()) {
-//                Log.d(TAG,entry.getKey() + " -> " + entry.getValue());
-//                System.out.println(entry.getKey() + " -> " + entry.getValue());
-//            }
-
-
             // (Trying to) submit the ratings
             if (!AuthManager.getInstance().isLoggedIn()) {
                 Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
@@ -506,47 +499,24 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
      */
     @Override
     public void onOpenReplies(Comment comment) {
-        System.out.println("onOpenReplies");
+
         flowInterface.openReplyFragment(comment);
     }
 
     @Override
     public void vote(String commentID, VoteType voteType, CommentType commentType) {
-        LoginSession session = LoginSession.from(getContext());
-        String authToken = session.bearerToken();
-        Call<BasicResponse> call;
-        if (commentType == CommentType.COMMENT) {
-            call = apiService.voteComment(authToken, commentID, new VoteRequest(voteType));
-        } else {
-            call = apiService.voteAnswer(authToken, commentID, new VoteRequest(voteType));
-        }
-        if (!AuthManager.getInstance().isLoggedIn()) {
-            Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
-        } else {
-            call.enqueue(new Callback<>() {
-                @Override
-                public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
-                    if (!response.isSuccessful()) {
-                        Toast.makeText(getContext(), "Vote couldn't be sent.", Toast.LENGTH_SHORT);
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<BasicResponse> call, Throwable throwable) {
-                    Toast.makeText(getContext(), "Vote couldn't be sent.", Toast.LENGTH_SHORT);
-                }
-            });
-        }
+        CommentHelper.vote(getContext(), apiService, commentID, voteType, commentType);
     }
 
     @Override
     public void reportComment(String commentID) {
-        showCommentReportDialog(commentID, CommentType.COMMENT);
+        //showCommentReportDialog(commentID, CommentType.COMMENT);
+        CommentHelper.showCommentReportDialog(getLayoutInflater(), apiService, getContext(), commentID, CommentType.COMMENT);
     }
 
     @Override
     public void reportReply(String commentID) {
-        showCommentReportDialog(commentID, CommentType.REPLY);
+        //This is never used in this class
     }
 
     private void updateLocalRatingsFromRequest(List<RatingTopicRequest> ratingRequests) {
@@ -613,101 +583,4 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         binding = null;
     }
 
-    /**
-     * Opens the bug report dialog.
-     */
-    private void showCommentReportDialog(String commentID, CommentType type) {
-        DialogCommentReportBinding dialogBinding = DialogCommentReportBinding.inflate(getLayoutInflater());
-
-        ReportReason[] reasons = ReportReason.values();
-
-        ArrayAdapter<ReportReason> adapter = new ArrayAdapter<>(
-                getContext(),
-                android.R.layout.simple_spinner_item,
-                reasons
-        );
-
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-        dialogBinding.reportReason.setAdapter(adapter);
-
-        Dialog dialog = new MaterialAlertDialogBuilder(requireContext())
-                .setView(dialogBinding.getRoot())
-                .create();
-
-        dialogBinding.bugReportCancel.setOnClickListener(v -> dialog.dismiss());
-        dialogBinding.bugReportSubmit.setOnClickListener(v -> submitCommentReport(dialogBinding, dialog, commentID, type));
-        dialogBinding.commentReportInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            /**
-             * Clears the empty-input error once the user starts typing.
-             */
-            @Override
-            public void afterTextChanged(Editable s) {
-                dialogBinding.bugReportInputLayout.setError(null);
-            }
-        });
-
-        dialog.setOnShowListener(dialogInterface -> {
-            if (dialog.getWindow() != null) {
-                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            }
-        });
-        dialog.show();
-    }
-    /**
-     * Validates the bug report text before closing the dialog.
-     *
-     * @param dialogBinding the views of the bug report dialog
-     * @param dialog        the dialog to close once the report is accepted
-     */
-    private void submitCommentReport(DialogCommentReportBinding dialogBinding, Dialog dialog,
-                                     String commentID, CommentType type) {
-        String report = dialogBinding.commentReportInput.getText() == null
-                ? ""
-                : dialogBinding.commentReportInput.getText().toString().trim();
-
-        if (report.isEmpty()) {
-            dialogBinding.bugReportInputLayout.setError(getString(R.string.bug_report_empty_error));
-            return;
-        }
-
-        ReportReason reason = (ReportReason) dialogBinding.reportReason.getSelectedItem();
-        CommentReportRequest request = new CommentReportRequest(commentID, reason, report);
-        Call<BasicResponse> reportCall;
-        String authToken = LoginSession.from(getContext()).bearerToken();
-        if (type == CommentType.COMMENT) {
-            reportCall = apiService.reportComment(authToken, request);
-        } else {
-            reportCall = apiService.reportReply(authToken, request);
-        }
-        if (!AuthManager.getInstance().isLoggedIn()) {
-            Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
-        } else {
-            reportCall.enqueue(new Callback<BasicResponse>() {
-                @Override
-                public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
-                    BasicResponse body = response.body();
-                    if (!response.isSuccessful() || body == null || !body.success()) {
-                        Log.println(Log.DEBUG, "comment report", "failure: " + response.code());
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<BasicResponse> call, Throwable throwable) {
-                    Log.println(Log.DEBUG, "comment report", "failure: " + throwable.getMessage());
-                }
-            });
-            dialogBinding.bugReportInputLayout.setError(null);
-            Toast.makeText(requireContext(), R.string.bug_report_submitted, Toast.LENGTH_SHORT).show();
-        }
-        dialog.dismiss();
-    }
 }

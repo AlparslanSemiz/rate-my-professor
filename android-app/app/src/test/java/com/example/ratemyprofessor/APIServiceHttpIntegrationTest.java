@@ -120,7 +120,7 @@ public class APIServiceHttpIntegrationTest {
                 .setResponseCode(200)
                 .setBody("{\"message\":\"ok\",\"success\":true,\"lectures\":"
                         + "[{\"id\":\"lecture-1\",\"name\":\"Algorithms\",\"code\":\"240001\","
-                        + "\"semesterYear\":2026,\"semesterSeason\":\"WINTER\",\"active\":true,"
+                        + "\"semesterYear\":2026,\"semesterSeason\":\"WS\",\"active\":true,"
                         + "\"professorId\":\"prof-1\",\"commentCount\":3,\"ratingCount\":4}]}"));
 
         Response<LecturesResponse> response = apiService.getLectures().execute();
@@ -129,7 +129,7 @@ public class APIServiceHttpIntegrationTest {
         assertNotNull(response.body());
         assertEquals(1, response.body().lectures().size());
         assertEquals("Algorithms", response.body().lectures().get(0).name());
-        assertEquals(SemesterSeason.WINTER, response.body().lectures().get(0).semesterSeason());
+        assertEquals(SemesterSeason.WS, response.body().lectures().get(0).semesterSeason());
     }
 
     @Test
