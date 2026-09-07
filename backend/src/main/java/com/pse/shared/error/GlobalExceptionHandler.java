@@ -1,6 +1,7 @@
 package com.pse.shared.error;
 
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.exception.InvalidAuthTokenException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,19 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MissingRequestHeaderException.class)
     ResponseEntity<BasicResponse> handleMissingHeader(MissingRequestHeaderException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new BasicResponse("Not logged in", false));
+    }
+
+    /**
+     * Thrown by {@code AuthService.verifyUser} when the Authorization header is absent or
+     * not a Bearer token. It reaches here only from the endpoints that read the header by
+     * hand -- {@code POST /reports}, {@code /auth/validate}, {@code /admins/validate} --
+     * because the security chain leaves those open. Without this it fell through to the
+     * catch-all below and answered 500, where the documented contract is 401.
+     */
+    @ExceptionHandler(InvalidAuthTokenException.class)
+    ResponseEntity<BasicResponse> handleInvalidAuthToken(InvalidAuthTokenException exception) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new BasicResponse("Not logged in", false));
     }
