@@ -1,6 +1,7 @@
 package com.pse.professor.service;
 
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -134,6 +135,13 @@ public class ProfessorService {
 
 
     public static ProfessorResponse createProfessorResponse(Professor professor) {
+
+
+        double averageRating = calculateAverageRating(professor);
+        professor.setAverageRating(BigDecimal.valueOf(averageRating));
+
+
+
         return new ProfessorResponse(
                 professor.getId(),
                 professor.getFirstName(),
