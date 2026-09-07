@@ -121,7 +121,8 @@ public class APIServiceHttpIntegrationTest {
                 .setBody("{\"message\":\"ok\",\"success\":true,\"lectures\":"
                         + "[{\"id\":\"lecture-1\",\"name\":\"Algorithms\",\"code\":\"240001\","
                         + "\"semesterYear\":2026,\"semesterSeason\":\"WINTER\",\"active\":true,"
-                        + "\"professorId\":\"prof-1\",\"commentCount\":3,\"ratingCount\":4}]}"));
+                        + "\"professorId\":\"prof-1\",\"commentCount\":3,\"ratingCount\":4,"
+                        + "\"averageRating\":4.5}]}"));
 
         Response<LecturesResponse> response = apiService.getLectures().execute();
 

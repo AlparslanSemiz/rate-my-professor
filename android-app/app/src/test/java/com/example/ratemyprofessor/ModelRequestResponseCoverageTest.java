@@ -222,7 +222,7 @@ public class ModelRequestResponseCoverageTest {
         assertTrue(professor.getLectures().isEmpty());
         assertEquals(professor, lectureModel.professors().get(0));
         assertEquals(8, lectureModel.ratingCount());
-        assertEquals(3.3, lectureModel.averageRating());
+        assertEquals(3.3, lectureModel.averageRating(), 0.0001);
 
         user.createReview(review);
         user.writeComment(comment);

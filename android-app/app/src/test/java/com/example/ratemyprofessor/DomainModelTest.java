@@ -67,7 +67,7 @@ public class DomainModelTest {
         assertTrue(lecture.active);
         assertEquals(5, lecture.commentCount);
         assertEquals(10, lecture.ratingCount);
-        assertEquals(2.7, lecture.averageRating);
+        assertEquals(2.7, lecture.averageRating, 0.0001);
     }
 
     @Test
