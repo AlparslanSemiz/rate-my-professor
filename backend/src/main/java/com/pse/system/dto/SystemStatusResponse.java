@@ -1,5 +1,6 @@
 package com.pse.system.dto;
 
+
 /**
  * Answer of {@code GET /system/status}.
  *
@@ -14,6 +15,13 @@ package com.pse.system.dto;
  * @param uptimeSeconds  seconds since {@code startedAt}
  * @param counts         table counts, {@code null} when they could not be read
  * @param lastWrite      newest audit event, {@code null} when there is none
+ *
+ * <p>Those two are the schema's two known gaps. {@code @Schema(nullable = true)} works on a
+ * scalar -- the cursors and {@code database.error} carry it -- but on a property that is a
+ * {@code $ref} springdoc emits {@code {"type":"null","$ref":…}}, which claims the value can
+ * only ever be null. Both forms are wrong, so neither is used and
+ * {@code OpenApiResponseValidationTests} names the two pointers instead. The fix is one
+ * annotation each when springdoc emits the 3.1 {@code anyOf} form.
  * @param gitlabEnabled  whether the GitLab issue integration is configured. The panel
  *                       hides the "create issue" action when it is not, rather than
  *                       discovering it by pressing the button and getting a 503.

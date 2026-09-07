@@ -33,6 +33,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.lang.annotation.Annotation;
@@ -100,6 +101,18 @@ class ApiAuthorizationMatrixTests {
             "GET /social/comments/{lecture_id}",
             "GET /social/sync/comments"
     );
+
+    /**
+     * Routes registered by a dependency that are deliberately reachable without a token.
+     *
+     * <p>One entry, and it is not really an endpoint: {@code /error} is where the servlet
+     * container dispatches an error it is about to render, and Spring Boot's
+     * {@code BasicErrorController} answers it. Requiring a token there would mean an
+     * anonymous request that fails could not be told what went wrong -- the refusal itself
+     * would fail to render. Called directly with no error in flight it answers 500, which is
+     * what the sweep sees.
+     */
+    private static final Set<String> PUBLIC_THIRD_PARTY_ROUTES = Set.of("GET /error");
 
     private static final String STUDENT_EMAIL = "matrix-student@student.kit.edu";
 
@@ -184,6 +197,41 @@ class ApiAuthorizationMatrixTests {
         assertTrue(open.isEmpty(),
                 "these routes answered an anonymous caller without refusing it. Either give "
                         + "SecurityConfig a matcher for them or add them to PUBLIC_ROUTES: " + open);
+    }
+
+    /**
+     * The same question asked of routes this project did not write.
+     *
+     * <p>{@link #applicationRoutes()} filters to {@code com.pse}, which is right for the sweep
+     * above -- it is about endpoints somebody here declared. But the filter also meant a
+     * dependency could register routes and no test would look at them, and the chain ends in
+     * {@code anyRequest().permitAll()}, so whatever it registered would be anonymous. That is
+     * not hypothetical: adding springdoc published {@code /v3/api-docs}, a complete
+     * description of every route and request body including the administrative ones, to
+     * anyone who asked. It is admin-tier now.
+     *
+     * <p>So third-party routes get the treatment first-party ones already had: every one must
+     * either refuse an anonymous caller or be named in {@link #PUBLIC_THIRD_PARTY_ROUTES}.
+     * A dependency that starts serving something new has to be classified by whoever adds it.
+     */
+    @Test
+    void everyRouteADependencyRegisteredIsEitherDeclaredPublicOrRefusesAnonymousCallers()
+            throws Exception {
+        Set<String> open = new TreeSet<>();
+
+        for (String route : thirdPartyRoutes()) {
+            if (PUBLIC_THIRD_PARTY_ROUTES.contains(route)) {
+                continue;
+            }
+            int status = anonymousStatusOf(route);
+            if (status != 401 && status != 403) {
+                open.add(route + " -> " + status);
+            }
+        }
+
+        assertTrue(open.isEmpty(),
+                "a dependency is serving these to anonymous callers. Give SecurityConfig a "
+                        + "matcher for them, or add them to PUBLIC_THIRD_PARTY_ROUTES: " + open);
     }
 
     /** The other direction: the routes declared public have to stay reachable. */
@@ -305,14 +353,32 @@ class ApiAuthorizationMatrixTests {
 
     /** Every {@code "VERB /pattern"} this application publishes, from Spring's own mappings. */
     private Set<String> applicationRoutes() {
+        return routesFrom(handler ->
+                handler.getBeanType().getPackageName().startsWith("com.pse"));
+    }
+
+    /** Routes a dependency registered, not this project. See the test that classifies them. */
+    private Set<String> thirdPartyRoutes() {
+        return routesFrom(handler ->
+                !handler.getBeanType().getPackageName().startsWith("com.pse"));
+    }
+
+    private Set<String> routesFrom(java.util.function.Predicate<HandlerMethod> include) {
         Set<String> routes = new TreeSet<>();
 
         handlerMapping.getHandlerMethods().forEach((info, handler) -> {
-            if (!handler.getBeanType().getPackageName().startsWith("com.pse")) {
+            if (!include.test(handler)) {
                 return;
             }
             for (String pattern : info.getPatternValues()) {
-                for (var method : info.getMethodsCondition().getMethods()) {
+                var methods = info.getMethodsCondition().getMethods();
+                if (methods.isEmpty()) {
+                    // A mapping that names no verb answers all of them. Probing GET is
+                    // enough to decide whether it is anonymous.
+                    routes.add("GET " + pattern);
+                    continue;
+                }
+                for (var method : methods) {
                     routes.add(method.name() + " " + pattern);
                 }
             }

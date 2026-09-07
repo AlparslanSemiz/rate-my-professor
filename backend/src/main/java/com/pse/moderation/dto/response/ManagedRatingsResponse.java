@@ -1,5 +1,6 @@
 package com.pse.moderation.dto.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 /**
@@ -10,6 +11,6 @@ public record ManagedRatingsResponse(
         String message,
         boolean success,
         List<ManagedRatingResponse> ratings,
-        String nextCursor
+        @Schema(nullable = true) String nextCursor
 ) {
 }

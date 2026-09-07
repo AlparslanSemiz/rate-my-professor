@@ -126,6 +126,10 @@ Deployment and scheduled maintenance jobs use these custom CI/CD variables:
 | `MAIL_FROM_NAME` | Sender display name. |
 | `IPINFO_TOKEN` | Optional IPinfo token. Secret when set. |
 | `GEOAPIFY_API_KEY` | Optional Geoapify API key. Secret when set. |
+| `SONAR_TOKEN` | SonarCloud analysis token. Secret. **Its presence is what enables the `sonarcloud` job** — until it is set, the job does not run and the pipeline is unchanged. Create it under My Account → Security on SonarCloud. |
+| `SONAR_PROJECT_KEY` | SonarCloud project key, e.g. `kit-pse_backend`. Shown on the project's Information page after it is created. |
+| `SONAR_ORGANIZATION` | SonarCloud organization key. Not the display name — the key under Organization → Administration. |
+| `SONAR_HOST_URL` | Optional. Defaults to `https://sonarcloud.io`; set it only for a self-hosted SonarQube. |
 | `AUDIT_REVERT_WINDOW` | Optional audit revert window override. |
 | `GITLAB_BASE_URL` | Optional GitLab instance base URL for issue creation. |
 | `GITLAB_PROJECT_ID` | Optional GitLab project id/path for issue creation. |

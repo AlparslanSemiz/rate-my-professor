@@ -1,5 +1,6 @@
 package com.pse.moderation.dto.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 /**
@@ -14,6 +15,6 @@ public record UserListResponse(
         String message,
         boolean success,
         List<UserResponse> users,
-        String nextCursor
+        @Schema(nullable = true) String nextCursor
 ) {
 }

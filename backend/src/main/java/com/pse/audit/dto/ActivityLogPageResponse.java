@@ -1,5 +1,6 @@
 package com.pse.audit.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 /**
@@ -10,6 +11,6 @@ public record ActivityLogPageResponse(
         String message,
         boolean success,
         List<AuditLogResponse> activityLogs,
-        String nextCursor
+        @Schema(nullable = true) String nextCursor
 ) {
 }

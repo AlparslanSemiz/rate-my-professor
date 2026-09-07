@@ -50,6 +50,25 @@ public class SecurityConfig {
                         // can widen an /admin path by accident. It does not capture /admins/**:
                         // patterns match whole segments, and "admins" is not "admin".
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+                        // The generated OpenAPI schema. Admin-tier deliberately: it is a
+                        // complete description of every route and every request body, the
+                        // administrative surface included, and the chain's default is
+                        // permitAll() -- so adding springdoc published all of it anonymously
+                        // until this line existed. The authorization sweep could not have
+                        // caught that, because it only walks handlers in com.pse and these
+                        // live in org.springdoc; ApiAuthorizationMatrixTests now requires
+                        // routes from outside the project to be declared rather than skipping
+                        // them.
+                        // All three forms, because they are three paths and a matcher for
+                        // one is not a matcher for the others: /v3/api-docs is the JSON,
+                        // /v3/api-docs.yaml the same document as YAML, and /v3/api-docs/**
+                        // the per-group documents and swagger-config. Locking only the first
+                        // two left the YAML open, which is how the sweep below found it.
+                        .requestMatchers(
+                                "/v3/api-docs",
+                                "/v3/api-docs.yaml",
+                                "/v3/api-docs/**"
+                        ).hasRole("ADMIN")
                         .requestMatchers("/account/**").authenticated()
                         // Both /data creates are admin-only and are answered here. The professor
                         // route used to carry its own isAdmin() check in the handler instead,

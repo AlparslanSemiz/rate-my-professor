@@ -91,6 +91,48 @@ coverage:line-target:
       when: never
     - when: on_success
 
+# Static analysis. Runs only when SONAR_TOKEN exists, so the pipeline is unchanged until
+# somebody creates the project on SonarCloud and adds the variable -- the same shape
+# backup:offsite uses for a missing variable, and the reason this job does not need to be
+# commented out while that is pending.
+#
+# allow_failure on purpose, for now: the first scan of a codebase this size raises hundreds
+# of issues and none of them are regressions. Turn it off once the baseline has been read
+# and a quality gate agreed -- until then a red pipeline would only teach people to ignore
+# it. The three variables it needs are listed in docs/deployment.md.
+sonarcloud:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  needs:
+    - job: server:test
+      artifacts: true
+  allow_failure: true
+  variables:
+    # Sonar reads git history to attribute issues to authors and to work out what is new.
+    # GIT_DEPTH is already 0 at the top of this file, which is what makes that possible.
+    SONAR_USER_HOME: "$CI_PROJECT_DIR/.sonar"
+  cache:
+    key: "sonar-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - .sonar/cache
+      - .m2/repository/
+      - .m2/wrapper/
+  script:
+    # Reuses server:test's JaCoCo XML through `needs: artifacts` rather than re-running the
+    # suite: sonar.coverage.jacoco.xmlReportPaths in the pom points at exactly that file, so
+    # Sonar and jacoco:check report the same number by construction.
+    - >
+      ./mvnw -B -ntp sonar:sonar
+      -Dsonar.host.url="${SONAR_HOST_URL:-https://sonarcloud.io}"
+      -Dsonar.projectKey="$SONAR_PROJECT_KEY"
+      -Dsonar.organization="$SONAR_ORGANIZATION"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$SONAR_TOKEN'
+      when: on_success
+    - when: never
+
 # Everything that needs a real PostgreSQL rather than the H2 translation the main test job
 # runs. A GitLab service is a plain TCP server -- no Docker socket, no privileged runner and
 # no Testcontainers dependency -- which is what lets the integration layer exist while the

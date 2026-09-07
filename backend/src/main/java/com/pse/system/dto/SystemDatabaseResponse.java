@@ -1,5 +1,7 @@
 package com.pse.system.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Result of the readiness probe against the configured database.
  *
@@ -9,7 +11,7 @@ package com.pse.system.dto;
  */
 public record SystemDatabaseResponse(
         boolean reachable,
-        Long latencyMs,
-        String error
+        @Schema(nullable = true) Long latencyMs,
+        @Schema(nullable = true) String error
 ) {
 }

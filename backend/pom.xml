@@ -29,6 +29,18 @@
 	<properties>
 		<java.version>21</java.version>
 		<jacoco.version>0.8.13</jacoco.version>
+		<sonar.version>5.2.0.4988</sonar.version>
+		<!--
+			Sonar reads coverage from the JaCoCo XML rather than measuring it itself, so the
+			two numbers cannot disagree. The report is written in the test phase, which is
+			why `mvn verify sonar:sonar` works and `mvn sonar:sonar` alone reports zero.
+		-->
+		<sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+		<!--
+			The same two exclusions jacoco:check uses. Kept in step by hand: a class excluded
+			from one and not the other makes the two tools disagree about the same file.
+		-->
+		<sonar.coverage.exclusions>**/DemoApplication.java,**/exception/**</sonar.coverage.exclusions>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -109,6 +121,32 @@
 			<version>1.81</version>
 		</dependency>
 
+		<!--
+			The OpenAPI schema, generated from the controllers rather than written by hand.
+			springdoc v3 is the line that supports Spring Boot 4; v2 targets Boot 3, and
+			3.0.3 is the release built against the 4.0.x this project is on.
+
+			The -api starter, not -ui: this backend is consumed by an Android client and the
+			admin panel, and swagger-ui would add webjars and a second set of routes for a
+			page nobody asked for.
+		-->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+			<version>3.0.3</version>
+		</dependency>
+
+		<!--
+			Validates real responses against the generated schema, so "the schema covers every
+			route" (OpenApiContractTests) is joined by "and the bodies match what it says".
+		-->
+		<dependency>
+			<groupId>com.atlassian.oai</groupId>
+			<artifactId>openapi-request-validator-mockmvc</artifactId>
+			<version>3.0.0</version>
+			<scope>test</scope>
+		</dependency>
+
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
@@ -141,6 +179,11 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.sonarsource.scanner.maven</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>${sonar.version}</version>
 			</plugin>
 			<plugin>
 				<groupId>org.jacoco</groupId>
