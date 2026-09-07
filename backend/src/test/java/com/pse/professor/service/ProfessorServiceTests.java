@@ -190,7 +190,7 @@ class ProfessorServiceTests {
 
         assertFalse(response.success());
         assertEquals(
-                "Couldn'    t find prof with uuid: " + professorId,
+                "Couldn't find prof with uuid: " + professorId,
                 response.message()
         );
 
@@ -507,7 +507,6 @@ class ProfessorServiceTests {
         when(overall2.getValue()).thenReturn(2.0);
 
         when(organization.getCategory()).thenReturn(RatingCategory.ORGANIZATION);
-        when(organization.getValue()).thenReturn(5.0);
 
         double result = ProfessorService.calculateAverageRating(professor);
 
