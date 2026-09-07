@@ -105,14 +105,14 @@ class AccountServiceTests {
         // Given
         Student student = student();
         when(studentService.deleteAccount(student))
-                .thenReturn(new BasicResponse("Error, couldnt find student", false));
+                .thenReturn(new BasicResponse("Error, couldn't find student", false));
 
         // When
         BasicResponse response = service().deleteAccount(student);
 
         // Then -- the failure is passed through unchanged, and nothing is revoked
         assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, couldnt find student");
+        assertThat(response.message()).isEqualTo("Error, couldn't find student");
         verifyNoInteractions(authService);
     }
 

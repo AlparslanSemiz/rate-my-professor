@@ -185,9 +185,9 @@ class StudentServiceTests {
     }
 
     /**
-     * The failure carries {@code success = false} and nulls, and the message says
+     * The failure carries {@code success = false} and nulls, and the message still says
      * "authenticate" although the only thing that happened is that no row matched the id.
-     * Pinned as-is: the wording reaches the client.
+     * Pinned as-is: the wording reaches the client, so it cannot change silently.
      */
     @Test
     void getUserInformation_unknownStudent_returnsTheAuthenticationFailureShape() {
@@ -274,7 +274,7 @@ class StudentServiceTests {
 
         // Then
         assertThat(response.success()).isTrue();
-        assertThat(response.message()).isEqualTo("Deleted Account succesfully: ada@kit.edu");
+        assertThat(response.message()).isEqualTo("Deleted Account successfully: ada@kit.edu");
         ArgumentCaptor<Student> saved = ArgumentCaptor.forClass(Student.class);
         verify(studentRepository).save(saved.capture());
         assertThat(saved.getValue().getStatus()).isEqualTo(UserStatus.DELETED);
@@ -287,7 +287,7 @@ class StudentServiceTests {
 
         // Then
         assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, couldnt authenticate user");
+        assertThat(response.message()).isEqualTo("Error, couldn't authenticate user");
         verifyNoInteractions(studentRepository);
     }
 
@@ -306,7 +306,7 @@ class StudentServiceTests {
 
         // Then
         assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, couldnt find student");
+        assertThat(response.message()).isEqualTo("Error, couldn't find student");
         verify(studentRepository, never()).save(any());
     }
 }
