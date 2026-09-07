@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -n "${CI_JOB_ID:-}" ]; then
+  COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-backend-smoke-${CI_PIPELINE_ID:-ci}-${CI_JOB_ID}}"
+else
+  COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-backend-smoke}"
+fi
+POSTGRES_CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-${COMPOSE_PROJECT_NAME}-postgres}"
+BACKEND_CONTAINER_NAME="${BACKEND_CONTAINER_NAME:-${COMPOSE_PROJECT_NAME}-app}"
+export COMPOSE_PROJECT_NAME POSTGRES_CONTAINER_NAME BACKEND_CONTAINER_NAME
+SMOKE_HEALTH_URL="${SMOKE_HEALTH_URL:-http://localhost:8080/health}"
+
 cleanup() {
-  docker compose down --remove-orphans >/dev/null 2>&1 || true
+  docker compose down --remove-orphans --volumes >/dev/null 2>&1 || true
 }
 
 trap cleanup EXIT
@@ -15,10 +25,11 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
+docker compose down --remove-orphans --volumes >/dev/null 2>&1 || true
 docker compose up --build -d
 
 for attempt in {1..60}; do
-  if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
+  if curl -fsS "$SMOKE_HEALTH_URL" >/dev/null 2>&1; then
     echo "Docker smoke test passed: /health returned a successful response."
     exit 0
   fi

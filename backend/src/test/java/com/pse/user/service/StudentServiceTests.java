@@ -1,0 +1,312 @@
+package com.pse.user.service;
+
+import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.dto.response.UserRatingResponse;
+import com.pse.lecture.model.Lecture;
+import com.pse.rating.model.Rating;
+import com.pse.rating.model.RatingCategory;
+import com.pse.rating.model.RatingTopic;
+import com.pse.shared.enums.UserStatus;
+import com.pse.shared.enums.VoteType;
+import com.pse.social.model.Answer;
+import com.pse.social.model.AnswerVote;
+import com.pse.social.model.Comment;
+import com.pse.social.model.CommentVote;
+import com.pse.user.dto.StudentProfileResponse;
+import com.pse.user.model.Student;
+import com.pse.user.repository.StudentRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+/**
+ * The profile-facing half of the student service: it assembles a profile from an entity
+ * graph and soft-deletes an account. Failure is never an exception here -- every path
+ * returns a response object with {@code success = false}, which means a caller that only
+ * checks for a thrown error sees a broken lookup as a successful one. So the assertions are
+ * on the response shape as much as on the values.
+ */
+@ExtendWith(MockitoExtension.class)
+class StudentServiceTests {
+
+    private static final UUID STUDENT_ID = UUID.fromString("3f2504e0-4f89-11d3-9a0c-0305e82c3301");
+
+    @Mock
+    private StudentRepository studentRepository;
+
+    private StudentService service() {
+        return new StudentService(studentRepository);
+    }
+
+    private static Student student() {
+        Student student = new Student();
+        student.setId(STUDENT_ID);
+        student.setUsername("ada");
+        student.setKitEmail("ada@kit.edu");
+        return student;
+    }
+
+    /** A comment carrying the given votes, attributed to the student. */
+    private static Comment commentWithVotes(Student student, VoteType... votes) {
+        Comment comment = new Comment();
+        comment.setStudent(student);
+        for (VoteType vote : votes) {
+            CommentVote commentVote = new CommentVote();
+            commentVote.setVote(vote);
+            commentVote.setComment(comment);
+            comment.getVotes().add(commentVote);
+        }
+        return comment;
+    }
+
+    private static Answer answerWithVotes(Student student, VoteType... votes) {
+        Answer answer = new Answer();
+        answer.setStudent(student);
+        for (VoteType vote : votes) {
+            AnswerVote answerVote = new AnswerVote();
+            answerVote.setVote(vote);
+            answerVote.setAnswer(answer);
+            answer.getVotes().add(answerVote);
+        }
+        return answer;
+    }
+
+    /**
+     * A rating on its own lecture with one topic, so the weighted average is a real number
+     * rather than the zero an empty topic list returns.
+     */
+    private static Rating ratingScoring(double value) {
+        Rating rating = new Rating();
+        rating.setLecture(new Lecture());
+        RatingTopic topic = new RatingTopic();
+        topic.setCategory(RatingCategory.ORGANIZATION);
+        topic.setValue(value);
+        topic.setRating(rating);
+        rating.getTopics().add(topic);
+        return rating;
+    }
+
+    // ---------- getUserInformation ----------
+
+    @Test
+    void getUserInformation_commentAndAnswerVotes_scoresUpvotesMinusDownvotes() {
+        // Given -- one up and one down on a comment, one up on an answer
+        Student student = student();
+        student.getComments().add(commentWithVotes(student, VoteType.UP, VoteType.DOWN));
+        student.getAnswers().add(answerWithVotes(student, VoteType.UP));
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+
+        // When
+        StudentProfileResponse response = service().getUserInformation(STUDENT_ID);
+
+        // Then
+        assertThat(response.credibilityScore()).isEqualTo(1);
+    }
+
+    @Test
+    void getUserInformation_oneUpAndOneDownVote_scoresZero() {
+        // Given
+        Student student = student();
+        student.getAnswers().add(answerWithVotes(student, VoteType.UP, VoteType.DOWN));
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+
+        // When
+        StudentProfileResponse response = service().getUserInformation(STUDENT_ID);
+
+        // Then
+        assertThat(response.credibilityScore()).isZero();
+    }
+
+    /**
+     * The score counts every vote on content the student wrote, whoever cast it -- which is
+     * the point of a credibility score, and worth pinning so a later "exclude self-votes"
+     * change has to be deliberate.
+     */
+    @Test
+    void getUserInformation_votesCastByOthers_stillCountTowardsTheAuthorsScore() {
+        // Given -- three upvotes on one comment, none of them the author's own
+        Student student = student();
+        student.getComments().add(
+                commentWithVotes(student, VoteType.UP, VoteType.UP, VoteType.UP));
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+
+        // When
+        StudentProfileResponse response = service().getUserInformation(STUDENT_ID);
+
+        // Then
+        assertThat(response.credibilityScore()).isEqualTo(3);
+    }
+
+    @Test
+    void getUserInformation_studentWithRatingsAndComments_reportsTheAverageAndTheCounts() {
+        // Given
+        Student student = student();
+        student.getRatings().add(ratingScoring(4.0));
+        student.getRatings().add(ratingScoring(2.0));
+        student.getComments().add(commentWithVotes(student));
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+
+        // When
+        StudentProfileResponse response = service().getUserInformation(STUDENT_ID);
+
+        // Then
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Success");
+        assertThat(response.username()).isEqualTo("ada");
+        assertThat(response.averageRating()).isEqualTo(3.0);
+        assertThat(response.ratingsCount()).isEqualTo(2);
+        assertThat(response.commentsWritten()).isEqualTo(1);
+        assertThat(response.profilePicture()).contains("seed=" + STUDENT_ID);
+    }
+
+    @Test
+    void getUserInformation_studentWithNoRatings_reportsAZeroAverage() {
+        // Given
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student()));
+
+        // When
+        StudentProfileResponse response = service().getUserInformation(STUDENT_ID);
+
+        // Then -- the empty-collection guard, not a division by zero
+        assertThat(response.averageRating()).isZero();
+        assertThat(response.ratingsCount()).isZero();
+    }
+
+    /**
+     * The failure carries {@code success = false} and nulls, and the message still says
+     * "authenticate" although the only thing that happened is that no row matched the id.
+     * Pinned as-is: the wording reaches the client, so it cannot change silently.
+     */
+    @Test
+    void getUserInformation_unknownStudent_returnsTheAuthenticationFailureShape() {
+        // Given
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.empty());
+
+        // When
+        StudentProfileResponse response = service().getUserInformation(STUDENT_ID);
+
+        // Then
+        assertThat(response.success()).isFalse();
+        assertThat(response.message()).isEqualTo("Error, cannot authenticate user");
+        assertThat(response.username()).isNull();
+        assertThat(response.profilePicture()).isNull();
+        assertThat(response.averageRating()).isZero();
+        assertThat(response.credibilityScore()).isZero();
+    }
+
+    // ---------- getUserRatings ----------
+
+    @Test
+    void getUserRatings_studentWithRatings_mapsEachRatingToItsLectureAndOverallScore() {
+        // Given
+        Student student = student();
+        student.getRatings().add(ratingScoring(4.0));
+        student.getRatings().add(ratingScoring(1.0));
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+
+        // When
+        UserRatingResponse response = service().getUserRatings(STUDENT_ID);
+
+        // Then -- the count is in the message, so it is part of the contract
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Success, found 2 ratings.");
+        assertThat(response.ratings()).hasSize(2);
+        assertThat(response.ratings()).extracting("overallRating")
+                .containsExactly(4.0, 1.0);
+        assertThat(response.ratings().getFirst().lecture()).isNotNull();
+    }
+
+    @Test
+    void getUserRatings_studentWithNoRatings_reportsZeroRatingsInTheMessage() {
+        // Given
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student()));
+
+        // When
+        UserRatingResponse response = service().getUserRatings(STUDENT_ID);
+
+        // Then -- a success with an empty list, not a failure
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Success, found 0 ratings.");
+        assertThat(response.ratings()).isEmpty();
+    }
+
+    @Test
+    void getUserRatings_unknownStudent_returnsTheAuthenticationFailureWithAnEmptyList() {
+        // Given
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.empty());
+
+        // When
+        UserRatingResponse response = service().getUserRatings(STUDENT_ID);
+
+        // Then -- an empty list rather than null, so a caller can iterate either way
+        assertThat(response.success()).isFalse();
+        assertThat(response.message()).isEqualTo("Error, cannot authenticate user");
+        assertThat(response.ratings()).isEmpty();
+    }
+
+    // ---------- deleteAccount ----------
+
+    /**
+     * The account is re-looked-up by email rather than by the id of the instance handed in,
+     * so this is the path a test has to stub. The status write is the whole deletion: rows
+     * stay, the account becomes unreachable.
+     */
+    @Test
+    void deleteAccount_existingStudent_softDeletesAndNamesTheEmailInTheMessage() {
+        // Given
+        Student student = student();
+        when(studentRepository.findByKitEmail("ada@kit.edu")).thenReturn(Optional.of(student));
+
+        // When
+        BasicResponse response = service().deleteAccount(student);
+
+        // Then
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Deleted Account successfully: ada@kit.edu");
+        ArgumentCaptor<Student> saved = ArgumentCaptor.forClass(Student.class);
+        verify(studentRepository).save(saved.capture());
+        assertThat(saved.getValue().getStatus()).isEqualTo(UserStatus.DELETED);
+    }
+
+    @Test
+    void deleteAccount_nullStudent_returnsTheAuthenticationFailure() {
+        // When
+        BasicResponse response = service().deleteAccount(null);
+
+        // Then
+        assertThat(response.success()).isFalse();
+        assertThat(response.message()).isEqualTo("Error, couldn't authenticate user");
+        verifyNoInteractions(studentRepository);
+    }
+
+    /**
+     * An authenticated principal whose row is already gone. Nothing is written, and the
+     * caller is told -- which is what stops {@code AccountService} revoking the tokens of
+     * an account it did not manage to delete.
+     */
+    @Test
+    void deleteAccount_emailNotInTheTable_returnsTheNotFoundFailureWithoutWriting() {
+        // Given
+        when(studentRepository.findByKitEmail("ada@kit.edu")).thenReturn(Optional.empty());
+
+        // When
+        BasicResponse response = service().deleteAccount(student());
+
+        // Then
+        assertThat(response.success()).isFalse();
+        assertThat(response.message()).isEqualTo("Error, couldn't find student");
+        verify(studentRepository, never()).save(any());
+    }
+}

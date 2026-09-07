@@ -22,7 +22,7 @@ import java.util.UUID;
  * refused requests live in the same table but are served by {@code /activity-logs}.
  */
 @RestController
-@RequestMapping("/audit-logs")
+@RequestMapping({"/admin/audit-logs", "/audit-logs"})
 public class AuditLogController {
 
     private final AuditLogService service;

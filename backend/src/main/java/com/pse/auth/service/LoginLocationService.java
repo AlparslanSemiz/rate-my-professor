@@ -3,6 +3,8 @@ package com.pse.auth.service;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import jakarta.annotation.PostConstruct;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,15 +26,25 @@ public class LoginLocationService {
     private final String geoapifyApiKey;
 
     public LoginLocationService(
+            RestClient ipInfoRestClient,
             @Value("${ipinfo.token:}") String ipInfoToken,
             @Value("${geoapify.api.key:}") String geoapifyApiKey
     ) {
+        this.ipInfoClient = ipInfoRestClient;
         this.ipInfoToken = ipInfoToken;
         this.geoapifyApiKey = geoapifyApiKey;
+    }
 
-        this.ipInfoClient = RestClient.builder()
-                .baseUrl("https://ipinfo.io")
-                .build();
+    /**
+     * Warns once at startup when no IPinfo token is configured. Without this the short
+     * circuit in {@link #getLoginLocation} is silent, so an unset IPINFO_TOKEN turns every
+     * lookup into "Unknown" and leaves nothing in the log to say why.
+     */
+    @PostConstruct
+    void warnIfTokenMissing() {
+        if (ipInfoToken.isBlank()) {
+            LOGGER.warn("IPINFO_TOKEN is not set; every login location will resolve to Unknown");
+        }
     }
 
     /**
@@ -265,7 +277,7 @@ public class LoginLocationService {
             return null;
         }
 
-        String ip = rawIp.split(",")[0].trim();
+        String ip = rawIp.split(",", -1)[0].trim();
 
         if (ip.isBlank()) {
             return null;

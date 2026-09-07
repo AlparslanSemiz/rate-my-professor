@@ -15,14 +15,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
- * Production runs {@code ddl-auto=update} with no migration files, so a new column either
- * appears on deploy or never does. Postgres refuses to add a NOT NULL column to a table that
- * already holds rows unless the column brings a default for them, and Hibernate logs a failed
- * schema update rather than aborting startup: the application comes up without the column and
- * fails on the first read of that table instead.
- *
- * <p>The test database is H2 with {@code create-drop}, which builds every table from scratch
- * and so can never reproduce that. This asserts the property the real deploy depends on.
+ * Flyway owns production schema changes. This keeps the known production backfill guard in
+ * place for the baseline migration: a NOT NULL column added to a populated table needs a
+ * database default or a dedicated data backfill.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -43,7 +38,7 @@ class SchemaDefaultsTests {
         assertNotNull(
                 column.get("column_default"),
                 "a NOT NULL column on an already populated table needs a database-level "
-                        + "default, otherwise ddl-auto=update cannot add it on deploy"
+                        + "default or a dedicated Flyway backfill"
         );
     }
 

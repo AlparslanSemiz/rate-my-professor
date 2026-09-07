@@ -23,6 +23,7 @@ import com.pse.shared.enums.UserStatus;
 import com.pse.shared.error.ApiException;
 import com.pse.shared.util.HashGenerator;
 import com.pse.shared.util.NameGenerator;
+import com.pse.shared.util.UtcDates;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -59,7 +60,7 @@ public class AuthService {
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
     private final Duration adminSessionTtl;
-    private final Duration studentSessionTtl;
+    private final Duration appSessionTtl;
     private final int requestEmailLimit;
     private final int requestIpLimit;
     private final int loginEmailLimit;
@@ -79,7 +80,7 @@ public class AuthService {
             ApplicationEventPublisher eventPublisher,
             Clock clock,
             @Value("${app.auth.admin-session-ttl:P1D}") Duration adminSessionTtl,
-            @Value("${app.auth.student-session-ttl:P365D}") Duration studentSessionTtl,
+            @Value("${app.auth.app-session-ttl:${app.auth.student-session-ttl:P365D}}") Duration appSessionTtl,
             @Value("${app.auth.rate-limit.request-email:3}") int requestEmailLimit,
             @Value("${app.auth.rate-limit.request-ip:20}") int requestIpLimit,
             @Value("${app.auth.rate-limit.login-email:10}") int loginEmailLimit,
@@ -98,7 +99,7 @@ public class AuthService {
         this.eventPublisher = eventPublisher;
         this.clock = clock;
         this.adminSessionTtl = adminSessionTtl;
-        this.studentSessionTtl = studentSessionTtl;
+        this.appSessionTtl = appSessionTtl;
         this.requestEmailLimit = requestEmailLimit;
         this.requestIpLimit = requestIpLimit;
         this.loginEmailLimit = loginEmailLimit;
@@ -131,8 +132,34 @@ public class AuthService {
         return new BasicResponse("Login code sent", true);
     }
 
+    /**
+     * Which API minted a session. It decides both what the token may be used for and how
+     * long it lives: the panel logs in through {@code /admin/auth/login} and gets an
+     * administrator session on the admin schedule, every app client logs in through
+     * {@code /auth/login} and gets a year, administrators included. Deriving the lifetime
+     * from the account instead is what used to put an administrator's phone on the
+     * panel's expiry schedule.
+     */
+    private enum LoginApi {
+        APP,
+        ADMIN
+    }
+
     @Transactional
     public LoginResponse login(LoginRequest request, HttpServletRequest httpRequest) {
+        return issueSession(request, httpRequest, LoginApi.APP);
+    }
+
+    /**
+     * Login for the admin panel. Only an account with an {@code admins} row gets through,
+     * and the session is always an administrator session whatever the body asks for.
+     */
+    @Transactional
+    public LoginResponse adminLogin(LoginRequest request, HttpServletRequest httpRequest) {
+        return issueSession(request, httpRequest, LoginApi.ADMIN);
+    }
+
+    private LoginResponse issueSession(LoginRequest request, HttpServletRequest httpRequest, LoginApi api) {
         String email = normalizeAndValidateEmail(request.email());
         String submittedCode = request.loginToken().trim();
         String emailSubject = rateLimitService.emailSubject(email);
@@ -173,7 +200,12 @@ public class AuthService {
             admin = adminRepository.save(admin);
         }
 
-        SessionType sessionType = resolveSessionType(request.sessionType(), admin);
+        // After the bootstrap block above, never before it: the first login of a
+        // configured bootstrap address would otherwise be refused for an admin row that
+        // this very request was about to create.
+        SessionType sessionType = api == LoginApi.ADMIN
+                ? requireAdminSession(existing, admin, emailSubject, ipSubject)
+                : resolveSessionType(request.sessionType(), admin);
 
         String rawToken = TokenGenerator.generateToken();
         Token token = new Token();
@@ -182,7 +214,7 @@ public class AuthService {
         token.setHash(HashGenerator.hashToken(rawToken));
         token.setSessionType(sessionType);
         token.setExpiresAt(LocalDateTime.now(clock).plus(
-                sessionType == SessionType.ADMIN ? adminSessionTtl : studentSessionTtl
+                api == LoginApi.ADMIN ? adminSessionTtl : appSessionTtl
         ));
         token = tokenRepository.save(token);
 
@@ -194,7 +226,7 @@ public class AuthService {
                     token.getId(),
                     student.getUsername() + " admin session",
                     AuditWriter.change("authenticated", false, true),
-                    Map.of("method", "EMAIL_OTP")
+                    Map.of("method", "EMAIL_OTP", "api", api.name())
             );
         } else {
             auditWriter.writeStudentAction(
@@ -203,7 +235,7 @@ public class AuthService {
                     AuditTargetType.USER_SESSION,
                     token.getId(),
                     student.getUsername() + " session",
-                    Map.of("method", "EMAIL_OTP", "newAccount", existing == null)
+                    Map.of("method", "EMAIL_OTP", "newAccount", existing == null, "api", api.name())
             );
         }
 
@@ -213,7 +245,7 @@ public class AuthService {
                 httpRequest.getRemoteAddr(),
                 safeUserAgent(httpRequest.getHeader("User-Agent"))
         ));
-        return new LoginResponse("Login successful", true, rawToken);
+        return new LoginResponse("Login successful", true, rawToken, UtcDates.format(token.getExpiresAt()));
     }
 
     @Transactional
@@ -374,6 +406,22 @@ public class AuthService {
         student.setCredibilityScore(0);
         student.setStatus(UserStatus.ACTIVE);
         return studentRepository.save(student);
+    }
+
+    /**
+     * The admin API mints administrator sessions only, so an account without an
+     * {@code admins} row cannot be served at all. The refusal costs a slot in the
+     * login-failure budget and leaves a record, the same as every other refusal here:
+     * without that, anyone holding a valid code could ask this endpoint which addresses
+     * are administrators, unbudgeted and unlogged.
+     */
+    private SessionType requireAdminSession(Student account, Admin admin, String emailSubject, String ipSubject) {
+        if (admin == null) {
+            consumeLoginFailure(emailSubject, ipSubject);
+            auditLoginRefusal(account, "NOT_AN_ADMIN");
+            throw new ApiException(HttpStatus.FORBIDDEN, "Admin access required");
+        }
+        return SessionType.ADMIN;
     }
 
     private SessionType resolveSessionType(SessionType requestedSessionType, Admin admin) {

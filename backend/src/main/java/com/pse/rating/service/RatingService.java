@@ -18,7 +18,6 @@ import com.pse.rating.dto.response.RatingCategoriesResponse;
 import com.pse.rating.dto.response.RatingCategoryResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
 import com.pse.rating.model.RatingCategory;
-import com.pse.user.service.StudentService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -163,7 +162,7 @@ public class RatingService {
         Rating rating = ratingRepository.findByStudentIdAndLectureId(student.getId(), lectureId).orElse(null);
 
         if (rating == null) {
-            return new RatingsAverageResponse("Error, couldnt find rating for Lecture: " + lectureId, false, null);
+            return new RatingsAverageResponse("Error, couldn't find rating for Lecture: " + lectureId, false, null);
         }
 
         List<TopicAverageResponse> topics = new ArrayList<>();

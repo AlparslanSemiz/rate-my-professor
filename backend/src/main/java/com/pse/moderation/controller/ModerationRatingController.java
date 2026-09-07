@@ -20,7 +20,7 @@ import java.util.UUID;
  * admin-only, and the security rules separate them by path/method.
  */
 @RestController
-@RequestMapping("/ratings")
+@RequestMapping({"/admin/ratings", "/ratings"})
 public class ModerationRatingController {
 
     private final ModerationContentService contentService;

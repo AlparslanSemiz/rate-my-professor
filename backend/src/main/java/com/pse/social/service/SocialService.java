@@ -180,7 +180,7 @@ public class SocialService {
     public BasicResponse submitAnswer(Student student, AnswerSubmitRequest request) {
 
         if(!submitAnswer(student, request.commentID(), request.content())){
-            return new BasicResponse("Error, couldnt finde comment",false);
+            return new BasicResponse("Error, couldn't find comment",false);
         }
 
         return new BasicResponse("Answer submitted successfully",true);
@@ -253,7 +253,7 @@ public class SocialService {
     public BasicResponse submitCommentReport(Student student, CommentReportRequest request) {
 
         if(!submitCommentReport(student, request.commentID(), request.reportReason(), request.explanation())){
-            return new BasicResponse("Error, couldnt finde comment",false);
+            return new BasicResponse("Error, couldn't find comment",false);
         }
 
         return new BasicResponse("Comment Report submitted successfully",true);
@@ -295,7 +295,7 @@ public class SocialService {
     public BasicResponse submitAnswerReport(Student student, AnswerReportRequest request) {
 
         if(!submitAnswerReport(student, request.answerID(), request.reportReason(), request.explanation())){
-            return new BasicResponse("Error, couldnt find answer",false);
+            return new BasicResponse("Error, couldn't find answer",false);
         }
 
         return new BasicResponse("Answer Report submitted successfully",true);

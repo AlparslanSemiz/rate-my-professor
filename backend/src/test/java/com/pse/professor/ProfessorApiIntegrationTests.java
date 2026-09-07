@@ -359,6 +359,70 @@ class ProfessorApiIntegrationTests {
     }
 
 
+
+    /**
+     * The same write on the admin API, which is where the panel moves to.
+     */
+    @Test
+    void adminCanAddProfessorThroughAdminApi() throws Exception {
+
+        Session admin = createSession("admin@student.kit.edu", true);
+
+        mockMvc.perform(
+                        post("/admin/data/professor")
+                                .header("Authorization", bearer(admin.rawToken()))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                      "firstName": "Petra",
+                                      "lastName": "Weber",
+                                      "lectureIDs": []
+                                    }
+                                    """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        assertTrue(
+                professorRepository
+                        .findByFirstNameAndLastName("Petra", "Weber")
+                        .isPresent()
+        );
+    }
+
+    /**
+     * The shape difference against {@code nonAdminCannotAddProfessor} above is the point:
+     * the legacy path answers 200 with {@code success: false} from inside the handler,
+     * while the admin API is refused by the security chain and answers 403.
+     */
+    @Test
+    void nonAdminCannotAddProfessorThroughAdminApi() throws Exception {
+
+        Session student = createSession("student@student.kit.edu", false);
+
+        mockMvc.perform(
+                        post("/admin/data/professor")
+                                .header("Authorization", bearer(student.rawToken()))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                      "firstName": "Petra",
+                                      "lastName": "Weber",
+                                      "lectureIDs": []
+                                    }
+                                    """)
+                )
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Could not authenticate Admin"));
+
+        assertTrue(
+                professorRepository
+                        .findByFirstNameAndLastName("Petra", "Weber")
+                        .isEmpty()
+        );
+    }
+
     @Test
     void nonAdminCannotAddProfessor() throws Exception {
 
@@ -383,7 +447,7 @@ class ProfessorApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message")
-                        .value("Error, couldnt authenticate Admin"));
+                        .value("Error, couldn't authenticate Admin"));
 
         assertTrue(
                 professorRepository

@@ -15,13 +15,17 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+/**
+ * Bug report moderation, plus the one endpoint that is not moderation: {@code POST /reports},
+ * where a student submits a report. That one is app API and deliberately has no {@code /admin}
+ * twin, which is why the admin routes carry their absolute paths instead of a class-level
+ * base path.
+ */
 @RestController
-@RequestMapping("/reports")
 public class ModerationBugReportController {
 
     private final ModerationBugReportService service;
@@ -30,12 +34,12 @@ public class ModerationBugReportController {
         this.service = service;
     }
 
-    @GetMapping
+    @GetMapping({"/admin/reports", "/reports"})
     public BugReportsResponse getAllReports() {
         return service.getAllReports();
     }
 
-    @PatchMapping("/{id}")
+    @PatchMapping({"/admin/reports/{id}", "/reports/{id}"})
     public BasicResponse updateBugReport(
             @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID id,
@@ -44,7 +48,7 @@ public class ModerationBugReportController {
         return service.updateBugReport(principal, id, request);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping({"/admin/reports/{id}", "/reports/{id}"})
     public BasicResponse deleteBugReport(
             @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID id
@@ -57,7 +61,7 @@ public class ModerationBugReportController {
      * and matched explicitly in the security chain — {@code POST /reports} itself is the
      * student submission endpoint and stays open.
      */
-    @PostMapping("/{id}/gitlab-issue")
+    @PostMapping({"/admin/reports/{id}/gitlab-issue", "/reports/{id}/gitlab-issue"})
     public GitLabIssueResponse createGitLabIssue(
             @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID id
@@ -65,7 +69,7 @@ public class ModerationBugReportController {
         return service.createIssue(principal, id);
     }
 
-    @PostMapping
+    @PostMapping("/reports")
     public BasicResponse sendBugReport(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody BugReportRequest request

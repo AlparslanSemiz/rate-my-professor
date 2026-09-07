@@ -1,0 +1,151 @@
+package com.pse.user.service;
+
+import com.pse.auth.dto.response.BasicResponse;
+import com.pse.auth.dto.response.UserRatingResponse;
+import com.pse.auth.service.AuthService;
+import com.pse.user.dto.StudentProfileResponse;
+import com.pse.user.model.Student;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+/**
+ * A thin facade over the student service, with one piece of logic of its own: deleting an
+ * account has to revoke the tokens issued to it. Without that the account is DELETED while
+ * every issued token stays valid until it expires, which for a student is a full year --
+ * so the tests that matter here are the one proving the revocation happens and the one
+ * proving it is conditional on the deletion actually having succeeded.
+ */
+@ExtendWith(MockitoExtension.class)
+class AccountServiceTests {
+
+    private static final UUID STUDENT_ID = UUID.fromString("3f2504e0-4f89-11d3-9a0c-0305e82c3301");
+
+    @Mock
+    private AuthService authService;
+
+    @Mock
+    private StudentService studentService;
+
+    private AccountService service() {
+        return new AccountService(authService, studentService);
+    }
+
+    private static Student student() {
+        Student student = new Student();
+        student.setId(STUDENT_ID);
+        student.setKitEmail("ada@kit.edu");
+        return student;
+    }
+
+    // ---------- read-through delegations ----------
+
+    @Test
+    void getUserInformation_delegatesToTheStudentServiceWithTheStudentId() {
+        // Given
+        StudentProfileResponse expected =
+                new StudentProfileResponse("Success", true, "ada", "url", 3.0, 2, 1, 4);
+        when(studentService.getUserInformation(STUDENT_ID)).thenReturn(expected);
+
+        // When
+        StudentProfileResponse response = service().getUserInformation(student());
+
+        // Then -- returned unchanged; the facade adds nothing on this path
+        assertThat(response).isSameAs(expected);
+        verifyNoInteractions(authService);
+    }
+
+    @Test
+    void getUserRatings_delegatesToTheStudentServiceWithTheStudentId() {
+        // Given
+        UserRatingResponse expected = new UserRatingResponse("Success", true, List.of());
+        when(studentService.getUserRatings(STUDENT_ID)).thenReturn(expected);
+
+        // When
+        UserRatingResponse response = service().getUserRatings(student());
+
+        // Then
+        assertThat(response).isSameAs(expected);
+        verifyNoInteractions(authService);
+    }
+
+    // ---------- deleteAccount ----------
+
+    @Test
+    void deleteAccount_successfulDeletion_revokesEveryIssuedToken() {
+        // Given
+        Student student = student();
+        when(studentService.deleteAccount(student))
+                .thenReturn(new BasicResponse("Deleted", true));
+
+        // When
+        BasicResponse response = service().deleteAccount(student);
+
+        // Then
+        assertThat(response.success()).isTrue();
+        verify(authService).invalidateAllAuthTokensForEmail("ada@kit.edu");
+    }
+
+    /**
+     * The branch that matters. A soft delete that did not happen must not log the account
+     * out: the caller is still a live student, and revoking here would sign them out of a
+     * session that is still legitimately theirs.
+     */
+    @Test
+    void deleteAccount_failedDeletion_leavesTheTokensAlone() {
+        // Given
+        Student student = student();
+        when(studentService.deleteAccount(student))
+                .thenReturn(new BasicResponse("Error, couldn't find student", false));
+
+        // When
+        BasicResponse response = service().deleteAccount(student);
+
+        // Then -- the failure is passed through unchanged, and nothing is revoked
+        assertThat(response.success()).isFalse();
+        assertThat(response.message()).isEqualTo("Error, couldn't find student");
+        verifyNoInteractions(authService);
+    }
+
+    // ---------- requestLogout ----------
+
+    /**
+     * The count comes back from the revocation and is embedded in the message, so it is
+     * part of the response contract rather than a log line.
+     */
+    @Test
+    void requestLogout_embedsTheNumberOfInvalidatedSessionsInTheMessage() {
+        // Given
+        when(authService.invalidateAllAuthTokensForEmail("ada@kit.edu")).thenReturn(3);
+
+        // When
+        BasicResponse response = service().requestLogout(student());
+
+        // Then
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Logged out successfully (3 sessions)");
+    }
+
+    /** Logging out with nothing to revoke is still a success, not a failure. */
+    @Test
+    void requestLogout_noActiveSessions_stillReportsSuccess() {
+        // Given
+        when(authService.invalidateAllAuthTokensForEmail("ada@kit.edu")).thenReturn(0);
+
+        // When
+        BasicResponse response = service().requestLogout(student());
+
+        // Then
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Logged out successfully (0 sessions)");
+    }
+}

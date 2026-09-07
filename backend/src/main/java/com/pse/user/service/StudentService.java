@@ -47,7 +47,6 @@ public class StudentService {
     @Transactional(readOnly = true)
     public StudentProfileResponse getUserInformation(UUID studentId) {
         Student student = studentRepository.findById(studentId).orElse(null);
-
         if (student == null) {
             return new StudentProfileResponse("Error, cannot authenticate user", false, null, null, 0, 0, 0, 0);
         }
@@ -168,12 +167,6 @@ public class StudentService {
         studentRepository.save(student);
         return true;
     }
-
-    //TODO: Why arent they in use?
-
-
-
-    //Repository Methods
 
     public double getAverageRating(Student student) {
         if (student.getRatings().isEmpty()) {
