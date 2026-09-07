@@ -91,7 +91,13 @@ coverage:line-target:
       when: never
     - when: on_success
 
-server:postgres-migration-smoke:
+# Everything that needs a real PostgreSQL rather than the H2 translation the main test job
+# runs. A GitLab service is a plain TCP server -- no Docker socket, no privileged runner and
+# no Testcontainers dependency -- which is what lets the integration layer exist while the
+# local build stays Docker-free. Tests select themselves into this job with
+# @EnabledIfEnvironmentVariable on POSTGRES_SMOKE_JDBC_URL, so they are skipped everywhere
+# else rather than failing.
+server:postgres-integration:
   stage: test
   image: maven:3.9-eclipse-temurin-21
   services:
@@ -105,7 +111,10 @@ server:postgres-migration-smoke:
     POSTGRES_SMOKE_USERNAME: postgres
     POSTGRES_SMOKE_PASSWORD: postgres_smoke_password
   script:
-    - ./mvnw -B -ntp -Dtest=PostgreSqlMigrationSmokeTests test
+    # Named rather than pattern-matched: this job's cost is one Spring context per distinct
+    # configuration, and adding a class here is the moment to check it shares the existing
+    # one. See com.pse.support.PostgresTestDatabase.
+    - ./mvnw -B -ntp -Dtest=PostgreSqlMigrationSmokeTests,AuditTimestampPrecisionPostgresTests test
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: never

@@ -3,7 +3,8 @@
 Layers: **unit → API/role → integration → E2E**. Every batch adds its own section. The unit
 layer is covered by batches 1–6, the API/role layer by the authorization, protocol and
 ownership sweeps below. The integration and E2E layers have not been started; what blocks the
-first of them is the Testcontainers question under [Open questions](#open-questions).
+first of them was recorded as the Testcontainers question; it turned out not to be a
+blocker at all — see [Settled questions](#settled-questions).
 
 ### Where it stands
 
@@ -29,8 +30,14 @@ not a batch of its own and gets no section below, only updated statuses.
 | Unit | Batches 1–6 done. |
 | API / role | The three sweeps below. |
 | Findings | **All closed.** |
-| Integration | **Not started** — blocked on the Testcontainers decision. |
+| Integration | **Started.** Runs against a real PostgreSQL in CI, no Testcontainers. |
 | E2E | **Not started.** |
+
+The integration layer runs in `server:postgres-integration`, against a `postgres:16` GitLab CI
+service with the production Flyway migrations. Its tests skip themselves when
+`POSTGRES_SMOKE_JDBC_URL` is unset, so `./mvnw verify` on a developer machine is unchanged and
+still needs no Docker. Its first result was ruling out the BUG-1 timestamp hypothesis — see
+[Settled questions](#settled-questions).
 
 The spread between LINE and BRANCH was 15 points before batch 4, 9.7 after it, 8.9 after batch
 5, and is **6.2** after batch 6. 125 branches and 154 lines are left in the whole module. The
@@ -400,9 +407,9 @@ assert the shape of a query nobody runs.
 
 In other words the coverage number is now a poor proxy for what is untested. The places in
 this document that defer something to the integration layer are the real remaining gap, and
-they are blocked on the Testcontainers question under [Open questions](#open-questions). There
-were 16 of them when this was written; F-9 is no longer one, because it was closed by removing
-the write rather than by testing it.
+they are the integration layer's backlog. There were 16 of them when this was written; F-9
+is no longer one, because it was closed by removing the write rather than by testing it. They
+are no longer blocked either — see [Settled questions](#settled-questions).
 
 
 ## The API / role batch
@@ -659,30 +666,52 @@ rather than a `Map`; `RateLimitService` takes a `PlatformTransactionManager` rat
 
 ---
 
-## Open questions
+## Settled questions
 
-### The BUG-1 nanosecond hypothesis
+### The BUG-1 nanosecond hypothesis — measured, and it does not hold
 
-**Hypothesis.** `AuditLog.@PrePersist` writes nanosecond precision through `Instant.now()`,
-while the Postgres `timestamptz` column truncates to microseconds. A cursor built from an
-entity that is still in the persistence context and has not been re-read from the DB carries
-`…123456789` while the row holds `…123456`. Since `.123456 < .123456789` is true, the keyset
-predicate matches the same row again and the row **repeats** at the top of the next page.
+**The hypothesis was.** `AuditLog.@PrePersist` writes nanosecond precision through
+`Instant.now()`, while the Postgres column **truncates** to microseconds. A cursor built from
+an entity still in the persistence context carries `…123456789` while the row holds
+`…123456`. Since `.123456 < .123456789`, the keyset predicate matches the same row again and
+it **repeats** at the top of the next page.
 
-**Why a unit test cannot confirm it.** The truncation is the behaviour of the JDBC driver
-and the column type, not of the codec. `KeysetCursorCodec` round-trips nanoseconds without
-loss — a unit test can only prove that. Producing the defect requires a real write, a real
-column and a real read-back.
+**Two of its premises were wrong, and the third does not lead where it was thought to.**
 
-**Where it will be tested.** In the integration batch, against a real Postgres via
-Testcontainers: write two rows inside one transaction, page with `limit=1`, and verify that
-no row shows up on two pages.
+1. *"Only a real Postgres can show this."* Both baselines declare `created_at timestamp(6)`
+   — the H2 one as well — so whatever precision is lost on PostgreSQL is lost on H2 too. Most
+   of this was measurable with no database at all, and
+   `AuditTimestampPrecisionTests` measures it.
+2. *"The column truncates."* **It rounds.** PostgreSQL 16 answers `.123457` for
+   `.1234569`, and H2 rounds too. That is not a detail: truncation can only move an instant
+   backwards, which is what the hypothesis's arithmetic depended on. Rounding moves it
+   forwards half the time, so the mechanism as described could not have been derived from
+   what the column actually does.
+3. *The premise that did hold:* `Instant.now()` really does carry nanoseconds on this
+   platform, so the entity really does hold digits the column cannot store. That much is
+   pinned, as a property of the clock rather than as a constant.
 
-**A tension to settle first:** Testcontainers is not a dependency today, and `CLAUDE.md`
-says tests deliberately do not require Docker (H2, Flyway's H2 migrations,
-`ddl-auto=validate`, the `test` profile). H2 in PostgreSQL mode does not model `timestamptz`
-precision the same way, so the current test profile cannot settle this question. Adding the
-dependency changes the CI contract — a decision for the integration batch.
+**And the defect does not reproduce.** Against a real PostgreSQL 16 with the production
+migrations, `pagingOneRowAtATimeNeverServesTheSameRowTwice` walks the log one row at a time
+and no row is served twice. The read path builds its cursor from `page.getLast()` — a row the
+query loaded, so it carries the stored value — and the keyset predicate pairs a strict
+`createdAt <` with an id tiebreaker, which is the shape that makes a repeat impossible even
+when two rows share a microsecond.
+
+BUG-1 therefore has no explanation on the backend, which is where the two bug reports in
+[Findings](#findings) already left it. What is different now is that the timestamp
+explanation has been ruled out rather than left standing as the leading theory.
+
+**The Testcontainers question was the wrong question.** It was recorded as the blocker for
+the whole integration layer: adding the dependency would put Docker in a build that
+deliberately did not need it. The pipeline already ran a real `postgres:16` as a **GitLab CI
+service** for the migration smoke test, and a service is a plain TCP server — no Docker
+socket, no privileged runner, no dependency. `com.pse.support.PostgresTestDatabase` is that
+job's setup generalised, tests opt in with
+`@EnabledIfEnvironmentVariable(named = "POSTGRES_SMOKE_JDBC_URL", …)`, and the local build is
+as Docker-free as it was. (The `CLAUDE.md` this document cited for the Docker-free rule is
+not in the repository and never has been — `git log --all -- CLAUDE.md` is empty. The rule
+itself is real and visible in the test profile; only the citation was.)
 
 ---
 

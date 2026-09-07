@@ -204,7 +204,7 @@ publishes backend port `8080` and PostgreSQL port `5432`.
 
 `scripts/docker-smoke-test.sh` runs `docker compose config`, starts the stack,
 checks `GET /health`, and tears the stack down on exit. It is a **local** helper: no CI
-job calls it. The pipeline's equivalent is `server:postgres-migration-smoke`, which runs
+job calls it. The pipeline's equivalent is `server:postgres-integration`, which runs
 the app test context against a `postgres:16` service instead of building the image. Run it
 from the repository root, and note that it stops the stack and removes its volumes on
 exit.
@@ -358,7 +358,7 @@ Jobs:
 | --- | --- | --- |
 | `server:test` | Push and merge request pipelines, never scheduled | Runs `./mvnw -B -ntp verify`, then `java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"`, then `java scripts/CheckLineCoverage.java` against the two line-coverage tiers. Publishes JUnit and JaCoCo artifacts. The changed-code gate needs a comparison ref; when it cannot resolve one it says so and passes, rather than failing a build over a missing base commit. |
 | `coverage:line-target` | Push and merge request pipelines, never scheduled | Reuses `server:test`'s JaCoCo artifact and re-checks bundle line coverage against `COVERAGE_LINE_TARGET`. Marked `allow_failure: true`, so missing the target is a **yellow warning that does not block the pipeline**. Costs a container start, not a rebuild. |
-| `server:postgres-migration-smoke` | Push and merge request pipelines | Starts the Spring Boot app test context against a `postgres:16` CI service, checks `/health`, and exercises the PostgreSQL Flyway migrations from `src/main/resources/db/migration/postgresql`. |
+| `server:postgres-integration` | Push and merge request pipelines | Everything that needs a real PostgreSQL rather than H2. Starts the Spring Boot app test context against a `postgres:16` CI service, checks `/health`, exercises the PostgreSQL Flyway migrations from `src/main/resources/db/migration/postgresql`, and runs the integration tests that depend on server behaviour H2 does not model. A CI service is a plain TCP server, so this needs no Docker socket, no privileged runner and no Testcontainers dependency. |
 | `server:package` | `main` branch, non-scheduled pipelines | Uses Kaniko to build `src/Dockerfile` and push `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`. |
 | `server:deploy:staging` | Manual job on `main`, non-scheduled pipelines | SSHes to the deployment host and replaces the Compose-managed `backend` service. |
 | `health:check` | Scheduled pipelines only | Curls the configured BW Cloud/staging `/health` URL and expects HTTP 200. |
