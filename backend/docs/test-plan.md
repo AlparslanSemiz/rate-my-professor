@@ -7,24 +7,33 @@ first of them is the Testcontainers question under [Open questions](#open-questi
 
 ### Where it stands
 
-**756 tests, 0 failures**, 2 skipped (the `@Disabled` `DemoApplicationTests`, and
-`PostgreSqlMigrationSmokeTests`, which runs on CI only). Bundle **95.45% LINE** (3229/3383),
-**89.23% BRANCH** (1027/1151). Line coverage is gated in two tiers — **90% mandatory,
+**773 tests, 0 failures**, 2 skipped (the `@Disabled` `DemoApplicationTests`, and
+`PostgreSqlMigrationSmokeTests`, which runs on CI only). Bundle **95.51% LINE** (3277/3431),
+**89.33% BRANCH** (1046/1171). Line coverage is gated in two tiers — **90% mandatory,
 95% target** — and BRANCH has a single floor at 0.87.
 
 Line coverage has been above its target since batch 5, so `coverage:line-target` is green
 rather than yellow; batch 6 raised the target itself from 94 to 95 rather than banking the
 slack.
 
+**[test-findings.md](test-findings.md) has no open entry.** The twelve that were still open
+after batch 6 were closed in one pass — eleven fixed, one (P-3) closed by a recorded decision.
+Three of them changed a client-visible contract, so they are named here rather than only in the
+findings document: **F-5** (app-tier failures answer 4xx instead of 200), **F-16** (a path
+called with a verb it does not map answers 405 with an `Allow` header instead of 404), and
+**F-3** (`VoteType.NONE` withdraws a vote). This is what the batches were for; closing them is
+not a batch of its own and gets no section below, only updated statuses.
+
 | Layer | State |
 |---|---|
 | Unit | Batches 1–6 done. |
 | API / role | The three sweeps below. |
+| Findings | **All closed.** |
 | Integration | **Not started** — blocked on the Testcontainers decision. |
 | E2E | **Not started.** |
 
 The spread between LINE and BRANCH was 15 points before batch 4, 9.7 after it, 8.9 after batch
-5, and is **6.2** after batch 6. 124 branches and 154 lines are left in the whole module. The
+5, and is **6.2** after batch 6. 125 branches and 154 lines are left in the whole module. The
 largest remaining branch gaps are `ModerationUserService` (27), `SocialService` (13),
 `ModerationContentService` (12) and `AuditLogService` (11) — and a growing share of what is
 left is not unit-testable at all: Criteria predicates, specification lambdas, and the two mail
@@ -212,8 +221,13 @@ whatever order `findAllById` returns, then compares them position by position, s
 unchanged assignment records a bogus change and a bogus audit event. The test states that with
 a `LinkedHashSet` and a stubbed repository order rather than relying on real `HashSet`
 iteration: `Professor` overrides neither `equals` nor `hashCode`, so real order varies per run
-and the flakiness would end up in the test instead of in the defect. The finding itself stays
-open — the fix is a product decision about `RevertValues`'s contract.
+and the flakiness would end up in the test instead of in the defect.
+
+The finding stayed open through batch 6 as a product decision about `RevertValues`'s contract,
+and is **fixed** now: both sides compare as multisets. The two deterministic tests were
+inverted rather than deleted, which is what that way of writing them bought — neither depends
+on real `HashSet` order, so they state the fixed behaviour exactly as reliably as they stated
+the broken one.
 
 ### The gates moved
 
@@ -384,9 +398,11 @@ are `MailService` and 12 are `MailTemplateService`, both decisions recorded unde
 lambdas, which build a query rather than compute an answer. Chasing those with mocks would
 assert the shape of a query nobody runs.
 
-In other words the coverage number is now a poor proxy for what is untested. The 16 places in
+In other words the coverage number is now a poor proxy for what is untested. The places in
 this document that defer something to the integration layer are the real remaining gap, and
-they are blocked on the Testcontainers question under [Open questions](#open-questions).
+they are blocked on the Testcontainers question under [Open questions](#open-questions). There
+were 16 of them when this was written; F-9 is no longer one, because it was closed by removing
+the write rather than by testing it.
 
 
 ## The API / role batch
@@ -426,23 +442,28 @@ instead of a real 403.
 
 ### The protocol sweep
 
-The same idea applied to status codes rather than to authorization. It found F-14 through F-17;
-F-17 is fixed, the rest are pinned as they are:
+The same idea applied to status codes rather than to authorization. It found F-14 through
+F-17, and **all four are fixed** — three of them after the batch, in the pass that closed the
+findings document:
 
-- **F-16** — a path that exists, called with a verb it does not map, answers **404 instead of
-  405**, on all 122 routes. Pinned, not fixed: it is a contract change with two documented
-  dependents and an unknown Android dependency, so it belongs in its own conversation with the
-  team rather than in a test batch.
+- **F-16** — a path that exists, called with a verb it does not map, answered **404 instead of
+  405**, on all 122 routes. It was pinned rather than fixed here, as a contract change with two
+  documented dependents. Both turned out to be documentation *of* the defect rather than uses
+  of it, so it was fixed: 405 with an `Allow` header naming the verbs that do map.
 - **F-17** — a body in a media type no converter can read answered **500 instead of 415** on
   all 37 body-reading routes. **Fixed** with one narrow `@ExceptionHandler`; the writeup in the
   findings document records why extending `ResponseEntityExceptionHandler` was the wrong fix
   and what the red run proved before the pin was flipped.
 - **F-14, F-15** — a missing required query parameter and the category list of an unknown
-  lecture both answer 500. Open.
+  lecture both answered 500. **Fixed**: 400 and 404.
 
-The two statuses that are wrong but pinned live in `com.pse.support.ApiContract` rather than in
-the sweep, because `AdminApiPathSplitTests` asserts one of them incidentally. Deciding to fix
-one is then a single edit, and the sweep tells you every route the decision touches.
+The two statuses live in `com.pse.support.ApiContract` rather than in the sweep, because
+`AdminApiPathSplitTests` asserts one of them incidentally. Both hold the right answer now, and
+the constant earned itself: flipping `WRONG_VERB_STATUS` from 404 to 405 carried 93 refusals
+across two suites with no other edit, which is what the batch claimed it would do.
+
+`PUBLIC_ROUTES_ANSWERING_SERVER_ERROR` — the two-entry exemption list F-14 and F-15 lived on —
+is empty and gone with them. A public route answering 5xx is a plain failure again.
 
 ### The ownership sweep
 
@@ -550,29 +571,39 @@ does not help, because the UUIDs never enter `hashCode` at all. Such a test woul
 and the flakiness would be written into the test rather than into the defect. The defect was
 split into two deterministic facts instead: with a `LinkedHashSet` fixture, that the handler
 **produces an order the declared type does not define**, and that `sameValue` counts the same
-two elements in reverse order as **different** — pinned separately.
+two elements in reverse order as different — pinned separately.
 
-Not fixed — order-insensitive comparison for set fields is a product decision and changes
-`RevertValues`'s contract. The deterministic test for the write side (with a stubbed
-`findAllById` order) was written in batch 4.
+**Fixed.** `sameValue` sorts before comparing, and `ModerationCatalogService` does the same on
+the write side through one `sameAssignment` helper. Sorted rather than de-duplicated: dropping
+one of two identical entries is still a change. The two deterministic tests were **inverted
+rather than deleted**, which is the return on having written them that way — neither depends
+on real `HashSet` order, so they pin the fix exactly as reliably as they pinned the defect.
+The handler still hands the check an ordered list, and that half is still pinned; what changed
+is that nothing reads the order any more.
 
-### Four gaps on the voting path
+### Four gaps on the voting path — all four closed
 
 Four behaviours pinned in the `SocialService.voteComment` / `voteAnswer` characterization
-tests, none of which look deliberate:
+tests, none of which looked deliberate. All four are fixed; the list is kept because what a
+characterization batch is *for* is turning "this looks wrong" into something specific enough
+to act on, and this is the clearest example of that in the document.
 
-1. **No audit is written.** `submitComment` / `submitAnswer` / `submit*Report` in the same
-   class all call `auditWriter.writeStudentAction(...)`; the two vote methods do not. So
-   vote manipulation does not appear in the moderation trail.
-2. **`voteType` is not validated.** A `null` vote type travels all the way to
-   `setVote(null)` and is handed to `save`; the only thing that stops it is the
-   `nullable = false` column, and only at flush time — outside a transaction this method
-   opened, that is, not somewhere the caller can intervene. The method returns
-   `success = true` in the meantime.
-3. **Neither is `@Transactional`.** The other write methods in the class are.
-4. **There is no toggle-off path.** A second vote in the same direction rewrites the vote
-   instead of removing it, and `VoteType` (`UP`, `DOWN`) has no third value for removal.
-   Withdrawing a vote is not possible today.
+1. **No audit was written.** `submitComment` / `submitAnswer` / `submit*Report` in the same
+   class all call `auditWriter.writeStudentAction(...)`; the two vote methods did not, so vote
+   manipulation did not appear in the moderation trail at all. **F-1, fixed:** `COMMENT_VOTED`
+   and `ANSWER_VOTED`, with the direction as metadata and a withdrawal recorded too.
+2. **`voteType` was not validated.** A `null` vote type travelled all the way to
+   `setVote(null)` and was handed to `save`; the only thing that stopped it was the
+   `nullable = false` column, at flush time, surfacing as a 409 where a client expects a 400.
+   **F-2, fixed** at the boundary with `@NotNull`.
+3. **Neither was `@Transactional`.** The other write methods in the class are. Fixed with
+   F-1 — `AuditWriter` joins the caller's transaction on purpose, so without one a vote could
+   commit while its entry did not.
+4. **There was no toggle-off path.** A second vote in the same direction rewrote the vote
+   instead of removing it, and `VoteType` (`UP`, `DOWN`) had no third value for removal.
+   **F-3, fixed** with `NONE`, which deletes the row — a withdrawal rather than a third
+   direction, chosen over a toggle because a toggle would have changed what an existing
+   client's retry does without asking it.
 
 ### `SocialController` route defect — the slash is missing from `/vote/answer`
 
@@ -836,16 +867,17 @@ dependency changes the CI contract — a decision for the integration batch.
   (`RestClientConfig`); behaviour did not change. Also Logback's `ListAppender`, because the
   difference between a silent failure and a logged one is this batch's main finding.
 - **Residual risk:**
-  - **The `IPINFO_TOKEN` warning only fires at startup.** If the token is revoked later, the
-    only trace is the 401/403 WARNs; a per-request warning was deliberately not added (log
-    noise on every login).
-  - **The broad `catch (Exception)`** makes 401/403/429/timeout indistinguishable to the
-    caller; the distinction lives only in the log. Suggested (not implemented): narrow the
-    catch.
   - The coordinate regex rejects whitespace around the comma (`"49.0, 8.4"` is invalid).
     Harmless today because IPinfo returns no space, but it would silently drop the map if the
     provider's format changed.
-- **Test count:** 39 (good: 10, bad: 29)
+- **Since closed (F-8):** the two risks that used to head this list are gone. The broad
+  `catch (Exception)` is split into `RestClientResponseException` (logged with the status, so
+  401/403 and 429 are distinguishable) and `ResourceAccessException` (network or timeout), and
+  the six failure-mode tests each assert their own sentence instead of one generic one. A token
+  revoked *after* startup — which no log line fired once at boot can catch — is reported as
+  `locationLookupEnabled` in `GET /system/status`. A per-request warning is still deliberately
+  not added.
+- **Test count:** 42 (good: 12, bad: 30)
 
 ### CatalogueRevertHandler.LectureHandler / .ProfessorHandler
 
@@ -857,7 +889,9 @@ dependency changes the CI contract — a decision for the integration batch.
     deleted lecture not appearing in the map, an empty target list
   - **BUG-3, in two deterministic halves:** with a `LinkedHashSet` fixture, that the handler
     produces an order the declared `Set` type does not define; and that `RevertValues.sameValue`
-    counts the same two elements in reverse order as different (while they are equal as sets)
+    counts the same two elements in reverse order as **the same value**. The second assertion
+    was inverted when the finding was fixed — it read "as different" before — which is what
+    writing it deterministically bought: it pins the fix as reliably as it pinned the defect
   - `LectureHandler.applyInverse`: resolving all seven fields — in particular mapping the
     record's `"professors"` key onto the request's `professorIds` field — and leaving the
     others `null` in a single-field `before` half
@@ -873,10 +907,11 @@ dependency changes the CI contract — a decision for the integration batch.
   compose the "no row" case) and `ModerationCatalogService` — `applyInverse` does not write
   the fields itself, it calls the method the panel calls, so what has to be verified is the
   delegation.
-- **Residual risk:** BUG-3 is open. Real-world order varies per run because `Professor` has
-  no `hashCode`, so the defect looks **flaky** in production: the same edit reverts once and
-  gives `VALUE_CHANGED` the next time. This is the most likely reason a bug report could not
-  be reproduced.
+- **Residual risk:** none outstanding. BUG-3 is fixed — `sameValue` compares collections as
+  multisets — which matters most for exactly the reason the finding gave: real order varies per
+  run because `Professor` has no `hashCode`, so the defect looked **flaky** in production, the
+  same edit reverting once and giving `VALUE_CHANGED` the next time. The handler still hands
+  the check an ordered list, and that is still pinned; nothing reads the order any more.
 - **Test count:** 15 (good: 7, bad: 8) — LectureHandler 9, ProfessorHandler 6
 
 ### ReportStatusRevertHandler.CommentReportHandler / .AnswerReportHandler
@@ -907,17 +942,18 @@ dependency changes the CI contract — a decision for the integration batch.
   map, an empty target list, the `updateWarning(principal, studentId, warningId, request)`
   argument order being built from the warning row (not from the audit entry — the owner is
   not one of the recorded fields), and refusing a missing warning with `ApiException` +
-  `NOT_FOUND` + `"Warning not found"`.
+  `NOT_FOUND` + the `TARGET_MISSING` refusal code.
 - **Deliberately not tested:** a `warning.getStudent()` NPE. `Warning.student` is
   `@ManyToOne(optional = false)`, so a row with a null student cannot exist; a test would
   assert over an unreachable state.
 - **Mocks used:** `WarningRepository` (for both `findAllById` and `findById`, the second of
   which only this handler has) and `ModerationUserService`.
-- **Residual risk:** nothing holds a lock between the revertibility check and the revert
-  itself, so the `NOT_FOUND` path is a real race: the check sees the row and says
-  "revertible", and the row can be gone by the time the revert runs. The handler behaves
-  correctly (refusing rather than crashing) but the user gets an error on an entry that looked
-  revertible.
+- **Residual risk:** the race itself is still there and stays — nothing holds a lock between
+  the revertibility check and the revert, so the check can say "revertible" and the row can be
+  gone by the time the revert runs. Locking would only move the window, since the operator's
+  decision is older than either query. What F-11 was actually about is fixed: the refusal
+  carries `AuditRevertRefusal.TARGET_MISSING` and the wording the check itself uses, so the
+  panel says the entry can no longer be reverted rather than reporting a missing record.
 - **Test count:** 6 (good: 3, bad: 3)
 
 ### UserRevertHandler
@@ -936,8 +972,9 @@ dependency changes the CI contract — a decision for the integration batch.
     one; reporting it would suggest a revert that writes the anonymized values back as if
     they were real
   - An id that did not survive not appearing in the map
-  - Characterization: the administrator id list being fetched before the loop, meaning it is
-    queried **even for an empty id list**
+  - That the administrator id list is **not** queried for an empty target list — the same
+    assertion F-12 recorded as a characterization, inverted when the finding was fixed rather
+    than deleted, so the order of the two queries cannot drift back
   - `applyInverse`: all six fields, and the others staying `null` in a single-field `before`
     half
 - **Deliberately not tested:** `ModerationUserService.updateStudent` itself — role demotion
@@ -960,25 +997,28 @@ dependency changes the CI contract — a decision for the integration batch.
 - **Behaviours tested:** that the vote table is never touched for a target that is not found;
   that the first vote builds the row with `student` + `comment`/`answer` + `vote`; that the
   second vote mutates and saves **the same instance** (`isSameAs`, no second row inserted);
-  that the answer path does not touch the comment vote table. And, as characterization, the
-  **four gaps**: no toggle-off, and a `null` `voteType` being saved with `success = true`
-  (separately for each of the two methods).
+  that the answer path does not touch the comment vote table; that every vote, **withdrawal
+  included**, writes its activity entry and a refused one writes none; and that `NONE` deletes
+  the row rather than storing a third direction. And, as characterization, the two gaps that
+  remain deliberate: no toggle-off on a repeated identical vote, and a `null` `voteType`
+  reaching `save` because rejection lives at the boundary.
 - **Deliberately not tested:** `submitComment` / `submitAnswer` / the report methods and the
-  notification path — the class's remaining 16 missed lines, a later batch. That the unique
+  notification path — the class's remaining missed lines, a later batch. That the unique
   constraint really does prevent the second row is an integration concern; only *what the
   code hands to* `save` is verified here.
-- **Mocks used:** only the four repositories the two methods touch (`CommentRepository`,
-  `AnswerRepository`, `CommentVoteRepository`, `AnswerVoteRepository`). The constructor's
-  other five dependencies (`LectureService`, the two report repositories,
-  `NotificationRepository`, `AuditWriter`) are passed as **`null`** rather than mocks:
-  putting mocks there would let a future edit start using these collaborators silently, while
-  `null` turns that into an immediate NPE in the method's own test. `AuditWriter` being on
-  that list is the finding itself.
-- **Residual risk:** none of the four gaps was fixed — all are product decisions. The most
-  serious is the missing audit: vote manipulation does not appear in the moderation trail at
-  all. A `null` `voteType` surfaces as `DataIntegrityViolationException` → 409 "State
-  conflict", so a client expecting 400 gets 409.
-- **Test count:** 9 (good: 4, bad: 5)
+- **Mocks used:** the four repositories the two methods touch (`CommentRepository`,
+  `AnswerRepository`, `CommentVoteRepository`, `AnswerVoteRepository`) plus `AuditWriter`. The
+  constructor's other four dependencies (`LectureService`, the two report repositories,
+  `NotificationRepository`) are passed as **`null`** rather than mocks: putting mocks there
+  would let a future edit start using these collaborators silently, while `null` turns that
+  into an immediate NPE in the method's own test. `AuditWriter` was on that list until F-1 was
+  closed — it *was* the finding.
+- **Residual risk:** the two remaining gaps are deliberate and written down as such. F-1 (no
+  audit) and F-3 (no way to withdraw a vote) are fixed; F-2 was fixed at the boundary, so a
+  `null` `voteType` is a 400 rather than the 409 it used to produce, and the characterization
+  test that reaches `save` is what stands between a future unvalidated caller and a constraint
+  violation at flush time.
+- **Test count:** 16 (good: 11, bad: 5)
 
 ### StudentService
 
@@ -987,15 +1027,14 @@ dependency changes the CI contract — a decision for the integration batch.
 - **Behaviours tested:**
   - `getUserInformation`: the credibility score being ups minus downs, the case that comes
     out to zero, the average score plus the rating/comment counts, a zero average with no
-    ratings (rather than a division by zero), and the exact failure shape returned for a
-    student that is not found
+    ratings (rather than a division by zero), the 404 for a student that is not found, and
+    that the derived score reaches the response **without** being written back to the entity
   - That the score counts **all** votes reaching the student who wrote the content,
     regardless of who cast them (pinned so that a future "don't count your own vote" change
     is a deliberate one)
   - `getUserRatings`: each rating being mapped to a `LectureResponse` plus the average score,
     the count embedded in the message (`"Success, found 2 ratings."`), `success = true` even
-    for an empty list, and an **empty list** rather than `null` for a student that is not
-    found
+    for an empty list, and a 404 for a student that is not found
   - `deleteAccount`: a `null` principal; a principal whose email is not in the table (nothing
     is written); and on the happy path, `UserStatus.DELETED` being written and saved and the
     message containing the email
@@ -1007,17 +1046,18 @@ dependency changes the CI contract — a decision for the integration batch.
   mean a new dependency (mockito-inline) and a departure from the house style, and it is not
   needed — plain fixtures drive all three.
 - **Mocks used:** only `StudentRepository`; the class's single dependency.
-- **Residual risk:**
-  - **No path throws.** Every failure is a response carrying `success = false` and HTTP 200.
-    So a caller that only looks at thrown errors mistakes a broken lookup for a successful
-    one. The tests pin this contract, but the contract itself is debatable.
-  - `getUserInformation` calls `student.setCredibilityScore(...)` inside a
-    `readOnly = true` transaction. Harmless at the unit level; what dirty checking does in a
-    real persistence context is an integration question.
+- **Residual risk:** none outstanding. All three entries that stood here are closed:
+  - **No path threw** — every failure was a response carrying `success = false` and HTTP 200,
+    so a caller reading the status mistook a broken lookup for a successful one. F-5: the four
+    failures throw `ApiException` now, 404 or 401, and the body a client parses is unchanged.
+  - `getUserInformation` called `student.setCredibilityScore(...)` inside a `readOnly = true`
+    transaction. F-9: the write is gone, so the dirty-checking question it raised no longer
+    has to be answered at the integration layer.
   - Typos in the message strings (`couldnt`, `succesfully`) were going out to the client;
     the three in `deleteAccount` were fixed in `edaf2bc` and the remaining five in `src/main`
-    in `57658c3`, with the tests that pin them updated alongside (F-10 closed).
-- **Test count:** 12 (good: 6, bad: 6)
+    in `57658c3`, with the tests that pin them updated alongside (F-10 closed). Two of those
+    three strings no longer exist at all — F-5 replaced the responses that carried them.
+- **Test count:** 13 (good: 7, bad: 6)
 
 ### AccountService
 
@@ -1025,8 +1065,10 @@ dependency changes the CI contract — a decision for the integration batch.
   its own: revoking the tokens issued to an account when it is deleted.
 - **Behaviours tested:** the two read paths delegating unchanged with `student.getId()`; that
   `invalidateAllAuthTokensForEmail` is called on a **successful** deletion and **not** called
-  on a failed one; and `requestLogout` embedding the returned session count in the message
-  (three sessions and zero sessions).
+  on a failed one — in both shapes a failure can take, the thrown `ApiException` that
+  `StudentService` produces since F-5 and the unsuccessful response the guard still refuses to
+  act on; and `requestLogout` embedding the returned session count in the message (three
+  sessions and zero sessions).
 - **Deliberately not tested:** `AuthService.invalidateAllAuthTokensForEmail` actually revoking
   the tokens — `AuthService`'s job. That a deleted account's token can no longer make requests
   is an integration concern (`TokenAuthenticationService` rejects `DELETED`).
@@ -1035,10 +1077,13 @@ dependency changes the CI contract — a decision for the integration batch.
   **based on its outcome**.
 - **Residual risk:** without the `success` condition the account would go `DELETED` while
   every token stayed valid until it expired, and a student token lives for a year — which is
-  why the failed-deletion branch is the single most valuable test in this batch. The class
-  throws an NPE on `getId()`/`getKitEmail()` if `student` arrives as `null`; not tested,
-  because the principal is supplied by the security chain.
-- **Test count:** 6 (good: 4, bad: 2)
+  why the failed-deletion branch is the single most valuable test in this batch. F-5 moved
+  that branch: the failure throws now, so the condition is no longer the only thing enforcing
+  the rule. It is kept, and tested against the collaborator's contract rather than against
+  today's implementation of it, so the rule outlives another change to how failure is
+  signalled. The class throws an NPE on `getId()`/`getKitEmail()` if `student` arrives as
+  `null`; not tested, because the principal is supplied by the security chain.
+- **Test count:** 7 (good: 4, bad: 3)
 
 ### BugReportRevertHandler
 
@@ -1101,7 +1146,8 @@ dependency changes the CI contract — a decision for the integration batch.
   delivery and the GitLab client are substituted.
 - **Residual risk:** the sweep proves a route *refuses* an anonymous caller, not that the rule
   behind the refusal is the right one. A route locked to admins that should be open to students
-  passes this test and fails nobody until a user complains.
+  passes this test and fails nobody until a user complains. The `PUBLIC_ROUTES_ANSWERING_SERVER_ERROR`
+  exemption list is gone with F-14 and F-15: a public route answering 5xx is a plain failure.
 - **Test count:** 6
 
 ### ApiProtocolContractTests
@@ -1111,25 +1157,27 @@ dependency changes the CI contract — a decision for the integration batch.
 - **Behaviours tested:** every body-reading route answering an unreadable media type with the
   declared status (415 since F-17 was fixed) and carrying the project's `BasicResponse` body
   rather than a `ProblemDetail`; malformed JSON in the *right* media type still being a clean
-  400; a path called with a verb it does not map answering the pinned status, with the project
-  error body.
-- **Deliberately not tested:** the `Allow` header a correct 405 would carry — there is no 405
-  to carry it yet (F-16). When that changes, `WRONG_VERB_STATUS` becomes 405 and
-  `wrongVerbCarriesTheProjectErrorBody` gains the header assertion; the constant's javadoc says
-  so.
+  400; a path called with a verb it does not map answering 405 with the project error body; and
+  every such refusal naming the verbs that **would** have worked in an `Allow` header.
+- **Deliberately not tested:** nothing outstanding. The `Allow` assertion this section used to
+  defer arrived with F-16, as its own sweep rather than as a line in
+  `wrongVerbCarriesTheProjectErrorBody`: the header is built in one place from the mapping's
+  own verb set, so a route that stopped emitting it would otherwise fail silently.
 - **Mocks used:** none, as above.
-- **Residual risk:** F-16 stays wrong on all 122 routes by decision, not by omission. The
-  pinned constant is what keeps that decision visible instead of letting it read as an
-  oversight.
-- **Test count:** 5
+- **Residual risk:** none outstanding. F-16 was the last wrong status here, and closing it
+  tested the batch's own claim — flipping `WRONG_VERB_STATUS` carried 93 refusals across two
+  suites with no other edit.
+- **Test count:** 6
 
 ### ApiOwnershipMatrixTests
 
 - **Responsibility:** horizontal authorization — whether an authenticated caller can reach a
   row belonging to another student.
 - **Behaviours tested:** the classification ratchet over all 61 id-taking routes; the
-  cross-user probe on the one owner-scoped route, asserted on the **row** rather than the
-  status; the owner's own call still working; `/ratings/own` being scoped by the principal
+  cross-user probe on the one owner-scoped route, asserted on the **row** first and the status
+  second — the row check is what proved the refusal back when the status was a 200, and it
+  stays the primary assertion because a status is evidence about the answer, not about the
+  table; the owner's own call still working; `/ratings/own` being scoped by the principal
   rather than the path; the notification list not leaking another student's rows; the
   administrative routes refusing a student who carries a **real** victim id; and the structural
   invariant that no app-tier handler takes a caller identity from the request.
@@ -1159,15 +1207,17 @@ dependency changes the CI contract — a decision for the integration batch.
   - `professorIds` and `lectureIds`: an id that does not resolve being a 404, an empty list
     clearing the assignment, and a reassignment being written **from the owning (lecture)
     side** with the detach and attach loops verified on both lectures
-  - **BUG-3's write side**: the same professors in a different order recording a bogus change
+  - **BUG-3's write side**: the same professors in a different order recording **no** change
+    and no audit entry at all — the two halves of what the bogus change used to produce
   - The audit entry: action, target type and the label built from the row *after* the edit
 - **Deliberately not tested:** `deleteLecture` / `deleteProfessor`, which were already
   covered; the cascade behaviour they rely on is an integration concern.
 - **Mocks used:** the five constructor dependencies. `AuditWriter` is mocked and captured
   rather than stubbed, because the field diff it receives *is* the observable behaviour of
   these methods — the response says only "Updated … successfully" either way.
-- **Residual risk:** 8 branches remain, in the delete paths and the label helpers. BUG-3
-  itself is open: the test pins the defect, it does not fix it.
+- **Residual risk:** 7 branches remain, in the delete paths and the label helpers. BUG-3 is
+  fixed on both sides through one `sameAssignment` helper; the test that pinned the defect
+  states the fix, which is what a deterministic characterization test is for.
 - **Test count:** 29
 
 ### ModerationUserService

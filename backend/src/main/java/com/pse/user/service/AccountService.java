@@ -33,6 +33,11 @@ public class AccountService {
 
     public BasicResponse deleteAccount(Student student) {
 
+        // Since F-5 the failure arrives as a thrown ApiException, so an unsuccessful
+        // deletion never reaches the revocation below at all. The condition is kept as the
+        // statement of the rule rather than as the only thing enforcing it: without it, an
+        // account that was not deleted would still be signed out of every session, and if
+        // the failure signalling ever changes back the rule survives the change.
         BasicResponse response = studentService.deleteAccount(student);
 
         if (response.success()) {

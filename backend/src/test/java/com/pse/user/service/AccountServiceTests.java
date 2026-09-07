@@ -4,16 +4,19 @@ import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.UserRatingResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.user.dto.StudentProfileResponse;
+import com.pse.shared.error.ApiException;
 import com.pse.user.model.Student;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -96,23 +99,47 @@ class AccountServiceTests {
     }
 
     /**
-     * The branch that matters. A soft delete that did not happen must not log the account
-     * out: the caller is still a live student, and revoking here would sign them out of a
-     * session that is still legitimately theirs.
+     * The rule that matters, in the shape it actually arrives in. A soft delete that did not
+     * happen must not log the account out: the caller is still a live student, and revoking
+     * here would sign them out of a session that is still legitimately theirs.
+     *
+     * <p>Since F-5 the failure is a thrown {@code ApiException} rather than a response
+     * carrying {@code success = false}, so this is what the path looks like now -- the
+     * exception travels on to the handler and the revocation is never reached.
      */
     @Test
     void deleteAccount_failedDeletion_leavesTheTokensAlone() {
         // Given
         Student student = student();
         when(studentService.deleteAccount(student))
-                .thenReturn(new BasicResponse("Error, couldn't find student", false));
+                .thenThrow(new ApiException(HttpStatus.NOT_FOUND, "Student not found"));
+
+        // When / Then
+        assertThatThrownBy(() -> service().deleteAccount(student))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Student not found");
+
+        verifyNoInteractions(authService);
+    }
+
+    /**
+     * The same rule stated against the collaborator's contract rather than against today's
+     * implementation of it. {@code StudentService} cannot return this shape any more, but
+     * {@code AccountService} does not know that -- and the guard is what keeps the rule true
+     * if the way a failed deletion is signalled ever changes again.
+     */
+    @Test
+    void deleteAccount_unsuccessfulResponse_stillLeavesTheTokensAlone() {
+        // Given
+        Student student = student();
+        when(studentService.deleteAccount(student))
+                .thenReturn(new BasicResponse("Not deleted", false));
 
         // When
         BasicResponse response = service().deleteAccount(student);
 
-        // Then -- the failure is passed through unchanged, and nothing is revoked
+        // Then
         assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, couldn't find student");
         verifyNoInteractions(authService);
     }
 
