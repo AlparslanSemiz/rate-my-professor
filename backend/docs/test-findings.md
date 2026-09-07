@@ -82,7 +82,11 @@ reverse order as different (while they are equal as sets).
 
 **Status.** Open. The fix (order-insensitive comparison for set fields) changes
 `RevertValues`'s contract and is a product decision. The deterministic test for the write
-side — with a stubbed `findAllById` order — was left to the `ModerationCatalogService` batch.
+side — with a stubbed `findAllById` order — now exists as
+`ModerationCatalogServiceTests.updateLecture_sameProfessorsInAnotherOrder_recordsABogusChange`,
+added in batch 4. It pins the bogus `professors` change and the bogus audit event that follow
+from comparing an unordered `Set` position by position. The finding stays **open**: the fix is
+a product decision about `RevertValues`'s contract, not a test gap.
 
 ---
 

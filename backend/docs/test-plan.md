@@ -1,26 +1,27 @@
 # Test plan
 
 Layers: **unit → API/role → integration → E2E**. Every batch adds its own section. The unit
-layer is covered by batches 1–3, the API/role layer by the authorization, protocol and
+layer is covered by batches 1–4, the API/role layer by the authorization, protocol and
 ownership sweeps below. The integration and E2E layers have not been started; what blocks the
 first of them is the Testcontainers question under [Open questions](#open-questions).
 
 ### Where it stands
 
-**559 tests, 0 failures**, 2 skipped (the `@Disabled` `DemoApplicationTests`, and
-`PostgreSqlMigrationSmokeTests`, which runs on CI only). Bundle **92.56% LINE** (3112/3362),
-**77.09% BRANCH** (878/1139), against gates of 0.90 and 0.73.
+**666 tests, 0 failures**, 2 skipped (the `@Disabled` `DemoApplicationTests`, and
+`PostgreSqlMigrationSmokeTests`, which runs on CI only). Bundle **94.02% LINE** (3161/3362),
+**84.20% BRANCH** (959/1139), against gates of 0.92 and 0.82.
 
 | Layer | State |
 |---|---|
-| Unit | Batches 1–3 done. The gap left is branch coverage in the moderation services. |
+| Unit | Batches 1–4 done. |
 | API / role | The three sweeps below. |
 | Integration | **Not started** — blocked on the Testcontainers decision. |
 | E2E | **Not started.** |
 
-The 15-point spread between LINE and BRANCH is where the remaining work is, and it is
-concentrated: `ModerationCatalogService` (48 missed branches), `ModerationUserService` (51),
-`ModerationContentService` (29), `RestClientGitLabClient` (18).
+The spread between LINE and BRANCH was 15 points before batch 4 and is **9.8** after it. What
+is left is spread thin rather than concentrated, with one exception: `RestClientGitLabClient`
+still has 18 missed branches of 22 and is the only untested adapter with no principled reason
+(see *Deliberately uncovered*).
 
 ### The metric
 
@@ -114,9 +115,12 @@ untested method left.
 To keep them apart: the three numbers measure three separate things; this is not an
 inconsistency.
 
-- **pom `jacoco:check` (LINE 0.90 / BRANCH 0.73)** — the bundle regression gate. The floor
-  it must not fall below again.
-- **The 90% target in this document** — the level batches aim for.
+- **pom `jacoco:check` (LINE 0.92 / BRANCH 0.82 since batch 4)** — the bundle regression
+  gate. The floor it must not fall below again; it is raised as batches clear it, never
+  lowered to make a build pass.
+- **The target in this document** — the level batches aim for. It was 90% LINE through
+  batches 1–3; batch 4 was chosen by the BRANCH counter instead, because every class it
+  touched was already above 82% LINE and a line target would never have picked them.
 - **`scripts/CheckChangedCoverage.java --threshold 30`** — the MR gate, which looks only
   at the coverage of *changed* code. Unrelated to the bundle.
 
@@ -150,6 +154,57 @@ exactly: a manual constructor factory rather than `@InjectMocks`, mocked reposit
 moderation service, and the same four questions per handler — the target type, the field map,
 a deleted row being **absent** rather than mapped to null, and `applyInverse` replaying through
 the service the panel itself calls.
+
+## Batch 4 — the moderation services
+
+Target: the branch gap. Three classes held 128 of the module's missed branches between them,
+and unlike the earlier batches this one was chosen by the BRANCH counter rather than by LINE —
+all three were already above 82% LINE and would never have been picked by a line-coverage
+target.
+
+| Class | LINE missed | BRANCH missed | Tests |
+|---|---|---|---|
+| `ModerationCatalogService` | 30 → **0** | 48 → **8** | 29 |
+| `ModerationUserService` | 26 → **13** | 51 → **27** | 49 |
+| `ModerationContentService` | 23 → **17** | 29 → **12** | 29 |
+
+**107 tests in total.** Bundle: 92.56% → **94.02% LINE**, 77.09% → **84.20% BRANCH**. Seven
+points of branch coverage from three classes, which is what "the gap is concentrated" meant.
+
+### What the tests are organised around
+
+All three classes have the same shape — validate, walk the request field by field, record a
+change only where the value actually differs, and write nothing at all when nothing did. That
+last property gets the most tests, and deliberately: a method that saves and writes an audit
+entry for an edit that changed nothing fills the moderation trail with events nobody
+performed. There are now tests for a resubmitted name, year, season, type, active flag,
+professor assignment, username, biography, credibility score, content and status.
+
+The second theme is the **protection matrix** in `updateStudent`. Three guards overlap on
+every field — is the target an administrator, is the target the caller, is the target the
+elevated operator — and the answers differ per field: a status change refuses self, a role
+change refuses self, an address change refuses neither but refuses an elevated target
+outright, for everybody including an elevated caller. Driving that through `MockMvc` means
+minting a different session per case; at the unit level it is a boolean, which is the whole
+argument for testing this class here rather than through the API.
+
+### BUG-3's write side, closed
+
+The deterministic write-side test that batch 2 deferred to this batch now exists.
+`updateLecture` builds `before` from a `Set` — which defines no order — and `after` from
+whatever order `findAllById` returns, then compares them position by position, so an
+unchanged assignment records a bogus change and a bogus audit event. The test states that with
+a `LinkedHashSet` and a stubbed repository order rather than relying on real `HashSet`
+iteration: `Professor` overrides neither `equals` nor `hashCode`, so real order varies per run
+and the flakiness would end up in the test instead of in the defect. The finding itself stays
+open — the fix is a product decision about `RevertValues`'s contract.
+
+### The gates moved
+
+`jacoco:check` went LINE `0.90` → **`0.92`** and BRANCH `0.73` → **`0.82`**, following the rule
+the batch 2 writeup set: about one and a half points below what is measured, so the gate stops
+a regression without breaking an unrelated MR. Verified green at those values.
+
 
 ## The API / role batch
 
@@ -310,7 +365,7 @@ two elements in reverse order as **different** — pinned separately.
 
 Not fixed — order-insensitive comparison for set fields is a product decision and changes
 `RevertValues`'s contract. The deterministic test for the write side (with a stubbed
-`findAllById` order) was left to the `ModerationCatalogService` batch.
+`findAllById` order) was written in batch 4.
 
 ### Four gaps on the voting path
 
@@ -894,3 +949,74 @@ dependency changes the CI contract — a decision for the integration batch.
   `NOT_OWNED_BY_A_USER` would pass. The invariant test is the backstop, and it is the one to
   keep working if the sets ever have to be trimmed.
 - **Test count:** 7
+
+### ModerationCatalogService
+
+- **Responsibility:** the catalogue behind the ratings — correcting a lecture or a professor
+  that was entered wrong, and the assignment between them.
+- **Behaviours tested:**
+  - Both rejection gates: a `null` request and a request whose every field is `null`, each
+    refused **before** the row is looked up
+  - Every validation bound, at the bound and past it: name 300, code 100, professor names
+    200, semester year 1900 and 2200 at both ends
+  - Trimming before comparison — a name resubmitted with surrounding whitespace is not a
+    change
+  - Every field resubmitted unchanged recording nothing, and the whole method then saving
+    nothing and writing no audit entry
+  - `professorIds` and `lectureIds`: an id that does not resolve being a 404, an empty list
+    clearing the assignment, and a reassignment being written **from the owning (lecture)
+    side** with the detach and attach loops verified on both lectures
+  - **BUG-3's write side**: the same professors in a different order recording a bogus change
+  - The audit entry: action, target type and the label built from the row *after* the edit
+- **Deliberately not tested:** `deleteLecture` / `deleteProfessor`, which were already
+  covered; the cascade behaviour they rely on is an integration concern.
+- **Mocks used:** the five constructor dependencies. `AuditWriter` is mocked and captured
+  rather than stubbed, because the field diff it receives *is* the observable behaviour of
+  these methods — the response says only "Updated … successfully" either way.
+- **Residual risk:** 8 branches remain, in the delete paths and the label helpers. BUG-3
+  itself is open: the test pins the defect, it does not fix it.
+- **Test count:** 29
+
+### ModerationUserService
+
+- **Responsibility:** the administrator's view of an account — listing, filtering, and the
+  field edit with its protection rules.
+- **Behaviours tested:**
+  - Every query-parameter rejection, each verified to happen **before the first repository
+    call**: limit out of range or not a number, a cursor with no limit (refused before the
+    cursor is even decoded), an unknown status, role or sort, a search over 200 characters,
+    and the refusal to filter for `DELETED` at all
+  - The accepted sort spellings, since the parser trims and ignores case — a blank value is
+    the default rather than an error
+  - The protection matrix on `updateStudent`: self-status, self-role, an administrator
+    target for an ordinary caller, and the elevated operator's address, which is refused for
+    **everybody including an elevated caller**
+  - Promotion saving the admin row and demotion deleting it, with the moderation-history
+    refusal checked up front rather than left to the constraint
+  - Session revocation on a changed address, on a block, and on either role change, asserted
+    through the token rows and the `sessionsRevoked` metadata
+  - `blockedAt` stamped from the injected `Clock` and cleared again on unblock
+  - The `biography == null → ""` normalization, the same one `UserRevertHandler` depends on
+- **Deliberately not tested:** the Criteria predicates (`rolePredicate`, `cursorPredicate`),
+  which build a query rather than compute an answer — they belong to the integration layer,
+  and mocking `CriteriaBuilder` would assert the shape of a query nobody runs.
+- **Mocks used:** all ten constructor dependencies, plus a `Clock.fixed`.
+- **Residual risk:** 27 branches remain, most of them in `getStudents`'s two ordering modes
+  and the predicates above.
+- **Test count:** 49
+
+### ModerationContentService
+
+- **Responsibility:** moderating a comment or an answer — editing the text, and the
+  visibility switch the student app reads.
+- **Behaviours tested:** the shared `contentChanges` guard from both sides; blank and
+  overlong content; content and status resubmitted unchanged writing nothing; the audit
+  preview being truncated to 120 characters **with a visible ellipsis** and left whole at the
+  boundary; the lecture label with a code, with a blank code and with no code at all; and the
+  answer path being audited as an `ANSWER_UPDATED` labelled through its parent comment.
+- **Deliberately not tested:** the listing methods' response assembly, which is mapping; the
+  rating deletion path, already covered.
+- **Mocks used:** all ten constructor dependencies.
+- **Residual risk:** 12 branches remain, in `getRatings`'s specification lambda and the
+  listing helpers.
+- **Test count:** 29
