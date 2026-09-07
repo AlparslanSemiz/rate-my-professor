@@ -447,7 +447,7 @@ class ProfessorApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message")
-                        .value("Error, couldnt authenticate Admin"));
+                        .value("Error, couldn't authenticate Admin"));
 
         assertTrue(
                 professorRepository

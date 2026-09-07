@@ -52,7 +52,7 @@ public class ProfessorController {
     @PostMapping("/professor")
     public BasicResponse addProfessor( @AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody ProfessorAddRequest request) {
         if (!principal.isAdmin()){
-            return new BasicResponse("Error, couldnt authenticate Admin", false);
+            return new BasicResponse("Error, couldn't authenticate Admin", false);
         }
         return professorService.addProfessor(request);
     }

@@ -116,7 +116,7 @@ public class ProfessorControllerTests {
 
         assertFalse(response.success());
         assertEquals(
-                "Error, couldnt authenticate Admin",
+                "Error, couldn't authenticate Admin",
                 response.message()
         );
 
