@@ -384,18 +384,20 @@ class LoginLocationServiceTests {
         assertWarnLogged();
     }
 
-    /** A null body returns early, without ever reaching the catch -- so nothing is logged. */
+
     @Test
-    void getLoginLocation_nullResponseBody_returnsUnknownWithoutLogging() {
+    void getLoginLocation_nullResponseBody_returnsUnknownAndLogsAttempt() {
         // Given
         ipInfoReturns(null);
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY)
+                .getLoginLocation(IP);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
-        assertThat(logs.list).isEmpty();
+
+        assertLookupAttemptLogged(IP);
     }
 
     /**
