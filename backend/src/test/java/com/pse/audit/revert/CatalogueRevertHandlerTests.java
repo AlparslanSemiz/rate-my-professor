@@ -80,7 +80,7 @@ class CatalogueRevertHandlerTests {
         lecture.setName("Programmierparadigmen");
         lecture.setCode("IN1234");
         lecture.setSemesterYear(2025);
-        lecture.setSemesterSeason(SemesterSeason.WINTER);
+        lecture.setSemesterSeason(SemesterSeason.WS);
         lecture.setActive(true);
         lecture.setLectureType(LectureType.LECTURE_AND_EXERCISE);
         return lecture;
