@@ -27,7 +27,7 @@ variables:
   # below; COVERAGE_LINE_TARGET is where the suite is trying to be -- missing it is a
   # warning (the coverage:line-target job goes yellow) and does not block the pipeline.
   COVERAGE_LINE_MIN: "90"
-  COVERAGE_LINE_TARGET: "94"
+  COVERAGE_LINE_TARGET: "95"
   GIT_DEPTH: "0"
 
 default:
