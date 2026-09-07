@@ -1,217 +1,228 @@
-# Test bulguları
+# Test findings
 
-Unit test batch'lerinin ortaya çıkardığı kusurlar, tek yerde. [test-plan.md](test-plan.md)
-neyin nasıl test edildiğini anlatır; bu belge yalnızca **testlerin bulduğu şeyleri** ve her
-birinin ne durumda olduğunu tutar.
+The defects the unit test batches turned up, in one place. [test-plan.md](test-plan.md)
+describes what is tested and how; this document holds only **what the tests found** and
+where each finding stands.
 
-Her bulgu, onu sabitleyen testin adıyla birlikte veriliyor: bir bulgu ancak bir testte
-yaşıyorsa gerçekten kayıtlıdır.
+Every finding is given together with the name of the test that pins it: a finding is only
+really recorded once it lives in a test.
 
-## Özet
+## Summary
 
-| # | Bulgu | Etki | Durum |
+| # | Finding | Impact | Status |
 |---|---|---|---|
-| [BUG-3](#bug-3--profesör-ataması-sırası-geri-almayı-sessizce-reddediyor) | Profesör ataması sırası geri almayı reddediyor | Yüksek — kullanıcıya kararsız görünüyor | Açık, karakterize edildi |
-| [F-1](#f-1--oy-verme-audit-yazmıyor) | Oy verme audit yazmıyor | Yüksek — moderasyon kör noktası | Açık, karakterize edildi |
-| [F-2](#f-2--votetype-doğrulanmıyor) | `voteType` doğrulanmıyor, `null` 409'a dönüşüyor | Orta — yanlış HTTP kodu | **Çözüldü** (`43e923b`) |
-| [F-3](#f-3--oy-geri-çekilemiyor) | Oy geri çekilemiyor (toggle-off yok) | Orta — ürün boşluğu | Açık, karakterize edildi |
-| [F-4](#f-4--voteanswer-rotasında-eğik-çizgi-eksik) | `/vote/answer` rotasında eğik çizgi eksik | Orta — rota yanlış | Açık; sınıf tarandı, tek örnek |
-| [F-5](#f-5--başarısızlıklar-http-200-ile-dönüyor) | Başarısızlıklar HTTP 200 ile dönüyor | Orta — sessiz hata | Açık, sözleşme sabitlendi |
-| [F-6](#f-6--studentservicein-ikinci-moderasyon-yolu) | `StudentService`'in ikinci, zayıf moderasyon yolu | Yüksek — koruma atlanabilirdi | **Çözüldü** (silindi) |
-| [F-7](#f-7--normalizeip-tek-virgülde-çöküyordu) | `normalizeIp` tek virgülde çöküyordu | Orta — login e-postasında hata | **Çözüldü** (`8fc2901`) |
-| [F-8](#f-8--ipinfo_token-boşken-sessiz-başarısızlık) | `IPINFO_TOKEN` boşken sessiz başarısızlık | Orta — teşhis edilemiyordu | **Kısmen çözüldü** |
-| [F-9](#f-9--readonly-transaction-içinde-yazma) | `readOnly` transaction içinde alan yazma | Düşük — integration sorusu | Açık, kayda geçti |
-| [F-10](#f-10--istemciye-giden-yazım-hataları) | İstemciye giden yazım hataları | Düşük — kozmetik, ama sözleşme | **Çözüldü** (`edaf2bc`, `57658c3`) |
-| [F-11](#f-11--uyarı-geri-almada-kontroluygulama-yarışı) | Uyarı geri almada kontrol/uygulama yarışı | Düşük — nadir | Açık, kayda geçti |
-| [F-12](#f-12--boş-hedef-listesinde-gereksiz-yönetici-sorgusu) | Boş hedef listesinde gereksiz yönetici sorgusu | Çok düşük | Açık, karakterize edildi |
-| [F-13](#f-13--token-iptali-tek-bir-koşula-bağlı) | Token iptali tek bir koşula bağlı | Bilgi — koruma mevcut | Test altına alındı |
-| [P-1](#p-1--kapsam-baseline-sayısı-yanlıştı) | Kapsam baseline sayısı yanlıştı | Süreç | **Çözüldü** (yeniden ölçüldü) |
-| [P-2](#p-2--integration-testleri-unit-hedeflerini-gizliyor) | Integration testleri unit hedeflerini gizliyor | Süreç | **Çözüldü** (yöntem değişti) |
-| [P-3](#p-3--lombok-jacocoda-filtrelenmiyor) | Lombok JaCoCo'da filtrelenmiyor | Süreç | Açık, bilinçli |
+| [BUG-3](#bug-3--professor-assignment-order-silently-refuses-a-revert) | Professor assignment order refuses a revert | High — looks unstable to the user | Open, characterised |
+| [F-1](#f-1--voting-writes-no-audit-entry) | Voting writes no audit entry | High — moderation blind spot | Open, characterised |
+| [F-2](#f-2--votetype-is-not-validated) | `voteType` is not validated, `null` turns into a 409 | Medium — wrong HTTP code | **Fixed** (`43e923b`) |
+| [F-3](#f-3--a-vote-cannot-be-withdrawn) | A vote cannot be withdrawn (no toggle-off) | Medium — product gap | Open, characterised |
+| [F-4](#f-4--the-voteanswer-route-is-missing-a-slash) | The `/vote/answer` route is missing a slash | Medium — wrong route | Open; class swept, single instance |
+| [F-5](#f-5--failures-come-back-with-http-200) | Failures come back with HTTP 200 | Medium — silent failure | Open, contract pinned |
+| [F-6](#f-6--studentservices-second-moderation-path) | `StudentService`'s second, weaker moderation path | High — a safeguard could be bypassed | **Fixed** (deleted) |
+| [F-7](#f-7--normalizeip-crashed-on-a-lone-comma) | `normalizeIp` crashed on a lone comma | Medium — error in the login email | **Fixed** (`8fc2901`) |
+| [F-8](#f-8--silent-failure-when-ipinfo_token-is-empty) | Silent failure when `IPINFO_TOKEN` is empty | Medium — undiagnosable | **Partly fixed** |
+| [F-9](#f-9--writing-inside-a-readonly-transaction) | Writing a field inside a `readOnly` transaction | Low — an integration question | Open, recorded |
+| [F-10](#f-10--typos-that-reach-the-client) | Typos that reach the client | Low — cosmetic, but it is contract | **Fixed** (`edaf2bc`, `57658c3`) |
+| [F-11](#f-11--checkapply-race-in-warning-revert) | Check/apply race in warning revert | Low — rare | Open, recorded |
+| [F-12](#f-12--needless-administrator-query-on-an-empty-target-list) | Needless administrator query on an empty target list | Very low | Open, characterised |
+| [F-13](#f-13--token-revocation-hangs-on-a-single-condition) | Token revocation hangs on a single condition | Info — the safeguard exists | Now under test |
+| [P-1](#p-1--the-coverage-baseline-number-was-wrong) | The coverage baseline number was wrong | Process | **Fixed** (re-measured) |
+| [P-2](#p-2--integration-tests-hide-unit-targets) | Integration tests hide unit targets | Process | **Fixed** (method changed) |
+| [P-3](#p-3--lombok-is-not-filtered-in-jacoco) | Lombok is not filtered in JaCoCo | Process | Open, deliberate |
 
-BUG-1 ve BUG-2 (cursor ve yaklaşık konum hata raporları) [test-plan.md](test-plan.md#bulgular)
-içinde; ikisi de backend'de yeniden üretilemedi ve orada yerinde duruyor.
+BUG-1 and BUG-2 (the cursor and approximate-location bug reports) are in
+[test-plan.md](test-plan.md#findings); neither could be reproduced in the backend and both
+stay there.
 
 ---
 
-## Kod kusurları
+## Code defects
 
-### BUG-3 — Profesör ataması sırası geri almayı sessizce reddediyor
+### BUG-3 — Professor assignment order silently refuses a revert
 
-**Nerede.** `CatalogueRevertHandler.LectureHandler.currentValues` (okuma tarafı) ve
-`ModerationCatalogService.updateLecture` (yazma tarafı).
+**Where.** `CatalogueRevertHandler.LectureHandler.currentValues` (the read side) and
+`ModerationCatalogService.updateLecture` (the write side).
 
-**Ne oluyor.** `Lecture.professors` bir `Set<Professor>` — sıra tanımlamayan bir tip — ama
-handler onu **sıralı** bir `List`'e çeviriyor. `RevertValues.sameValue` iki koleksiyonu
-`asStrings(left).equals(asStrings(right))` üzerinden, yani pozisyon pozisyon karşılaştırıyor.
-Sonuç: profesör ataması hiç değişmemiş bir ders, yalnızca kümenin iterasyon sırası audit
-JSON'una yazılan sırayla uyuşmadığı için `VALUE_CHANGED` alıp **meşru bir geri almayı
-reddediyor**.
+**What happens.** `Lecture.professors` is a `Set<Professor>` — a type that defines no order —
+but the handler turns it into an **ordered** `List`. `RevertValues.sameValue` compares two
+collections through `asStrings(left).equals(asStrings(right))`, that is, position by
+position. The result: a lecture whose professor assignment never changed gets a
+`VALUE_CHANGED` purely because the set's iteration order does not match the order written
+into the audit JSON, and **a legitimate revert is refused**.
 
-Yazma tarafında aynı duyarlılık ters yönde çalışıyor: `updateLecture` `before`'u `Set`'ten,
-`after`'ı `professorRepository.findAllById(...)` sırasından üretip `!before.equals(after)`
-ile karşılaştırıyor — yani değişmemiş bir atama **sahte** bir `professors` değişikliği ve
-sahte bir audit olayı yazabiliyor.
+The same sensitivity works in reverse on the write side: `updateLecture` builds `before`
+from the `Set` and `after` from the order of `professorRepository.findAllById(...)`, then
+compares them with `!before.equals(after)` — so an unchanged assignment can write a
+**phantom** `professors` change and a phantom audit event.
 
-**Neden ciddi.** `Professor` ne `equals` ne `hashCode` override ediyor, yani kimlik hash'i
-kullanılıyor ve `HashSet` bucket dağılımı nesne adreslerine bağlı. Sıra **her çalıştırmada**
-değişebiliyor. Kusur bu yüzden üretimde kararsız görünüyor: aynı düzenleme bir seferde geri
-alınabilir, diğerinde alınamaz. Yeniden üretilemeyen bir hata raporunun en olası nedeni bu.
+**Why it is serious.** `Professor` overrides neither `equals` nor `hashCode`, so identity
+hashes are used and `HashSet` bucket distribution depends on object addresses. The order can
+change **on every run**. That is why the defect looks unstable in production: the same edit
+is revertible once and not the next time. This is the most likely explanation for a bug
+report that cannot be reproduced.
 
-**Testler.**
+**Tests.**
 ```
 CatalogueRevertHandlerTests
   lectureHandler_currentValues_professorAssignment_carriesTheOrderOfAnUnorderedSet
   lectureHandler_professorAssignmentInAnotherOrder_comparesAsChangedByRevertValues
 ```
-Test gerçek `HashSet` sırasına **bel bağlamıyor**: öyle bir test kararsız olur ve kararsızlık
-kusura değil teste yazılırdı. Kusur iki deterministik olguya ayrıldı — `LinkedHashSet`
-fixture'ı ile handler'ın bildirilen tipin tanımlamadığı bir sıra ürettiği, ve `sameValue`'nun
-aynı iki elemanı ters sırada farklı saydığı (küme olarak eşitken).
+The tests deliberately do **not** lean on the real `HashSet` order: such a test would be
+flaky, and the flakiness would be written into the test rather than into the defect. The
+defect was split into two deterministic facts instead — that with a `LinkedHashSet` fixture
+the handler produces an order the declared type does not define, and that `sameValue` counts
+the same two elements in reverse order as different (while they are equal as sets).
 
-**Durum.** Açık. Düzeltme (küme alanları için sırasız karşılaştırma) `RevertValues`'ın
-sözleşmesini değiştiriyor ve bir ürün kararı. Yazma tarafının deterministik testi —
-stub'lanmış `findAllById` sırasıyla — `ModerationCatalogService` batch'ine bırakıldı.
-
----
-
-### F-1 — Oy verme audit yazmıyor
-
-**Nerede.** `SocialService.voteComment`, `SocialService.voteAnswer`.
-
-**Ne oluyor.** Aynı sınıftaki `submitComment`, `submitAnswer` ve `submit*Report` metotlarının
-hepsi `auditWriter.writeStudentAction(...)` çağırıyor. İki oy metodu çağırmıyor. Yani
-**oy manipülasyonu moderasyon izinde hiç görünmüyor** — bir hesabın yüzlerce oyu
-değiştirmesinin audit tarafında hiçbir izi yok.
-
-**Test.** `SocialServiceVoteTests` — `AuditWriter` bu testte bilinçli olarak mock değil
-`null` geçiliyor; iki metot ona dokunmadığı için testler geçiyor, ve dokunmaya başlarsa
-anında NPE veriyor. `AuditWriter`'ın o listede olması bulgunun kendisi.
-
-**Durum.** Açık.
+**Status.** Open. The fix (order-insensitive comparison for set fields) changes the contract
+of `RevertValues` and is a product decision. The deterministic test for the write side —
+with a stubbed `findAllById` order — was left to the `ModerationCatalogService` batch.
 
 ---
 
-### F-2 — `voteType` doğrulanmıyor
+### F-1 — Voting writes no audit entry
 
-**Nerede.** `SocialService.voteComment`, `SocialService.voteAnswer`.
+**Where.** `SocialService.voteComment`, `SocialService.voteAnswer`.
 
-**Ne oluyor.** `null` bir oy tipi hiç kontrol edilmeden `setVote(null)`'a kadar gidiyor ve
-`save`'e veriliyor. Metot `success = true` dönüyor. Tek durduran, `comment_votes.vote`
-üzerindeki `nullable = false` kolonu — o da **flush anında**, bu metodun açtığı bir
-transaction'ın dışında (iki metot da `@Transactional` değil).
+**What happens.** `submitComment`, `submitAnswer` and the `submit*Report` methods in the
+same class all call `auditWriter.writeStudentAction(...)`. The two vote methods do not. So
+**vote manipulation never shows up in the moderation trail** — an account flipping hundreds
+of votes leaves no trace at all on the audit side.
 
-**Sonuç.** `DataIntegrityViolationException` → `GlobalExceptionHandler:69` → **HTTP 409
-"State conflict"**. İstemci bozuk bir istek için 400 beklerken 409 alıyor, ve mesaj
-hangi alanın sorunlu olduğunu söylemiyor.
+**Test.** `SocialServiceVoteTests` — `AuditWriter` is deliberately passed as `null` rather
+than a mock in this test; the tests pass because neither method touches it, and the moment
+one starts to, it is an immediate NPE. `AuditWriter` being on that list is the finding
+itself.
 
-**Testler.**
+**Status.** Open.
+
+---
+
+### F-2 — `voteType` is not validated
+
+**Where.** `SocialService.voteComment`, `SocialService.voteAnswer`.
+
+**What happens.** A `null` vote type travels unchecked all the way to `setVote(null)` and is
+handed to `save`. The method returns `success = true`. The only thing that stops it is the
+`nullable = false` column on `comment_votes.vote` — and that fires **at flush time**,
+outside any transaction this method opened (neither method is `@Transactional`).
+
+**Consequence.** `DataIntegrityViolationException` → `GlobalExceptionHandler:69` → **HTTP
+409 "State conflict"**. The client expects a 400 for a malformed request and gets a 409, and
+the message does not say which field is at fault.
+
+**Tests.**
 ```
 SocialServiceVoteTests
   voteComment_nullVoteType_isSavedAsANullVoteRatherThanRejected
   voteAnswer_nullVoteType_isSavedAsANullVoteRatherThanRejected
 ```
 
-**Durum.** **Çözüldü** — commit `43e923b`.
+**Status.** **Fixed** — commit `43e923b`.
 
-`VoteCommentRequest.voteType` ve `VoteAnswerRequest.voteType` `@NotNull` aldı, iki handler
-da `@Valid @RequestBody` oldu. Codebase'in doğrulama yaptığı her endpoint böyle yapıyor ve
-`AddLectureRequest` zaten bir enum alanında (`@NotNull SemesterSeason`) birebir aynı
-örneği taşıyordu. `GlobalExceptionHandler` ihlali **400 "Invalid request"**'e çeviriyor.
+`VoteCommentRequest.voteType` and `VoteAnswerRequest.voteType` got `@NotNull`, and both
+handlers became `@Valid @RequestBody`. Every endpoint in the codebase that validates does it
+this way, and `AddLectureRequest` already carried exactly the same example on an enum field
+(`@NotNull SemesterSeason`). `GlobalExceptionHandler` turns the violation into **400
+"Invalid request"**.
 
-Servise **guard eklenmedi**: doğrulama sınırda duruyor. Gerekçe, `SocialService`'in hiçbir
-metodunun exception atmaması (F-5) — servise `ApiException` koymak sınıfa ikinci bir hata
-sözleşmesi sokardı, ve servisin tek çağıranı bu controller.
+**No guard was added to the service**: validation stays at the boundary. The reason is that
+no method of `SocialService` throws (F-5) — putting an `ApiException` in the service would
+have introduced a second error contract into the class, and the service's only caller is
+this controller.
 
-Yeni testler `SocialApiIntegrationTests` içinde: `voteWithoutAVoteTypeIsRejectedAsABadRequest`
-(hem açık `null` hem alanın hiç olmaması), `votingOnAnAnswerWithoutAVoteTypeIsRejectedAsABadRequest`,
-ve `aVoteCarryingAVoteTypeIsStillAccepted` — son test guard'ın meşru bir oyu reddetmediğini
-gösteriyor.
+The new tests live in `SocialApiIntegrationTests`:
+`voteWithoutAVoteTypeIsRejectedAsABadRequest` (both an explicit `null` and the field being
+absent altogether), `votingOnAnAnswerWithoutAVoteTypeIsRejectedAsABadRequest`, and
+`aVoteCarryingAVoteTypeIsStillAccepted` — the last one shows the guard does not reject a
+legitimate vote.
 
-`SocialServiceVoteTests`'teki iki test silinmedi, yeniden adlandırıldı:
-`voteComment_nullVoteType_reachesSaveBecauseValidationLivesAtTheBoundary` (ve `voteAnswer`
-eşi). Servis hâlâ doğrulamıyor, testler de bunu söylüyor artık — ve ileride sınırı atlayan
-bir çağıran belirirse flush'taki constraint ihlaliyle arasındaki tek kayıt bu.
+The two tests in `SocialServiceVoteTests` were not deleted, only renamed:
+`voteComment_nullVoteType_reachesSaveBecauseValidationLivesAtTheBoundary` (and the
+`voteAnswer` twin). The service still does not validate, and now the tests say so — and if a
+caller that skips the boundary ever appears, they are the only record standing between it
+and the constraint violation at flush.
 
-Doğrulama: `@NotNull` geçici olarak kaldırıldığında yeni test
-`Status expected:<400> but was:<409>` ile kırmızıya düşüyor — yani kusur bulguda yazıldığı
-gibiydi ve test onu gerçekten yakalıyor.
+Verification: with `@NotNull` temporarily removed, the new test goes red with
+`Status expected:<400> but was:<409>` — so the defect was exactly as written up, and the
+test really does catch it.
 
 ---
 
-### F-3 — Oy geri çekilemiyor
+### F-3 — A vote cannot be withdrawn
 
-**Nerede.** `SocialService.voteComment`, `SocialService.voteAnswer`, `VoteType`.
+**Where.** `SocialService.voteComment`, `SocialService.voteAnswer`, `VoteType`.
 
-**Ne oluyor.** Aynı yönde ikinci oy, oyu kaldırmak yerine aynı değeri yeniden yazıyor.
-`VoteType`'ın yalnızca `UP` ve `DOWN` değerleri var; kaldırmak için üçüncü bir değer
-(`NONE`) ya da bir silme yolu yok. **Bir kullanıcı verdiği oyu geri çekemiyor.**
+**What happens.** A second vote in the same direction rewrites the same value instead of
+removing the vote. `VoteType` has only `UP` and `DOWN`; there is no third value (`NONE`) and
+no delete path for removing one. **A user cannot take back a vote they cast.**
 
 **Test.** `SocialServiceVoteTests.voteComment_repeatedIdenticalVote_isRewrittenRatherThanToggledOff`
 
-**Durum.** Açık — ürün kararı, kusur değil de olabilir; ama bilinçli olduğu kodda hiçbir
-yerde yazılı değil, o yüzden kayda geçti.
+**Status.** Open — a product decision, and possibly not a defect at all; but nothing in the
+code says anywhere that it is deliberate, so it is recorded.
 
 ---
 
-### F-4 — `/vote/answer` rotasında eğik çizgi eksik
+### F-4 — The `/vote/answer` route is missing a slash
 
-**Nerede.** `SocialController:95`.
+**Where.** `SocialController:95`.
 
-**Ne oluyor.**
+**What happens.**
 ```java
-@PostMapping("/comments/vote/answer{answer_id}")   // eğik çizgi yok
+@PostMapping("/comments/vote/answer{answer_id}")   // no slash
 ```
-Sınıf `@RequestMapping("/social")` taşıdığı için gerçek rota
-`/social/comments/vote/answer<id>` oluyor — örneğin
+Because the class carries `@RequestMapping("/social")`, the real route is
+`/social/comments/vote/answer<id>` — for example
 `/social/comments/vote/answer7c9e6679-7425-40de-944b-e07fc1f90ae7`.
-Yorum tarafındaki kardeş endpoint (`:71`) doğru yazılmış:
+The sibling endpoint on the comment side (`:71`) is written correctly:
 `/comments/vote/comment/{comment_id}`.
 
-**Neden testler yakalamadı.** Bu bir controller kusuru; unit katmanı servisi test ediyor,
-rota bağlamayı değil. Hiçbir test oy endpoint'ine HTTP isteği atmıyor — bulgu, oy yolunu
-okurken çıktı.
+**Why the tests did not catch it.** This is a controller defect; the unit layer tests the
+service, not route binding. No test sends an HTTP request to the vote endpoint — the finding
+came out of reading the vote path.
 
-**Sınıf geneli tarandı — tek örnek bu.** Rota bir sınıf kusuru mu diye 19 controller'daki
-**110 verb+path rotasının tamamı** tarandı: yol değişkeninden önce ayırıcısı eksik olan
-başka **hiçbir** mapping yok.
+**The whole class was swept — this is the only instance.** To find out whether the route was
+a class-wide defect, **all 110 verb+path routes** across 19 controllers were swept: there is
+**no** other mapping missing its separator before a path variable.
 
-Tarama üç şeyi daha kontrol etti, hiçbiri çıkmadı: çifte eğik çizgi (0), sondaki eğik çizgi
-(0), ve belirsiz (aynı verb + aynı yol) mapping (0).
+The sweep checked three more things and found none of them: double slashes (0), trailing
+slashes (0), and ambiguous (same verb + same path) mappings (0).
 
-Tarama sırasında bulunan tek komşu nokta — kusur değil:
+The only neighbouring point found during the sweep — not a defect:
 
-- `RatingController:55` metot yolu `"own/{lectureId}"`, yani başında eğik çizgi yok. Spring
-  sınıf öneki ile birleştirirken ayırıcıyı kendisi koyuyor, dolayısıyla rota doğru çalışıyor
-  (`/ratings/own/{lectureId}`). Yalnızca codebase'in geri kalanından farklı yazılmış.
+- `RatingController:55` has the method path `"own/{lectureId}"`, that is, with no leading
+  slash. Spring inserts the separator itself when joining it to the class prefix, so the
+  route works correctly (`/ratings/own/{lectureId}`). It is only written differently from
+  the rest of the codebase.
 
-Taramanın kendisi tekrarlanabilir olsun diye: sınıf düzeyindeki `@RequestMapping`'in
-**dizi biçimini** (`@RequestMapping({"/admin/users", "/users"})`) hesaba katmayan bir tarama
-altı sahte çakışma üretiyor — moderasyon controller'larının hepsi bu biçimi kullanıyor.
+So that the sweep itself is repeatable: a sweep that does not account for the **array form**
+of the class-level `@RequestMapping` (`@RequestMapping({"/admin/users", "/users"})`)
+produces six false collisions — every moderation controller uses that form.
 
-**Durum.** Açık, düzeltilmedi — bu bulgunun kapsamı tarama, düzeltme değil. Düzeltmek
-**kırıcı bir değişiklik**: istemci bugünkü (bozuk) rotayı kullanıyorsa yeni rota ile birlikte
-eskisinin de bir süre servis edilmesi gerekebilir. Tek örnek olduğu artık bilindiğine göre
-karar tek bir endpoint'in kararı — API/rol batch'ine kalıyor.
+**Status.** Open, not fixed — the scope of this finding was the sweep, not the fix. Fixing
+it is a **breaking change**: if a client is using today's (broken) route, the old one may
+have to be served alongside the new one for a while. Now that it is known to be the only
+instance, the decision is a single endpoint's decision — it is left to the API/role batch.
 
 ---
 
-### F-5 — Başarısızlıklar HTTP 200 ile dönüyor
+### F-5 — Failures come back with HTTP 200
 
-**Nerede.** `StudentService`, `AccountService`, `SocialService` — üçü de hiçbir exception
-atmıyor.
+**Where.** `StudentService`, `AccountService`, `SocialService` — none of the three throws
+anything.
 
-**Ne oluyor.** Her başarısızlık `BasicResponse(mesaj, success = false)` olarak dönüyor ve
-HTTP 200 ile servis ediliyor. Bulunamayan bir öğrenci, bulunamayan bir yorum, silinemeyen
-bir hesap — hepsi "başarılı" bir cevap. Yalnızca HTTP durumuna ya da atılan hataya bakan
-bir çağıran bozuk bir aramayı başarılı sanıyor.
+**What happens.** Every failure comes back as `BasicResponse(message, success = false)` and
+is served with HTTP 200. A student that cannot be found, a comment that cannot be found, an
+account that cannot be deleted — all of them are a "successful" response. A caller that
+looks only at the HTTP status or at a thrown error takes a broken lookup for a successful
+one.
 
-Karşılaştırma: `ModerationCatalogService` aynı durumlarda `ApiException` atıyor ve
-`GlobalExceptionHandler` bunları 400/404'e çeviriyor. Yani kod tabanında **iki farklı hata
-sözleşmesi** yan yana duruyor.
+For comparison: `ModerationCatalogService` throws an `ApiException` in the same situations
+and `GlobalExceptionHandler` turns those into 400/404. So **two different error contracts**
+sit side by side in the codebase.
 
-**Testler.** Bu yüzden negatif yol testleri `assertThatThrownBy` değil `response.success()`
-ve `response.message()` üzerinden yazıldı — sözleşme buysa test onu sabitlemek zorunda:
+**Tests.** That is why the negative-path tests are written against `response.success()` and
+`response.message()` rather than `assertThatThrownBy` — if this is the contract, the test
+has to pin it:
 ```
 StudentServiceTests
   getUserInformation_unknownStudent_returnsTheAuthenticationFailureShape
@@ -223,107 +234,110 @@ SocialServiceVoteTests
   voteAnswer_unknownAnswer_returnsAFailureWithoutTouchingTheVoteTable
 ```
 
-**Durum.** Açık — bir tasarım kararı, ve değiştirmek istemci tarafını etkiler. Testler
-mevcut davranışı sabitledi, yani sözleşme değişirse testler de değişmeli (ve bu iyi:
-değişiklik sessiz olamaz).
+**Status.** Open — a design decision, and changing it affects the client side. The tests
+pinned the current behaviour, so if the contract changes the tests have to change with it
+(and that is good: the change cannot be silent).
 
-Yan not: `getUserInformation` bulunamayan öğrenci için `"Error, cannot authenticate user"`
-diyor, oysa olan tek şey id ile eşleşen satır olmaması. Kimlik doğrulama zaten security
-zincirinde yapılmış durumda. Mesaj yanıltıcı ve istemciye gidiyor.
+Side note: `getUserInformation` says `"Error, cannot authenticate user"` for a student that
+cannot be found, when all that happened is that no row matched the id. Authentication has
+already been done in the security chain. The message is misleading and it goes to the client.
 
 ---
 
-### F-6 — `StudentService`'in ikinci moderasyon yolu
+### F-6 — `StudentService`'s second moderation path
 
-**Nerede.** `StudentService` — `deleteUser`, `blockStudent`, `unblockStudent`,
+**Where.** `StudentService` — `deleteUser`, `blockStudent`, `unblockStudent`,
 `findByKitEmail`, `addStudent`, `getAllUsers`, `getUser`.
 
-**Ne oluyordu.** Yedi metodun `src/` içinde hiçbir çağıranı yoktu. Kodun kendisi de
-soruyordu: `//TODO: Why arent they in use?`.
+**What was happening.** Seven methods had no caller anywhere in `src/`. The code itself was
+asking too: `//TODO: Why arent they in use?`.
 
-Tehlike, ölü kod olmalarından çok **ne yapmadıklarındaydı**. Canlı yönetici akışı
-`ModerationUserService` (`blockStudent:591`, `unblockStudent:617`) ve o ayrıca:
+The danger was less that they were dead code than **what they did not do**. The live
+administrator flow is `ModerationUserService` (`blockStudent:591`, `unblockStudent:617`),
+and it additionally:
 
-- `protectAdministrator(...)` — bir yöneticinin engellenmesini durduruyor
-- idempotency kısa devresi
-- `blockedAt` / `blockedReason` bilgisi
-- `revokeTokens(target)` — engellenen hesabın oturumlarını kapatıyor
+- `protectAdministrator(...)` — stops an administrator from being blocked
+- short-circuits for idempotency
+- records `blockedAt` / `blockedReason`
+- `revokeTokens(target)` — closes the blocked account's sessions
 - `auditWriter.write(... USER_BLOCKED ...)`
 
-`StudentService`'in kopyaları bunların **hiçbirini** yapmıyordu; yalnızca `setStatus` +
-`save`. Yani bu metotlardan biri bir gün bir controller'a bağlanırsa: token iptali yok,
-audit kaydı yok, yönetici koruması yok — ve hiçbir test bunu fark etmezdi.
+`StudentService`'s copies did **none** of this; only `setStatus` + `save`. So if one of
+these methods were wired to a controller one day: no token revocation, no audit entry, no
+administrator protection — and no test would have noticed.
 
-**Neden test değil silme.** Test yazmak, kimsenin dayanmadığı ve moderasyonun sessizce
-zayıf ikinci bir yolunu, kod tek yola indirilmeye çalışılırken çivilemek olurdu.
+**Why deletion rather than tests.** Writing tests would have nailed down a silently weaker
+second path through moderation that nobody depends on, at the very moment the code was being
+reduced to a single path.
 
-**Durum.** **Çözüldü.** Yedi metot silindi; `RatingService`'teki kullanılmayan
-`import com.pse.user.service.StudentService;` de kaldırıldı. `StudentService`'in
-`src/main`'deki tek tüketicisi artık `AccountService` ve tam üç metot kullanıyor.
+**Status.** **Fixed.** The seven methods were deleted; the unused
+`import com.pse.user.service.StudentService;` in `RatingService` went with them.
+`StudentService`'s only consumer in `src/main` is now `AccountService`, and it uses exactly
+three methods.
 
 ---
 
-### F-7 — `normalizeIp` tek virgülde çöküyordu
+### F-7 — `normalizeIp` crashed on a lone comma
 
-**Nerede.** `LoginLocationService.normalizeIp`.
+**Where.** `LoginLocationService.normalizeIp`.
 
-**Ne oluyordu.** `","` (yalnızca virgülden oluşan bir `X-Forwarded-For`) metodu
-`ArrayIndexOutOfBoundsException` ile düşürüyordu: Java'nın `split(",")`'i sondaki boş
-parçaları attığı için dizi boş kalıyor ve `[0]` patlıyordu. `normalizeIp`, geniş `try`
-bloğundan **önce** çalıştığı için bu, `catch (Exception)`'ın yakalamadığı tek girdiydi —
-exception `getLoginLocation`'dan dışarı çıkıp `AFTER_COMMIT` dinleyicisindeki login
-e-postasında yakalanmamış hata olarak yüzeye vuruyordu. Login'in kendisi başarılı olmaya
-devam ediyordu.
+**What was happening.** `","` (an `X-Forwarded-For` consisting of nothing but a comma) took
+the method down with an `ArrayIndexOutOfBoundsException`: because Java's `split(",")` drops
+trailing empty parts, the array came back empty and `[0]` blew up. Since `normalizeIp` runs
+**before** the broad `try` block, this was the one input `catch (Exception)` did not catch —
+the exception escaped `getLoginLocation` and surfaced as an uncaught error in the login email
+inside the `AFTER_COMMIT` listener. The login itself kept succeeding.
 
-**Düzeltme.** `rawIp.split(",", -1)` — negatif limit boş parçaları koruduğu için sonuç
-`[""]` oluyor ve mevcut boşluk kontrolüne düşüyor.
+**Fix.** `rawIp.split(",", -1)` — the negative limit keeps the empty parts, so the result is
+`[""]` and it falls into the existing blank check.
 
 **Test.** `LoginLocationServiceTests.getLoginLocation_addressOfOnlyCommas_returnsUnknownWithoutCallingIpInfo`
 
-**Durum.** **Çözüldü** — commit `8fc2901`.
+**Status.** **Fixed** — commit `8fc2901`.
 
 ---
 
-### F-8 — `IPINFO_TOKEN` boşken sessiz başarısızlık
+### F-8 — Silent failure when `IPINFO_TOKEN` is empty
 
-**Nerede.** `LoginLocationService.getLoginLocation`.
+**Where.** `LoginLocationService.getLoginLocation`.
 
-**Ne oluyor.** `ipinfo.token=${IPINFO_TOKEN:}` boşa düşerse `getLoginLocation`,
-`ipInfoToken.isBlank()` üzerinden hiç HTTP çağrısı yapmadan `"Unknown"` dönüyor. Yaklaşık
-konumun "artık çalışmamasının" en olası üretim nedeni bu, ve istek başına **hiçbir iz
-bırakmıyordu**.
+**What happens.** If `ipinfo.token=${IPINFO_TOKEN:}` falls back to empty, `getLoginLocation`
+returns `"Unknown"` through `ipInfoToken.isBlank()` without making any HTTP call at all.
+This is the most likely production reason for approximate location "no longer working", and
+it left **no trace whatsoever** per request.
 
-**Düzeltme.** `warnIfTokenMissing()` (`@PostConstruct`) artık açılışta bir kez WARN
-düşüyor. Yutulan exception'lar da stack trace ile loglanıyor, yani 401/403/429 ve timeout
-artık loglardan ayırt edilebiliyor.
+**Fix.** `warnIfTokenMissing()` (`@PostConstruct`) now emits a WARN once at startup.
+Swallowed exceptions are logged with their stack trace too, so 401/403/429 and timeouts can
+now be told apart in the logs.
 
-**Durum.** **Kısmen çözüldü.** Uyarı yalnızca açılışta düşüyor: token sonradan iptal
-edilirse tek iz 401/403 WARN'ları olur. İstek başına uyarı bilinçli olarak eklenmedi (her
-login için log gürültüsü). Ayrıca geniş `catch (Exception)` hâlâ 401/403/429/timeout'u
-çağıran açısından ayırt edilemez kılıyor — ayrım yalnızca logda.
-
----
-
-### F-9 — `readOnly` transaction içinde yazma
-
-**Nerede.** `StudentService.getUserInformation`.
-
-**Ne oluyor.** Metot `@Transactional(readOnly = true)` ama içinde
-`student.setCredibilityScore(credibilityScore)` çağırıyor — yani okuma amaçlı bir
-transaction içinde yönetilen bir entity'yi değiştiriyor. Skor hesaplanmış bir değer;
-kalıcılaşması istenmiyor gibi görünüyor ama dirty-checking'in gerçek bir persistence
-context'te ne yapacağı kodda belli değil.
-
-**Neden unit testle karara bağlanamaz.** Mock'lanmış bir repository'de dirty-checking diye
-bir şey yok; davranış Hibernate'in ve `readOnly` bayrağının işi.
-
-**Durum.** Açık, integration katmanına havale edildi.
+**Status.** **Partly fixed.** The warning only fires at startup: if the token is revoked
+later, the only trace is the 401/403 WARNs. A per-request warning was deliberately not added
+(log noise on every login). The broad `catch (Exception)` also still makes
+401/403/429/timeout indistinguishable from the caller's point of view — the distinction
+exists only in the log.
 
 ---
 
-### F-10 — İstemciye giden yazım hataları
+### F-9 — Writing inside a `readOnly` transaction
 
-**Nerede.** `StudentService.deleteAccount`.
+**Where.** `StudentService.getUserInformation`.
+
+**What happens.** The method is `@Transactional(readOnly = true)` but calls
+`student.setCredibilityScore(credibilityScore)` inside it — that is, it modifies a managed
+entity inside a transaction meant for reading. The score is a computed value; it does not
+look as if it is meant to be persisted, but the code does not say what dirty checking would
+do in a real persistence context.
+
+**Why a unit test cannot settle it.** There is no such thing as dirty checking against a
+mocked repository; the behaviour is Hibernate's and the `readOnly` flag's business.
+
+**Status.** Open, handed to the integration layer.
+
+---
+
+### F-10 — Typos that reach the client
+
+**Where.** `StudentService.deleteAccount`.
 
 ```
 "Error, couldnt authenticate user"      // couldn't
@@ -331,10 +345,10 @@ bir şey yok; davranış Hibernate'in ve `readOnly` bayrağının işi.
 "Deleted Account succesfully: ..."      // successfully
 ```
 
-Bu dizgiler `BasicResponse.message` içinde istemciye gidiyor, yani kullanıcı arayüzünde
-görünebiliyorlar.
+These strings go to the client inside `BasicResponse.message`, so they can appear in the
+user interface.
 
-**Durum.** **Çözüldü** — commit `edaf2bc`. Üç dizgi düzeltildi:
+**Status.** **Fixed** — commit `edaf2bc`. Three strings corrected:
 
 ```
 "Error, couldn't authenticate user"
@@ -342,15 +356,16 @@ görünebiliyorlar.
 "Deleted Account successfully: ..."
 ```
 
-`StudentServiceTests`'in bu dizgileri sabitleyen assertion'ları aynı commit'te güncellendi —
-zaten metnin sessizce değişmemesi için varlar, yani metinle birlikte değişmeleri gerekiyor.
-`AccountServiceTests` de `StudentService`'in başarısızlık mesajını stub'ladığı için o stub
-da taşındı; bırakılsa artık var olmayan bir dizgiyi belgelerdi.
+The `StudentServiceTests` assertions that pin these strings were updated in the same commit —
+they exist precisely so the text cannot change silently, which means they have to change
+along with the text. `AccountServiceTests` also stubbed `StudentService`'s failure message,
+so that stub moved too; left alone, it would document a string that no longer exists.
 
-**Kalan beşi de kapandı** — commit `57658c3`. `src/main`'de aynı yazım hatası sekiz yerde
-vardı; ilk commit yalnızca `deleteAccount`'un üçünü kapsıyordu, ikincisi geri kalanını:
+**The remaining five are closed as well** — commit `57658c3`. The same typo existed in eight
+places in `src/main`; the first commit covered only the three in `deleteAccount`, the second
+covered the rest:
 
-| Yer | Önce | Sonra |
+| Place | Before | After |
 |---|---|---|
 | `ProfessorController:55` | `couldnt authenticate Admin` | `couldn't authenticate Admin` |
 | `RatingService:168` | `couldnt find rating for Lecture: ` | `couldn't find rating for Lecture: ` |
@@ -358,56 +373,56 @@ vardı; ilk commit yalnızca `deleteAccount`'un üçünü kapsıyordu, ikincisi 
 | `SocialService:257` | `couldnt finde comment` | `couldn't find comment` |
 | `SocialService:299` | `couldnt find answer` | `couldn't find answer` |
 
-İki `SocialService` mesajı `finde` de diyordu, o yüzden yalnızca kesme işareti almakla
-kalmayıp `find`'e döndüler. `ProfessorController`'ın mesajını sabitleyen iki test
-(`ProfessorControllerTests:119`, `ProfessorApiIntegrationTests:450`) mesajla birlikte
-güncellendi; `RatingService` ve `SocialService` dizgilerini hiçbir test assert etmiyordu.
+The two `SocialService` messages also said `finde`, so they did not just gain an apostrophe
+but went back to `find`. The two tests that pin `ProfessorController`'s message
+(`ProfessorControllerTests:119`, `ProfessorApiIntegrationTests:450`) were updated along with
+it; no test asserted the `RatingService` and `SocialService` strings.
 
-`src/main` artık ne `couldnt` ne `finde` içeriyor.
+`src/main` now contains neither `couldnt` nor `finde`.
 
 ---
 
-### F-11 — Uyarı geri almada kontrol/uygulama yarışı
+### F-11 — Check/apply race in warning revert
 
-**Nerede.** `WarningRevertHandler.applyInverse`.
+**Where.** `WarningRevertHandler.applyInverse`.
 
-**Ne oluyor.** Revertibility kontrolü (`currentValues`) ile revert'in kendisi
-(`applyInverse`) arasında hiçbir şey kilit tutmuyor. Kontrol satırı görüp "geri alınabilir"
-diyebilir, revert anında satır gitmiş olabilir. Handler doğru davranıyor — patlamak yerine
-`ApiException(NOT_FOUND, "Warning not found")` ile reddediyor — ama kullanıcı geri
-alınabilir **görünen** bir girdide hata alıyor.
+**What happens.** Nothing holds a lock between the revertibility check (`currentValues`) and
+the revert itself (`applyInverse`). The check can see the row and say "revertible", and by
+the moment of the revert the row can be gone. The handler behaves correctly — it refuses
+with `ApiException(NOT_FOUND, "Warning not found")` instead of blowing up — but the user
+gets an error on an entry that **looked** revertible.
 
-Bu, `applyInverse` içinde kendi sorgusunu yapan tek handler olduğu için tek bu handler'da
-görülüyor.
+This only shows up in this handler because it is the only one that runs its own query inside
+`applyInverse`.
 
 **Test.** `WarningRevertHandlerTests.applyInverse_warningWithdrawnSinceTheEntry_throwsNotFound`
 
-**Durum.** Açık — davranış makul, yalnızca kullanıcı deneyimi tuhaf. Panelin bu 409/404'ü
-"girdi artık geri alınamaz" olarak sunması yeterli olabilir.
+**Status.** Open — the behaviour is reasonable, only the user experience is odd. It may be
+enough for the panel to present this 409/404 as "the entry is no longer revertible".
 
 ---
 
-### F-12 — Boş hedef listesinde gereksiz yönetici sorgusu
+### F-12 — Needless administrator query on an empty target list
 
-**Nerede.** `UserRevertHandler.currentValues`.
+**Where.** `UserRevertHandler.currentValues`.
 
-**Ne oluyor.** `adminRepository.findAllAdminStudentIds()` döngüden **önce** çağrılıyor, yani
-hedef listesi boş olsa bile bir sorgu atılıyor. Bugün zararsız: revertibility geçişi bu
-metodu yalnızca boş olmayan bir id kümesiyle çağırıyor.
+**What happens.** `adminRepository.findAllAdminStudentIds()` is called **before** the loop,
+so a query is issued even when the target list is empty. Harmless today: the revertibility
+pass only calls this method with a non-empty set of ids.
 
-**Test.** `UserRevertHandlerTests.currentValues_noTargets_stillQueriesTheAdminIdList` —
-karakterizasyon, ki bunu değiştiren bir düzenleme bilinçli olsun.
+**Test.** `UserRevertHandlerTests.currentValues_noTargets_stillQueriesTheAdminIdList` — a
+characterisation, so that an edit which changes it is a deliberate one.
 
-**Durum.** Açık, bilinçli olarak düzeltilmedi.
+**Status.** Open, deliberately not fixed.
 
 ---
 
-### F-13 — Token iptali tek bir koşula bağlı
+### F-13 — Token revocation hangs on a single condition
 
-**Nerede.** `AccountService.deleteAccount`.
+**Where.** `AccountService.deleteAccount`.
 
-**Ne.** Bu bir kusur **değil** — mevcut bir koruma. Ama kaybedilmesi pahalı olduğu için
-kayda geçti.
+**What.** This is **not** a defect — it is an existing safeguard. But it is recorded because
+losing it would be expensive.
 
 ```java
 if (response.success()) {
@@ -415,87 +430,89 @@ if (response.success()) {
 }
 ```
 
-Bu koşul olmadan hesap `DELETED` olurken ona verilmiş her token süresi dolana kadar
-geçerli kalır — ve `app.auth.app-session-ttl` varsayılanı **`P365D`**, yani bir öğrenci
-token'ı bir yıl yaşıyor. Koşulun diğer yönü de önemli: **başarısız** bir silmede token'lar
-iptal edilmemeli, yoksa hâlâ meşru bir oturum kapatılır.
+Without this condition, the account goes `DELETED` while every token ever issued to it stays
+valid until it expires — and the `app.auth.app-session-ttl` default is **`P365D`**, so a
+student token lives for a year. The other direction of the condition matters just as much:
+tokens must **not** be revoked on a **failed** deletion, or a still-legitimate session gets
+closed.
 
-**Testler.**
+**Tests.**
 ```
 AccountServiceTests
   deleteAccount_successfulDeletion_revokesEveryIssuedToken
   deleteAccount_failedDeletion_leavesTheTokensAlone
 ```
-İkinci test bu batch'in en değerli tek testi: koruma bir gün kaldırılırsa kırmızıya düşer.
+The second test is the single most valuable test in this batch: it goes red if the safeguard
+is ever removed.
 
-**Durum.** Test altına alındı.
+**Status.** Now under test.
 
 ---
 
-## Süreç bulguları
+## Process findings
 
-### P-1 — Kapsam baseline sayısı yanlıştı
+### P-1 — The coverage baseline number was wrong
 
-Batch 2'ye girilen sayı %85.7 LINE (2916/3403) idi. Gerçek ölçüm — silmeden sonra —
-**%87.76** (2932/3341). %90 hedefi için gereken açık 147 satır değil **75 satırdı**;
-yani planlanan işin yaklaşık yarısı yetiyordu.
+The number batch 2 was entered with was 85.7% LINE (2916/3403). The actual measurement —
+after the deletion — was **87.76%** (2932/3341). The gap needed for the 90% target was not
+147 lines but **75**; that is, roughly half of the planned work was enough.
 
-**Ders.** Batch aritmetiği ölçülmüş bir sayıyla başlamalı, devralınan bir sayıyla değil.
-Ölçüm artık batch'in ilk adımı.
+**Lesson.** Batch arithmetic has to start from a measured number, not an inherited one.
+Measuring is now the first step of a batch.
 
-### P-2 — Integration testleri unit hedeflerini gizliyor
+### P-2 — Integration tests hide unit targets
 
-"Unit testi yok" ile "satırları kapsanmıyor" aynı şey değil. Suite'te on adet
-`@SpringBootTest` sınıfı var — `DemoApplicationTests` `@Disabled`, `PostgreSqlMigrationSmokeTests`
-yalnızca CI'da koşuyor, kalan **sekizi** her yerel çalıştırmada tüm context'i ayağa
-kaldırıyor — ve kapsamları bundle'ın içinde. En keskin örnek:
+"There is no unit test" and "the lines are not covered" are not the same thing. The suite has
+ten `@SpringBootTest` classes — `DemoApplicationTests` is `@Disabled`,
+`PostgreSqlMigrationSmokeTests` only runs in CI, and the remaining **eight** bring up the
+full context on every local run — and their coverage is inside the bundle. The sharpest
+example:
 
-`UserRevertHandler`'ın hem `currentValues`'ı hem `applyInverse`'ü
-`AdminApiIntegrationTests.aFieldEditIsRevertibleAndTheReversalIsItsOwnAuditEvent` (`:2509`)
-tarafından uçtan uca sürülüyordu. Kaynak satır sayısından beklenen kazanç ~29 satırdı;
-gerçek açık **2 satırdı** (`UserStatus.DELETED` `continue`'su ve `UserRole.ADMIN` ternary
-kolu).
+Both `currentValues` and `applyInverse` of `UserRevertHandler` were being driven end to end
+by `AdminApiIntegrationTests.aFieldEditIsRevertibleAndTheReversalIsItsOwnAuditEvent`
+(`:2509`). The gain expected from the source line count was ~29 lines; the real gap was
+**2 lines** (the `UserStatus.DELETED` `continue` and the `UserRole.ADMIN` ternary arm).
 
-Aynı şekilde `StudentService.getUserRatings` mutlu yolu ve `getAverageRating` toplaması
-`LazyLoadingRegressionTests` tarafından kapsanıyordu.
+Likewise, the happy path of `StudentService.getUserRatings` and the summation in
+`getAverageRating` were covered by `LazyLoadingRegressionTests`.
 
-**Ders.** Hedefler `jacoco.csv`'deki `LINE_MISSED`'dan seçilmeli:
+**Lesson.** Targets have to be picked from `LINE_MISSED` in `jacoco.csv`:
 ```
 awk -F, 'NR>1 && $8>0 {printf "%4d %s.%s\n", $8, $2, $3}' \
   target/site/jacoco/jacoco.csv | sort -rn | head -25
 ```
-Bu, `UserRevertHandler`'ı listenin dibine, `CatalogueRevertHandler`'ı tepesine taşıyor —
-tersi bir sezgiyle çalışılıyordu.
+That moves `UserRevertHandler` to the bottom of the list and `CatalogueRevertHandler` to the
+top — work had been going on the opposite intuition.
 
-Notlanmaya değer: 2 satırlık kazanca rağmen `UserRevertHandlerTests` yazıldı, çünkü o iki
-satır `DELETED` ve `ADMIN` dallarıydı — yani değeri kapsam değil, dalların **niçin** öyle
-olduğunun yazılı hâle gelmesiydi.
+Worth noting: `UserRevertHandlerTests` was written despite the 2-line gain, because those two
+lines were the `DELETED` and `ADMIN` branches — so the value was not coverage but getting
+**why** those branches are the way they are into writing.
 
-### P-3 — Lombok JaCoCo'da filtrelenmiyor
+### P-3 — Lombok is not filtered in JaCoCo
 
-Repo'da `lombok.config` yok ve `lombok.addLombokGeneratedAnnotation` varsayılanı `false`.
-Yani her entity'nin üretilmiş getter/setter'ları bundle'da sayılan satırlar — paydanın
-3341 olmasının büyük nedeni.
+There is no `lombok.config` in the repo and the `lombok.addLombokGeneratedAnnotation`
+default is `false`. So every entity's generated getters/setters are lines counted in the
+bundle — a large part of why the denominator is 3341.
 
-**Bilinçli olarak değiştirilmedi.** Filtrelemek bir kısayol gibi görünüyor ama accessor'lar
-serileştirme yoluyla yoğun biçimde kapsandığı için *kapsanan* satırları kapsanmayanlardan
-daha çok siler ve oranı **düşürebilir** — üstelik sayının ne ölçtüğünü sessizce değiştirir.
-Aynı gerekçeyle `<excludes>` listesi de genişletilmedi (`**/model/**` ya da `**/dto/**`
-eklemek tek test yazmadan birkaç puan kazandırırdı). Bunlar ratchet'i geçmek değil,
-yeniden tanımlamak olurdu.
+**Deliberately left alone.** Filtering them looks like a shortcut, but because accessors are
+heavily covered through serialisation it deletes more *covered* lines than uncovered ones and
+could **lower** the ratio — and on top of that it silently changes what the number measures.
+The `<excludes>` list was left unextended for the same reason (adding `**/model/**` or
+`**/dto/**` would have gained several points without a single test being written). Those
+would not be passing the ratchet but redefining it.
 
 ---
 
-## Bilinçli test edilmeyen erişilemez durumlar
+## Unreachable states deliberately left untested
 
-Kod okurken kusur gibi görünen, ama kalıcı bir satırdan erişilemediği için test yazılmayan
-noktalar. Test yazmak kurgu üzerine assert etmek olurdu; buraya yazılmaları kararın bilinçli
-olduğunu gösteriyor.
+Points that look like defects while reading the code, but for which no test was written
+because they cannot be reached from a persisted row. Writing a test would mean asserting on a
+fiction; listing them here shows the decision was deliberate.
 
-| Nokta | Neden erişilemez |
+| Point | Why it is unreachable |
 |---|---|
-| `WarningRevertHandler` — `warning.getStudent()` NPE'si | `Warning.student` `@ManyToOne(optional = false)`; null öğrencili satır var olamaz |
-| `CatalogueRevertHandler` — `getSemesterSeason().name()` null-guard'sız | kolon `nullable = false` |
-| `CatalogueRevertHandler` — `getLectureType().name()` null-guard'sız | kolon `nullable = false`, ayrıca Java tarafında `LECTURE_ONLY` varsayılanı var |
-| `AccountService` — `student == null` NPE'si | principal security zincirinden geliyor, null olamaz |
-| Statik-only sınıfların private constructor'ları | JaCoCo 0.8.0'dan beri filtreliyor; reflection testi yazmak sahte kapsam olurdu |
+| `WarningRevertHandler` — the `warning.getStudent()` NPE | `Warning.student` is `@ManyToOne(optional = false)`; a row with a null student cannot exist |
+| `CatalogueRevertHandler` — `getSemesterSeason().name()` without a null guard | the column is `nullable = false` |
+| `CatalogueRevertHandler` — `getLectureType().name()` without a null guard | the column is `nullable = false`, and there is a `LECTURE_ONLY` default on the Java side as well |
+| `AccountService` — the `student == null` NPE | the principal comes from the security chain and cannot be null |
+| Private constructors of static-only classes | JaCoCo has filtered them since 0.8.0; writing a reflection test would be fake coverage |
