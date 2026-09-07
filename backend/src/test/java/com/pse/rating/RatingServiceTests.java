@@ -551,7 +551,7 @@ class RatingServiceTests {
         assertFalse(response.success());
 
         assertEquals(
-                "Error, couldnt find rating for Lecture: "
+                "Error, couldn't find rating for Lecture: "
                         + lectureId,
                 response.message()
         );

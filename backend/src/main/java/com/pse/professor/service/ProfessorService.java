@@ -71,7 +71,7 @@ public class ProfessorService {
 
         Professor professor = professorRepository.findWithLecturesById(professor_id).orElse(null);
         if(professor == null) {
-            return new ProfessorDetailResponse("Couldnt find prof with uuid: " + professor_id, false, null);
+            return new ProfessorDetailResponse("Couldn't find prof with uuid: " + professor_id, false, null);
         }
 
 

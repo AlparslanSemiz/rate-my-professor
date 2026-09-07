@@ -379,7 +379,7 @@ public class AuthService {
     public Student verifyUser(String authHeader) {
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new InvalidAuthTokenException("Couldnt find Auth-Token");
+            throw new InvalidAuthTokenException("Couldn't find Auth-Token");
         }
 
 

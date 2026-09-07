@@ -371,7 +371,7 @@ class RatingApiIntegrationTests {
                 .andExpect(
                         jsonPath("$.message")
                                 .value(
-                                        "Error, couldnt find rating for Lecture: "
+                                        "Error, couldn't find rating for Lecture: "
                                                 + lecture.getId()
                                 )
                 );

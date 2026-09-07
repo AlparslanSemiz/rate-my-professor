@@ -108,12 +108,12 @@ public class StudentService {
     public BasicResponse deleteAccount(Student student) {
 
         if (student == null) {
-            return new BasicResponse("Error, couldnt authenticate user", false);
+            return new BasicResponse("Error, couldn't authenticate user", false);
         }
 
         //Soft delete in Database: Set "deleted" to true
         if( !softDeleteByKitEmail(student.getKitEmail())){
-            return new BasicResponse("Error, couldnt find student", false);
+            return new BasicResponse("Error, couldn't find student", false);
         }
 
         return new BasicResponse("Deleted Account succesfully: " + student.getKitEmail(), true);

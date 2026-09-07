@@ -187,7 +187,7 @@ class ProfessorServiceTests {
 
         assertFalse(response.success());
         assertEquals(
-                "Couldnt find prof with uuid: " + professorId,
+                "Couldn't find prof with uuid: " + professorId,
                 response.message()
         );
 

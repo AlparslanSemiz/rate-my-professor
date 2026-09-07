@@ -271,7 +271,7 @@ class StudentServiceTests {
 
         assertFalse(response.success());
         assertEquals(
-                "Error, couldnt authenticate user",
+                "Error, couldn't authenticate user",
                 response.message()
         );
 
@@ -298,7 +298,7 @@ class StudentServiceTests {
         assertFalse(response.success());
 
         assertEquals(
-                "Error, couldnt find student",
+                "Error, couldn't find student",
                 response.message()
         );
 

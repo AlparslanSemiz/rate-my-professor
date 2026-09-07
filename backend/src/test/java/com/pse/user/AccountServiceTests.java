@@ -149,7 +149,7 @@ class AccountServiceTests {
 
         BasicResponse deleteResponse =
                 new BasicResponse(
-                        "Error, couldnt find student",
+                        "Error, couldn't find student",
                         false
                 );
 
