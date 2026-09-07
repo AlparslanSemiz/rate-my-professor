@@ -133,21 +133,31 @@ class WarningRevertHandlerTests {
     }
 
     /**
-     * A warning withdrawn between the revertibility check and the revert itself. The
-     * check reports {@code TARGET_MISSING} from the absent row, but nothing holds a lock in
-     * between, so the handler has to refuse rather than dereference an empty optional.
+     * A warning withdrawn between the revertibility check and the revert itself -- F-11.
+     * Nothing holds a lock in between, and this is the only handler that runs its own query
+     * inside {@code applyInverse}, so the row can be gone by the time the revert runs.
+     *
+     * <p>Refusing was always the right answer; what the finding was about is what the
+     * refusal said. It carries the same code and the same wording the revertibility check
+     * uses for this situation now, so the panel can tell the operator the entry can no
+     * longer be reverted rather than reporting a missing record on an entry it had just
+     * shown as revertible.
      */
     @Test
-    void applyInverse_warningWithdrawnSinceTheEntry_throwsNotFound() {
+    void applyInverse_warningWithdrawnSinceTheEntry_refusesAsAMissingTarget() {
         // Given
         when(warningRepository.findById(FIRST)).thenReturn(Optional.empty());
 
         // When / Then
         assertThatThrownBy(() -> handler().applyInverse(PRINCIPAL, FIRST, new HashMap<>()))
                 .isInstanceOf(ApiException.class)
-                .hasMessage("Warning not found")
-                .extracting(exception -> ((ApiException) exception).getStatus())
-                .isEqualTo(HttpStatus.NOT_FOUND);
+                .hasMessage("The record this entry is about no longer exists")
+                .satisfies(exception -> {
+                    assertThat(((ApiException) exception).getStatus())
+                            .isEqualTo(HttpStatus.NOT_FOUND);
+                    assertThat(((ApiException) exception).getCode())
+                            .isEqualTo(AuditRevertRefusal.TARGET_MISSING.name());
+                });
         verifyNoInteractions(userService);
     }
 }

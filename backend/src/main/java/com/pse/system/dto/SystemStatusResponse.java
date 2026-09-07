@@ -17,6 +17,10 @@ package com.pse.system.dto;
  * @param gitlabEnabled  whether the GitLab issue integration is configured. The panel
  *                       hides the "create issue" action when it is not, rather than
  *                       discovering it by pressing the button and getting a 503.
+ * @param locationLookupEnabled whether login locations can be resolved -- F-8. Without it
+ *                       an unset or revoked IPINFO_TOKEN shows up only as every login mail
+ *                       saying "Unknown", which is what made the original report
+ *                       ("approximate location stopped working") undiagnosable.
  */
 public record SystemStatusResponse(
         String message,
@@ -28,6 +32,7 @@ public record SystemStatusResponse(
         SystemDatabaseResponse database,
         SystemCountsResponse counts,
         SystemLastWriteResponse lastWrite,
-        boolean gitlabEnabled
+        boolean gitlabEnabled,
+        boolean locationLookupEnabled
 ) {
 }

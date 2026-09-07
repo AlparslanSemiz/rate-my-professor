@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -46,9 +47,18 @@ public class UserRevertHandler implements AuditRevertHandler {
 
     @Override
     public Map<UUID, Map<String, Object>> currentValues(Collection<UUID> targetIds) {
+        List<Student> students = studentRepository.findAllById(targetIds);
+        if (students.isEmpty()) {
+            // F-12: the administrator id list is only needed to label the rows below, so
+            // asking for it before knowing whether there are any was a query issued for
+            // nothing. The revertibility pass never calls this with an empty set today,
+            // which is what kept it harmless.
+            return Map.of();
+        }
+
         Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
         Map<UUID, Map<String, Object>> values = new HashMap<>();
-        for (Student student : studentRepository.findAllById(targetIds)) {
+        for (Student student : students) {
             // A soft-deleted account is anonymised: its recorded username and address are
             // already gone, so it reads as a missing target rather than a stale one.
             if (student.getStatus() == UserStatus.DELETED) {

@@ -114,12 +114,19 @@ class LoginLocationServiceTests {
         return new IpInfoResponse(IP, "Karlsruhe", "Baden-Wurttemberg", "DE", "49.0069,8.4037");
     }
 
-    private void assertWarnLogged() {
+    /**
+     * F-8. The swallowed cause has to survive as a log line, and the line has to say which
+     * cause it was: a revoked token, an exhausted quota and an unreachable host are three
+     * different operational problems and they all used to arrive as the same sentence, so
+     * the log could not answer "why did location lookup stop working" -- the question the
+     * original bug report asked.
+     */
+    private void assertWarnLogged(String expectedFragment) {
         assertThat(logs.list)
-                .as("the swallowed cause has to survive as a log line")
+                .as("the swallowed cause has to survive as a log line naming what happened")
                 .anySatisfy(event -> {
                     assertThat(event.getLevel()).isEqualTo(Level.WARN);
-                    assertThat(event.getFormattedMessage()).contains("Could not determine location");
+                    assertThat(event.getFormattedMessage()).contains(expectedFragment);
                 });
     }
 
@@ -285,6 +292,29 @@ class LoginLocationServiceTests {
         assertThat(logs.list).isEmpty();
     }
 
+    // ---------- isConfigured: the counterpart the panel can see ----------
+
+    /**
+     * F-8, the half a log line cannot cover. {@code warnIfTokenMissing} fires once, at
+     * startup, so a token revoked while the process runs leaves nothing behind but 401 WARNs
+     * that somebody has to go looking for. This is reported through {@code GET /system/status}
+     * next to {@code gitlabEnabled}, so the panel can say location lookup is off instead of
+     * the operator inferring it from every login mail saying "Unknown" -- which is exactly
+     * the report ("approximate location stopped working") that could not be diagnosed.
+     */
+    @ParameterizedTest
+    @CsvSource({"''", "'   '"})
+    void isConfigured_blankToken_isFalse(String token) {
+        // When / Then
+        assertThat(serviceWith(token, GEOAPIFY_KEY).isConfigured()).isFalse();
+    }
+
+    @Test
+    void isConfigured_tokenPresent_isTrue() {
+        // When / Then
+        assertThat(serviceWith(TOKEN, GEOAPIFY_KEY).isConfigured()).isTrue();
+    }
+
     // ---------- getLoginLocation: every way the lookup fails ----------
 
     @Test
@@ -298,7 +328,7 @@ class LoginLocationServiceTests {
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
-        assertWarnLogged();
+        assertWarnLogged("IPinfo refused the lookup for IP 203.0.113.42 with 401");
     }
 
     @Test
@@ -312,7 +342,7 @@ class LoginLocationServiceTests {
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
-        assertWarnLogged();
+        assertWarnLogged("IPinfo refused the lookup for IP 203.0.113.42 with 403");
     }
 
     @Test
@@ -326,7 +356,7 @@ class LoginLocationServiceTests {
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
-        assertWarnLogged();
+        assertWarnLogged("IPinfo refused the lookup for IP 203.0.113.42 with 429");
     }
 
     @Test
@@ -340,7 +370,7 @@ class LoginLocationServiceTests {
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
-        assertWarnLogged();
+        assertWarnLogged("IPinfo refused the lookup for IP 203.0.113.42 with 500");
     }
 
     @Test
@@ -354,7 +384,7 @@ class LoginLocationServiceTests {
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
-        assertWarnLogged();
+        assertWarnLogged("IPinfo was unreachable");
     }
 
     @Test
@@ -368,7 +398,7 @@ class LoginLocationServiceTests {
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
-        assertWarnLogged();
+        assertWarnLogged("IPinfo was unreachable");
     }
 
     @Test
@@ -381,7 +411,7 @@ class LoginLocationServiceTests {
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
-        assertWarnLogged();
+        assertWarnLogged("Could not determine location");
     }
 
 

@@ -14,18 +14,33 @@ import java.util.UUID;
  * representation-insensitive on purpose: {@code UserStatus.ACTIVE} and the string
  * {@code "ACTIVE"} are the same recorded value, and treating them as different would make
  * every entry look stale.
+ *
+ * <p>It is order-insensitive for the same reason -- see {@link #sameValue}.
  */
 public final class RevertValues {
 
     private RevertValues() {
     }
 
+    /**
+     * <p>Collections are compared as multisets rather than position by position -- BUG-3.
+     * The only two collection-valued fields recorded are a lecture's {@code professors} and
+     * a professor's {@code lectures}, and both are read out of a {@code Set}, a type that
+     * defines no order. Comparing them by position asked whether an unordered collection had
+     * been iterated the same way twice: {@code Professor} overrides neither {@code equals}
+     * nor {@code hashCode}, so {@code HashSet} buckets by identity hash and the order can
+     * differ on every run. A revert of an assignment nobody had touched was then refused as
+     * {@code VALUE_CHANGED}, and refused again or not depending on the run -- which is what
+     * made the defect look flaky in production rather than broken.
+     *
+     * <p>Sorted, not de-duplicated: two of the same entry is still a different value from one.
+     */
     public static boolean sameValue(Object recorded, Object current) {
         if (recorded == null || current == null) {
             return recorded == null && current == null;
         }
         if (recorded instanceof Collection<?> left && current instanceof Collection<?> right) {
-            return asStrings(left).equals(asStrings(right));
+            return asSortedStrings(left).equals(asSortedStrings(right));
         }
         if (recorded instanceof Number left && current instanceof Number right) {
             return left.longValue() == right.longValue();
@@ -33,8 +48,8 @@ public final class RevertValues {
         return String.valueOf(recorded).equals(String.valueOf(current));
     }
 
-    private static List<String> asStrings(Collection<?> values) {
-        return values.stream().map(String::valueOf).toList();
+    private static List<String> asSortedStrings(Collection<?> values) {
+        return values.stream().map(String::valueOf).sorted().toList();
     }
 
     public static String asString(Map<String, Object> before, String field) {

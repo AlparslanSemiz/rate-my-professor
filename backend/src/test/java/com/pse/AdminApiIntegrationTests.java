@@ -1179,7 +1179,11 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.lastWrite.action").value("USER_BLOCKED"))
                 .andExpect(jsonPath("$.lastWrite.actorName").value("admin"))
                 .andExpect(jsonPath("$.lastWrite.at", endsWith("Z")))
-                .andExpect(jsonPath("$.lastWrite.ageSeconds").isNumber());
+                .andExpect(jsonPath("$.lastWrite.ageSeconds").isNumber())
+                // F-8: the test profile sets no IPINFO_TOKEN, so login locations cannot be
+                // resolved -- and the panel can now see that instead of the operator
+                // inferring it from every login mail saying "Unknown".
+                .andExpect(jsonPath("$.locationLookupEnabled").value(false));
 
         Session student = createSession("student@student.kit.edu", false);
         mockMvc.perform(get("/system/status").header("Authorization", bearer(student.rawToken())))

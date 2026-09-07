@@ -216,20 +216,24 @@ class CatalogueRevertHandlerTests {
     }
 
     /**
-     * BUG-3, second half: the staleness check the recorded value is fed into is order
-     * sensitive, so the two readings above compare as a changed value even though the
-     * assignment is identical as a set. An unchanged lecture can therefore refuse a
-     * legitimate revert with {@code VALUE_CHANGED}.
+     * BUG-3, second half: the handler still hands an ordered list to the staleness check --
+     * the test above pins that -- but the check no longer reads anything into the order. The
+     * two readings above are the same recorded value, so a lecture whose assignment nobody
+     * touched can be reverted whichever way its {@code Set} happened to iterate.
+     *
+     * <p>This is the assertion that made the defect deterministic to begin with, which is
+     * why it stays: it does not depend on real {@code HashSet} order, so it could not be
+     * flaky in either direction.
      */
     @Test
-    void lectureHandler_professorAssignmentInAnotherOrder_comparesAsChangedByRevertValues() {
+    void lectureHandler_professorAssignmentInAnotherOrder_comparesAsUnchangedByRevertValues() {
         // Given
         List<String> recorded = List.of(PROFESSOR_A.toString(), PROFESSOR_B.toString());
         List<String> current = List.of(PROFESSOR_B.toString(), PROFESSOR_A.toString());
 
-        // When / Then -- equal as sets, unequal to the check that actually runs
+        // When / Then -- equal as sets, and now equal to the check that actually runs
         assertThat(Set.copyOf(recorded)).isEqualTo(Set.copyOf(current));
-        assertThat(RevertValues.sameValue(recorded, current)).isFalse();
+        assertThat(RevertValues.sameValue(recorded, current)).isTrue();
     }
 
     // ---------- LectureHandler.applyInverse ----------

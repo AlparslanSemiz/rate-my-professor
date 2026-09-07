@@ -176,19 +176,20 @@ class UserRevertHandlerTests {
     }
 
     /**
-     * Characterization: the admin id list is fetched before the loop, so it is queried even
-     * when there is nothing to describe. Harmless today -- the revertibility pass only calls
-     * this with a non-empty id set -- and recorded so a later change to that is deliberate.
+     * F-12. The admin id list is only needed to label the rows, so asking for it before
+     * knowing whether there are any was a query issued for nothing. It was harmless -- the
+     * revertibility pass only calls this with a non-empty id set -- which is why it stayed
+     * open as long as it did; the assertion is inverted rather than deleted so the order of
+     * the two queries cannot drift back.
      */
     @Test
-    void currentValues_noTargets_stillQueriesTheAdminIdList() {
+    void currentValues_noTargets_doesNotQueryTheAdminIdList() {
         // Given
-        when(adminRepository.findAllAdminStudentIds()).thenReturn(List.of());
         when(studentRepository.findAllById(List.of())).thenReturn(List.of());
 
         // When / Then
         assertThat(handler().currentValues(List.of())).isEmpty();
-        verify(adminRepository).findAllAdminStudentIds();
+        verifyNoInteractions(adminRepository);
         verifyNoInteractions(userService);
     }
 

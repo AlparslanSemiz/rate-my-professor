@@ -1,6 +1,10 @@
 package com.pse.social.service;
 
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.service.AuditWriter;
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.lecture.model.Lecture;
 import com.pse.shared.enums.VoteType;
 import com.pse.shared.error.ApiException;
 import com.pse.social.dto.request.VoteAnswerRequest;
@@ -14,6 +18,7 @@ import com.pse.social.repository.AnswerVoteRepository;
 import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.CommentVoteRepository;
 import com.pse.user.model.Student;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -21,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,11 +39,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Voting is the one write path in {@link SocialService} that is neither transactional nor
- * audited. These tests pin what it actually does -- including the gaps recorded as
- * findings -- rather than what a vote endpoint might be expected to do. The vote type is
- * now validated at the boundary rather than here (F-2), which the two null-vote tests
- * below spell out.
+ * Voting used to be the one write path in {@link SocialService} that was neither
+ * transactional nor audited. It is both now -- F-1 -- and these tests pin what it does,
+ * including what it deliberately still does not do. The vote type is validated at the
+ * boundary rather than here (F-2), which the two null-vote tests below spell out.
  *
  * <p>Scope is the two vote methods only, hence the file name; the submit and report paths
  * are a separate batch.
@@ -60,15 +65,37 @@ class SocialServiceVoteTests {
     @Mock
     private AnswerVoteRepository answerVoteRepository;
 
+    @Mock
+    private AuditWriter auditWriter;
+
     private final Student student = new Student();
+    private final Student author = new Student();
+    private final Lecture lecture = new Lecture();
     private final Comment comment = new Comment();
     private final Answer answer = new Answer();
 
     /**
-     * The five collaborators the vote methods never touch are passed as null rather than
+     * Both entities are wired to an author and a lecture because the columns behind them are
+     * {@code @ManyToOne(optional = false)} -- a persisted row cannot have either missing, and
+     * the audit label reads both. They are eagerly fetched by the {@code findById} the vote
+     * methods already make, so reading them costs no extra query.
+     */
+    @BeforeEach
+    void wireTheObjectGraph() {
+        author.setUsername("ada");
+        lecture.setCode("IN0001");
+        lecture.setName("Algorithmen 1");
+        comment.setStudent(author);
+        comment.setLecture(lecture);
+        answer.setStudent(author);
+        answer.setComment(comment);
+    }
+
+    /**
+     * The four collaborators the vote methods never touch are passed as null rather than
      * mocked. A mock would let a later edit start using one of them without any test
      * noticing; a null turns that into an immediate failure in the tests that own these
-     * methods. That the audit writer is among them is itself one of the findings.
+     * methods. The audit writer was on that list until F-1 was closed -- it was the finding.
      */
     private SocialService service() {
         return new SocialService(
@@ -80,7 +107,7 @@ class SocialServiceVoteTests {
                 commentVoteRepository,
                 answerVoteRepository,
                 null,
-                null
+                auditWriter
         );
     }
 
@@ -150,9 +177,10 @@ class SocialServiceVoteTests {
     }
 
     /**
-     * Characterization: there is no toggle-off. Voting up twice re-saves an up vote instead
-     * of clearing it, and {@link VoteType} has no third value to clear it with -- so the
-     * only way to withdraw a vote is a path that does not exist yet.
+     * Deliberate, not a gap: voting up twice re-saves an up vote rather than clearing it.
+     * F-3 added a way to withdraw a vote, and it is an explicit {@link VoteType#NONE} rather
+     * than a toggle -- a toggle would have changed what an existing client's second identical
+     * request does, and no client asked for that.
      */
     @Test
     void voteComment_repeatedIdenticalVote_isRewrittenRatherThanToggledOff() {
@@ -173,6 +201,157 @@ class SocialServiceVoteTests {
         assertThat(response.success()).isTrue();
         verify(commentVoteRepository).save(existing);
         assertThat(existing.getVote()).isEqualTo(VoteType.UP);
+    }
+
+    // ---------- withdrawal (F-3) and the audit trail (F-1) ----------
+
+    /**
+     * F-3. {@code NONE} deletes the row rather than storing a third direction, which is why
+     * {@code comment_votes.vote} can stay {@code nullable = false}. Before this there was no
+     * way at all to take a vote back.
+     */
+    @Test
+    void voteComment_withdrawal_deletesTheRowRatherThanStoringAThirdDirection() {
+        // Given
+        CommentVote existing = new CommentVote();
+        existing.setStudent(student);
+        existing.setComment(comment);
+        existing.setVote(VoteType.UP);
+        when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.of(comment));
+        when(commentVoteRepository.findByStudentAndComment(student, comment))
+                .thenReturn(Optional.of(existing));
+
+        // When
+        BasicResponse response =
+                service().voteComment(COMMENT_ID, student, new VoteCommentRequest(VoteType.NONE));
+
+        // Then
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Comment vote withdrawn successfully");
+        verify(commentVoteRepository).delete(existing);
+        verify(commentVoteRepository, never()).save(any());
+    }
+
+    /** Withdrawing a vote that was never cast is not an error -- there is nothing to delete. */
+    @Test
+    void voteComment_withdrawalWithNoVoteOnRecord_succeedsWithoutTouchingTheRow() {
+        // Given
+        when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.of(comment));
+        when(commentVoteRepository.findByStudentAndComment(student, comment))
+                .thenReturn(Optional.empty());
+
+        // When
+        BasicResponse response =
+                service().voteComment(COMMENT_ID, student, new VoteCommentRequest(VoteType.NONE));
+
+        // Then
+        assertThat(response.success()).isTrue();
+        verify(commentVoteRepository, never()).delete(any());
+        verify(commentVoteRepository, never()).save(any());
+    }
+
+    @Test
+    void voteAnswer_withdrawal_deletesTheRow() {
+        // Given
+        AnswerVote existing = new AnswerVote();
+        existing.setStudent(student);
+        existing.setAnswer(answer);
+        existing.setVote(VoteType.DOWN);
+        when(answerRepository.findById(ANSWER_ID)).thenReturn(Optional.of(answer));
+        when(answerVoteRepository.findByStudentAndAnswer(student, answer))
+                .thenReturn(Optional.of(existing));
+
+        // When
+        BasicResponse response =
+                service().voteAnswer(ANSWER_ID, student, new VoteAnswerRequest(VoteType.NONE));
+
+        // Then
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Answer vote withdrawn successfully");
+        verify(answerVoteRepository).delete(existing);
+        verify(answerVoteRepository, never()).save(any());
+    }
+
+    /**
+     * F-1. Every other write in {@link SocialService} recorded itself and the two vote
+     * methods did not, so an account flipping hundreds of votes left nothing in the
+     * moderation trail. The direction travels as metadata rather than as a change set,
+     * because a vote has no "before": a first vote and an overwrite are the same action
+     * from the log's point of view.
+     */
+    @Test
+    void voteComment_writesTheVoteToTheActivityLog() {
+        // Given
+        when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.of(comment));
+        when(commentVoteRepository.findByStudentAndComment(student, comment))
+                .thenReturn(Optional.empty());
+
+        // When
+        service().voteComment(COMMENT_ID, student, new VoteCommentRequest(VoteType.UP));
+
+        // Then
+        verify(auditWriter).writeStudentAction(
+                student,
+                AuditAction.COMMENT_VOTED,
+                AuditTargetType.COMMENT,
+                comment.getId(),
+                "Vote on ada in IN0001 — Algorithmen 1",
+                Map.of("vote", "UP"));
+    }
+
+    @Test
+    void voteAnswer_writesTheVoteToTheActivityLog() {
+        // Given
+        when(answerRepository.findById(ANSWER_ID)).thenReturn(Optional.of(answer));
+        when(answerVoteRepository.findByStudentAndAnswer(student, answer))
+                .thenReturn(Optional.empty());
+
+        // When
+        service().voteAnswer(ANSWER_ID, student, new VoteAnswerRequest(VoteType.DOWN));
+
+        // Then
+        verify(auditWriter).writeStudentAction(
+                student,
+                AuditAction.ANSWER_VOTED,
+                AuditTargetType.ANSWER,
+                answer.getId(),
+                "Vote on ada in IN0001 — Algorithmen 1",
+                Map.of("vote", "DOWN"));
+    }
+
+    /** A withdrawal is an action too, and the one most worth seeing in a manipulation case. */
+    @Test
+    void voteComment_withdrawal_isRecordedAsItsOwnEntry() {
+        // Given
+        when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.of(comment));
+        when(commentVoteRepository.findByStudentAndComment(student, comment))
+                .thenReturn(Optional.empty());
+
+        // When
+        service().voteComment(COMMENT_ID, student, new VoteCommentRequest(VoteType.NONE));
+
+        // Then
+        verify(auditWriter).writeStudentAction(
+                student,
+                AuditAction.COMMENT_VOTED,
+                AuditTargetType.COMMENT,
+                comment.getId(),
+                "Vote on ada in IN0001 — Algorithmen 1",
+                Map.of("vote", "NONE"));
+    }
+
+    /** A refused vote writes nothing: an entry for something that did not happen is worse. */
+    @Test
+    void voteComment_unknownComment_writesNoAuditEntry() {
+        // Given
+        when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.empty());
+
+        // When / Then
+        assertThatThrownBy(() ->
+                service().voteComment(COMMENT_ID, student, new VoteCommentRequest(VoteType.UP)))
+                .isInstanceOf(ApiException.class);
+
+        verifyNoInteractions(auditWriter);
     }
 
     /**

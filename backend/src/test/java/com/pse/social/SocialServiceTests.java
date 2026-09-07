@@ -232,6 +232,13 @@ class SocialServiceTests {
                 ))
                 .thenReturn(Optional.empty());
 
+        when(comment.getStudent())
+                .thenReturn(mock(Student.class));
+
+        when(comment.getLecture())
+                .thenReturn(mock(Lecture.class));
+
+
 
         BasicResponse response =
                 socialService.voteComment(
@@ -289,6 +296,13 @@ class SocialServiceTests {
                 .thenReturn(
                         Optional.of(existingVote)
                 );
+
+        when(comment.getStudent())
+                .thenReturn(mock(Student.class));
+
+        when(comment.getLecture())
+                .thenReturn(mock(Lecture.class));
+
 
 
         BasicResponse response =
@@ -540,6 +554,18 @@ class SocialServiceTests {
                 .thenReturn(
                         Optional.of(existingVote)
                 );
+
+        Comment votedComment = mock(Comment.class);
+
+        when(votedComment.getLecture())
+                .thenReturn(mock(Lecture.class));
+
+        when(answer.getStudent())
+                .thenReturn(mock(Student.class));
+
+        when(answer.getComment())
+                .thenReturn(votedComment);
+
 
 
         BasicResponse response =

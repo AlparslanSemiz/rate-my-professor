@@ -136,6 +136,12 @@ public class SocialService {
 
     }
 
+    /**
+     * Transactional so the vote and the audit entry commit together -- {@link AuditWriter}
+     * joins the caller's transaction on purpose, and a vote recorded without its entry is
+     * exactly the blind spot F-1 describes.
+     */
+    @Transactional
     public BasicResponse voteComment(UUID commentId, Student student, VoteCommentRequest request) {
 
         Comment comment = commentRepository.findById(commentId).orElse(null);
@@ -147,6 +153,18 @@ public class SocialService {
 
         CommentVote commentVote = commentVoteRepository.findByStudentAndComment(student, comment).orElse(null);
 
+        // F-3: NONE withdraws the vote rather than recording a third direction, so the row
+        // goes away and the column never has to hold it.
+        if (request.voteType() == VoteType.NONE) {
+            if (commentVote != null) {
+                commentVoteRepository.delete(commentVote);
+            }
+            writeVoteAudit(student, AuditAction.COMMENT_VOTED, AuditTargetType.COMMENT,
+                    comment.getId(), voteLabel(comment.getStudent(), comment.getLecture()),
+                    VoteType.NONE);
+            return new BasicResponse("Comment vote withdrawn successfully", true);
+        }
+
         if(commentVote != null) {
             commentVote.setVote(request.voteType());
         }else{
@@ -157,6 +175,10 @@ public class SocialService {
         }
 
         commentVoteRepository.save(commentVote);
+
+        writeVoteAudit(student, AuditAction.COMMENT_VOTED, AuditTargetType.COMMENT,
+                comment.getId(), voteLabel(comment.getStudent(), comment.getLecture()),
+                request.voteType());
 
         return new BasicResponse("Comment vote saved successfully", true);
 
@@ -226,6 +248,8 @@ public class SocialService {
     }
 
 
+    /** The answer half of {@link #voteComment}, transactional for the same reason. */
+    @Transactional
     public BasicResponse voteAnswer(UUID answerID, Student student, VoteAnswerRequest request) {
 
         Answer answer = answerRepository.findById(answerID).orElse(null);
@@ -237,6 +261,16 @@ public class SocialService {
 
         AnswerVote answerVote = answerVoteRepository.findByStudentAndAnswer(student, answer).orElse(null);
 
+        if (request.voteType() == VoteType.NONE) {
+            if (answerVote != null) {
+                answerVoteRepository.delete(answerVote);
+            }
+            writeVoteAudit(student, AuditAction.ANSWER_VOTED, AuditTargetType.ANSWER,
+                    answer.getId(), voteLabel(answer.getStudent(), answer.getComment().getLecture()),
+                    VoteType.NONE);
+            return new BasicResponse("Answer vote withdrawn successfully", true);
+        }
+
         if(answerVote != null) {
             answerVote.setVote(request.voteType());
         }else{
@@ -246,6 +280,11 @@ public class SocialService {
             answerVote.setVote(request.voteType());
         }
         answerVoteRepository.save(answerVote);
+
+        writeVoteAudit(student, AuditAction.ANSWER_VOTED, AuditTargetType.ANSWER,
+                answer.getId(), voteLabel(answer.getStudent(), answer.getComment().getLecture()),
+                request.voteType());
+
         return new BasicResponse("Answer vote saved successfully", true);
     }
 
@@ -506,6 +545,37 @@ public class SocialService {
      * The lecture a piece of content belongs to, formatted the way the reported-comments
      * endpoint formats its {@code postContext}.
      */
+    /**
+     * F-1. Every other write in this class recorded itself; the two vote methods did not, so
+     * an account flipping hundreds of votes left no trace on the moderation side at all.
+     * The direction is metadata rather than a change set, because a vote has no "before":
+     * an overwrite and a first vote are the same action from the log's point of view.
+     */
+    private void writeVoteAudit(
+            Student student,
+            AuditAction action,
+            AuditTargetType targetType,
+            UUID targetId,
+            String targetLabel,
+            VoteType vote
+    ) {
+        auditWriter.writeStudentAction(
+                student,
+                action,
+                targetType,
+                targetId,
+                targetLabel,
+                // Null-safe for the same reason submitCommentReport is: the vote type is
+                // validated at the boundary (F-2), and the audit write must not be the thing
+                // that turns a request that slipped past it into an NPE.
+                Map.of("vote", vote == null ? "UNSPECIFIED" : vote.name())
+        );
+    }
+
+    private String voteLabel(Student author, Lecture lecture) {
+        return "Vote on " + author.getUsername() + " in " + lectureLabel(lecture);
+    }
+
     private String lectureLabel(Lecture lecture) {
         String code = lecture.getCode();
         String name = lecture.getName();

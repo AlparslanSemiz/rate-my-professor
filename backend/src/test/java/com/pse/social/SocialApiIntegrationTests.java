@@ -1,5 +1,6 @@
 package com.pse.social;
 
+import com.pse.audit.model.AuditAction;
 import com.pse.audit.repository.AuditLogRepository;
 import com.pse.auth.model.Token;
 import com.pse.auth.repository.AuthRateLimitBucketRepository;
@@ -207,6 +208,60 @@ class SocialApiIntegrationTests {
                                         "Very helpful lecture"
                                 )
                 );
+    }
+
+
+    /**
+     * F-3 end to end. {@code NONE} is accepted by the boundary -- it is a {@link VoteType}
+     * value like the other two, so {@code @NotNull} passes -- and the row is deleted rather
+     * than rewritten, which is what lets the {@code vote} column stay {@code nullable = false}.
+     *
+     * <p>The audit entry is the other half: F-1 means a withdrawal is recorded too, and a
+     * withdrawal is the event a manipulation case most needs to see.
+     */
+    @Test
+    void aVoteCanBeWithdrawnAndTheWithdrawalIsRecorded() throws Exception {
+
+        Session author = createSession("author@student.kit.edu");
+        Session voter = createSession("voter@student.kit.edu");
+        Lecture lecture = createLecture();
+        Comment comment = createComment(author.student(), lecture, "Original comment");
+
+        mockMvc.perform(
+                        post("/social/comments/vote/comment/{commentId}", comment.getId())
+                                .header("Authorization", bearer(voter.rawToken()))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "voteType":"UP"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isOk());
+
+        assertEquals(1, commentVoteRepository.count());
+
+        mockMvc.perform(
+                        post("/social/comments/vote/comment/{commentId}", comment.getId())
+                                .header("Authorization", bearer(voter.rawToken()))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "voteType":"NONE"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        assertEquals(0, commentVoteRepository.count());
+
+        assertEquals(
+                2,
+                auditLogRepository.findAll().stream()
+                        .filter(log -> log.getAction() == AuditAction.COMMENT_VOTED)
+                        .count()
+        );
     }
 
 

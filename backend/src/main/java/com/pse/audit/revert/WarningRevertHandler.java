@@ -54,8 +54,18 @@ public class WarningRevertHandler implements AuditRevertHandler {
     public void applyInverse(AuthenticatedUser principal, UUID targetId, Map<String, Object> before) {
         // A warning is addressed as a sub-resource of the student it was issued to, so the
         // owning student has to be resolved before the correction can be applied.
+        //
+        // F-11: nothing holds a lock between the revertibility check and this line, and this
+        // is the only handler that runs its own query inside applyInverse, so the row can be
+        // withdrawn in between. Refusing is the right answer -- but "Warning not found" read
+        // as a broken request on an entry the panel had just shown as revertible. It carries
+        // the refusal vocabulary the check itself uses now, so the panel can say the entry
+        // can no longer be reverted instead of reporting a missing record.
         Warning warning = warningRepository.findById(targetId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Warning not found"));
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND,
+                        "The record this entry is about no longer exists",
+                        AuditRevertRefusal.TARGET_MISSING.name()));
         userService.updateWarning(
                 principal,
                 warning.getStudent().getId(),

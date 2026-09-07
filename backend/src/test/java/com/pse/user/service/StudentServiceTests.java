@@ -206,6 +206,33 @@ class StudentServiceTests {
                 .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
+    /**
+     * F-9. The score was written back onto the managed entity inside a method annotated
+     * {@code @Transactional(readOnly = true)}, so whether it reached the database was up to
+     * dirty checking rather than to anything in the code. It also aimed at a column an
+     * administrator owns -- {@code ModerationUserService} can set {@code credibilityScore}
+     * and {@code UserRevertHandler} can revert it -- so a student opening their own profile
+     * could quietly undo that adjustment. The response still carries the computed value.
+     */
+    @Test
+    void getUserInformation_derivedScore_isReportedWithoutBeingWrittenBackToTheEntity() {
+        // Given -- an administrator has set the stored score to something else
+        Student student = student();
+        student.setCredibilityScore(42);
+        student.getComments().add(commentWithVotes(student, VoteType.UP, VoteType.UP));
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+
+        // When
+        StudentProfileResponse response = service().getUserInformation(STUDENT_ID);
+
+        // Then
+        assertThat(response.credibilityScore()).isEqualTo(2);
+        assertThat(student.getCredibilityScore())
+                .as("a read must not overwrite a column somebody else owns")
+                .isEqualTo(42);
+        verify(studentRepository, never()).save(any());
+    }
+
     // ---------- getUserRatings ----------
 
     @Test

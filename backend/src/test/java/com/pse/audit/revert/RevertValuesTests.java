@@ -88,11 +88,27 @@ class RevertValuesTests {
         assertThat(RevertValues.sameValue(List.of("a", "b"), List.of("a", "b"))).isTrue();
     }
 
-    /** Assignments are recorded as ordered lists, so a reordering is a real change. */
+    /**
+     * BUG-3. The only two collection-valued fields recorded -- a lecture's professors and a
+     * professor's lectures -- are read out of a {@code Set}, so a reordering carries no
+     * information and comparing by position refused reverts of assignments nobody had
+     * touched. Order-insensitive since.
+     */
     @Test
-    void sameValue_listsWithTheSameElementsReordered_returnsFalse() {
+    void sameValue_collectionsWithTheSameElementsReordered_returnsTrue() {
         // When / Then
-        assertThat(RevertValues.sameValue(List.of("a", "b"), List.of("b", "a"))).isFalse();
+        assertThat(RevertValues.sameValue(List.of("a", "b"), List.of("b", "a"))).isTrue();
+    }
+
+    /**
+     * Sorted rather than de-duplicated: dropping one of two identical entries is still a
+     * change, and a set comparison would have called this pair equal.
+     */
+    @Test
+    void sameValue_collectionsWithTheSameElementsButDifferentCounts_returnsFalse() {
+        // When / Then
+        assertThat(RevertValues.sameValue(List.of("a", "a", "b"), List.of("a", "b", "b"))).isFalse();
+        assertThat(RevertValues.sameValue(List.of("a", "a"), List.of("a"))).isFalse();
     }
 
     @Test

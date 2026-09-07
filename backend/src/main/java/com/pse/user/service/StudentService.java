@@ -56,7 +56,14 @@ public class StudentService {
         //CredibilityScore = |Upvotes| - |DownVotes|
         int credibilityScore = calculateCredibilityScore(student);
 
-        student.setCredibilityScore(credibilityScore);
+        // Deliberately not written back to the entity -- F-9. This method is
+        // @Transactional(readOnly = true) and the score is derived, so the assignment was a
+        // mutation of a managed entity inside a transaction meant for reading, whose effect
+        // depended on what dirty checking chose to do. It also aimed at a column somebody
+        // else owns: an administrator can set credibilityScore through ModerationUserService
+        // and UserRevertHandler can revert it, so a student opening their own profile could
+        // silently overwrite that adjustment. The response below carries the computed value
+        // either way, so nothing a caller sees changes.
 
         return new StudentProfileResponse(
                 "Success",

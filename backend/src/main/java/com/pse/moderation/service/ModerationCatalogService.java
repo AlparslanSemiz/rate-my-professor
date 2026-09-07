@@ -120,7 +120,10 @@ public class ModerationCatalogService {
             List<Professor> professors = resolveProfessors(request.professorIds());
             List<UUID> before = lecture.getProfessors().stream().map(Professor::getId).toList();
             List<UUID> after = professors.stream().map(Professor::getId).toList();
-            if (!before.equals(after)) {
+            // Compared as a multiset -- BUG-3. lecture.getProfessors() is a Set and the
+            // resolved list carries the order of the request, so comparing by position made
+            // an unchanged assignment look edited and wrote a bogus audit event for it.
+            if (!sameAssignment(before, after)) {
                 changes.put("professors", change(labels(before), labels(after)));
                 lecture.getProfessors().clear();
                 lecture.getProfessors().addAll(professors);
@@ -274,7 +277,9 @@ public class ModerationCatalogService {
         List<Lecture> after = resolveLectures(lectureIds);
         List<UUID> beforeIds = professor.getLectures().stream().map(Lecture::getId).toList();
         List<UUID> afterIds = after.stream().map(Lecture::getId).toList();
-        if (beforeIds.equals(afterIds)) {
+        // The mirror image of the professor assignment above, and unordered for the same
+        // reason: professor.getLectures() is a Set.
+        if (sameAssignment(beforeIds, afterIds)) {
             return Map.of();
         }
 
@@ -335,6 +340,19 @@ public class ModerationCatalogService {
 
     private static String professorLabel(Professor professor) {
         return professor.getFirstName() + " " + professor.getLastName();
+    }
+
+    /**
+     * Whether two id assignments hold the same members, regardless of the order they come
+     * out in. Both sides are read from a {@code Set} on one end and from a request or a
+     * repository lookup on the other, so position carries no information -- BUG-3.
+     */
+    private static boolean sameAssignment(List<UUID> before, List<UUID> after) {
+        return sorted(before).equals(sorted(after));
+    }
+
+    private static List<String> sorted(List<UUID> ids) {
+        return ids.stream().map(UUID::toString).sorted().toList();
     }
 
     private static Map<String, Object> change(Object before, Object after) {

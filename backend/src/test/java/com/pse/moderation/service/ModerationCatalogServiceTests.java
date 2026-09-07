@@ -285,23 +285,23 @@ class ModerationCatalogServiceTests {
     }
 
     /**
-     * BUG-3, the write side, made deterministic.
+     * BUG-3, the write side, fixed.
      *
      * <p>{@code Lecture.professors} is a {@code Set}, which defines no order, but
-     * {@code updateLecture} builds {@code before} from the set's iteration order and
-     * {@code after} from the order {@code findAllById} happens to return, then compares them
-     * with {@code !before.equals(after)} — position by position. So an assignment that did
-     * not change can be recorded as a change and write an audit event nobody performed.
+     * {@code updateLecture} built {@code before} from the set's iteration order and
+     * {@code after} from the order {@code findAllById} happened to return, then compared
+     * them position by position. So an assignment that did not change was recorded as a
+     * change and wrote an audit event nobody performed. The two are compared as multisets
+     * now, so the same members in another order are the same assignment.
      *
      * <p>Real {@code HashSet} order is not used here: {@code Professor} overrides neither
      * {@code equals} nor {@code hashCode}, so ordering depends on object addresses and varies
      * per run. A test built on that would be flaky, and the flakiness would sit in the test
      * instead of in the defect. A {@code LinkedHashSet} plus a stubbed repository order states
-     * the same fact and states it every time. This is the write-side half the batch 2 writeup
-     * deferred to this batch.
+     * the same fact and states it every time.
      */
     @Test
-    void updateLecture_sameProfessorsInAnotherOrder_recordsABogusChange() {
+    void updateLecture_sameProfessorsInAnotherOrder_recordsNoChange() {
         Professor first = professor(PROFESSOR_ID, "Peter", "Sanders");
         Professor second = professor(UUID.fromString("33333333-3333-3333-3333-333333333333"),
                 "Dorothea", "Wagner");
@@ -319,14 +319,11 @@ class ModerationCatalogServiceTests {
 
         assertThat(response.success()).isTrue();
 
-        Map<String, Object> changes = changesWritten();
-        assertThat(changes)
-                .as("the assignment is the same set, yet a change was recorded — BUG-3")
-                .containsKey("professors");
-        assertThat(before(changes, "professors"))
-                .isEqualTo(List.of(first.getId().toString(), second.getId().toString()));
-        assertThat(after(changes, "professors"))
-                .isEqualTo(List.of(second.getId().toString(), first.getId().toString()));
+        // Nothing changed, so nothing is recorded -- and with no other field in the request
+        // there is no audit event at all, which is the second half of what the bogus change
+        // used to produce.
+        verifyNoInteractions(auditWriter);
+        assertThat(lecture.getProfessors()).containsExactlyInAnyOrder(first, second);
     }
 
     @Test

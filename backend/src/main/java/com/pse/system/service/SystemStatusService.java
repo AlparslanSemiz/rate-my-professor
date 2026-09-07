@@ -2,6 +2,7 @@ package com.pse.system.service;
 
 import com.pse.audit.model.AuditLog;
 import com.pse.audit.repository.AuditLogRepository;
+import com.pse.auth.service.LoginLocationService;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.BugReportRepository;
@@ -52,6 +53,7 @@ public class SystemStatusService {
     private final BugReportRepository bugReportRepository;
     private final AuditLogRepository auditLogRepository;
     private final GitLabClient gitLabClient;
+    private final LoginLocationService loginLocationService;
 
     public SystemStatusService(
             JdbcTemplate jdbcTemplate,
@@ -66,7 +68,8 @@ public class SystemStatusService {
             CommentReportRepository commentReportRepository,
             BugReportRepository bugReportRepository,
             AuditLogRepository auditLogRepository,
-            GitLabClient gitLabClient
+            GitLabClient gitLabClient,
+            LoginLocationService loginLocationService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.applicationContext = applicationContext;
@@ -81,6 +84,7 @@ public class SystemStatusService {
         this.bugReportRepository = bugReportRepository;
         this.auditLogRepository = auditLogRepository;
         this.gitLabClient = gitLabClient;
+        this.loginLocationService = loginLocationService;
     }
 
     /**
@@ -171,7 +175,8 @@ public class SystemStatusService {
                 database,
                 counts,
                 lastWrite,
-                gitLabClient.isEnabled()
+                gitLabClient.isEnabled(),
+                loginLocationService.isConfigured()
         );
     }
 }

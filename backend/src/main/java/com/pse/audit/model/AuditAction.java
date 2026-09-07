@@ -38,6 +38,8 @@ public enum AuditAction {
     USER_LOGOUT(AuditActionScope.ACTIVITY),
     COMMENT_CREATED(AuditActionScope.ACTIVITY),
     ANSWER_CREATED(AuditActionScope.ACTIVITY),
+    COMMENT_VOTED(AuditActionScope.ACTIVITY),
+    ANSWER_VOTED(AuditActionScope.ACTIVITY),
     RATING_SUBMITTED(AuditActionScope.ACTIVITY),
     COMMENT_REPORT_CREATED(AuditActionScope.ACTIVITY),
     ANSWER_REPORT_CREATED(AuditActionScope.ACTIVITY),

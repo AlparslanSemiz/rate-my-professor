@@ -9,7 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import com.pse.shared.enums.IpInfoResponse;
 import com.pse.shared.enums.LoginLocation;
@@ -81,11 +83,37 @@ public class LoginLocationService {
 
             return new LoginLocation(description, mapsUrl, response.loc());
 
+        } catch (RestClientResponseException exception) {
+            // F-8: told apart from the two below on purpose. A 401 or 403 means the token is
+            // there but no longer works -- the case the startup warning cannot catch, because
+            // the token was fine when the application booted -- and a 429 means the quota ran
+            // out. All three used to arrive as the same anonymous "could not determine".
+            LOGGER.warn("IPinfo refused the lookup for IP {} with {}; "
+                            + "the token may be revoked or out of quota",
+                    ip, exception.getStatusCode(), exception);
+
+            return new LoginLocation("Unknown", null, null);
+
+        } catch (ResourceAccessException exception) {
+            LOGGER.warn("IPinfo was unreachable for IP {} -- network or timeout", ip, exception);
+
+            return new LoginLocation("Unknown", null, null);
+
         } catch (Exception exception) {
             LOGGER.warn("Could not determine location for IP {}", ip, exception);
 
             return new LoginLocation("Unknown", null, null);
         }
+    }
+
+    /**
+     * Whether a location can be resolved at all. Reported through {@code GET /system/status}
+     * so an operator can see that lookups are off rather than inferring it from every login
+     * mail saying "Unknown" -- F-8. The startup warning covers a token that was missing at
+     * boot; this covers the whole life of the process.
+     */
+    public boolean isConfigured() {
+        return !ipInfoToken.isBlank();
     }
 
     /**
