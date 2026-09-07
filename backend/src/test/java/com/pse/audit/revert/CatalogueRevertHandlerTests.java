@@ -138,7 +138,7 @@ class CatalogueRevertHandlerTests {
                 entry("name", "Programmierparadigmen"),
                 entry("code", "IN1234"),
                 entry("semesterYear", 2025),
-                entry("semesterSeason", "WINTER"),
+                entry("semesterSeason", "WS"),
                 entry("active", true),
                 entry("lectureType", "LECTURE_AND_EXERCISE"),
                 entry("professors", List.of(PROFESSOR_A.toString()))
@@ -245,7 +245,7 @@ class CatalogueRevertHandlerTests {
         before.put("name", "Programmieren");
         before.put("code", "IN1000");
         before.put("semesterYear", 2024);
-        before.put("semesterSeason", "SUMMER");
+        before.put("semesterSeason", "SS");
         before.put("active", false);
         before.put("lectureType", "LECTURE_ONLY");
         before.put("professors", List.of(PROFESSOR_A.toString(), PROFESSOR_B.toString()));

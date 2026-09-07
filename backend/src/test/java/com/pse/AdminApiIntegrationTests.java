@@ -1558,7 +1558,7 @@ class AdminApiIntegrationTests {
                         .header("Authorization", bearer(admin.rawToken()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"code":"CS102","semesterYear":2027,"semesterSeason":"WINTER","active":false}
+                                {"code":"CS102","semesterYear":2027,"semesterSeason":"WS","active":false}
                                 """))
                 .andExpect(status().isOk());
         Lecture stored = lectureRepository.findById(lecture.getId()).orElseThrow();

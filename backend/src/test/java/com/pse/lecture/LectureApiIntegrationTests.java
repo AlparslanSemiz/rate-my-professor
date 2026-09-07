@@ -260,7 +260,7 @@ class LectureApiIntegrationTests {
           "name": "Lineare Algebra 1",
           "code": "LA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": [
             "%s"
@@ -312,7 +312,7 @@ class LectureApiIntegrationTests {
           "name": "Analysis 1",
           "code": "ANA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": [
             "%s"
@@ -344,7 +344,7 @@ class LectureApiIntegrationTests {
           "name": "Analysis 1",
           "code": "ANA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": []
         }
@@ -380,7 +380,7 @@ class LectureApiIntegrationTests {
           "name": "Lineare Algebra 1",
           "code": "LA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": [
             "%s"
@@ -432,7 +432,7 @@ class LectureApiIntegrationTests {
           "name": "Lineare Algebra 1",
           "code": "LA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": [
             "%s"
@@ -471,7 +471,7 @@ class LectureApiIntegrationTests {
           "name": "Lineare Algebra 1",
           "code": "LA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": [
             "%s"
