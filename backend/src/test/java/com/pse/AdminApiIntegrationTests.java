@@ -2213,16 +2213,17 @@ class AdminApiIntegrationTests {
         Session student = createSession("edit-rating@student.kit.edu", false);
         Lecture lecture = createLecture();
 
-        // Rating existiert noch nicht
+        // Rating existiert noch nicht -- 200, und ratings ist eine leere Liste, nie null
         mockMvc.perform(get("/ratings/own/{lectureId}", lecture.getId())
                         .header("Authorization", bearer(student.rawToken())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.ratings").isEmpty());
 
-        // Lecture existiert nicht
+        // Lecture existiert nicht -- 404, wie bei der Kategorien-Route daneben
         mockMvc.perform(get("/ratings/own/{lectureId}", UUID.randomUUID())
                         .header("Authorization", bearer(student.rawToken())))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false));
 
         // Rating erstmals erstellen

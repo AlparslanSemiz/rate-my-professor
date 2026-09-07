@@ -166,14 +166,22 @@ public class RatingService {
 
         Lecture lecture = lectureService.getById(lectureId);
 
+        // The same answer getRatingCategories gives for an unknown id, two methods below:
+        // a lecture that does not exist is a 404, not a successful response reporting it.
         if (lecture == null) {
-            return new RatingsAverageResponse("Error, cannot find lecture with id " + lectureId, false, null);
+            throw new ApiException(HttpStatus.NOT_FOUND, "Lecture not found");
         }
 
         Rating rating = ratingRepository.findByStudentIdAndLectureId(student.getId(), lectureId).orElse(null);
 
+        // An empty list, never null. "I have not rated this lecture" is the ordinary answer
+        // for any lecture a student has not rated -- which is every lecture with no ratings --
+        // and a null list field is a crash waiting for the first caller that iterates the
+        // response without checking. StudentService.getUserRatings already answers its own
+        // empty case this way, deliberately, so a caller can iterate either way.
         if (rating == null) {
-            return new RatingsAverageResponse("Error, couldn't find rating for Lecture: " + lectureId, false, null);
+            return new RatingsAverageResponse(
+                    "Error, couldn't find rating for Lecture: " + lectureId, false, List.of());
         }
 
         List<TopicAverageResponse> topics = new ArrayList<>();

@@ -151,7 +151,15 @@ class AdminApiPathSplitTests {
         mockMvc.perform(get("/admin/auth/me").header("Authorization", bearer(rawToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.kitEmail").value(ADMIN_EMAIL))
-                .andExpect(jsonPath("$.user.role").value("ADMIN"));
+                .andExpect(jsonPath("$.user.role").value("ADMIN"))
+                // The panel renders this one, and nothing asserted it until the panel
+                // started showing "Signed in as: Unknown User". That symptom is not this
+                // endpoint -- /admins/validate, the legacy call the panel has not migrated
+                // off, answers a bare BasicResponse with no identity in it at all -- but a
+                // route whose whole job is to say who is signed in should have its name
+                // field under test either way.
+                .andExpect(jsonPath("$.user.username").isNotEmpty())
+                .andExpect(jsonPath("$.user.id").isNotEmpty());
         mockMvc.perform(get("/admin/users").header("Authorization", bearer(rawToken)))
                 .andExpect(status().isOk());
         assertEquals(1, countAudits(AuditAction.ADMIN_LOGIN));

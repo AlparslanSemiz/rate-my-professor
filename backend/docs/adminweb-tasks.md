@@ -25,6 +25,50 @@ done, and the backend will ask before doing it.
 The one thing you keep by not moving is a year-long panel session, which is not the policy
 the split exists to enforce.
 
+## Two bugs on your board are this migration
+
+Both are on the team's bug list as backend problems. Neither is a backend defect; both are
+what "do nothing" costs, so they close when the tasks below are done.
+
+**"No logout after 2 days."** The session lifetime is a property of the **endpoint**, not of
+the account or the session type. `POST /auth/login` with no `sessionType` in the body mints
+an *administrator* session — which is why every panel screen works — on the **app**
+schedule: `AUTH_APP_SESSION_TTL`, a year. `POST /admin/auth/login` mints the same
+administrator session on `AUTH_ADMIN_SESSION_TTL`, one day. So the panel is not failing to
+log out; it was handed a year. → **Task 1**, and the backend pins both lifetimes in
+`AdminApiPathSplitTests`.
+
+**"Signed in as: Unknown User."** Most likely `GET /admins/validate`, which is what the panel
+predates the split with. It answers a bare `BasicResponse` — `{"message": "...", "success":
+true}` — and carries **no identity at all**: no name, no id, no address. There is nothing in
+that response to render, so a panel falling back to a placeholder is the expected outcome
+rather than a failure.
+
+`GET /admin/auth/me` is the replacement and carries what the header needs:
+
+```json
+{
+  "message": "Authenticated",
+  "success": true,
+  "user": {
+    "id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+    "username": "ada",
+    "kitEmail": "ada@kit.edu",
+    "role": "ADMIN",
+    "status": "ACTIVE",
+    "isSuperAdmin": false
+  }
+}
+```
+
+Read the name from `user.username`. Note `isSuperAdmin` is spelled with the `is` — Jackson
+would otherwise have put it on the wire as `superAdmin`. → **Task 1**, last line.
+
+This second one is an inference from the backend side: we can see what each endpoint returns,
+not which one the panel calls. If the panel is already on `/admin/auth/me` and still shows a
+placeholder, say so and we will look again — that would be a real backend bug and we would
+want it.
+
 ---
 
 ## 1. Move the five auth calls

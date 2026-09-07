@@ -486,7 +486,7 @@ class RatingServiceTests {
 
 
     @Test
-    void getOwnRatingReturnsErrorWhenLectureDoesNotExist() {
+    void getOwnRatingUnknownLectureIsNotFound() {
 
         Student student = mock(Student.class);
 
@@ -496,27 +496,26 @@ class RatingServiceTests {
                 .thenReturn(null);
 
 
-        RatingsAverageResponse response =
-                ratingService.getOwnRating(
+        ApiException thrown = assertThrows(
+                ApiException.class,
+                () -> ratingService.getOwnRating(
                         student,
                         lectureId
-                );
-
-
-        assertFalse(response.success());
-
-        assertEquals(
-                "Error, cannot find lecture with id "
-                        + lectureId,
-                response.message()
+                )
         );
 
-        assertNull(response.ratings());
+
+        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
+
+        assertEquals(
+                "Lecture not found",
+                thrown.getMessage()
+        );
     }
 
 
     @Test
-    void getOwnRatingReturnsErrorWhenStudentHasNoRating() {
+    void getOwnRatingWithNoRatingYetReturnsAnEmptyListRatherThanNull() {
 
         Student student = mock(Student.class);
 
@@ -556,7 +555,12 @@ class RatingServiceTests {
                 response.message()
         );
 
-        assertNull(response.ratings());
+        // Empty, never null. This assertion read assertNull until the crash report -- a
+        // lecture nobody has rated is exactly the case that reaches here, so the null list
+        // went out on the ordinary path rather than an exotic one.
+        assertNotNull(response.ratings());
+
+        assertTrue(response.ratings().isEmpty());
     }
 
 

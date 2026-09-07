@@ -33,6 +33,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -339,6 +340,17 @@ class RatingApiIntegrationTests {
     }
 
 
+    /**
+     * The exact request the app makes for a lecture nobody has rated -- and the assertion
+     * that was missing when it crashed. This test already drove this path; it asserted
+     * {@code success} and {@code message} and never looked at {@code ratings}, which is the
+     * field the client dereferences. It came back {@code null}, and a null list field is a
+     * crash in any caller that iterates the response without checking.
+     *
+     * <p>The lesson is narrower than "assert more": a response's *collection* fields are
+     * worth asserting even on a failure path, because that is where a client's null check
+     * is least likely to be.
+     */
     @Test
     void ownRatingReturnsErrorWhenStudentHasNotRatedLecture() throws Exception {
 
@@ -374,6 +386,43 @@ class RatingApiIntegrationTests {
                                         "Error, couldn't find rating for Lecture: "
                                                 + lecture.getId()
                                 )
+                )
+                .andExpect(
+                        jsonPath("$.ratings")
+                                .isArray()
+                )
+                .andExpect(
+                        jsonPath("$.ratings")
+                                .isEmpty()
+                );
+    }
+
+
+    /** An id that resolves to no lecture is a 404, the same answer the categories route gives. */
+    @Test
+    void ownRatingForAnUnknownLectureIsNotFound() throws Exception {
+
+        Session student =
+                createSession(
+                        "student@student.kit.edu"
+                );
+
+        mockMvc.perform(
+                        get(
+                                "/ratings/own/{lectureId}",
+                                UUID.randomUUID()
+                        )
+                                .header(
+                                        "Authorization",
+                                        bearer(
+                                                student.rawToken()
+                                        )
+                                )
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(
+                        jsonPath("$.success")
+                                .value(false)
                 );
     }
 
