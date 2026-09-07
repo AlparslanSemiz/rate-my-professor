@@ -222,9 +222,7 @@ class SocialApiIntegrationTests {
         createAnswer(author, comment, "An answer to vote on");
         UUID answerId = answerRepository.findAll().getFirst().getId();
 
-        // The route really is /vote/answer<id> with no slash -- F-4, not fixed yet. Using the
-        // route as it is today keeps this test honest; it will need updating when F-4 lands.
-        mockMvc.perform(post("/social/comments/vote/answer" + answerId)
+        mockMvc.perform(post("/social/comments/vote/answer/{answer_id}", answerId)
                         .header("Authorization", bearer(voter.rawToken()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"voteType\": null}"))

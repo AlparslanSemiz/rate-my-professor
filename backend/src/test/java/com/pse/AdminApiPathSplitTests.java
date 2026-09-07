@@ -34,16 +34,21 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -220,6 +225,92 @@ class AdminApiPathSplitTests {
             assertEquals(403, statusOf(path, studentToken), path + " with a student session");
             assertEquals(401, statusOf(path, null), path + " without a token");
         }
+    }
+
+    /**
+     * The same matrix for the writes, which the listing matrix above cannot reach.
+     *
+     * <p>It matters more here than for the reads. The {@code /admin} prefix is guarded by
+     * one blanket rule, but every legacy twin is an individual per-verb matcher, and the
+     * chain ends in {@code anyRequest().permitAll()} -- so a verb missing from one of those
+     * dozen rules does not deny, it opens. {@code POST /data/professor} is the precedent:
+     * it had no matcher at all and was answered inside the handler instead.
+     *
+     * <p>The admin expectation is "not refused" rather than 200 deliberately. These ids do
+     * not exist, so a permitted call lands on a 400 or a 404; that it got that far is the
+     * assertion.
+     */
+    @Test
+    void adminWriteVerbsAreRefusedByRoleOnBothPrefixes() throws Exception {
+        String adminToken = JsonPath.read(loginThrough("/admin/auth", ADMIN_EMAIL, ""), "$.authToken");
+        String studentToken = JsonPath.read(loginThrough("/auth", STUDENT_EMAIL, ""), "$.authToken");
+
+        for (Route route : writeRoutes()) {
+            String label = route.method() + " " + route.path();
+
+            assertEquals(401, statusOf(route, null), label + " without a token");
+            assertEquals(403, statusOf(route, studentToken), label + " with a student session");
+
+            int admin = statusOf(route, adminToken);
+            assertTrue(admin != 401 && admin != 403,
+                    label + " refused an admin session with " + admin);
+        }
+    }
+
+    private record Route(String method, String path) {
+    }
+
+    /** Every administrative write, under the /admin prefix and under its legacy twin. */
+    private List<Route> writeRoutes() {
+        String id = UUID.randomUUID().toString();
+        List<Route> routes = new ArrayList<>();
+
+        for (String prefix : List.of("/admin", "")) {
+            routes.add(new Route("PATCH", prefix + "/users/" + id));
+            routes.add(new Route("DELETE", prefix + "/users/" + id));
+            routes.add(new Route("PATCH", prefix + "/users/" + id + "/block"));
+            routes.add(new Route("PATCH", prefix + "/users/" + id + "/unblock"));
+            routes.add(new Route("POST", prefix + "/users/" + id + "/warnings"));
+            routes.add(new Route("PATCH", prefix + "/users/" + id + "/warnings/" + id));
+            routes.add(new Route("DELETE", prefix + "/users/" + id + "/warnings/" + id));
+            routes.add(new Route("PATCH", prefix + "/comments/" + id));
+            routes.add(new Route("DELETE", prefix + "/comments/" + id));
+            routes.add(new Route("PATCH", prefix + "/comments/reported/" + id));
+            routes.add(new Route("DELETE", prefix + "/comments/reported/" + id));
+            routes.add(new Route("PATCH", prefix + "/answers/" + id));
+            routes.add(new Route("DELETE", prefix + "/answers/" + id));
+            routes.add(new Route("PATCH", prefix + "/answers/reported/" + id));
+            routes.add(new Route("DELETE", prefix + "/answers/reported/" + id));
+            routes.add(new Route("DELETE", prefix + "/ratings/" + id));
+            routes.add(new Route("POST", prefix + "/data/lectures"));
+            routes.add(new Route("PATCH", prefix + "/data/lectures/" + id));
+            routes.add(new Route("DELETE", prefix + "/data/lectures/" + id));
+            routes.add(new Route("POST", prefix + "/data/professor"));
+            routes.add(new Route("PATCH", prefix + "/data/professor/" + id));
+            routes.add(new Route("DELETE", prefix + "/data/professor/" + id));
+            routes.add(new Route("PATCH", prefix + "/reports/" + id));
+            routes.add(new Route("DELETE", prefix + "/reports/" + id));
+            routes.add(new Route("POST", prefix + "/reports/" + id + "/gitlab-issue"));
+            routes.add(new Route("POST", prefix + "/audit-logs/" + id + "/revert"));
+        }
+
+        return routes;
+    }
+
+    private int statusOf(Route route, String rawToken) throws Exception {
+        MockHttpServletRequestBuilder request = switch (route.method()) {
+            case "POST" -> post(route.path());
+            case "PATCH" -> patch(route.path());
+            case "DELETE" -> delete(route.path());
+            default -> throw new IllegalArgumentException("unhandled verb " + route.method());
+        };
+
+        request = request.contentType(MediaType.APPLICATION_JSON).content("{}");
+        if (rawToken != null) {
+            request = request.header("Authorization", bearer(rawToken));
+        }
+
+        return mockMvc.perform(request).andReturn().getResponse().getStatus();
     }
 
     @Test

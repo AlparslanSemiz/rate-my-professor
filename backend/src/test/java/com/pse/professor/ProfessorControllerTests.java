@@ -7,7 +7,6 @@ import com.pse.professor.dto.response.ProfessorDetailResponse;
 import com.pse.professor.dto.response.ProfessorsResponse;
 import com.pse.professor.service.ProfessorService;
 
-import com.pse.security.AuthenticatedUser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,8 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.*;
 
@@ -75,7 +72,6 @@ public class ProfessorControllerTests {
     @Test
     void addProfessorPassesRequestToService() {
 
-        AuthenticatedUser principal = mock(AuthenticatedUser.class);
         ProfessorAddRequest request = mock(ProfessorAddRequest.class);
 
         BasicResponse expectedResponse =
@@ -83,46 +79,24 @@ public class ProfessorControllerTests {
                         "Professor added successfully",
                         true
                 );
-        when(principal.isAdmin()).thenReturn(true);
 
         when(professorService.addProfessor(request))
                 .thenReturn(expectedResponse);
 
 
-        BasicResponse response = professorController.addProfessor(principal, request);
+        BasicResponse response = professorController.addProfessor(request);
 
 
         assertSame(expectedResponse, response);
 
-        verify(principal).isAdmin();
         verify(professorService).addProfessor(request);
     }
 
-    @Test
-    void addProfessorDoesNotCallServiceWhenUserIsNotAdmin() {
-
-        AuthenticatedUser principal = mock(AuthenticatedUser.class);
-        ProfessorAddRequest request = mock(ProfessorAddRequest.class);
-
-        when(principal.isAdmin()).thenReturn(false);
-
-
-        BasicResponse response =
-                professorController.addProfessor(
-                        principal,
-                        request
-                );
-
-
-        assertFalse(response.success());
-        assertEquals(
-                "Error, couldn't authenticate Admin",
-                response.message()
-        );
-
-        verify(principal).isAdmin();
-        verifyNoInteractions(professorService);
-    }
+    // A companion test used to assert that this handler turned a non-admin away itself,
+    // answering 200 {"success": false}. The handler no longer decides: POST /data/professor
+    // is matched by the security chain, so a non-admin never reaches the method. The
+    // refusal is asserted where it now happens -- ProfessorApiIntegrationTests
+    // .nonAdminCannotAddProfessor and ApiAuthorizationMatrixTests.
 
 
     @Test
