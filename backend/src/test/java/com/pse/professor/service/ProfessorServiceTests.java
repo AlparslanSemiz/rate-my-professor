@@ -9,6 +9,9 @@ import com.pse.professor.dto.response.ProfessorsResponse;
 import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
 
+import com.pse.rating.model.Rating;
+import com.pse.rating.model.RatingCategory;
+import com.pse.rating.model.RatingTopic;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -187,7 +190,7 @@ class ProfessorServiceTests {
 
         assertFalse(response.success());
         assertEquals(
-                "Couldn't find prof with uuid: " + professorId,
+                "Couldn'    t find prof with uuid: " + professorId,
                 response.message()
         );
 
@@ -464,7 +467,52 @@ class ProfessorServiceTests {
         assertNull(result);
     }
 
+    @Test
+    void calculateAverageRatingReturnsZeroWhenProfessorHasNoRatings() {
 
+        Professor professor = mock(Professor.class);
+
+        when(professor.getLectures()).thenReturn(Set.of());
+
+        double result = ProfessorService.calculateAverageRating(professor);
+
+        assertEquals(0.0, result);
+    }
+
+    @Test
+    void calculateAverageRatingUsesOverallRatings() {
+
+        Professor professor = mock(Professor.class);
+        Lecture lecture = mock(Lecture.class);
+
+        Rating rating1 = mock(Rating.class);
+        Rating rating2 = mock(Rating.class);
+
+        RatingTopic overall1 = mock(RatingTopic.class);
+        RatingTopic overall2 = mock(RatingTopic.class);
+        RatingTopic organization = mock(RatingTopic.class);
+
+        when(professor.getLectures()).thenReturn(Set.of(lecture));
+        when(lecture.getRatings()).thenReturn(List.of(rating1, rating2));
+
+        when(rating1.getTopics()).thenReturn(List.of(overall1, organization));
+        when(rating2.getTopics()).thenReturn(List.of(overall2));
+
+
+
+        when(overall1.getCategory()).thenReturn(RatingCategory.OVERALL);
+        when(overall1.getValue()).thenReturn(4.0);
+
+        when(overall2.getCategory()).thenReturn(RatingCategory.OVERALL);
+        when(overall2.getValue()).thenReturn(2.0);
+
+        when(organization.getCategory()).thenReturn(RatingCategory.ORGANIZATION);
+        when(organization.getValue()).thenReturn(5.0);
+
+        double result = ProfessorService.calculateAverageRating(professor);
+
+        assertEquals(3.0, result);
+    }
 
 
     private Professor createProfessor(
