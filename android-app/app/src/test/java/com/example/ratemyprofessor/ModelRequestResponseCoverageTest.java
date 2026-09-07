@@ -91,7 +91,7 @@ public class ModelRequestResponseCoverageTest {
                 "Algorithms",
                 "240001",
                 2026,
-                SemesterSeason.WINTER,
+                SemesterSeason.WS,
                 true,
                 Collections.singletonList(professor),
                 3,
@@ -193,11 +193,12 @@ public class ModelRequestResponseCoverageTest {
                 "Algorithms",
                 "240001",
                 2026,
-                SemesterSeason.WINTER,
+                SemesterSeason.WS,
                 true,
                 Collections.singletonList(professor),
                 2,
-                8
+                8,
+                3.3
         );
         User user = new User("user-1", "student@kit.edu", "uxabc", "student", "/profile.png");
         UserStatistics statistics = new UserStatistics(1, 2, 3.0, 4.0);
@@ -221,6 +222,7 @@ public class ModelRequestResponseCoverageTest {
         assertTrue(professor.getLectures().isEmpty());
         assertEquals(professor, lectureModel.professors().get(0));
         assertEquals(8, lectureModel.ratingCount());
+        assertEquals(3.3, lectureModel.averageRating());
 
         user.createReview(review);
         user.writeComment(comment);

@@ -61,11 +61,12 @@ public class DatabaseSyncTest {
                 "Algorithms",
                 "240001",
                 2026,
-                SemesterSeason.WINTER,
+                SemesterSeason.WS,
                 true,
                 Collections.singletonList(professor),
                 2,
-                8
+                8,
+                4.0
         );
         LocalDateTime createdAt = LocalDateTime.of(2026, 8, 3, 10, 0);
         Comment reply = new Comment(
@@ -109,7 +110,7 @@ public class DatabaseSyncTest {
         Lecture insertedLecture = searchService.insertedLectures.get(0);
         assertEquals("lecture-1", insertedLecture.id);
         assertEquals("Algorithms", insertedLecture.name);
-        assertEquals(SemesterSeason.WINTER, insertedLecture.semesterSeason);
+        assertEquals(SemesterSeason.WS, insertedLecture.semesterSeason);
         assertEquals(8, insertedLecture.ratingCount);
 
         Instructor insertedInstructor = searchService.insertedInstructors.get(0);

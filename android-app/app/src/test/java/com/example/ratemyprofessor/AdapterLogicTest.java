@@ -48,7 +48,7 @@ public class AdapterLogicTest {
         LectureAdapter adapter = new LectureAdapter(list, l -> {});
         assertEquals(0, adapter.getItemCount());
 
-        list.add(new Lecture("1", "L", "C", 2024, null, true, 0, 0));
+        list.add(new Lecture("1", "L", "C", 2024, null, true, 0, 0, 0));
         assertEquals(1, adapter.getItemCount());
     }
 

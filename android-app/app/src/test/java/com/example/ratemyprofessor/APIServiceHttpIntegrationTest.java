@@ -129,7 +129,7 @@ public class APIServiceHttpIntegrationTest {
         assertNotNull(response.body());
         assertEquals(1, response.body().lectures().size());
         assertEquals("Algorithms", response.body().lectures().get(0).name());
-        assertEquals(SemesterSeason.WINTER, response.body().lectures().get(0).semesterSeason());
+        assertEquals(SemesterSeason.WS, response.body().lectures().get(0).semesterSeason());
     }
 
     @Test
