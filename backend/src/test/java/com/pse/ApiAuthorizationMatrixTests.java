@@ -101,21 +101,6 @@ class ApiAuthorizationMatrixTests {
             "GET /social/sync/comments"
     );
 
-    /**
-     * Public routes that answer 500 today where a 400 or a 404 belongs -- F-14
-     * ({@code GET /data/professor/id} with no query parameters) and F-15
-     * ({@code GET /ratings/{lectureId}/categories} for an unknown lecture) in
-     * docs/test-findings.md.
-     *
-     * <p>They are named rather than tolerated quietly: the assertion below requires each one
-     * to still be a 500, so fixing either turns this red and the list has to shrink. Any
-     * other public route that starts answering 5xx fails outright.
-     */
-    private static final Set<String> PUBLIC_ROUTES_ANSWERING_SERVER_ERROR = Set.of(
-            "GET /data/professor/id",
-            "GET /ratings/{lectureId}/categories"
-    );
-
     private static final String STUDENT_EMAIL = "matrix-student@student.kit.edu";
 
     @Autowired MockMvc mockMvc;
@@ -215,13 +200,12 @@ class ApiAuthorizationMatrixTests {
             assertTrue(status != 401 && status != 403,
                     route + " is declared public but answered " + status + " without a token");
 
-            if (PUBLIC_ROUTES_ANSWERING_SERVER_ERROR.contains(route)) {
-                assertEquals(500, status,
-                        route + " no longer answers 500 -- drop it from "
-                                + "PUBLIC_ROUTES_ANSWERING_SERVER_ERROR and close its finding");
-            } else {
-                assertTrue(status < 500, route + " is public but answered " + status);
-            }
+            // No exemptions left. This list held two entries until F-14 and F-15 were
+            // fixed -- GET /data/professor/id with no query parameters, and
+            // GET /ratings/{lectureId}/categories for an unknown lecture -- both reachable
+            // by an anonymous caller with no fixture at all. A public route answering 5xx
+            // is now a plain failure.
+            assertTrue(status < 500, route + " is public but answered " + status);
         }
     }
 

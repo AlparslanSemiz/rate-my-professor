@@ -252,6 +252,26 @@ class ProfessorApiIntegrationTests {
     }
 
 
+    /**
+     * F-14. Both parameters are required, and {@code MissingServletRequestParameterException}
+     * had no handler -- so the catch-all answered 500 "Unexpected backend error", telling an
+     * anonymous caller the backend had broken when the request was at fault. The route needs
+     * no fixture and no token to reach, which is what made it worth fixing.
+     */
+    @Test
+    void getProfessorIDWithoutItsRequiredParametersIsABadRequestRatherThanAServerError()
+            throws Exception {
+
+        mockMvc.perform(get("/data/professor/id"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(get("/data/professor/id").param("firstName", "Stefan"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+
     @Test
     void adminCanAddProfessor() throws Exception {
 

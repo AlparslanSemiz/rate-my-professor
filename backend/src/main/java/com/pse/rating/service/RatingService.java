@@ -20,6 +20,8 @@ import com.pse.rating.dto.response.RatingCategoriesResponse;
 import com.pse.rating.dto.response.RatingCategoryResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
 import com.pse.rating.model.RatingCategory;
+import com.pse.shared.error.ApiException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -187,6 +189,13 @@ public class RatingService {
     public RatingCategoriesResponse getRatingCategories(UUID lectureId) {
 
         Lecture lecture = lectureService.getById(lectureId);
+
+        // F-15: getById answers null rather than throwing, and the loop below dereferences
+        // it. Without this an unknown id was an NPE and the catch-all turned that into a
+        // 500 -- on a route anonymous callers can reach with any random UUID.
+        if (lecture == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Lecture not found");
+        }
 
         List<RatingCategoryResponse> responses = new ArrayList<>();
 

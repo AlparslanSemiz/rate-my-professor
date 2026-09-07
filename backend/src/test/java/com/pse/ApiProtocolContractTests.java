@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,6 +38,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +46,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -222,7 +225,55 @@ class ApiProtocolContractTests {
         mockMvc.perform(delete("/health").header("Authorization", bearer(adminToken)))
                 .andExpect(status().is(WRONG_VERB_STATUS))
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").value("Not found"));
+                .andExpect(jsonPath("$.message").value("Method not allowed"));
+    }
+
+    /**
+     * The other half of a 405. A caller told only that its verb is wrong still does not know
+     * which verb would have worked, so the header is part of the answer rather than a
+     * decoration -- and it is the one piece {@link #wrongVerbCarriesTheProjectErrorBody}
+     * cannot see, because the body does not carry it.
+     *
+     * <p>Swept rather than sampled for the same reason the status is: the header is built in
+     * one place from the mapping's own verb set, and a route that stops emitting it would
+     * otherwise fail silently.
+     */
+    @Test
+    void everyWrongVerbRefusalNamesTheVerbsThatWouldHaveWorked() throws Exception {
+        String adminToken = adminSession();
+        Map<String, Set<String>> verbsByShape = mappedVerbsByShape();
+
+        List<String> missing = new ArrayList<>();
+
+        for (String shape : verbsByShape.keySet()) {
+            Set<String> reachable = verbsReaching(shape, verbsByShape);
+
+            String probe = PROBE_ORDER.stream()
+                    .filter(verb -> !reachable.contains(verb))
+                    .findFirst()
+                    .orElse(null);
+            if (probe == null) {
+                continue;
+            }
+
+            String allow = headerOf(probe, shape, adminToken, HttpHeaders.ALLOW);
+            if (allow == null || allow.isBlank()) {
+                missing.add(probe + " " + shape + " (reachable verbs " + reachable + ")");
+                continue;
+            }
+
+            Set<String> named = Arrays.stream(allow.split(","))
+                    .map(String::trim)
+                    .collect(Collectors.toSet());
+            if (!named.containsAll(reachable)) {
+                missing.add(probe + " " + shape + " -> Allow: " + allow
+                        + " (reachable verbs " + reachable + ")");
+            }
+        }
+
+        assertTrue(missing.isEmpty(),
+                "these paths refused an unmapped verb without naming the verbs that map, "
+                        + "which is half of a 405: " + missing);
     }
 
     /**
@@ -404,6 +455,15 @@ class ApiProtocolContractTests {
     }
 
     private int statusOf(String verb, String shape, String rawToken) throws Exception {
+        return probe(verb, shape, rawToken).getResponse().getStatus();
+    }
+
+    private String headerOf(String verb, String shape, String rawToken, String header)
+            throws Exception {
+        return probe(verb, shape, rawToken).getResponse().getHeader(header);
+    }
+
+    private MvcResult probe(String verb, String shape, String rawToken) throws Exception {
         MockHttpServletRequestBuilder request = requestFor(verb, concrete(shape))
                 .header("Authorization", bearer(rawToken));
 
@@ -411,7 +471,7 @@ class ApiProtocolContractTests {
             request = request.contentType(MediaType.APPLICATION_JSON).content("{}");
         }
 
-        return mockMvc.perform(request).andReturn().getResponse().getStatus();
+        return mockMvc.perform(request).andReturn();
     }
 
     private MockHttpServletRequestBuilder requestFor(String verb, String path) {

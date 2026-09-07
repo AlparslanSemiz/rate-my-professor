@@ -20,14 +20,16 @@ frontend. Error responses use:
 {"message":"Human-readable error","success":false}
 ```
 
-Validation errors return `400`, missing records `404`, protected admin-account state
-conflicts `409`, a body sent in a media type the route cannot read `415`, rate limits `429`
-with `Retry-After`, unexpected failures `500`, and a failed database readiness check `503`.
+Validation errors return `400`, missing records `404`, a path called with a verb it does
+not map `405` with an `Allow` header, protected admin-account state conflicts `409`, a body
+sent in a media type the route cannot read `415`, rate limits `429` with `Retry-After`,
+unexpected failures `500`, and a failed database readiness check `503`.
 
 Two distinctions worth stating, because both used to answer `500`: a body in the wrong
-media type is `415`, while malformed content inside the *right* media type is `400`. A path
-that exists but is called with a verb it does not map answers `404`, not `405` — that one is
-a known defect (F-17's sibling F-16), left as it is because clients depend on it.
+media type is `415`, while malformed content inside the *right* media type is `400`. A third
+used to answer `404`: a path that does not exist is `404`, while a path that exists and does
+not map the verb is `405` — the two were indistinguishable until F-16 was fixed, since both
+carried the same status and the same `"Not found"` body.
 
 ## Path migration
 
@@ -50,7 +52,8 @@ the panel can move at its own pace, and they are removed once it has.
 Three things deliberately do **not** move:
 
 - **`POST /reports`** is the student's bug submission on the app API. There is no
-  `POST /admin/reports`, and a request to it answers `404`.
+  `POST /admin/reports`, and a request to it answers `405` with `Allow: GET` — the path
+  exists, the verb does not. (It answered `404` until F-16 was fixed.)
 - **The public catalogue reads** — `GET /data/lectures`, `GET /data/lectures/{id}`,
   `GET /data/professor`, `GET /data/professor/{id}`, `GET /data/professor/id` — stay on the
   app API. The panel calls them there. Serving the same rows under `/admin` would put one
@@ -672,7 +675,8 @@ Returns `{"message":"Deleted bug report successfully","success":true}` and a
 `BUG_REPORT_DELETED` audit event.
 
 `POST /reports` is the authenticated-student submission endpoint and stays open to
-students on the app API. It has no `/admin` twin: `POST /admin/reports` answers `404`.
+students on the app API. It has no `/admin` twin: `POST /admin/reports` answers `405` with
+`Allow: GET`, since `GET /admin/reports` is the listing.
 
 ### `POST /admin/reports/{id}/gitlab-issue`
 

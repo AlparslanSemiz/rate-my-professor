@@ -16,6 +16,7 @@ import com.pse.rating.model.RatingCategory;
 import com.pse.rating.model.RatingTopic;
 import com.pse.rating.repository.RatingRepository;
 import com.pse.rating.service.RatingService;
+import com.pse.shared.error.ApiException;
 import com.pse.user.model.Student;
 
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -629,6 +631,29 @@ class RatingServiceTests {
         );
     }
 
+
+
+    /**
+     * F-15. {@code lectureService.getById} answers null rather than throwing, and the loop
+     * that follows dereferences it -- so an unknown id was an NPE, and the catch-all turned
+     * that into a 500 on a route an anonymous caller can reach with any random UUID.
+     */
+    @Test
+    void getRatingCategoriesUnknownLectureIsNotFoundRatherThanAServerError() {
+
+        UUID lectureId = UUID.randomUUID();
+
+        when(lectureService.getById(lectureId))
+                .thenReturn(null);
+
+        ApiException thrown = assertThrows(
+                ApiException.class,
+                () -> ratingService.getRatingCategories(lectureId)
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
+        assertEquals("Lecture not found", thrown.getMessage());
+    }
 
 
     @Test

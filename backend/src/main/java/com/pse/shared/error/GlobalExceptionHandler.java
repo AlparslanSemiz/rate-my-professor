@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -14,11 +15,15 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -43,7 +48,8 @@ public class GlobalExceptionHandler {
             HandlerMethodValidationException.class,
             ConstraintViolationException.class,
             HttpMessageNotReadableException.class,
-            MethodArgumentTypeMismatchException.class
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class
     })
     ResponseEntity<BasicResponse> handleBadRequest(Exception exception) {
         return ResponseEntity.badRequest()
@@ -75,10 +81,29 @@ public class GlobalExceptionHandler {
                 .body(new BasicResponse("Not found", false));
     }
 
+    /**
+     * A path that exists, called with a verb it does not map -- F-16 in
+     * docs/test-findings.md. This answered 404 with the same body as {@link #handleNotFound}
+     * until it was corrected, so which of the two mechanisms had run was indistinguishable
+     * from the response: "no such path" and "the path exists, the method does not" are
+     * different facts and a client that cannot tell them apart cannot retry correctly.
+     *
+     * <p>The {@code Allow} header is half of a 405. Without it the caller learns that its
+     * verb is wrong but not which verb would have worked, and RFC 9110 requires it.
+     */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     ResponseEntity<BasicResponse> handleWrongMethod(HttpRequestMethodNotSupportedException exception) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new BasicResponse("Not found", false));
+        ResponseEntity.BodyBuilder response = ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED);
+
+        Set<HttpMethod> allowed = exception.getSupportedHttpMethods();
+        if (allowed != null && !allowed.isEmpty()) {
+            response.header(HttpHeaders.ALLOW, allowed.stream()
+                    .map(HttpMethod::name)
+                    .sorted()
+                    .collect(Collectors.joining(", ")));
+        }
+
+        return response.body(new BasicResponse("Method not allowed", false));
     }
 
     /**
@@ -87,14 +112,13 @@ public class GlobalExceptionHandler {
      * read a {@code @RequestBody} answered 500, telling the caller the backend broke when
      * the request was at fault.
      *
-     * <p>Deliberately declared one exception type at a time rather than by extending
-     * {@code ResponseEntityExceptionHandler}: that base class maps this type together with
-     * {@code HttpRequestMethodNotSupportedException} (F-16) and
-     * {@code MissingServletRequestParameterException} (F-14), so inheriting it would both
-     * clash with {@link #handleWrongMethod} -- an ambiguous mapping the context refuses to
-     * start with -- and change two other documented answers nobody asked to change. It
-     * would also switch the body to {@code ProblemDetail}, which the Android client does
-     * not parse.
+     * <p>Still declared one exception type at a time rather than by extending
+     * {@code ResponseEntityExceptionHandler}. When this handler was written that base class
+     * would have changed two other documented answers as a side effect; F-16 and F-14 have
+     * since been corrected to the codes it would have produced, so that reason is gone. The
+     * remaining one is not: the base class clashes with {@link #handleWrongMethod} -- an
+     * ambiguous mapping the context refuses to start with -- and switches the body to
+     * {@code ProblemDetail}, which the Android client does not parse.
      */
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     ResponseEntity<BasicResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException exception) {

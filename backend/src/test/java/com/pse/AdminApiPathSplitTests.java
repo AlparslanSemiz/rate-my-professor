@@ -328,22 +328,22 @@ class AdminApiPathSplitTests {
      * The student's bug submission is the one app route with no administrative twin.
      *
      * <p>The refusal it asserts is not the mechanism the test name suggests. Two different
-     * things answer 404 here and {@code GlobalExceptionHandler} gives them <b>byte-identical
-     * bodies</b> -- same status, same {@code "Not found"} message -- so the response alone
-     * cannot tell them apart:
+     * things can refuse a request here:
      *
      * <ul>
      *   <li>{@code NoResourceFoundException}, meaning no such path, from
-     *       {@code handleNotFound}; and</li>
+     *       {@code handleNotFound} -- 404; and</li>
      *   <li>{@code HttpRequestMethodNotSupportedException}, meaning the path exists but not
-     *       for this verb, from {@code handleWrongMethod} -- F-16 in docs/test-findings.md,
-     *       where 405 belongs.</li>
+     *       for this verb, from {@code handleWrongMethod} -- 405, F-16 in
+     *       docs/test-findings.md.</li>
      * </ul>
      *
-     * <p>This route's 404 is the second one: {@code /admin/reports} very much exists, it
-     * just only maps GET. The GET assertion below is the distinguishing signal, since the
-     * bodies are no help -- and it is what stops the test from silently passing for the
-     * wrong reason if the path were ever removed outright.
+     * <p>This route's refusal is the second one: {@code /admin/reports} very much exists, it
+     * just only maps GET. Until F-16 was fixed both answered 404 with <b>byte-identical
+     * bodies</b>, so the response alone could not tell them apart and this test read as
+     * "there is no /admin/reports at all", which is false. The status now distinguishes
+     * them; the GET assertion below is kept anyway, because it is what stops the test from
+     * silently passing for the wrong reason if the path were ever removed outright.
      */
     @Test
     void studentBugSubmissionHasNoAdminTwin() throws Exception {
