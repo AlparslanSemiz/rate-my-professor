@@ -28,7 +28,7 @@ really recorded if it lives in a test.
 | [F-14](#f-14--500-when-a-required-query-parameter-is-missing) | 500 when a required query parameter is missing | Medium — wrong HTTP code | Open, put under test |
 | [F-15](#f-15--500-for-the-category-list-of-an-unknown-lecture) | 500 for the category list of an unknown lecture | Medium — wrong HTTP code | Open, put under test |
 | [F-16](#f-16--the-wrong-http-method-returns-404-instead-of-405) | The wrong HTTP method returns 404 instead of 405 | Medium — wrong HTTP code, on all 122 routes | Open, put under test |
-| [F-17](#f-17--an-unsupported-media-type-returns-500-instead-of-415) | An unsupported media type returns 500 instead of 415 | Medium — wrong HTTP code, on every route that reads a body | Open, put under test |
+| [F-17](#f-17--an-unsupported-media-type-returns-500-instead-of-415) | An unsupported media type returns 500 instead of 415 | Medium — wrong HTTP code, on every route that reads a body | **Fixed** |
 | [P-1](#p-1--the-coverage-baseline-number-was-wrong) | The coverage baseline number was wrong | Process | **Fixed** (re-measured) |
 | [P-2](#p-2--integration-tests-hide-unit-targets) | Integration tests hide unit targets | Process | **Fixed** (method changed) |
 | [P-3](#p-3--lombok-is-not-filtered-in-jacoco) | Lombok is not filtered in JaCoCo | Process | Open, deliberate |
@@ -598,8 +598,10 @@ every body-reading route with `text/plain` and all of them return 500.
 
 **Same root cause, seen in production.** In the production logs,
 `MaxUploadSizeExceededException` and Tomcat's 512-byte multipart header limit fall into the same
-catch-all branch. Same cause: no handler for body/transport layer exceptions. That will be
-measured separately as F-18.
+catch-all branch. Same cause: no handler for body/transport layer exceptions. Still to be
+measured separately; it takes the next free number when it is, which is no longer F-18 — the
+ownership sweep claimed F-18 onwards. Fixing F-17 does **not** cover it: the narrow handler
+claims one exception type and these are different types, still falling to the catch-all.
 
 **⚠ Do NOT fix this by extending `ResponseEntityExceptionHandler`.**
 
@@ -636,8 +638,25 @@ were verified against this project's version — Spring Framework **7.0.7** (Boo
 and return 415 with the project's existing `BasicResponse` body. It touches neither of the other
 two findings and does not change the body shape.
 
-**Status.** Open, put under test. The expected code lives in a single constant:
-`com.pse.support.ApiContract.UNSUPPORTED_MEDIA_TYPE_STATUS = 500`.
+**Status. Fixed** — that narrow handler, `GlobalExceptionHandler.handleUnsupportedMediaType`,
+and nothing else. `ApiContract.UNSUPPORTED_MEDIA_TYPE_STATUS` is now `415`.
+
+How it was verified, in the order it was done: the handler was added **first**, with the pin
+left at `500`. `everyBodyReadingRouteAnswersAnUnsupportedMediaTypeWithTheDeclaredStatus` then
+went red and named **all 37** body-reading routes as having moved `500 → 415` — more than the
+26 the finding first counted, because the legacy and `/admin` paths of the same handler are
+separate mappings. That red run is the evidence the handler reaches every route rather than the
+one probed by hand; only then was the constant flipped.
+
+The other three tests in the class stayed green throughout, which is the part that matters for
+the neighbouring findings: **F-16's 404 is untouched** and malformed JSON in the right media
+type is still 400. The two answers did not collapse into each other.
+
+One test was added rather than edited: `unsupportedMediaTypeCarriesTheProjectErrorBody` asserts
+`{message: "Unsupported media type", success: false}`. The sweep only reads statuses, so it
+would stay green if someone later replaced the narrow handler with
+`ResponseEntityExceptionHandler` — the status would still be 415 while the body silently became
+`application/problem+json`. That is reason 3 above, and now it has a test rather than a warning.
 
 ---
 

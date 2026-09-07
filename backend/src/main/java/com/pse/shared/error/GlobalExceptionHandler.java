@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -78,6 +79,27 @@ public class GlobalExceptionHandler {
     ResponseEntity<BasicResponse> handleWrongMethod(HttpRequestMethodNotSupportedException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new BasicResponse("Not found", false));
+    }
+
+    /**
+     * A body sent in a media type no converter can read -- F-17 in docs/test-findings.md.
+     * Without this the catch-all below claimed it first and every one of the routes that
+     * read a {@code @RequestBody} answered 500, telling the caller the backend broke when
+     * the request was at fault.
+     *
+     * <p>Deliberately declared one exception type at a time rather than by extending
+     * {@code ResponseEntityExceptionHandler}: that base class maps this type together with
+     * {@code HttpRequestMethodNotSupportedException} (F-16) and
+     * {@code MissingServletRequestParameterException} (F-14), so inheriting it would both
+     * clash with {@link #handleWrongMethod} -- an ambiguous mapping the context refuses to
+     * start with -- and change two other documented answers nobody asked to change. It
+     * would also switch the body to {@code ProblemDetail}, which the Android client does
+     * not parse.
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    ResponseEntity<BasicResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException exception) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(new BasicResponse("Unsupported media type", false));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

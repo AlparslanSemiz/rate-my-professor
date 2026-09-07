@@ -21,8 +21,13 @@ frontend. Error responses use:
 ```
 
 Validation errors return `400`, missing records `404`, protected admin-account state
-conflicts `409`, rate limits `429` with `Retry-After`, unexpected failures `500`, and a
-failed database readiness check `503`.
+conflicts `409`, a body sent in a media type the route cannot read `415`, rate limits `429`
+with `Retry-After`, unexpected failures `500`, and a failed database readiness check `503`.
+
+Two distinctions worth stating, because both used to answer `500`: a body in the wrong
+media type is `415`, while malformed content inside the *right* media type is `400`. A path
+that exists but is called with a verb it does not map answers `404`, not `405` — that one is
+a known defect (F-17's sibling F-16), left as it is because clients depend on it.
 
 ## Path migration
 
