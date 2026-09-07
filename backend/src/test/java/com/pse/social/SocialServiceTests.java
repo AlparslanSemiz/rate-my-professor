@@ -331,7 +331,7 @@ class SocialServiceTests {
         assertFalse(response.success());
 
         assertEquals(
-                "Error, couldn't finde comment",
+                "Error, couldn't find comment",
                 response.message()
         );
 
