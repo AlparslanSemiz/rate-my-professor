@@ -19,5 +19,6 @@ public record LectureResponse(
         LectureType lectureType,
         List<ProfessorShortResponse> professors,
         int commentCount,
-        int ratingCount
+        int ratingCount,
+        double averageRating
 ) {}

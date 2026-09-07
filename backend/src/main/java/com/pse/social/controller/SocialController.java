@@ -11,7 +11,7 @@ import com.pse.social.dto.request.VoteCommentRequest;
 import com.pse.social.dto.response.CommentsResponse;
 import com.pse.social.dto.response.NotificationsResponse;
 import com.pse.social.service.SocialService;
-import jakarta.validation.Valid;
+import com.pse.user.model.Student;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,12 +46,6 @@ public class SocialController {
         return socialService.getNotifications(principal.student());
     }
 
-    @PatchMapping("/notifications/all")
-    public BasicResponse markAllNotificationsAsSeen(@AuthenticationPrincipal AuthenticatedUser principal){
-
-        return socialService.markAllNotificationsAsSeen(principal.student());
-    }
-
     @PatchMapping("/notifications/{notification_id}")
     public BasicResponse markNotificationAsSeen(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID notification_id){
 
@@ -70,19 +64,20 @@ public class SocialController {
 
 
     @PostMapping("/comments/vote/comment/{comment_id}")
-    public BasicResponse voteComment(@PathVariable UUID comment_id, @AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody VoteCommentRequest request) {
+    public BasicResponse voteComment(@PathVariable UUID comment_id, @AuthenticationPrincipal AuthenticatedUser principal, @RequestBody VoteCommentRequest request) {
 
         return socialService.voteComment(comment_id, principal.student(), request);
 
     }
 
 
-
     //Returns both Comments *AND* answers
     @GetMapping("/comments/{lecture_id}")
-    public CommentsResponse getComments(@PathVariable UUID lecture_id){
+    public CommentsResponse getComments(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID lecture_id){
 
-        return socialService.getComments(lecture_id);
+        Student student = principal != null ? principal.student() : null;
+
+        return socialService.getComments(lecture_id, student);
     }
 
 
@@ -93,8 +88,8 @@ public class SocialController {
 
     }
 
-    @PostMapping("/comments/vote/answer{answer_id}")
-    public BasicResponse voteAnswer(@PathVariable UUID answer_id, @AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody VoteAnswerRequest request) {
+    @PostMapping("/comments/vote/answer/{answer_id}")
+    public BasicResponse voteAnswer(@PathVariable UUID answer_id, @AuthenticationPrincipal AuthenticatedUser principal, @RequestBody VoteAnswerRequest request) {
 
         return socialService.voteAnswer(answer_id, principal.student(), request);
 

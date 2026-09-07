@@ -52,6 +52,8 @@ public class LoginLocationService {
      */
     public LoginLocation getLoginLocation(String rawIp) {
 
+        LOGGER.info("Trying to determine location. rawIp={}", rawIp);
+
         String ip = normalizeIp(rawIp);
 
         if (ip == null || ipInfoToken.isBlank()) {

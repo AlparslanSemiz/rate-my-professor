@@ -4,43 +4,43 @@ public enum RatingCategory {
 
     OVERALL("Overall", 0),
 
-    // Generell
-    ROOM("Raum", 0.5),
-    ORGANIZATION("Organisation", 1.0),
-    MATERIALS("Unterlagen/Folien", 1.0),
-    WORKLOAD("Arbeitsaufwand", 1.0),
+    // General
+    ROOM("Room", 0.5),
+    ORGANIZATION("Organization", 1.0),
+    MATERIALS("Materials/Slides", 1.0),
+    WORKLOAD("Workload", 1.0),
 
 
-    // Vorlesung
-    LECTURE_UNDERSTANDABILITY("Verständlichkeit", 2.0),
-    LECTURE_INTEREST("Interessant statt langweilig", 1.5),
-    LECTURE_DIFFICULTY("Schwierigkeit", 1.0),
-    LECTURE_STRUCTURE("Struktur", 1.5),
-    LECTURE_PACE("Tempo", 1.0),
-    LECTURE_EXAMPLES("Praxisbeispiele", 1.0),
+    // Lecture
+    LECTURE_UNDERSTANDABILITY("Understandability", 2.0),
+    LECTURE_INTEREST("Interest", 1.5),
+    LECTURE_DIFFICULTY("Difficulty", 1.0),
+    LECTURE_STRUCTURE("Structure", 1.5),
+    LECTURE_PACE("Pace", 1.0),
+    LECTURE_EXAMPLES("Practical Examples", 1.0),
 
 
     // Professor
     PROFESSOR_ENGAGEMENT("Engagement", 1.5),
-    PROFESSOR_COMMUNICATION("Kommunikation", 1.5),
-    PROFESSOR_AVAILABILITY("Erreichbarkeit", 1.0),
-    PROFESSOR_EXAM_PREPARATION("Prüfungsvorbereitung", 2.0),
+    PROFESSOR_COMMUNICATION("Communication", 1.5),
+    PROFESSOR_AVAILABILITY("Availability", 1.0),
+    PROFESSOR_EXAM_PREPARATION("Exam Preparation", 2.0),
 
 
-    // Übung
-    EXERCISE_BOARDWORK("Tafelanschrieb", 1.0),
-    EXERCISE_QUESTIONS("Fragen beantwortet", 1.5),
-    EXERCISE_HELPFULNESS("Hilfreich", 2.0),
-    EXERCISE_EXPLANATIONS("Erklärungen", 1.5),
-    EXERCISE_EXAMPLES("Beispielaufgaben", 1.5),
-    EXERCISE_PACE("Tempo", 1.0),
+    // Exercise
+    EXERCISE_BOARDWORK("Board Work", 1.0),
+    EXERCISE_QUESTIONS("Question Answering", 1.5),
+    EXERCISE_HELPFULNESS("Helpfulness", 2.0),
+    EXERCISE_EXPLANATIONS("Explanations", 1.5),
+    EXERCISE_EXAMPLES("Example Problems", 1.5),
+    EXERCISE_PACE("Pace", 1.0),
 
 
-    // Übungsleiter
-    TUTOR_EXPLANATION("Erklärfähigkeit", 2.0),
-    TUTOR_PREPARATION("Vorbereitung", 1.5),
+    // Tutor
+    TUTOR_EXPLANATION("Explanation Skills", 2.0),
+    TUTOR_PREPARATION("Preparation", 1.5),
     TUTOR_MOTIVATION("Motivation", 1.0),
-    TUTOR_FRIENDLINESS("Freundlichkeit", 1.0),
+    TUTOR_FRIENDLINESS("Friendliness", 1.0),
     TUTOR_FEEDBACK("Feedback", 1.0);
 
 
@@ -59,8 +59,4 @@ public enum RatingCategory {
     public double getDefaultWeight() {
         return defaultWeight;
     }
-
-
-
-
 }

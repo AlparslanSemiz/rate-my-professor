@@ -99,9 +99,17 @@ public class AdminBootstrapRunner implements ApplicationRunner {
      * {@code username} is unique and a collision must not take the service down.
      */
     private String resolveUsername(String configuredName) {
-        if (configuredName.isBlank() || studentRepository.existsByUsername(configuredName)) {
-            return NameGenerator.generateUsername();
+
+        if (!configuredName.isBlank() && !studentRepository.existsByUsername(configuredName)) {
+            return configuredName;
         }
-        return configuredName;
+
+        String username;
+
+        do {
+            username = NameGenerator.generateUsername();
+        } while (studentRepository.existsByUsername(username));
+
+        return username;
     }
 }

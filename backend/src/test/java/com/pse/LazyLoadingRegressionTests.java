@@ -196,7 +196,7 @@ class LazyLoadingRegressionTests {
         lecture.setName("Algorithms");
         lecture.setCode("CS101");
         lecture.setSemesterYear(2026);
-        lecture.setSemesterSeason(SemesterSeason.SUMMER);
+        lecture.setSemesterSeason(SemesterSeason.SS);
         lecture.setActive(true);
         lecture.getProfessors().add(professor);
         return lectureRepository.saveAndFlush(lecture);

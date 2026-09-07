@@ -1,4 +1,4 @@
-package com.pse;
+package com.pse.auth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

@@ -1,8 +1,4 @@
-package com.pse;
-
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+package com.pse.user;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.UserRatingResponse;
@@ -19,6 +15,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
 class AccountControllerTests {
 
@@ -34,90 +33,78 @@ class AccountControllerTests {
     @InjectMocks
     private AccountController accountController;
 
+
     @BeforeEach
     void setUp() {
         when(principal.student()).thenReturn(student);
     }
 
-    @Test
-    void informationShouldReturnUserInformation() {
 
-        StudentProfileResponse expectedResponse = new StudentProfileResponse(
-                "Success",
-                true,
-                "SchnellerFuchs1234",
-                "https://api.dicebear.com/avatar.svg",
-                4.5,
-                0,
-                0,
-                42
-        );
+    @Test
+    void getUserInformationReturnsServiceResponse() {
+
+        StudentProfileResponse expectedResponse = mock(StudentProfileResponse.class);
 
         when(accountService.getUserInformation(student))
                 .thenReturn(expectedResponse);
 
-        StudentProfileResponse response =
-                accountController.getUserInformation(principal);
+
+        StudentProfileResponse response = accountController.getUserInformation(principal);
+
 
         assertSame(expectedResponse, response);
 
         verify(accountService).getUserInformation(student);
     }
 
-    @Test
-    void ratingsShouldReturnUserRatings() {
 
-        UserRatingResponse expectedResponse = new UserRatingResponse(
-                "Success",
-                true,
-                null
-        );
+    @Test
+    void getUserRatingsReturnsServiceResponse() {
+
+        UserRatingResponse expectedResponse = mock(UserRatingResponse.class);
 
         when(accountService.getUserRatings(student))
                 .thenReturn(expectedResponse);
 
-        UserRatingResponse response =
-                accountController.getUserRatings(principal);
+
+        UserRatingResponse response = accountController.getUserRatings(principal);
 
         assertSame(expectedResponse, response);
 
         verify(accountService).getUserRatings(student);
     }
 
+
     @Test
-    void logoutShouldReturnServiceResponse() {
+    void requestLogoutReturnsServiceResponse() {
 
         BasicResponse expectedResponse =
-                new BasicResponse(
-                        "Logged out successfully (3 sessions)",
-                        true
-                );
+                new BasicResponse("Logged out", true);
 
         when(accountService.requestLogout(student))
                 .thenReturn(expectedResponse);
 
-        BasicResponse response =
-                accountController.requestLogout(principal);
+
+        BasicResponse response = accountController.requestLogout(principal);
+
 
         assertSame(expectedResponse, response);
 
         verify(accountService).requestLogout(student);
     }
 
-    @Test
-    void deleteAccountShouldReturnServiceResponse() {
 
-        BasicResponse expectedResponse =
-                new BasicResponse(
-                        "Deleted Account successfully: test@student.kit.edu",
-                        true
-                );
+    @Test
+    void deleteAccountReturnsServiceResponse() {
+
+        BasicResponse expectedResponse = new BasicResponse("Deleted", true);
 
         when(accountService.deleteAccount(student))
                 .thenReturn(expectedResponse);
 
-        BasicResponse response =
-                accountController.deleteAccount(principal);
+
+        BasicResponse response = accountController.deleteAccount(principal);
+
 
         assertSame(expectedResponse, response);
 

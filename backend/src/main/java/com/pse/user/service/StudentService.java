@@ -64,7 +64,7 @@ public class StudentService {
                 getAverageRating(student),
                 student.getRatings().size(),
                 student.getComments().size(),
-                student.getCredibilityScore()
+                credibilityScore
         );
     }
 
@@ -168,7 +168,6 @@ public class StudentService {
         return true;
     }
 
-
     public double getAverageRating(Student student) {
         if (student.getRatings().isEmpty()) {
         return 0;
@@ -182,5 +181,6 @@ public class StudentService {
 
         return sum / student.getRatings().size();
     }
+
 
 }

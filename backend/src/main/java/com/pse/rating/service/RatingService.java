@@ -80,15 +80,14 @@ public class RatingService {
             RatingTopic topic = new RatingTopic();
 
             topic.setCategory(topicRequest.category());
-            topic.setValue((short) topicRequest.value());
+            topic.setValue(topicRequest.value());
             topic.setRating(rating);
 
             rating.getTopics().add(topic);
 
         }
 
-        //TODO: idk ob heir ein bug ensteht weil wir das rating objekt noch nicht gespeicehrt haben
-
+        //TODO: idk ob hier ein bug ensteht weil wir das rating objekt noch nicht gespeicehrt haben
         //Add overall Rating
         double overallRating = calculateAverageScore(rating);
         RatingTopic overallTopic = new RatingTopic();
@@ -100,8 +99,6 @@ public class RatingService {
 
 
         ratingRepository.save(rating);
-
-
 
         String code = lecture.getCode();
         auditWriter.writeStudentAction(
@@ -200,7 +197,6 @@ public class RatingService {
 
 
 
-    //TODO: Ich bin mir unsicher, eig haben wir ja eine OVERALL kategorie, also müsssen das nicht jedes mal berechnen
     public static double calculateAverageScore(Rating rating){
 
         // Overall Rating berechnen
@@ -208,6 +204,10 @@ public class RatingService {
         double totalWeight = 0;
 
         for (RatingTopic topic : rating.getTopics()) {
+
+            if (topic.getCategory() == RatingCategory.OVERALL) {
+                continue;
+            }
 
             double weight = topic.getCategory().getDefaultWeight();
 

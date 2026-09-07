@@ -95,8 +95,7 @@ public class SocialService {
 
 
 
-    // Needs a transaction so that the comment and its activity-log entry commit
-    // together. The same holds for the other submit methods below.
+
     @Transactional
     public BasicResponse submitComment(Student student, CommentSubmitRequest request) {
 
@@ -170,7 +169,7 @@ public class SocialService {
         List<CommentResponse> commentsResponses = new ArrayList<>();
 
         for (Comment comment : comments) {
-            commentsResponses.add(createCommentResponse(comment));
+            commentsResponses.add(createCommentResponse(comment, null));
         }
 
         return new CommentsResponse("Comments loaded successfully", true, commentsResponses);
@@ -381,7 +380,7 @@ public class SocialService {
 
 
     @Transactional(readOnly = true)
-    public CommentsResponse getComments(UUID lecture_id) {
+    public CommentsResponse getComments(UUID lecture_id, Student student) {
 
         // Only VISIBLE comments reach the student app. A comment is set to HIDDEN
         // when an admin resolves a report against it as ACTION_TAKEN.
@@ -392,13 +391,113 @@ public class SocialService {
 
         for(Comment comment : comments) {
 
-            commentsResponses.add(createCommentResponse(comment));
+            commentsResponses.add(createCommentResponse(comment, student));
         }
 
         return new CommentsResponse("Found " + commentsResponses.size() + " comments", true, commentsResponses);
     }
 
 
+
+
+
+
+    //If student is null => userVote = null
+    public CommentResponse createCommentResponse(Comment comment, Student student){
+
+        List<AnswerResponse> answerResponses = getAnswerResponses(comment, student);
+
+        VoteType userVote = null;
+
+        if (student != null) {
+            CommentVote vote = commentVoteRepository.findByStudentAndComment(student, comment).orElse(null);
+
+            if (vote != null) {
+                userVote = vote.getVote();
+            }
+        }
+
+        return new CommentResponse(
+                comment.getId(),
+                comment.getContent(),
+                comment.getStatus(),
+                comment.getStudent().getUsername(),
+                ProfilePictureGenerator.generateProfilePicture(comment.getStudent()),
+                comment.getLecture().getId(),
+                comment.getCreatedAt(),
+                commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
+                commentVoteRepository.countByCommentAndVote(comment, VoteType.UP),
+                userVote,
+                answerResponses
+        );
+    }
+
+    public AnswerResponse createAnswerResponse(Answer answer, Student student){
+
+        VoteType userVote = null;
+
+        if (student != null) {
+            AnswerVote vote = answerVoteRepository.findByStudentAndAnswer(student, answer).orElse(null);
+
+            if (vote != null) {
+                userVote = vote.getVote();
+            }
+        }
+
+        return new AnswerResponse(
+                answer.getId(),
+                answer.getContent(),
+                answer.getStatus(),
+                answer.getStudent().getUsername(),
+                ProfilePictureGenerator.generateProfilePicture(answer.getStudent()),
+                answer.getCreatedAt(),
+                answerVoteRepository.countByAnswerAndVote(answer, VoteType.DOWN),
+                answerVoteRepository.countByAnswerAndVote(answer, VoteType.UP),
+                userVote
+        );
+    }
+
+
+
+
+
+    private List<AnswerResponse> getAnswerResponses(Comment comment, Student student) {
+
+        List<Answer> answers = comment.getAnswers();
+        List<AnswerResponse> answerResponses = new ArrayList<>();
+        for(Answer answer : answers) {
+
+            // Hidden answers must not reach students once an admin has resolved a
+            // report against them as ACTION_TAKEN, mirroring the comment filter above.
+            if (answer.getStatus() != ContentStatus.VISIBLE) {
+                continue;
+            }
+
+            answerResponses.add(createAnswerResponse(answer, student));
+        }
+        return answerResponses;
+    }
+
+
+
+    @Transactional
+    public BasicResponse markNotificationAsSeen(Student student, UUID notificationId) {
+
+        //check that student owns notification
+        Notification notification = notificationRepository
+                .findByRecipientAndId(student, notificationId)
+                .orElse(null);
+
+
+        if(notification == null) {
+            return new BasicResponse("Notification Not Found", false);
+        }
+
+        notification.setSeen(true);
+
+        return new BasicResponse("Marked Notifications as seen", true);
+
+    }
 
 
     /**
@@ -423,108 +522,4 @@ public class SocialService {
         );
     }
 
-
-    public CommentResponse createCommentResponse(Comment comment){
-
-        List<AnswerResponse> answerResponses = getAnswerResponses(comment);
-
-        return new CommentResponse(
-                comment.getId(),
-                comment.getContent(),
-                comment.getStatus(),
-                comment.getStudent().getUsername(),
-                ProfilePictureGenerator.generateProfilePicture(comment.getStudent()),
-                comment.getLecture().getId(),
-                comment.getCreatedAt(),
-                commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
-                commentVoteRepository.countByCommentAndVote(comment, VoteType.UP),
-                answerResponses
-        );
-    }
-
-    public AnswerResponse createAnswerResponse(Answer answer){
-
-        return new AnswerResponse(
-                answer.getId(),
-                answer.getContent(),
-                answer.getStatus(),
-                answer.getStudent().getUsername(),
-                ProfilePictureGenerator.generateProfilePicture(answer.getStudent()),
-                answer.getCreatedAt(),
-                answerVoteRepository.countByAnswerAndVote(answer, VoteType.DOWN),
-                answerVoteRepository.countByAnswerAndVote(answer, VoteType.UP)
-        );
-    }
-
-
-
-
-    //Methods used by other Services
-
-    public boolean updateReportStatus(UUID reportId, ReportStatus status) {
-        CommentReport commentReport = commentReportRepository.findById(reportId).orElse(null);
-
-        if(commentReport == null) {
-            return false;
-        }
-
-        commentReport.setStatus(status);
-
-        return true;
-    }
-
-
-
-    //Repository methods
-
-    public List<CommentReport> getReportedComments() {
-        return commentReportRepository.findAll();
-    }
-
-
-
-    private List<AnswerResponse> getAnswerResponses(Comment comment) {
-
-        List<Answer> answers = comment.getAnswers();
-        List<AnswerResponse> answerResponses = new ArrayList<>();
-        for(Answer answer : answers) {
-
-            // Hidden answers must not reach students once an admin has resolved a
-            // report against them as ACTION_TAKEN, mirroring the comment filter above.
-            if (answer.getStatus() != ContentStatus.VISIBLE) {
-                continue;
-            }
-
-            answerResponses.add(createAnswerResponse(answer));
-        }
-        return answerResponses;
-    }
-
-
-
-    public BasicResponse markAllNotificationsAsSeen(Student student) {
-
-        notificationRepository.markAllAsSeen(student);
-        return new BasicResponse("Marked all Notifications as Seen", true);
-
-    }
-
-    @Transactional
-    public BasicResponse markNotificationAsSeen(Student student, UUID notificationId) {
-
-        //check that student owns notification
-        Notification notification = notificationRepository
-                .findByRecipientAndId(student, notificationId)
-                .orElse(null);
-
-
-        if(notification == null) {
-            return new BasicResponse("Notification Not Found", false);
-        }
-
-        notification.setSeen(true);
-
-        return new BasicResponse("Marked Notifications as seen", true);
-
-    }
 }

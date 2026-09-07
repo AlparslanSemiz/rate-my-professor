@@ -80,7 +80,7 @@ class CatalogueRevertHandlerTests {
         lecture.setName("Programmierparadigmen");
         lecture.setCode("IN1234");
         lecture.setSemesterYear(2025);
-        lecture.setSemesterSeason(SemesterSeason.WINTER);
+        lecture.setSemesterSeason(SemesterSeason.WS);
         lecture.setActive(true);
         lecture.setLectureType(LectureType.LECTURE_AND_EXERCISE);
         return lecture;
@@ -138,7 +138,7 @@ class CatalogueRevertHandlerTests {
                 entry("name", "Programmierparadigmen"),
                 entry("code", "IN1234"),
                 entry("semesterYear", 2025),
-                entry("semesterSeason", "WINTER"),
+                entry("semesterSeason", "WS"),
                 entry("active", true),
                 entry("lectureType", "LECTURE_AND_EXERCISE"),
                 entry("professors", List.of(PROFESSOR_A.toString()))
@@ -245,7 +245,7 @@ class CatalogueRevertHandlerTests {
         before.put("name", "Programmieren");
         before.put("code", "IN1000");
         before.put("semesterYear", 2024);
-        before.put("semesterSeason", "SUMMER");
+        before.put("semesterSeason", "SS");
         before.put("active", false);
         before.put("lectureType", "LECTURE_ONLY");
         before.put("professors", List.of(PROFESSOR_A.toString(), PROFESSOR_B.toString()));
@@ -257,7 +257,7 @@ class CatalogueRevertHandlerTests {
         assertThat(request.name()).isEqualTo("Programmieren");
         assertThat(request.code()).isEqualTo("IN1000");
         assertThat(request.semesterYear()).isEqualTo(2024);
-        assertThat(request.semesterSeason()).isEqualTo(SemesterSeason.SUMMER);
+        assertThat(request.semesterSeason()).isEqualTo(SemesterSeason.SS);
         assertThat(request.active()).isFalse();
         assertThat(request.lectureType()).isEqualTo(LectureType.LECTURE_ONLY);
         assertThat(request.professorIds()).containsExactly(PROFESSOR_A, PROFESSOR_B);

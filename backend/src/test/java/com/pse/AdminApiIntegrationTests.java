@@ -154,8 +154,9 @@ class AdminApiIntegrationTests {
         String code = codeDelivery.codeFor("admin@student.kit.edu");
 
         String loginBody = """
-                {"email":"ADMIN@student.kit.edu","loginToken":"%s"}
-                """.formatted(code);
+            {"email":"ADMIN@student.kit.edu","loginToken":"%s"}
+            """.formatted(code);
+
         String token = com.jayway.jsonpath.JsonPath.read(
                 mockMvc.perform(post("/auth/login")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -163,7 +164,9 @@ class AdminApiIntegrationTests {
                         .andExpect(status().isOk())
                         .andExpect(jsonPath("$.message").value("Login successful"))
                         .andExpect(jsonPath("$.success").value(true))
-                        .andReturn().getResponse().getContentAsString(),
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(),
                 "$.authToken"
         );
 
@@ -173,34 +176,41 @@ class AdminApiIntegrationTests {
                         LocalDateTime.now(java.time.Clock.systemUTC())
                 )
                 .orElseThrow();
+
         assertEquals(SessionType.ADMIN, issuedToken.getSessionType());
+
         long remainingSeconds = java.time.Duration.between(
                 LocalDateTime.now(java.time.Clock.systemUTC()),
                 issuedToken.getExpiresAt()
         ).toSeconds();
+
         org.junit.jupiter.api.Assertions.assertTrue(
                 remainingSeconds >= java.time.Duration.ofDays(365).minusSeconds(5).toSeconds()
                         && remainingSeconds <= java.time.Duration.ofDays(365).toSeconds()
         );
 
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(token)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Authenticated"))
-                .andExpect(jsonPath("$.user.kitEmail").value("admin@student.kit.edu"))
-                .andExpect(jsonPath("$.user.role").value("ADMIN"));
+        // The issued token is an active admin session.
+        mockMvc.perform(get("/users")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk());
 
-        mockMvc.perform(post("/auth/logout").header("Authorization", bearer(token)))
+        mockMvc.perform(post("/auth/logout")
+                        .header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Logged out successfully"));
 
-        mockMvc.perform(get("/users").header("Authorization", bearer(token)))
+        // The same token can no longer access a protected endpoint.
+        mockMvc.perform(get("/users")
+                        .header("Authorization", bearer(token)))
                 .andExpect(status().isUnauthorized());
+
         assertEquals(
                 1,
                 auditLogRepository.findAll().stream()
                         .filter(log -> log.getAction() == AuditAction.ADMIN_LOGOUT)
                         .count()
         );
+
         assertEquals(
                 1,
                 auditLogRepository.findAll().stream()
@@ -209,17 +219,25 @@ class AdminApiIntegrationTests {
         );
     }
 
+
     @Test
     void appLoginGivesAdminAccountYearLongStudentOnlySession() throws Exception {
         requestCode("admin@student.kit.edu");
+
         String rawToken = com.jayway.jsonpath.JsonPath.read(
                 mockMvc.perform(post("/auth/login")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
-                                        {"email":"admin@student.kit.edu","loginToken":"%s","sessionType":"APP"}
-                                        """.formatted(codeDelivery.codeFor("admin@student.kit.edu"))))
+                                    {
+                                      "email":"admin@student.kit.edu",
+                                      "loginToken":"%s",
+                                      "sessionType":"APP"
+                                    }
+                                    """.formatted(codeDelivery.codeFor("admin@student.kit.edu"))))
                         .andExpect(status().isOk())
-                        .andReturn().getResponse().getContentAsString(),
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(),
                 "$.authToken"
         );
 
@@ -229,27 +247,36 @@ class AdminApiIntegrationTests {
                         LocalDateTime.now(java.time.Clock.systemUTC())
                 )
                 .orElseThrow();
+
         assertEquals(SessionType.APP, issuedToken.getSessionType());
+
         long remainingSeconds = java.time.Duration.between(
                 LocalDateTime.now(java.time.Clock.systemUTC()),
                 issuedToken.getExpiresAt()
         ).toSeconds();
+
         org.junit.jupiter.api.Assertions.assertTrue(
                 remainingSeconds >= java.time.Duration.ofDays(365).minusSeconds(5).toSeconds()
                         && remainingSeconds <= java.time.Duration.ofDays(365).toSeconds()
         );
 
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(rawToken)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.role").value("STUDENT"));
-        mockMvc.perform(get("/users").header("Authorization", bearer(rawToken)))
+        // An APP session is a valid student session.
+        mockMvc.perform(get("/social/notifications")
+                        .header("Authorization", bearer(rawToken)))
+                .andExpect(status().isOk());
+
+        // Even though the account is also an admin, APP sessions must not gain admin access.
+        mockMvc.perform(get("/users")
+                        .header("Authorization", bearer(rawToken)))
                 .andExpect(status().isForbidden());
+
         assertEquals(
                 1,
                 auditLogRepository.findAll().stream()
                         .filter(log -> log.getAction() == AuditAction.USER_LOGIN)
                         .count()
         );
+
         assertEquals(
                 0,
                 auditLogRepository.findAll().stream()
@@ -257,6 +284,7 @@ class AdminApiIntegrationTests {
                         .count()
         );
     }
+
 
     @Test
     void appLoginGivesStudentAccountYearLongSession() throws Exception {
@@ -356,37 +384,49 @@ class AdminApiIntegrationTests {
 
     @Test
     void protectedEndpointsDifferentiateAnonymousStudentAndAdmin() throws Exception {
-        mockMvc.perform(get("/users")).andExpect(status().isUnauthorized());
+        // Anonymous users are not authenticated.
+        mockMvc.perform(get("/users"))
+                .andExpect(status().isUnauthorized());
 
+        // Students are authenticated, but do not have admin permissions.
         Session student = createSession("student@student.kit.edu", false);
-        mockMvc.perform(get("/users").header("Authorization", bearer(student.rawToken())))
+
+        mockMvc.perform(get("/users")
+                        .header("Authorization", bearer(student.rawToken())))
                 .andExpect(status().isForbidden());
 
+        // Normal admin sessions may access the admin API.
         Session admin = createSession("admin@student.kit.edu", true);
-        mockMvc.perform(get("/users").header("Authorization", bearer(admin.rawToken())))
+
+        mockMvc.perform(get("/users")
+                        .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
 
-        // Elevation is not a role. The panel's role union is STUDENT | ADMIN, so an
-        // elevated operator has to keep answering ADMIN and carry the distinction in a
-        // separate field, under exactly this key.
+        // Superadmins are admins as well, but elevation is expressed through
+        // additional permissions rather than through a separate public role field.
         Session elevated = createSession(SUPERUSER_EMAIL, true);
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(elevated.rawToken())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.role").value("ADMIN"))
-                .andExpect(jsonPath("$.user.isSuperAdmin").value(true));
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(admin.rawToken())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.role").value("ADMIN"))
-                .andExpect(jsonPath("$.user.isSuperAdmin").value(false));
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(student.rawToken())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.role").value("STUDENT"))
-                .andExpect(jsonPath("$.user.isSuperAdmin").value(false));
+        Session otherAdmin = createSession("other-admin@student.kit.edu", true);
+
+        mockMvc.perform(get("/users")
+                        .header("Authorization", bearer(elevated.rawToken())))
+                .andExpect(status().isOk());
+
+        // A normal admin may not moderate another admin.
+        mockMvc.perform(patch("/users/{id}/block", otherAdmin.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isConflict());
+
+        // An elevated admin may moderate another admin.
+        mockMvc.perform(patch("/users/{id}/block", otherAdmin.student().getId())
+                        .header("Authorization", bearer(elevated.rawToken())))
+                .andExpect(status().isOk());
 
         mockMvc.perform(get("/missing-api-path"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false));
     }
+
+
 
     @Test
     void usersResponsesWarningsAndLifecycleUseServerSideActor() throws Exception {
@@ -465,19 +505,30 @@ class AdminApiIntegrationTests {
     @Test
     void lastSeenFollowsApiActivityAndIsNotRewrittenOnEveryRequest() throws Exception {
         Session target = createSession("target@student.kit.edu", false);
-        org.junit.jupiter.api.Assertions.assertNull(
-                target.student().getLastSeenAt(), "seeded student has never been seen");
 
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
+        org.junit.jupiter.api.Assertions.assertNull(
+                target.student().getLastSeenAt(),
+                "seeded student has never been seen"
+        );
+
+        // Any successful authenticated API request counts as activity.
+        mockMvc.perform(get("/social/notifications")
+                        .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk());
+
         LocalDateTime firstSeen = reloadStudent(target).getLastSeenAt();
+
         org.junit.jupiter.api.Assertions.assertNotNull(
-                firstSeen, "the first authenticated request records last seen");
+                firstSeen,
+                "the first authenticated request records last seen"
+        );
 
         // Inside the refresh window the value is left alone, so a busy client does not
         // turn every one of its calls into a row update.
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
+        mockMvc.perform(get("/social/notifications")
+                        .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk());
+
         assertEquals(
                 firstSeen,
                 reloadStudent(target).getLastSeenAt(),
@@ -486,32 +537,37 @@ class AdminApiIntegrationTests {
 
         // Once the stored value falls outside the window, the next request moves it on.
         LocalDateTime stale = firstSeen.minusHours(1);
+
         Student student = reloadStudent(target);
         student.setLastSeenAt(stale);
         studentRepository.saveAndFlush(student);
 
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
+        mockMvc.perform(get("/social/notifications")
+                        .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk());
+
         org.junit.jupiter.api.Assertions.assertTrue(
                 reloadStudent(target).getLastSeenAt().isAfter(stale),
                 "a request outside the refresh window advances last seen"
         );
 
-        // A refused request is not activity: the status gate runs before the write, so a
-        // blocked account's retries cannot keep its "last seen" looking current.
+        // A refused request is not activity.
         student = reloadStudent(target);
         student.setLastSeenAt(stale);
         student.setStatus(UserStatus.BLOCKED);
         studentRepository.saveAndFlush(student);
 
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
+        mockMvc.perform(get("/social/notifications")
+                        .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isUnauthorized());
+
         assertEquals(
                 stale,
                 reloadStudent(target).getLastSeenAt(),
                 "a refused request does not register as activity"
         );
     }
+
 
     /**
      * The plain-administrator case: elevation is what lifts these refusals, and this
@@ -1558,7 +1614,7 @@ class AdminApiIntegrationTests {
                         .header("Authorization", bearer(admin.rawToken()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"code":"CS102","semesterYear":2027,"semesterSeason":"WINTER","active":false}
+                                {"code":"CS102","semesterYear":2027,"semesterSeason":"WS","active":false}
                                 """))
                 .andExpect(status().isOk());
         Lecture stored = lectureRepository.findById(lecture.getId()).orElseThrow();
@@ -1765,20 +1821,23 @@ class AdminApiIntegrationTests {
     void logoutAllRevokesEverySessionOfTheAccount() throws Exception {
         Session first = createSession("multi-device@student.kit.edu", false);
         String secondToken = issueToken(first.student());
+
         String validateBody = """
-                {"email":"multi-device@student.kit.edu"}
-                """;
+            {"email":"multi-device@student.kit.edu"}
+            """;
 
         mockMvc.perform(post("/auth/logout-all")
                         .header("Authorization", bearer(first.rawToken())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
+        // Both existing sessions have been revoked.
         mockMvc.perform(post("/auth/validate")
                         .header("Authorization", bearer(first.rawToken()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validateBody))
                 .andExpect(status().isUnauthorized());
+
         mockMvc.perform(post("/auth/validate")
                         .header("Authorization", bearer(secondToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -1786,30 +1845,46 @@ class AdminApiIntegrationTests {
                 .andExpect(status().isUnauthorized());
 
         assertEquals(2, tokenRepository.findAll().size());
+
         org.junit.jupiter.api.Assertions.assertTrue(
                 tokenRepository.findAll().stream().allMatch(Token::isRevoked)
         );
+
         assertEquals(
                 UserStatus.ACTIVE,
-                studentRepository.findById(first.student().getId()).orElseThrow().getStatus()
+                studentRepository.findById(first.student().getId())
+                        .orElseThrow()
+                        .getStatus()
         );
 
+        // logout-all only destroys the sessions, not the account.
+        // The account must be able to log in again afterwards.
         requestCode("multi-device@student.kit.edu");
+
         String freshToken = com.jayway.jsonpath.JsonPath.read(
                 mockMvc.perform(post("/auth/login")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
-                                        {"email":"multi-device@student.kit.edu","loginToken":"%s"}
-                                        """.formatted(
-                                        codeDelivery.codeFor("multi-device@student.kit.edu"))))
+                                    {
+                                      "email":"multi-device@student.kit.edu",
+                                      "loginToken":"%s"
+                                    }
+                                    """.formatted(
+                                        codeDelivery.codeFor("multi-device@student.kit.edu")
+                                )))
                         .andExpect(status().isOk())
-                        .andReturn().getResponse().getContentAsString(),
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(),
                 "$.authToken"
         );
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(freshToken)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.kitEmail").value("multi-device@student.kit.edu"));
+
+        // The newly issued session is usable again.
+        mockMvc.perform(get("/social/notifications")
+                        .header("Authorization", bearer(freshToken)))
+                .andExpect(status().isOk());
     }
+
 
     @Test
     @WithAnonymousUser
@@ -1845,15 +1920,15 @@ class AdminApiIntegrationTests {
                         .header("Authorization", bearer(admin.rawToken()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                            {
-                              "message": "%s"
-                            }
-                            """.formatted(warningMessage)))
+                        {
+                          "message": "%s"
+                        }
+                        """.formatted(warningMessage)))
                 .andExpect(status().isOk());
 
         // The warning is delivered through the student's notification feed.
-        // Warnings are not publicly attributed to another user and are not
-        // associated with an answer, comment or lecture.
+        // This successful request also proves that the student's existing session
+        // remains valid after receiving the warning.
         mockMvc.perform(get("/social/notifications")
                         .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isOk())
@@ -1876,21 +1951,15 @@ class AdminApiIntegrationTests {
                         .getStatus()
         );
 
-        // The existing session remains valid.
-        mockMvc.perform(get("/auth/me")
-                        .header("Authorization", bearer(target.rawToken())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.status").value("ACTIVE"));
-
         // Warnings accumulate and the current count is returned to admins.
         mockMvc.perform(post("/users/{id}/warnings", target.student().getId())
                         .header("Authorization", bearer(admin.rawToken()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                            {
-                              "message": "Second incident"
-                            }
-                            """))
+                        {
+                          "message": "Second incident"
+                        }
+                        """))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/users")
@@ -1901,6 +1970,8 @@ class AdminApiIntegrationTests {
                         hasItem(2)
                 ));
     }
+
+
 
     @Test
     void blockedStudentIsRejectedEvenWithAnUnrevokedToken() throws Exception {
@@ -2440,7 +2511,7 @@ class AdminApiIntegrationTests {
         second.setName("Databases");
         second.setCode("CS102");
         second.setSemesterYear(2026);
-        second.setSemesterSeason(SemesterSeason.SUMMER);
+        second.setSemesterSeason(SemesterSeason.SS);
         second.setActive(true);
         second = lectureRepository.saveAndFlush(second);
 
@@ -2843,7 +2914,7 @@ class AdminApiIntegrationTests {
         lecture.setName("Algorithms");
         lecture.setCode("CS101");
         lecture.setSemesterYear(2026);
-        lecture.setSemesterSeason(SemesterSeason.SUMMER);
+        lecture.setSemesterSeason(SemesterSeason.SS);
         lecture.setActive(true);
         return lectureRepository.saveAndFlush(lecture);
     }

@@ -154,7 +154,7 @@ class LectureApiIntegrationTests {
         lecture.setName("Lineare Algebra 1");
         lecture.setCode("LA1");
         lecture.setSemesterYear(2026);
-        lecture.setSemesterSeason(SemesterSeason.SUMMER);
+        lecture.setSemesterSeason(SemesterSeason.SS);
         lecture.setActive(true);
 
         lectureRepository.save(lecture);
@@ -176,13 +176,13 @@ class LectureApiIntegrationTests {
         Lecture activeLecture = new Lecture();
         activeLecture.setName("Lineare Algebra 1");
         activeLecture.setSemesterYear(2026);
-        activeLecture.setSemesterSeason(SemesterSeason.SUMMER);
+        activeLecture.setSemesterSeason(SemesterSeason.SS);
         activeLecture.setActive(true);
 
         Lecture inactiveLecture = new Lecture();
         inactiveLecture.setName("Alte Vorlesung");
         inactiveLecture.setSemesterYear(2024);
-        inactiveLecture.setSemesterSeason(SemesterSeason.WINTER);
+        inactiveLecture.setSemesterSeason(SemesterSeason.SS);
         inactiveLecture.setActive(false);
 
         lectureRepository.save(activeLecture);
@@ -204,7 +204,7 @@ class LectureApiIntegrationTests {
         lecture.setName("Lineare Algebra 1");
         lecture.setCode("LA1");
         lecture.setSemesterYear(2026);
-        lecture.setSemesterSeason(SemesterSeason.SUMMER);
+        lecture.setSemesterSeason(SemesterSeason.SS);
 
         lecture = lectureRepository.save(lecture);
 
@@ -260,7 +260,7 @@ class LectureApiIntegrationTests {
           "name": "Lineare Algebra 1",
           "code": "LA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": [
             "%s"
@@ -312,7 +312,7 @@ class LectureApiIntegrationTests {
           "name": "Analysis 1",
           "code": "ANA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": [
             "%s"
@@ -344,7 +344,7 @@ class LectureApiIntegrationTests {
           "name": "Analysis 1",
           "code": "ANA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": []
         }
@@ -380,7 +380,7 @@ class LectureApiIntegrationTests {
           "name": "Lineare Algebra 1",
           "code": "LA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": [
             "%s"
@@ -411,7 +411,7 @@ class LectureApiIntegrationTests {
         existingLecture.setName("Lineare Algebra 1");
         existingLecture.setCode("LA1");
         existingLecture.setSemesterYear(2026);
-        existingLecture.setSemesterSeason(SemesterSeason.SUMMER);
+        existingLecture.setSemesterSeason(SemesterSeason.SS);
 
         lectureRepository.save(existingLecture);
 
@@ -432,7 +432,7 @@ class LectureApiIntegrationTests {
           "name": "Lineare Algebra 1",
           "code": "LA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": [
             "%s"
@@ -471,7 +471,7 @@ class LectureApiIntegrationTests {
           "name": "Lineare Algebra 1",
           "code": "LA1",
           "semesterYear": 2026,
-          "semesterSeason": "SUMMER",
+          "semesterSeason": "SS",
           "active": true,
           "professorIds": [
             "%s"

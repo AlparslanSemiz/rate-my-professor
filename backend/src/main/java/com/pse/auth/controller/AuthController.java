@@ -3,7 +3,6 @@ package com.pse.auth.controller;
 import com.pse.auth.dto.request.LoginRequest;
 import com.pse.auth.dto.request.OTPRequest;
 import com.pse.auth.dto.request.ValidateCredentialsRequest;
-import com.pse.auth.dto.response.AuthMeResponse;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.LoginResponse;
 import com.pse.auth.service.AuthService;
@@ -11,7 +10,6 @@ import com.pse.security.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -48,10 +46,6 @@ public class AuthController {
         return authService.logoutAll(principal);
     }
 
-    @GetMapping("/me")
-    public AuthMeResponse me(@AuthenticationPrincipal AuthenticatedUser principal) {
-        return authService.me(principal);
-    }
 
     @PostMapping("/validate")
     public BasicResponse validate(@RequestHeader("Authorization") String authHeader, @Valid @RequestBody ValidateCredentialsRequest request) {

@@ -123,7 +123,6 @@ class LoginLocationServiceTests {
                 });
     }
 
-    // ---------- getLoginLocation: the resolving path ----------
 
     @Test
     void getLoginLocation_completeResponse_buildsTheFullDescriptionAndMapsUrl() {
@@ -233,17 +232,18 @@ class LoginLocationServiceTests {
      * stays silent by design; the trace is the startup warning pinned in the next section.
      */
     @Test
-    void getLoginLocation_blankToken_returnsUnknownSilentlyWithoutCallingIpInfo() {
+    void getLoginLocation_blankToken_returnsUnknownWithoutCallingIpInfo() {
         // When
         LoginLocation location = serviceWith("", GEOAPIFY_KEY).getLoginLocation(IP);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
         verifyNoInteractions(restClient);
-        assertThat(logs.list)
-                .as("the request path stays silent -- warnIfTokenMissing is what speaks up")
-                .isEmpty();
+
+        assertLookupAttemptLogged(IP);
     }
+
+
 
     @Test
     void getLoginLocation_nullToken_throwsNullPointerException() {
@@ -384,18 +384,20 @@ class LoginLocationServiceTests {
         assertWarnLogged();
     }
 
-    /** A null body returns early, without ever reaching the catch -- so nothing is logged. */
+
     @Test
-    void getLoginLocation_nullResponseBody_returnsUnknownWithoutLogging() {
+    void getLoginLocation_nullResponseBody_returnsUnknownAndLogsAttempt() {
         // Given
         ipInfoReturns(null);
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY)
+                .getLoginLocation(IP);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
-        assertThat(logs.list).isEmpty();
+
+        assertLookupAttemptLogged(IP);
     }
 
     /**
@@ -403,16 +405,18 @@ class LoginLocationServiceTests {
      * lookup of nothing, so it takes the description path rather than the catch.
      */
     @Test
-    void getLoginLocation_bogonAddressWithAnEmptyBody_returnsUnknownWithoutLogging() {
+    void getLoginLocation_bogonAddressWithAnEmptyBody_returnsUnknownAndLogsAttempt() {
         // Given
         ipInfoReturns(new IpInfoResponse(null, null, null, null, null));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation("10.0.0.5");
+        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY)
+                .getLoginLocation("10.0.0.5");
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
-        assertThat(logs.list).isEmpty();
+
+        assertLookupAttemptLogged("10.0.0.5");
     }
 
     @Test
@@ -494,5 +498,16 @@ class LoginLocationServiceTests {
 
         // Then
         assertThat(html).doesNotContain("<script>").contains("&lt;script&gt;").contains("&amp;");
+    }
+
+
+    private void assertLookupAttemptLogged(String rawIp) {
+        assertThat(logs.list)
+                .anySatisfy(event -> {
+                    assertThat(event.getLevel()).isEqualTo(Level.INFO);
+                    assertThat(event.getFormattedMessage())
+                            .contains("Trying to determine location")
+                            .contains("rawIp=" + rawIp);
+                });
     }
 }
