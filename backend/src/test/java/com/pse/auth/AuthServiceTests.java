@@ -479,7 +479,7 @@ class AuthServiceTests {
                 );
 
 
-        verify(eventPublisher).publishEvent(any());
+        verify(eventPublisher).publishEvent(any(SuccessfulLoginEvent.class));
     }
 
 
