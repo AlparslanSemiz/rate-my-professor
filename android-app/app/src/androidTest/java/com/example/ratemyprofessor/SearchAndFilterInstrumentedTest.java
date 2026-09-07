@@ -85,9 +85,9 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void searchServiceReturnsLecturesMatchingNameOrderedByName() {
-        searchService.insertLecture(new Lecture("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SUMMER, true, "prof-1", 0, 0));
-        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0));
-        searchService.insertLecture(new Lecture("lecture-3", "Analysis", "240003", 2024, SemesterSeason.SUMMER, true, "prof-1", 0, 0));
+        searchService.insertLecture(new Lecture("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SS, true, 0, 0, 0));
+        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WS, true, 0, 0, 0));
+        searchService.insertLecture(new Lecture("lecture-3", "Analysis", "240003", 2024, SemesterSeason.SS, true, 0, 0, 0));
 
         List<Lecture> results = searchService.searchLectures("A");
 
@@ -98,8 +98,8 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void searchServiceReturnsEmptyLectureListWhenNameDoesNotMatch() {
-        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0));
-        searchService.insertLecture(new Lecture("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SUMMER, true, "prof-1", 0, 0));
+        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WS, true, 0, 0, 0));
+        searchService.insertLecture(new Lecture("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SS, true, 0, 0, 0));
 
         List<Lecture> results = searchService.searchLectures("Physics");
 
@@ -108,9 +108,9 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void searchServiceReturnsAllLecturesOrderedByNameForBlankQuery() {
-        searchService.insertLecture(new Lecture("lecture-3", "Softwaretechnik", "240002", 2024, SemesterSeason.SUMMER, true, "prof-1", 0, 0));
-        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0));
-        searchService.insertLecture(new Lecture("lecture-2", "Analysis", "240003", 2024, SemesterSeason.SUMMER, true, "prof-1", 0, 0));
+        searchService.insertLecture(new Lecture("lecture-3", "Softwaretechnik", "240002", 2024, SemesterSeason.SS, true, 0, 0, 0));
+        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WS, true, 0, 0, 0));
+        searchService.insertLecture(new Lecture("lecture-2", "Analysis", "240003", 2024, SemesterSeason.SS, true, 0, 0, 0));
 
         List<Lecture> results = searchService.searchLectures("");
 
@@ -122,8 +122,8 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void deleteLecturesClearsLectureTable() {
-        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0));
-        searchService.insertLecture(new Lecture("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SUMMER, true, "prof-1", 0, 0));
+        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WS, true, 0, 0, 0));
+        searchService.insertLecture(new Lecture("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SS, true, 0, 0, 0));
 
         searchService.deleteLectures();
 
@@ -134,8 +134,8 @@ public class SearchAndFilterInstrumentedTest {
     public void lectureAdapterBindsLectureNameAndItemCount() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         ArrayList<Lecture> lectures = new ArrayList<>();
-        lectures.add(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0));
-        lectures.add(new Lecture("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SUMMER, true, "prof-1", 0, 0));
+        lectures.add(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WS, true, 0, 0, 0));
+        lectures.add(new Lecture("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SS, true, 0, 0, 0));
         LectureAdapter adapter = new LectureAdapter(lectures, name -> {});
         ViewGroup parent = new FrameLayout(context);
 
