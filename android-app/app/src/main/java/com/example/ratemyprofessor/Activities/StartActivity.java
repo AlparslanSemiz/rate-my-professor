@@ -36,6 +36,14 @@ public class StartActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // This jumps the login screen when we launch the app with a "devMode" parameter
+        boolean isDevMode = getIntent().getBooleanExtra("devMode", false);
+        if (isDevMode) {
+            System.out.println("Should jump LoginScreen");
+            openScreen(MainActivity.class);
+            return;
+        }
+
         LoginSession session = LoginSession.from(this);
 
         //debug
