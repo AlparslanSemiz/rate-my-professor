@@ -15,6 +15,5 @@ public interface CommentVoteRepository extends JpaRepository<CommentVote, UUID>{
 
     Optional<CommentVote> findByStudentAndComment(Student student, Comment comment);
 
-
     int countByCommentAndVote(Comment comment, VoteType vote);
 }

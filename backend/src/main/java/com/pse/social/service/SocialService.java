@@ -169,7 +169,7 @@ public class SocialService {
         List<CommentResponse> commentsResponses = new ArrayList<>();
 
         for (Comment comment : comments) {
-            commentsResponses.add(createCommentResponse(comment));
+            commentsResponses.add(createCommentResponse(comment, null));
         }
 
         return new CommentsResponse("Comments loaded successfully", true, commentsResponses);
@@ -380,7 +380,7 @@ public class SocialService {
 
 
     @Transactional(readOnly = true)
-    public CommentsResponse getComments(UUID lecture_id) {
+    public CommentsResponse getComments(UUID lecture_id, Student student) {
 
         // Only VISIBLE comments reach the student app. A comment is set to HIDDEN
         // when an admin resolves a report against it as ACTION_TAKEN.
@@ -391,7 +391,7 @@ public class SocialService {
 
         for(Comment comment : comments) {
 
-            commentsResponses.add(createCommentResponse(comment));
+            commentsResponses.add(createCommentResponse(comment, student));
         }
 
         return new CommentsResponse("Found " + commentsResponses.size() + " comments", true, commentsResponses);
@@ -402,10 +402,20 @@ public class SocialService {
 
 
 
+    //If student is null => userVote = null
+    public CommentResponse createCommentResponse(Comment comment, Student student){
 
-    public CommentResponse createCommentResponse(Comment comment){
+        List<AnswerResponse> answerResponses = getAnswerResponses(comment, student);
 
-        List<AnswerResponse> answerResponses = getAnswerResponses(comment);
+        VoteType userVote = null;
+
+        if (student != null) {
+            CommentVote vote = commentVoteRepository.findByStudentAndComment(student, comment).orElse(null);
+
+            if (vote != null) {
+                userVote = vote.getVote();
+            }
+        }
 
         return new CommentResponse(
                 comment.getId(),
@@ -417,11 +427,22 @@ public class SocialService {
                 comment.getCreatedAt(),
                 commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
                 commentVoteRepository.countByCommentAndVote(comment, VoteType.UP),
+                userVote,
                 answerResponses
         );
     }
 
-    public AnswerResponse createAnswerResponse(Answer answer){
+    public AnswerResponse createAnswerResponse(Answer answer, Student student){
+
+        VoteType userVote = null;
+
+        if (student != null) {
+            AnswerVote vote = answerVoteRepository.findByStudentAndAnswer(student, answer).orElse(null);
+
+            if (vote != null) {
+                userVote = vote.getVote();
+            }
+        }
 
         return new AnswerResponse(
                 answer.getId(),
@@ -431,7 +452,8 @@ public class SocialService {
                 ProfilePictureGenerator.generateProfilePicture(answer.getStudent()),
                 answer.getCreatedAt(),
                 answerVoteRepository.countByAnswerAndVote(answer, VoteType.DOWN),
-                answerVoteRepository.countByAnswerAndVote(answer, VoteType.UP)
+                answerVoteRepository.countByAnswerAndVote(answer, VoteType.UP),
+                userVote
         );
     }
 
@@ -439,7 +461,7 @@ public class SocialService {
 
 
 
-    private List<AnswerResponse> getAnswerResponses(Comment comment) {
+    private List<AnswerResponse> getAnswerResponses(Comment comment, Student student) {
 
         List<Answer> answers = comment.getAnswers();
         List<AnswerResponse> answerResponses = new ArrayList<>();
@@ -451,7 +473,7 @@ public class SocialService {
                 continue;
             }
 
-            answerResponses.add(createAnswerResponse(answer));
+            answerResponses.add(createAnswerResponse(answer, student));
         }
         return answerResponses;
     }

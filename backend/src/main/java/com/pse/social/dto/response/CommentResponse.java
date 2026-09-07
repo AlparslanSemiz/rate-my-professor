@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.pse.shared.enums.ContentStatus;
+import com.pse.shared.enums.VoteType;
 
 public record CommentResponse(
 
@@ -17,6 +18,7 @@ public record CommentResponse(
         LocalDateTime createdAt,
         int downVotes,
         int upVotes,
+        VoteType userVote,
 
         List<AnswerResponse> answers
 

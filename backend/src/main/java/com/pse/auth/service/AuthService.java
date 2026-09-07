@@ -401,11 +401,24 @@ public class AuthService {
     private Student createStudent(String email) {
         Student student = new Student();
         student.setKitEmail(email);
-        student.setUsername(NameGenerator.generateUsername());
+
+
+        student.setUsername(generateUniqueUsername());
         student.setEmailVerifiedAt(LocalDateTime.now(clock));
         student.setCredibilityScore(0);
         student.setStatus(UserStatus.ACTIVE);
         return studentRepository.save(student);
+    }
+
+    private String generateUniqueUsername() {
+
+        String username;
+
+        do {
+            username = NameGenerator.generateUsername();
+        } while (studentRepository.existsByUsername(username));
+
+        return username;
     }
 
     /**

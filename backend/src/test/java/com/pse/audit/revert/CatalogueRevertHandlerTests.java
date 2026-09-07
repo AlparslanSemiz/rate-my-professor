@@ -257,7 +257,7 @@ class CatalogueRevertHandlerTests {
         assertThat(request.name()).isEqualTo("Programmieren");
         assertThat(request.code()).isEqualTo("IN1000");
         assertThat(request.semesterYear()).isEqualTo(2024);
-        assertThat(request.semesterSeason()).isEqualTo(SemesterSeason.SUMMER);
+        assertThat(request.semesterSeason()).isEqualTo(SemesterSeason.SS);
         assertThat(request.active()).isFalse();
         assertThat(request.lectureType()).isEqualTo(LectureType.LECTURE_ONLY);
         assertThat(request.professorIds()).containsExactly(PROFESSOR_A, PROFESSOR_B);

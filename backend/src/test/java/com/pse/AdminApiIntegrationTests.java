@@ -2440,7 +2440,7 @@ class AdminApiIntegrationTests {
         second.setName("Databases");
         second.setCode("CS102");
         second.setSemesterYear(2026);
-        second.setSemesterSeason(SemesterSeason.SUMMER);
+        second.setSemesterSeason(SemesterSeason.SS);
         second.setActive(true);
         second = lectureRepository.saveAndFlush(second);
 
@@ -2843,7 +2843,7 @@ class AdminApiIntegrationTests {
         lecture.setName("Algorithms");
         lecture.setCode("CS101");
         lecture.setSemesterYear(2026);
-        lecture.setSemesterSeason(SemesterSeason.SUMMER);
+        lecture.setSemesterSeason(SemesterSeason.SS);
         lecture.setActive(true);
         return lectureRepository.saveAndFlush(lecture);
     }

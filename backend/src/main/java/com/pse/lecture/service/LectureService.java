@@ -7,6 +7,10 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.pse.professor.service.ProfessorService;
+import com.pse.rating.model.Rating;
+import com.pse.rating.model.RatingCategory;
+import com.pse.rating.model.RatingTopic;
+import com.pse.rating.service.RatingService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -175,6 +179,23 @@ public class LectureService {
             professorResponses.add(ProfessorService.createProfessorShortResponse(professor));
         }
 
+        double sum = 0;
+        int count = 0;
+
+        for (Rating rating : lecture.getRatings()) {
+            for (RatingTopic topic : rating.getTopics()) {
+                if (topic.getCategory() == RatingCategory.OVERALL) {
+                    sum += topic.getValue();
+                    count++;
+                    break;
+                }
+            }
+        }
+
+        double averageRating = count == 0 ? 0.0 : sum / count;
+
+
+
         return new LectureResponse(
                 lecture.getId(),
                 lecture.getName(),
@@ -185,7 +206,8 @@ public class LectureService {
                 lecture.getLectureType(),
                 professorResponses,
                 lecture.getComments().size(),
-                lecture.getRatings().size()
+                lecture.getRatings().size(),
+                averageRating
         );
 
     }

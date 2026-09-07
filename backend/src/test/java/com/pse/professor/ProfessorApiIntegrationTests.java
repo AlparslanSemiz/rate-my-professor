@@ -308,7 +308,7 @@ class ProfessorApiIntegrationTests {
         lecture.setName("Lineare Algebra 1");
         lecture.setCode("LA1");
         lecture.setSemesterYear(2026);
-        lecture.setSemesterSeason(SemesterSeason.SUMMER);
+        lecture.setSemesterSeason(SemesterSeason.SS);
         lecture.setActive(true);
 
         lecture = lectureRepository.saveAndFlush(lecture);

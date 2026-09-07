@@ -154,17 +154,16 @@ class SocialControllerTests {
         CommentsResponse expected =
                 mock(CommentsResponse.class);
 
-        when(socialService.getComments(lectureId))
+        when(socialService.getComments(lectureId, null))
                 .thenReturn(expected);
 
 
-        CommentsResponse response = socialController.getComments(lectureId);
+        CommentsResponse response = socialController.getComments(null, lectureId);
 
 
         assertSame(expected, response);
 
-        verify(socialService)
-                .getComments(lectureId);
+        verify(socialService).getComments(lectureId, null);
     }
 
 

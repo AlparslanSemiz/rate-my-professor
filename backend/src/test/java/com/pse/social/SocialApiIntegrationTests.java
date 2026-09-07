@@ -681,7 +681,7 @@ class SocialApiIntegrationTests {
 
         lecture.setSemesterYear(2026);
 
-        lecture.setSemesterSeason(SemesterSeason.SUMMER);
+        lecture.setSemesterSeason(SemesterSeason.SS);
 
         lecture.setActive(true);
 
