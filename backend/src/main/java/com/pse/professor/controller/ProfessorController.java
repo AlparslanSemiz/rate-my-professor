@@ -3,9 +3,7 @@ package com.pse.professor.controller;
 
 import java.util.UUID;
 
-import com.pse.security.AuthenticatedUser;
 import jakarta.validation.Valid;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,14 +44,16 @@ public class ProfessorController {
 
     /**
      * SECURED [NEEDS ADMIN]
+     *
+     * <p>Authorization is the security chain's, not this method's. The isAdmin() check that
+     * used to live here answered a non-admin {@code 200 {"success": false}} and an anonymous
+     * caller a 500, because the principal it read was null.
+     *
      * @param request
      * @return
      */
     @PostMapping("/professor")
-    public BasicResponse addProfessor( @AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody ProfessorAddRequest request) {
-        if (!principal.isAdmin()){
-            return new BasicResponse("Error, couldn't authenticate Admin", false);
-        }
+    public BasicResponse addProfessor(@Valid @RequestBody ProfessorAddRequest request) {
         return professorService.addProfessor(request);
     }
 
