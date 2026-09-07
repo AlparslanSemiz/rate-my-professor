@@ -1,0 +1,167 @@
+package com.example.ratemyprofessor.logic;
+
+import static androidx.core.content.ContentProviderCompat.requireContext;
+
+import static java.security.AccessController.getContext;
+
+import android.app.Dialog;
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.widget.ArrayAdapter;
+import android.widget.Toast;
+
+import com.example.ratemyprofessor.DomainModel.CommentType;
+import com.example.ratemyprofessor.DomainModel.VoteType;
+import com.example.ratemyprofessor.R;
+import com.example.ratemyprofessor.ServerCommunication.APIService;
+import com.example.ratemyprofessor.ServerCommunication.AuthManager;
+import com.example.ratemyprofessor.ServerCommunication.LoginSession;
+import com.example.ratemyprofessor.ServerCommunication.ReportReason;
+import com.example.ratemyprofessor.ServerCommunication.Requests.CommentReportRequest;
+import com.example.ratemyprofessor.ServerCommunication.Requests.VoteRequest;
+import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
+import com.example.ratemyprofessor.databinding.DialogCommentReportBinding;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+public final class CommentHelper {
+    private CommentHelper() {
+        // static helper class
+    }
+
+    public static void submitCommentReport(Context context,
+                                            APIService apiService,
+                                            DialogCommentReportBinding dialogBinding, Dialog dialog,
+                                            String commentID, CommentType type) {
+
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            Toast.makeText(
+                    context,
+                    "You are not logged in.",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            dialog.dismiss();
+            return;
+        }
+
+        String report = dialogBinding.commentReportInput.getText() == null
+                ? ""
+                : dialogBinding.commentReportInput.getText().toString().trim();
+
+
+        ReportReason reason = (ReportReason) dialogBinding.reportReason.getSelectedItem();
+        CommentReportRequest request = new CommentReportRequest(commentID, reason, report);
+        Call<BasicResponse> reportCall;
+        String authToken = LoginSession.from(context).bearerToken();
+
+        if (type == CommentType.COMMENT) {
+            reportCall = apiService.reportComment(authToken, request);
+        } else {
+            reportCall = apiService.reportReply(authToken, request);
+        }
+
+        reportCall.enqueue(new Callback<BasicResponse>() {
+            @Override
+            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                BasicResponse body = response.body();
+                if (!response.isSuccessful() || body == null || !body.success()) {
+                    Log.println(Log.DEBUG, "comment report", "failure: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                Log.println(Log.DEBUG, "comment report", "failure: " + throwable.getMessage());
+            }
+        });
+
+        dialogBinding.bugReportInputLayout.setError(null);
+        Toast.makeText(context, R.string.bug_report_submitted, Toast.LENGTH_SHORT).show();
+
+        dialog.dismiss();
+    }
+
+    public static void showCommentReportDialog(LayoutInflater layoutInflater, APIService apiService, Context context, String commentID, CommentType type) {
+        DialogCommentReportBinding dialogBinding = DialogCommentReportBinding.inflate(layoutInflater);
+
+        ReportReason[] reasons = ReportReason.values();
+
+        ArrayAdapter<ReportReason> adapter = new ArrayAdapter<>(
+                context,
+                android.R.layout.simple_spinner_item,
+                reasons
+        );
+
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        dialogBinding.reportReason.setAdapter(adapter);
+
+        Dialog dialog = new MaterialAlertDialogBuilder(context)
+                .setView(dialogBinding.getRoot())
+                .create();
+
+        dialogBinding.bugReportCancel.setOnClickListener(v -> dialog.dismiss());
+        dialogBinding.bugReportSubmit.setOnClickListener(v -> CommentHelper.submitCommentReport(context, apiService, dialogBinding, dialog, commentID, type));
+        dialogBinding.commentReportInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            /**
+             * Clears the empty-input error once the user starts typing.
+             */
+            @Override
+            public void afterTextChanged(Editable s) {
+                dialogBinding.bugReportInputLayout.setError(null);
+            }
+        });
+
+        dialog.setOnShowListener(dialogInterface -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            }
+        });
+        dialog.show();
+    }
+
+    public static void vote(Context context, APIService apiService, String commentID, VoteType voteType, CommentType commentType) {
+        LoginSession session = LoginSession.from(context);
+        String authToken = session.bearerToken();
+        Call<BasicResponse> call;
+        if (commentType == CommentType.COMMENT) {
+            call = apiService.voteComment(authToken, commentID, new VoteRequest(voteType));
+        } else {
+            call = apiService.voteAnswer(authToken, commentID, new VoteRequest(voteType));
+        }
+        if (!AuthManager.getInstance().isLoggedIn()) {
+            Toast.makeText(context, "You are not logged in.", Toast.LENGTH_SHORT).show();
+        } else {
+            call.enqueue(new Callback<>() {
+                @Override
+                public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                    if (!response.isSuccessful()) {
+                        Toast.makeText(context, "Vote couldn't be sent.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                    Toast.makeText(context, "Vote couldn't be sent.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+}

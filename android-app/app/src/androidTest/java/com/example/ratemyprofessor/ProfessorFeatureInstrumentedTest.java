@@ -141,12 +141,12 @@ public class ProfessorFeatureInstrumentedTest {
 
     @Test
     public void updateDBReplacesExistingLecturesWithServerLectures() throws Exception {
-        searchService.insertLecture(new Lecture("old-lecture", "Old Lecture", "000000", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0));
+        searchService.insertLecture(new Lecture("old-lecture", "Old Lecture", "000000", 2023, SemesterSeason.WS, true, "prof-1", 0, 0));
         APIService apiService = new FakeAPIService(
                 Collections.emptyList(),
                 Arrays.asList(
-                        new Lecture("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SUMMER, true, "prof-1", 0, 0),
-                        new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-2", 0, 0)
+                        new Lecture("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SS, true, "prof-1", 0, 0),
+                        new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WS, true, "prof-2", 0, 0)
                 )
         );
 
@@ -160,7 +160,7 @@ public class ProfessorFeatureInstrumentedTest {
     @Test
     public void updateDBLeavesExistingDataWhenServerBodiesAreNull() {
         searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", 4.5f, 10));
-        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WINTER, true, "prof-1", 0, 0));
+        searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WS, true, "prof-1", 0, 0));
         APIService apiService = new FakeAPIService(null, null);
 
         database.updateDB(apiService);
