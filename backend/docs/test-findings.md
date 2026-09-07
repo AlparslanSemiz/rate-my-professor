@@ -726,6 +726,24 @@ context-loading tests are what refused. That is the argument for keeping both la
 A sweep that finds nothing is only worth something if what it covered is written down.
 Otherwise the next person repeats it, or worse, assumes it was never done.
 
+### Batch 6 raised no finding
+
+The security path (`TokenAuthenticationService`, `AccessRefusalAuditor`), the bug-report path
+and the remaining arms of `AuthService` were brought to zero missed branches and **every
+behaviour matched what the code's own comments said it should do**. After F-18 turned up in
+batch 5 the reasonable expectation was another defect here; there was none.
+
+What the batch did produce is two pieces of characterization, recorded in
+[test-plan.md](test-plan.md) rather than as findings because neither is wrong:
+
+- A token carrying **no session type** — the shape the older test helper mints — is treated as
+  neither `APP` nor `ADMIN`: the admin row is looked up and a missing one is not a refusal.
+- `AuthService.validate`'s `student == null` arm is reachable only through a **well-formed**
+  header carrying a token nobody holds; a malformed header throws out of `verifyUser` first.
+
+Both are pinned. If session types are ever made mandatory, the first test is the one that has
+to change, and it names the decision instead of leaving it to be rediscovered.
+
 ### The ownership / IDOR sweep found no defect
 
 `ApiOwnershipMatrixTests` asks the question `ApiAuthorizationMatrixTests` does not: once a
@@ -813,6 +831,17 @@ top — the work had been running on the opposite intuition.
 Worth noting: `UserRevertHandlerTests` was written despite the 2-line gain, because those two
 lines were the `DELETED` and `ADMIN` branches — so the value was not coverage but writing down
 **why** the branches are the way they are.
+
+**The mirror image, found in batch 6.** `ModerationBugReportService` sat at 3 missed lines and
+**15 missed branches**: driven only through `AdminApiIntegrationTests`, its lines looked settled
+while five separate ways of refusing a student's bug report had never been executed. So the
+`LINE_MISSED` ranking above catches only half of the pattern. The other half needs the branch
+column, which is why batch 4 was selected by it — and why batch 6 was selected by neither, the
+gaps being too thin by then for either counter to point anywhere useful:
+```
+awk -F, 'NR>1 && $6>0 {printf "%4d %s.%s\n", $6, $2, $3}' \
+  target/site/jacoco/jacoco.csv | sort -rn | head -25
+```
 
 ### P-3 — Lombok is not filtered in JaCoCo
 

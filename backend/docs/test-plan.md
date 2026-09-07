@@ -1,36 +1,34 @@
 # Test plan
 
 Layers: **unit → API/role → integration → E2E**. Every batch adds its own section. The unit
-layer is covered by batches 1–5, the API/role layer by the authorization, protocol and
+layer is covered by batches 1–6, the API/role layer by the authorization, protocol and
 ownership sweeps below. The integration and E2E layers have not been started; what blocks the
 first of them is the Testcontainers question under [Open questions](#open-questions).
 
 ### Where it stands
 
-**677 tests, 0 failures**, 2 skipped (the `@Disabled` `DemoApplicationTests`, and
-`PostgreSqlMigrationSmokeTests`, which runs on CI only). Bundle **94.86% LINE** (3209/3383),
-**86.01% BRANCH** (990/1151). Line coverage is gated in two tiers — **90% mandatory,
-94% target** — and BRANCH has a single floor at 0.84.
+**756 tests, 0 failures**, 2 skipped (the `@Disabled` `DemoApplicationTests`, and
+`PostgreSqlMigrationSmokeTests`, which runs on CI only). Bundle **95.45% LINE** (3229/3383),
+**89.23% BRANCH** (1027/1151). Line coverage is gated in two tiers — **90% mandatory,
+95% target** — and BRANCH has a single floor at 0.87.
 
-Line coverage is **above the target** since batch 5, by 29 covered lines, so
-`coverage:line-target` is green rather than yellow. The batch that did it was chosen for the
-opposite reason: `RestClientGitLabClient` was the one class the *Deliberately uncovered* table
-had to describe as debt rather than as a decision, and clearing the target was what closing it
-happened to buy.
+Line coverage has been above its target since batch 5, so `coverage:line-target` is green
+rather than yellow; batch 6 raised the target itself from 94 to 95 rather than banking the
+slack.
 
 | Layer | State |
 |---|---|
-| Unit | Batches 1–5 done. |
+| Unit | Batches 1–6 done. |
 | API / role | The three sweeps below. |
 | Integration | **Not started** — blocked on the Testcontainers decision. |
 | E2E | **Not started.** |
 
-The spread between LINE and BRANCH was 15 points before batch 4, 9.7 after it, and is **8.9**
-after batch 5. What is left is genuinely spread thin now — no single class holds a
-concentration the way the moderation services or the GitLab client did. The four largest
-remaining branch gaps are `ModerationUserService` (27), `ModerationBugReportService` (15),
-`AuthService` (14) and `SocialService` (13); the first of those is mostly Criteria predicates,
-which belong to the integration layer rather than to a unit test.
+The spread between LINE and BRANCH was 15 points before batch 4, 9.7 after it, 8.9 after batch
+5, and is **6.2** after batch 6. 124 branches and 154 lines are left in the whole module. The
+largest remaining branch gaps are `ModerationUserService` (27), `SocialService` (13),
+`ModerationContentService` (12) and `AuditLogService` (11) — and a growing share of what is
+left is not unit-testable at all: Criteria predicates, specification lambdas, and the two mail
+classes under *Deliberately uncovered*. See the note at the end of the batch 6 section.
 
 ### The metric
 
@@ -127,12 +125,12 @@ To keep them apart: these numbers measure different things; this is not an incon
   moved together: `jacoco:check` in the pom (`LINE 0.90`) catches it on a local
   `mvnw verify`, and `COVERAGE_LINE_MIN` in `.gitlab-ci.yml` catches it in the pipeline.
   Below it the build is red.
-- **The line target, 94%** (`COVERAGE_LINE_TARGET`). Missing it is a **warning, not a
+- **The line target, 95%** (`COVERAGE_LINE_TARGET`). Missing it is a **warning, not a
   failure**: `scripts/CheckLineCoverage.java` prints it inside `server:test`, and the
   `coverage:line-target` job — `allow_failure: true` — turns the same condition into a
   visible yellow mark on the pipeline while letting it pass. It is where the suite is
   trying to be, not a gate.
-- **The BRANCH floor, `0.84`,** in the pom only. A floor, not a target: without it a
+- **The BRANCH floor, `0.87`,** in the pom only. A floor, not a target: without it a
   heavily branched method can arrive with one happy-path test and pull branch coverage down
   without failing anything. Batch 4 was chosen by this counter rather than by LINE, because
   every class it touched was already above 82% LINE and a line target would never have
@@ -302,6 +300,93 @@ floor of the two-tier arrangement, and the 94% target lives in CI, not in the po
 
 Verified the same way as before: with BRANCH temporarily at `0.90`, `./mvnw verify` went red
 with "branches covered ratio is 0.86, but expected minimum is 0.90", and green at `0.84`.
+
+
+## Batch 6 — the security path and the bug-report path
+
+The first batch chosen by **neither** counter. Measured at method level, the worst single
+uncovered method left was 7 branches: the concentration batch 4 exploited is gone, and "take
+the biggest number" would have led straight to `ModerationUserService`'s Criteria predicates —
+which this document already assigns to the integration layer.
+
+So the four targets were picked by what a missed branch there would actually cost. Three of
+them had **no direct test at all**: `TokenAuthenticationService` appeared in the suite only as
+a mock inside `AuthServiceTests`, and `ModerationBugReportService` was driven exclusively
+through `AdminApiIntegrationTests`.
+
+| Class | LINE missed | BRANCH missed | Tests |
+|---|---|---|---|
+| `TokenAuthenticationService` | 6 → **0** | 6 → **0** | 24 |
+| `AccessRefusalAuditor` | 3 → **0** | 2 → **0** | 5 |
+| `ModerationBugReportService` | 3 → **0** | 15 → **0** | 32 |
+| `AuthService` | 8 → **0** | 14 → **0** | 16 (added to 13 existing) |
+
+Bundle: 94.86% → **95.45% LINE**, 86.01% → **89.23% BRANCH**. 79 tests, and all four classes
+are now at zero on both counters.
+
+### Why the token gate was worth 24 tests
+
+Every uncovered branch in `TokenAuthenticationService.authenticate` was a **refusal**. Nothing
+in the suite said that a token should be turned down — only that a good one gets through.
+
+That is the wrong way round for this class. A missed refusal here is not a wrong status code;
+it is a session that keeps working after the account behind it was blocked or deleted, for as
+long as the token lives, and a student token lives for a year. The class enforces the status on
+every request precisely so that a path which changes it without revoking sessions cannot leave
+one alive, and that intent is written in a comment. It has a test now.
+
+The other properties pinned there: the repository is queried with the **SHA-256 hash** and
+never with the plaintext; an `APP` session never even asks whether the account is an
+administrator, so the tier is a property of the session rather than of the person; a legacy
+plaintext token is upgraded in place and the plaintext cleared; and a refused request does not
+count as activity. The "last seen" write is tested on the boundary of its five-minute window
+with a fixed clock, in both directions.
+
+One characterization worth flagging: a token with **no session type** — the shape the older
+test helper mints, and the reason `AdminApiPathSplitTests` exists — is treated as neither `APP`
+nor `ADMIN`. It picks up the admin row if there is one, and a missing one is not a refusal.
+
+### The bug-report path, and P-2 again
+
+`ModerationBugReportService` was at 3 missed lines and 15 missed branches — the clearest live
+example of [P-2](test-findings.md#p-2--integration-tests-hide-unit-targets) left in the module.
+`sendBugReport` refuses through a single six-armed condition, so one valid submission in an
+integration test covers the whole disjunction with one arm while five different ways of
+silently dropping a student's report stay untested. Each arm is its own case now.
+
+`updateBugReport` got the treatment batch 4 gave the other three moderation services: every
+field resubmitted unchanged must record nothing, save nothing and write no audit entry. Plus
+both text bounds at and past the limit, and the `createIssue` arm that decides a missing report
+is **not** a failed attempt and must not be marked as one.
+
+### What it did not find
+
+**No defect.** Every behaviour matched what the code's own comments said it should do, which is
+worth recording rather than leaving implicit: after F-18 in batch 5, the reasonable expectation
+was another one here. Two observations were pinned as characterization instead — the untyped
+session above, and `AuthService.validate`, whose `student == null` arm is reachable only
+through a well-formed header carrying a token nobody holds, because a malformed header throws
+out of `verifyUser` before that line.
+
+### The gates moved
+
+`jacoco:check` went BRANCH `0.84` → **`0.87`**, and `COVERAGE_LINE_TARGET` in CI went
+`94` → **`95`**. The pom's LINE floor stays at `0.90`: it is the mandatory tier, and the point
+of splitting the two was that only one of them has to be conservative. Verified as before —
+with BRANCH temporarily at `0.92`, `verify` went red with "branches covered ratio is 0.89, but
+expected minimum is 0.92", and green at `0.87`.
+
+### Where the unit layer stops
+
+124 branches and 154 lines are left in the module, and the composition has changed: 46 lines
+are `MailService` and 12 are `MailTemplateService`, both decisions recorded under
+*Deliberately uncovered*; a large share of the rest is Criteria predicates and specification
+lambdas, which build a query rather than compute an answer. Chasing those with mocks would
+assert the shape of a query nobody runs.
+
+In other words the coverage number is now a poor proxy for what is untested. The 16 places in
+this document that defer something to the integration layer are the real remaining gap, and
+they are blocked on the Testcontainers question under [Open questions](#open-questions).
 
 
 ## The API / role batch
@@ -1170,3 +1255,77 @@ dependency changes the CI contract — a decision for the integration batch.
   marker on the public constructor is now load-bearing: removing it breaks every
   `@SpringBootTest`, and nothing in the unit layer would notice.
 - **Test count:** 25
+
+### TokenAuthenticationService
+
+- **Responsibility:** turns a bearer token into an authenticated caller, or refuses it. Every
+  authenticated request in the application passes through this one method.
+- **Behaviours tested:**
+  - The input gate: `null`, empty, whitespace-only and over-long tokens refused **without
+    reaching the database**, and a token of exactly the 512-character limit still looked up
+  - That the lookup uses the **SHA-256 hash** and never the plaintext
+  - The legacy upgrade: a token found by its plaintext gets a hash written, its
+    `legacyValue` cleared and the row saved; a token found by hash never looks for one
+  - A token whose student is gone, and `BLOCKED` / `DELETED` accounts, each refused —
+    separately, because they are separate arms of the same condition
+  - That a refused request does **not** update `lastSeenAt` and does not save
+  - The five-minute "last seen" window on both sides of its boundary and exactly on it, with a
+    fixed clock
+  - The session tier: an `APP` session never queries the admin table; an `ADMIN` session with
+    no admin row is refused; one with an admin row carries it; and a token with **no** session
+    type is treated as neither
+- **Deliberately not tested:** that expired and revoked tokens are filtered — that lives in the
+  repository query's name (`…AndRevokedFalseAndExpiresAtAfter…`) and is an integration concern;
+  at this level it arrives as an empty result. `@Transactional` semantics likewise.
+- **Mocks used:** `TokenRepository`, `AdminRepository`, `StudentRepository`, plus `Clock.fixed`.
+  `HashGenerator` is static and is used for real — unlike Argon2 in `OtpService`, token hashing
+  is SHA-256 and costs nothing.
+- **Residual risk:** the untyped-token arm is pinned as characterization, not endorsed. If
+  session types are ever made mandatory, this is the test that has to change, and it names the
+  decision rather than leaving it to be rediscovered.
+- **Test count:** 24
+
+### AccessRefusalAuditor
+
+- **Responsibility:** records the requests authorization turned down, for the panel's refusal
+  view.
+- **Behaviours tested:** an anonymous caller and a principal that is not one of ours both
+  produce **no** record; an authenticated caller produces one carrying the method, the path,
+  the `403` and the actor; an administrator arrives as an administrator; and a failing
+  `AuditWriter` neither escapes nor changes the answer — it leaves a WARN with the stack trace.
+- **Deliberately not tested:** where the entry ends up. That is `AuditWriter`'s job and has its
+  own tests.
+- **Mocks used:** `AuditWriter`, plus `MockHttpServletRequest` and a real
+  `SecurityContextHolder` context, cleared after each test.
+- **Residual risk:** the last test is the one that matters and the easiest to delete by
+  accident. Without the try/catch a failed audit write turns a correct 403 into a 500, on
+  behalf of somebody who was being refused anyway.
+- **Test count:** 5
+
+### ModerationBugReportService
+
+- **Responsibility:** the bug report queue — what a student submits, what an administrator
+  edits, and the tracker issue opened from it.
+- **Behaviours tested:**
+  - `sendBugReport`: an invalid token refused before anything is read; **each of the six arms**
+    of the validity condition separately, none of them storing anything; and a valid report
+    stored trimmed, attributed to its reporter and audited with its severity
+  - `updateBugReport`: a `null` request and an all-null request refused **before the report is
+    looked up**; an unknown report 404; each field's change recorded as before/after; title and
+    description trimmed; both bounds at and past the limit
+  - **Every field resubmitted unchanged writing nothing at all** — no save, no audit entry —
+    field by field and all four at once
+  - `createIssue`: unavailable when the integration is off, without touching the report; a
+    missing report **not** marked as a failed attempt; any other refusal marked and rethrown;
+    and the existing-issue answer distinguished from the created one
+- **Deliberately not tested:** `BugReportIssueTransactions` itself, which is about transaction
+  boundaries and belongs to the integration layer — the reason it is a separate class is that
+  its failure marker must survive a rolled-back transaction.
+- **Mocks used:** all five constructor dependencies. `AuditWriter` is captured rather than
+  stubbed: the field diff it receives is the only observable difference between an edit that
+  changed something and one that did not.
+- **Residual risk:** the idempotency the class promises is enforced inside
+  `BugReportIssueTransactions`, so what is verified here is that this class asks for it and
+  reports both answers — not that two concurrent requests really produce one issue.
+- **Test count:** 32
+
