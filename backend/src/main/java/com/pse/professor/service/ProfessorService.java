@@ -7,6 +7,9 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.pse.professor.dto.response.ProfessorShortResponse;
+import com.pse.rating.model.Rating;
+import com.pse.rating.model.RatingCategory;
+import com.pse.rating.model.RatingTopic;
 import com.pse.user.model.Student;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -160,6 +163,32 @@ public class ProfessorService {
             return null;
         }
         return professor.getId();
+    }
+
+    public static double calculateAverageRating(Professor professor) {
+
+        double sum = 0.0;
+        int count = 0;
+
+        for (Lecture lecture : professor.getLectures()) {
+
+            for (Rating rating : lecture.getRatings()) {
+
+                for (RatingTopic topic : rating.getTopics()) {
+
+                    if (topic.getCategory() == RatingCategory.OVERALL) {
+                        sum += topic.getValue();
+                        count++;
+                    }
+                }
+            }
+        }
+
+        if (count == 0) {
+            return 0.0;
+        }
+
+        return sum / count;
     }
 
 

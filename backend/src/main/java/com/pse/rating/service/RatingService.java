@@ -14,6 +14,8 @@ import com.pse.audit.service.AuditWriter;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.lecture.service.LectureService;
+import com.pse.professor.model.Professor;
+import com.pse.professor.service.ProfessorService;
 import com.pse.rating.dto.response.RatingCategoriesResponse;
 import com.pse.rating.dto.response.RatingCategoryResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
@@ -96,9 +98,15 @@ public class RatingService {
         overallTopic.setRating(rating);
 
         rating.getTopics().add(overallTopic);
+        ratingRepository.saveAndFlush(rating);
 
+        // Durchschnitt für alle Professoren dieser Vorlesung aktualisieren
+        for (Professor professor : lecture.getProfessors()) {
 
-        ratingRepository.save(rating);
+            double professorAverageRating = ProfessorService.calculateAverageRating(professor);
+
+            professor.setAverageRating(BigDecimal.valueOf(professorAverageRating));
+        }
 
         String code = lecture.getCode();
         auditWriter.writeStudentAction(
@@ -116,6 +124,7 @@ public class RatingService {
         return new BasicResponse("Rating submitted successfully",true);
 
     }
+
 
 
 
