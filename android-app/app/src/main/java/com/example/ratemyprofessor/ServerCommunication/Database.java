@@ -18,7 +18,7 @@ import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.Rating;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -112,7 +112,7 @@ public abstract class Database extends RoomDatabase {
         //the calls to the server for updating
         refreshTable(
                 apiService.getProfessors(),
-                ProfessorResponse::professors,
+                ProfessorsResponse::professors,
                 service::deleteProfessors,
                 service::insertProfessor,
                 executor,

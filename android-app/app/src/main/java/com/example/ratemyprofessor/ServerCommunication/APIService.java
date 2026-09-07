@@ -11,7 +11,8 @@ import com.example.ratemyprofessor.ServerCommunication.Requests.RatingRequest;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationsResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorDetailResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoriesResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ServerResponse;
@@ -108,7 +109,18 @@ public interface APIService {
      * @return the response with all professors
      */
     @GET("/data/professor")
-    Call<ProfessorResponse> getProfessors();
+    Call<ProfessorsResponse> getProfessors();
+
+    /**
+     * Loads the details of a specific professor from the backend.
+     *
+     * @param professorId the UUID of the professor
+     * @return the response containing the professor details
+     */
+    @GET("/data/professor/{professor_id}")
+    Call<ProfessorDetailResponse> getProfessor(
+            @Path("professor_id") String professorId
+    );
 
     /**
      * Loads all lectures from the backend.

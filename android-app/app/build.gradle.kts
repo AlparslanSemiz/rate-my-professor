@@ -84,6 +84,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.robolectric)
+    testImplementation("org.mockito:mockito-core:5.18.0")
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
     implementation(libs.retrofit)

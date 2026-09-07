@@ -32,8 +32,7 @@ import com.example.ratemyprofessor.ServerCommunication.Requests.LoginRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.PostCommentRequest;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationsResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.PersonalStatisticsResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoriesResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ServerResponse;
@@ -234,8 +233,8 @@ public class ProfessorFeatureInstrumentedTest {
         public Call<BasicResponse> deleteAccount(String token) { return null; }
 
         @Override
-        public Call<ProfessorResponse> getProfessors() {
-            ProfessorResponse resp = new ProfessorResponse("its ok", true, professors);
+        public Call<ProfessorsResponse> getProfessors() {
+            ProfessorsResponse resp = new ProfessorsResponse("its ok", true, professors);
             return new SuccessfulCall<>(resp);
         }
 

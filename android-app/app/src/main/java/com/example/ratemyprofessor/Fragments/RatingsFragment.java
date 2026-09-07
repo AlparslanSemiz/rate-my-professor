@@ -2,10 +2,7 @@ package com.example.ratemyprofessor.Fragments;
 
 import static android.view.View.INVISIBLE;
 
-import android.app.Dialog;
 import android.content.Context;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -14,7 +11,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -37,30 +33,26 @@ import com.example.ratemyprofessor.DomainModel.Rating;
 import com.example.ratemyprofessor.DomainModel.RatingCategory;
 import com.example.ratemyprofessor.DomainModel.Semester;
 import com.example.ratemyprofessor.DomainModel.VoteType;
-import com.example.ratemyprofessor.R;
 import com.example.ratemyprofessor.ServerCommunication.APIService;
 import com.example.ratemyprofessor.ServerCommunication.AuthManager;
 import com.example.ratemyprofessor.ServerCommunication.Database;
 import com.example.ratemyprofessor.ServerCommunication.LoginSession;
-import com.example.ratemyprofessor.ServerCommunication.ReportReason;
-import com.example.ratemyprofessor.ServerCommunication.Requests.CommentReportRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.PostCommentRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.RatingRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.RatingTopicRequest;
-import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorDetailResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoriesResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoryResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ServerResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.TopicAverageResponse;
 import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
-import com.example.ratemyprofessor.ServerCommunication.Requests.VoteRequest;
-import com.example.ratemyprofessor.databinding.DialogCommentReportBinding;
 import com.example.ratemyprofessor.databinding.FragmentRatingsBinding;
 import com.example.ratemyprofessor.logic.CommentHelper;
 import com.example.ratemyprofessor.logic.RatingColorCalculator;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -482,7 +474,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                         // update View
                         updateLocalRatingsFromRequest(requestList);
                         insertAverageRatings(lecture);
-                        // TODO Update prof rating
+                        updateProfRating();
                     }
 
                     @Override
@@ -498,6 +490,31 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             }
         }
         );
+    }
+
+    /**
+     * Updates the local average rating of a professor to reflect a submitted rating.
+     */
+    public void updateProfRating() {
+        String profId = professor.id;
+
+        apiService.getProfessor(profId).enqueue(new Callback<ProfessorDetailResponse>() {
+            @Override
+            public void onResponse(Call<ProfessorDetailResponse> call,
+                                   Response<ProfessorDetailResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    ProfessorDetailResponse professorDetail = response.body();
+
+                    ProfessorResponse professorResponse = professorDetail.professor();
+                    professor.averageRating = (float) professorResponse.averageRating();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ProfessorDetailResponse> call, Throwable t) {
+                t.printStackTrace();
+            }
+        });
     }
 
 

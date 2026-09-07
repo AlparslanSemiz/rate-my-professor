@@ -1,12 +1,23 @@
 package com.example.ratemyprofessor.ServerCommunication;
 
 public enum ReportReason {
-    SPAM,
-    INSULT,
-    HARASSMENT,
-    HATE_SPEECH,
-    PERSONAL_INFORMATION,
-    OFF_TOPIC,
-    INAPPROPRIATE_CONTENT,
-    OTHER
+    SPAM("Spam"),
+    INSULT("Insult"),
+    HARASSMENT("Harassment"),
+    HATE_SPEECH("Hate Speech"),
+    PERSONAL_INFORMATION("Personal Information"),
+    OFF_TOPIC("Off Topic"),
+    INAPPROPRIATE_CONTENT("Inappropriate Content"),
+    OTHER("Other");
+
+    private final String displayName;
+
+    ReportReason(String displayName) {
+        this.displayName = displayName;
+    }
+
+    @Override
+    public String toString() {
+        return displayName;
+    }
 }
