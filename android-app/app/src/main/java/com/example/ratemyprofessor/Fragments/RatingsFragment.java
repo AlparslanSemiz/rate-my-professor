@@ -59,7 +59,7 @@ import com.example.ratemyprofessor.ServerCommunication.Responses.TopicAverageRes
 import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
 import com.example.ratemyprofessor.ServerCommunication.Requests.VoteRequest;
 import com.example.ratemyprofessor.databinding.DialogCommentReportBinding;
-import com.example.ratemyprofessor.databinding.FragmentOfferingRatingsBinding;
+import com.example.ratemyprofessor.databinding.FragmentRatingsBinding;
 import com.example.ratemyprofessor.logic.RatingColorCalculator;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -80,7 +80,7 @@ import retrofit2.Response;
  * <p>Last step of the selection: professor, semester and lecture are all known here, so this
  * screen loads the ratings and comments belonging to exactly that offering.</p>
  */
-public class OfferingRatingsFragment extends Fragment implements CommentsAdapter.OnCommentClickListener {
+public class RatingsFragment extends Fragment implements CommentsAdapter.OnCommentClickListener {
 
     private static final String TAG = "OfferingRatings";
 
@@ -101,7 +101,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
 
     private final APIService apiService;
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
-    FragmentOfferingRatingsBinding binding;
+    FragmentRatingsBinding binding;
 
     /**
      * The displayed comments. Answers are inserted into and removed from this same list when
@@ -112,7 +112,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
 
     RatingAdapter ratingAdapter;
 
-    public OfferingRatingsFragment() {
+    public RatingsFragment() {
         apiService = RetrofitClient.getClient().create(APIService.class);
         // Required empty public constructor
     }
@@ -122,7 +122,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
      * @param semester  the semester it is held in
      * @param lecture   the offering whose ratings and comments are shown
      */
-    public OfferingRatingsFragment(Professor professor, Semester semester, Lecture lecture) {
+    public RatingsFragment(Professor professor, Semester semester, Lecture lecture) {
         this.lecture = lecture;
         this.professor = professor;
         this.semester = semester;
@@ -133,7 +133,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        binding = FragmentOfferingRatingsBinding.inflate(inflater, container, false);
+        binding = FragmentRatingsBinding.inflate(inflater, container, false);
         binding.lectureTitle.setText(lecture.name);
         binding.term.setText(semester.getSemesterName());
         binding.commentList.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -187,7 +187,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
             SearchService searchService = Database.getInstance(getContext()).searchService();
             executorService.execute(() -> {
                 comments = commentModelToComment(searchService.getComments(lecture.id));
-                commentsAdapter = new CommentsAdapter(getContext(), comments, OfferingRatingsFragment.this, CommentType.COMMENT);
+                commentsAdapter = new CommentsAdapter(getContext(), comments, RatingsFragment.this, CommentType.COMMENT);
                 binding.commentList.setAdapter(commentsAdapter);
             });
             Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
@@ -204,7 +204,7 @@ public class OfferingRatingsFragment extends Fragment implements CommentsAdapter
                     // Copied into an own list, because folding answers in and out modifies it.
                     comments = new ArrayList<>(body.comments());
                     runOnUiThread(() -> {
-                        commentsAdapter = new CommentsAdapter(getContext(), comments, OfferingRatingsFragment.this, CommentType.COMMENT);
+                        commentsAdapter = new CommentsAdapter(getContext(), comments, RatingsFragment.this, CommentType.COMMENT);
                         binding.commentList.setAdapter(commentsAdapter);
                     });
                 }

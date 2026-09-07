@@ -20,7 +20,7 @@ import com.example.ratemyprofessor.DomainModel.Lecture;
 import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.Semester;
 import com.example.ratemyprofessor.Fragments.HomeFragment;
-import com.example.ratemyprofessor.Fragments.OfferingRatingsFragment;
+import com.example.ratemyprofessor.Fragments.RatingsFragment;
 import com.example.ratemyprofessor.Fragments.ProfileFragment;
 import com.example.ratemyprofessor.Fragments.ReplyFragment;
 import com.example.ratemyprofessor.Fragments.SearchFragment;
@@ -156,7 +156,7 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
 
     @Override
     public void openLectureProfile(Professor professor, Semester semester, Lecture lecture) {
-        loadFragment(new OfferingRatingsFragment(professor, semester, lecture), true);
+        loadFragment(new RatingsFragment(professor, semester, lecture), true);
     }
 
     @Override

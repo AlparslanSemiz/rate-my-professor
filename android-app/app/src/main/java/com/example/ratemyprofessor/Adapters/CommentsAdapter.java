@@ -18,6 +18,7 @@ import com.bumptech.glide.Glide;
 import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.CommentType;
 import com.example.ratemyprofessor.DomainModel.VoteType;
+import com.example.ratemyprofessor.Fragments.RatingsFragment;
 import com.example.ratemyprofessor.ServerCommunication.AuthManager;
 import com.example.ratemyprofessor.databinding.ItemCommentBinding;
 import com.example.ratemyprofessor.databinding.ItemReplyBinding;
@@ -25,7 +26,7 @@ import com.example.ratemyprofessor.databinding.ItemReplyBinding;
 import java.util.List;
 
 /**
- * The adapter for comments in {@link com.example.ratemyprofessor.Fragments.OfferingRatingsFragment}
+ * The adapter for comments in {@link RatingsFragment}
  *
  * <p>Answers are not a nested list: opening them inserts them into this very list right below
  * their comment, and closing them removes them again. That is why the listener methods are
