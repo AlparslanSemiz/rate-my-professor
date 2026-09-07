@@ -190,7 +190,14 @@
 										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.92</minimum>
+											<!--
+												Kept in step with COVERAGE_LINE_MIN in .gitlab-ci.yml.
+												This one enforces the floor locally, on `mvnw verify`;
+												the CI script enforces the same floor and adds the
+												softer COVERAGE_LINE_TARGET tier on top, which warns
+												without failing. If you move one, move the other.
+											-->
+											<minimum>0.90</minimum>
 										</limit>
 										<!--
 											A floor, not a target. Without it a heavily branched method

@@ -23,6 +23,11 @@ variables:
   MAVEN_USER_HOME: "$CI_PROJECT_DIR/.m2"
   IMAGE_TAG: "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
   COVERAGE_THRESHOLD: "30"
+  # Bundle line coverage, in two tiers. COVERAGE_LINE_MIN is the floor the build dies
+  # below; COVERAGE_LINE_TARGET is where the suite is trying to be -- missing it is a
+  # warning (the coverage:line-target job goes yellow) and does not block the pipeline.
+  COVERAGE_LINE_MIN: "90"
+  COVERAGE_LINE_TARGET: "94"
   GIT_DEPTH: "0"
 
 default:
@@ -46,6 +51,9 @@ server:test:
   script:
     - ./mvnw -B -ntp verify
     - java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"
+    # The floor only. Missing the target prints a warning here and fails nothing; the
+    # coverage:line-target job below is what makes that warning visible in the pipeline.
+    - java scripts/CheckLineCoverage.java --min "$COVERAGE_LINE_MIN" --target "$COVERAGE_LINE_TARGET"
   coverage: '/Changed code line coverage:\s*([0-9]+(?:\.[0-9]+)?)%/'
   artifacts:
     when: always
@@ -59,6 +67,25 @@ server:test:
         coverage_format: jacoco
         path: target/site/jacoco/jacoco.xml
     expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
+
+# The optional tier. Marked allow_failure, so falling below COVERAGE_LINE_TARGET shows as a
+# yellow warning on the pipeline and still lets it pass -- the same shape backup:offsite uses
+# for a missing variable. It reuses server:test's JaCoCo artifact rather than rebuilding, so
+# it costs a container start and nothing else.
+coverage:line-target:
+  stage: test
+  image: eclipse-temurin:21-jdk
+  needs:
+    - job: server:test
+      artifacts: true
+  cache: []
+  allow_failure: true
+  script:
+    - java scripts/CheckLineCoverage.java --min "$COVERAGE_LINE_MIN" --target "$COVERAGE_LINE_TARGET" --fail-on-target
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: never

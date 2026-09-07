@@ -7,9 +7,16 @@ first of them is the Testcontainers question under [Open questions](#open-questi
 
 ### Where it stands
 
-**666 tests, 0 failures**, 2 skipped (the `@Disabled` `DemoApplicationTests`, and
-`PostgreSqlMigrationSmokeTests`, which runs on CI only). Bundle **94.02% LINE** (3161/3362),
-**84.20% BRANCH** (959/1139), against gates of 0.92 and 0.82.
+**668 tests, 0 failures**, 2 skipped (the `@Disabled` `DemoApplicationTests`, and
+`PostgreSqlMigrationSmokeTests`, which runs on CI only). Bundle **93.97% LINE** (3178/3382),
+**84.27% BRANCH** (970/1151). Line coverage is gated in two tiers — **90% mandatory,
+94% target** — and BRANCH has a single floor at 0.82.
+
+Line coverage currently sits **just under the target**, so `coverage:line-target` is yellow:
+93.97% against 94%, which is **2 covered lines** away. That is the tier working rather than
+failing — the `bugFixes2` merge grew the production code by 20 lines and the covered count by
+17, and the warning is what says so. Either cover the shortfall or move
+`COVERAGE_LINE_TARGET`; the pipeline passes either way.
 
 | Layer | State |
 |---|---|
@@ -18,7 +25,7 @@ first of them is the Testcontainers question under [Open questions](#open-questi
 | Integration | **Not started** — blocked on the Testcontainers decision. |
 | E2E | **Not started.** |
 
-The spread between LINE and BRANCH was 15 points before batch 4 and is **9.8** after it. What
+The spread between LINE and BRANCH was 15 points before batch 4 and is **9.7** after it. What
 is left is spread thin rather than concentrated, with one exception: `RestClientGitLabClient`
 still has 18 missed branches of 22 and is the only untested adapter with no principled reason
 (see *Deliberately uncovered*).
@@ -112,17 +119,26 @@ untested method left.
 
 ### Three different coverage numbers
 
-To keep them apart: the three numbers measure three separate things; this is not an
-inconsistency.
+To keep them apart: these numbers measure different things; this is not an inconsistency.
 
-- **pom `jacoco:check` (LINE 0.92 / BRANCH 0.82 since batch 4)** — the bundle regression
-  gate. The floor it must not fall below again; it is raised as batches clear it, never
-  lowered to make a build pass.
-- **The target in this document** — the level batches aim for. It was 90% LINE through
-  batches 1–3; batch 4 was chosen by the BRANCH counter instead, because every class it
-  touched was already above 82% LINE and a line target would never have picked them.
+- **The mandatory line floor, 90%.** Enforced twice on purpose, and the two have to be
+  moved together: `jacoco:check` in the pom (`LINE 0.90`) catches it on a local
+  `mvnw verify`, and `COVERAGE_LINE_MIN` in `.gitlab-ci.yml` catches it in the pipeline.
+  Below it the build is red.
+- **The line target, 94%** (`COVERAGE_LINE_TARGET`). Missing it is a **warning, not a
+  failure**: `scripts/CheckLineCoverage.java` prints it inside `server:test`, and the
+  `coverage:line-target` job — `allow_failure: true` — turns the same condition into a
+  visible yellow mark on the pipeline while letting it pass. It is where the suite is
+  trying to be, not a gate.
+- **The BRANCH floor, `0.82`,** in the pom only. A floor, not a target: without it a
+  heavily branched method can arrive with one happy-path test and pull branch coverage down
+  without failing anything. Batch 4 was chosen by this counter rather than by LINE, because
+  every class it touched was already above 82% LINE and a line target would never have
+  picked them.
 - **`scripts/CheckChangedCoverage.java --threshold 30`** — the MR gate, which looks only
-  at the coverage of *changed* code. Unrelated to the bundle.
+  at the coverage of *changed* code. Unrelated to the bundle: a change can be fully covered
+  and still drop the bundle, and the bundle can sit above its floor while a new file arrives
+  untested.
 
 ---
 
@@ -201,9 +217,14 @@ open — the fix is a product decision about `RevertValues`'s contract.
 
 ### The gates moved
 
-`jacoco:check` went LINE `0.90` → **`0.92`** and BRANCH `0.73` → **`0.82`**, following the rule
-the batch 2 writeup set: about one and a half points below what is measured, so the gate stops
-a regression without breaking an unrelated MR. Verified green at those values.
+`jacoco:check` went BRANCH `0.73` → **`0.82`**, following the rule the batch 2 writeup set:
+about one and a half points below what is measured, so the gate stops a regression without
+breaking an unrelated MR.
+
+LINE was raised to `0.92` in this batch and then **settled at `0.90`** when the two-tier CI
+check landed: 90% became the mandatory floor and 94% the advisory target, so the number that
+used to do both jobs was split into the two it was actually doing. See *Three different
+coverage numbers* above. Verified green at both values.
 
 
 ## The API / role batch

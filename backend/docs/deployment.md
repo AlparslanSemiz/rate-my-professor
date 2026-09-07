@@ -356,14 +356,23 @@ Jobs:
 
 | Job | When it runs | What it does |
 | --- | --- | --- |
-| `server:test` | Push and merge request pipelines, never scheduled | Runs `./mvnw -B -ntp verify`, then `java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"`. Publishes JUnit and JaCoCo artifacts. The coverage gate needs a comparison ref; when it cannot resolve one it says so and passes, rather than failing a build over a missing base commit. |
+| `server:test` | Push and merge request pipelines, never scheduled | Runs `./mvnw -B -ntp verify`, then `java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"`, then `java scripts/CheckLineCoverage.java` against the two line-coverage tiers. Publishes JUnit and JaCoCo artifacts. The changed-code gate needs a comparison ref; when it cannot resolve one it says so and passes, rather than failing a build over a missing base commit. |
+| `coverage:line-target` | Push and merge request pipelines, never scheduled | Reuses `server:test`'s JaCoCo artifact and re-checks bundle line coverage against `COVERAGE_LINE_TARGET`. Marked `allow_failure: true`, so missing the target is a **yellow warning that does not block the pipeline**. Costs a container start, not a rebuild. |
 | `server:postgres-migration-smoke` | Push and merge request pipelines | Starts the Spring Boot app test context against a `postgres:16` CI service, checks `/health`, and exercises the PostgreSQL Flyway migrations from `src/main/resources/db/migration/postgresql`. |
 | `server:package` | `main` branch, non-scheduled pipelines | Uses Kaniko to build `src/Dockerfile` and push `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`. |
 | `server:deploy:staging` | Manual job on `main`, non-scheduled pipelines | SSHes to the deployment host and replaces the Compose-managed `backend` service. |
 | `health:check` | Scheduled pipelines only | Curls the configured BW Cloud/staging `/health` URL and expects HTTP 200. |
 | `backup:offsite` | Scheduled pipelines only | Copies the newest server-side PostgreSQL dump, verifies it, encrypts it with `BACKUP_PASSPHRASE`, and stores only the encrypted `.gpg` artifact. |
 
-The changed-code coverage threshold is configured as `COVERAGE_THRESHOLD: "30"`.
+Coverage is configured in three variables, and they answer different questions:
+
+| Variable | Value | Meaning |
+| --- | --- | --- |
+| `COVERAGE_THRESHOLD` | `30` | Minimum coverage of the lines a merge request *changed*. |
+| `COVERAGE_LINE_MIN` | `90` | Mandatory bundle line coverage. Below it the pipeline is **red**. Kept in step with the `LINE` minimum in the pom's `jacoco:check`, which enforces the same floor on a local `mvnw verify` — move one, move the other. |
+| `COVERAGE_LINE_TARGET` | `94` | The bundle line coverage the suite aims for. Below it `coverage:line-target` goes **yellow** and the pipeline still passes. |
+
+Branch coverage has a single floor of `0.82`, in the pom only.
 
 Scheduled `backup:offsite` is expected to fail when `BACKUP_PASSPHRASE` is not
 configured. This prevents CI from uploading a readable dump that contains real
