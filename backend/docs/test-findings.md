@@ -37,6 +37,10 @@ BUG-1 and BUG-2 (the cursor and approximate-location bug reports) are in
 [test-plan.md](test-plan.md#findings); neither was reproducible on the backend and they stay
 there.
 
+The numbers stop at F-17 on purpose. The ownership / IDOR sweep ran and raised nothing — what
+it covered and how is under [Negative results](#negative-results), because a sweep that finds
+nothing is only worth something if its coverage is written down.
+
 ---
 
 ## Code defects
@@ -599,9 +603,10 @@ every body-reading route with `text/plain` and all of them return 500.
 **Same root cause, seen in production.** In the production logs,
 `MaxUploadSizeExceededException` and Tomcat's 512-byte multipart header limit fall into the same
 catch-all branch. Same cause: no handler for body/transport layer exceptions. Still to be
-measured separately; it takes the next free number when it is, which is no longer F-18 — the
-ownership sweep claimed F-18 onwards. Fixing F-17 does **not** cover it: the narrow handler
-claims one exception type and these are different types, still falling to the catch-all.
+measured separately, and **F-18 is still free for it**: the ownership sweep that was going to
+claim that number found nothing to record (see *Negative results* below). Fixing F-17 does
+**not** cover it: the narrow handler claims one exception type and these are different types,
+still falling to the catch-all.
 
 **⚠ Do NOT fix this by extending `ResponseEntityExceptionHandler`.**
 
@@ -657,6 +662,61 @@ One test was added rather than edited: `unsupportedMediaTypeCarriesTheProjectErr
 would stay green if someone later replaced the narrow handler with
 `ResponseEntityExceptionHandler` — the status would still be 415 while the body silently became
 `application/problem+json`. That is reason 3 above, and now it has a test rather than a warning.
+
+---
+
+## Negative results
+
+A sweep that finds nothing is only worth something if what it covered is written down.
+Otherwise the next person repeats it, or worse, assumes it was never done.
+
+### The ownership / IDOR sweep found no defect
+
+`ApiOwnershipMatrixTests` asks the question `ApiAuthorizationMatrixTests` does not: once a
+caller *is* authenticated, can they reach a row belonging to somebody else? **No route was
+found that lets them.** No finding was raised, which is why the F-numbers stop at F-17 and
+F-18 is still free.
+
+**What was covered.** All 61 id-taking routes, read from Spring's handler mappings rather
+than listed by hand, each classified into one of four sets with the reason recorded next to
+it:
+
+| Class | Count | Why cross-user access is or is not possible |
+|---|---|---|
+| Owner-scoped | 1 | `PATCH /social/notifications/{id}` — the one per-user row the app tier addresses by id |
+| Cross-user by design | 2 | The two vote routes; voting on somebody else's comment is the feature |
+| Admin tier | 52 | Governed by role, not ownership; acting on another account is the job |
+| Not owned by a user | 6 | The id names a lecture or a professor — catalogue rows belong to nobody |
+
+**Why the owner-scoped column is one line long, and why that is not luck.** In the app tier
+the caller's identity comes only from `@AuthenticationPrincipal`. No handler takes a student
+id as a path variable, a query parameter or a body field — checked by reflection over every
+app-tier handler method and its `@RequestBody` type, not by reading the code. There is simply
+nothing for a caller to tamper with. `noAppTierHandlerTakesACallerIdentityFromTheRequest` is
+the test that keeps it that way; it is the one worth having, because the individual probes
+only cover today's routes while the invariant covers tomorrow's.
+
+**What was verified positively, not just asserted:**
+
+- `PATCH /social/notifications/{id}` with the wrong student's token leaves the row untouched
+  (`findByRecipientAndId` scopes the lookup to the caller), while the owner's own call still
+  works — both directions, so the refusal is not "broken for everybody".
+- `GET /ratings/own/{lectureId}` is scoped by the principal, not by the path. Tested by
+  giving two students the same lecture id rather than by swapping ids, because the path
+  offers no way to name another student.
+- `GET /social/notifications` returns an empty list to a student whose notifications belong
+  to someone else. It takes no id at all, which is exactly why it earned a test: the scoping
+  is invisible in the route and lives entirely in the query.
+- The administrative routes refuse a student **with a real victim id** with 403, and the
+  victim's row is unchanged afterwards. Knowing a real id buys nothing over knowing a random
+  one, which is what it means for the refusal to happen before the handler looks the id up.
+
+**One thing the sweep will not tell you, deliberately.** The notification refusal comes back
+as HTTP **200** with `success:false` — the refusal is real, the status code is not. So
+`markingAnotherStudentsNotificationAsSeenDoesNotTouchTheRow` asserts on the *row*, never on
+the status: a status is not evidence of anything on this endpoint. That is [F-5](#f-5--failures-come-back-with-http-200),
+already open, and this sweep is a second place it hurts — a client cannot distinguish
+"refused, not yours" from "done".
 
 ---
 
