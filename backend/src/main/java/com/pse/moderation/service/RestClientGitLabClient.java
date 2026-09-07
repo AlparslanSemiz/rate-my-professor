@@ -3,14 +3,13 @@ package com.pse.moderation.service;
 import com.pse.shared.error.ApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 
@@ -31,16 +30,35 @@ public class RestClientGitLabClient implements GitLabClient {
     private final String projectId;
     private final String token;
 
+    // Explicit, because the class now has a second constructor for the tests: with two
+    // candidates and neither marked, the container looks for a default constructor and the
+    // bean fails to build.
+    @Autowired
     public RestClientGitLabClient(
             @Value("${app.gitlab.base-url:}") String baseUrl,
             @Value("${app.gitlab.project-id:}") String projectId,
             @Value("${app.gitlab.token:}") String token,
             @Value("${app.gitlab.timeout:PT10S}") Duration timeout
     ) {
+        this(restClientFor(baseUrl, timeout), projectId, token);
+    }
+
+    /**
+     * The seam the unit tests use: a client assembled elsewhere, so the HTTP conversation can
+     * be driven by {@code MockRestServiceServer} without a tracker being reachable.
+     *
+     * @param restClient the client to talk through, or {@code null} when no base URL is
+     *                   configured — which is what turns the integration off
+     */
+    RestClientGitLabClient(RestClient restClient, String projectId, String token) {
+        this.restClient = restClient;
         this.projectId = projectId == null ? "" : projectId.trim();
         this.token = token == null ? "" : token.trim();
+    }
+
+    private static RestClient restClientFor(String baseUrl, Duration timeout) {
         String trimmedBase = baseUrl == null ? "" : baseUrl.trim().replaceAll("/+$", "");
-        this.restClient = trimmedBase.isEmpty()
+        return trimmedBase.isEmpty()
                 ? null
                 : RestClient.builder()
                         .baseUrl(trimmedBase)
@@ -71,12 +89,13 @@ public class RestClientGitLabClient implements GitLabClient {
             throw new ApiException(
                     HttpStatus.SERVICE_UNAVAILABLE, "GitLab integration is not configured");
         }
-        String path = "/api/v4/projects/"
-                + URLEncoder.encode(projectId, StandardCharsets.UTF_8)
-                + "/issues";
         try {
             Map<?, ?> body = restClient.post()
-                    .uri(path)
+                    // The project id goes in as a URI variable rather than as text spliced
+                    // into the path: RestClient encodes variables itself, so a path-shaped id
+                    // ("group/project") becomes one segment. Encoding it here as well handed
+                    // GitLab a percent sign it encoded again -- see F-18.
+                    .uri("/api/v4/projects/{projectId}/issues", projectId)
                     .header("PRIVATE-TOKEN", token)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of("title", title, "description", description))
