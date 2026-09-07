@@ -325,7 +325,7 @@ class StudentServiceTests {
         assertTrue(response.success());
 
         assertEquals(
-                "Deleted Account succesfully: student@student.kit.edu",
+                "Deleted Account successfully: student@student.kit.edu",
                 response.message()
         );
 

@@ -122,7 +122,7 @@ class AccountServiceTests {
 
         BasicResponse deleteResponse =
                 new BasicResponse(
-                        "Deleted Account succesfully",
+                        "Deleted Account successfully",
                         true
                 );
 

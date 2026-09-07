@@ -227,7 +227,7 @@ class AccountApiIntegrationTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")
                         .value(
-                                "Deleted Account succesfully: "
+                                "Deleted Account successfully: "
                                         + "delete@student.kit.edu"
                         ));
 

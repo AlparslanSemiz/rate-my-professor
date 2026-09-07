@@ -116,7 +116,7 @@ public class StudentService {
             return new BasicResponse("Error, couldn't find student", false);
         }
 
-        return new BasicResponse("Deleted Account succesfully: " + student.getKitEmail(), true);
+        return new BasicResponse("Deleted Account successfully: " + student.getKitEmail(), true);
     }
 
 
