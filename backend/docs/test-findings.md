@@ -532,11 +532,27 @@ belgelenmiş bir ifadeyi ve geçen bir testi değiştirir.
 **Nasıl bulundu.** Protokol taraması (`ApiProtocolContractTests`), her yol şeklini
 eşlemediği bir metotla çağırarak.
 
+**Karar: düzeltilmiyor.** Sözleşme bugünkü hâliyle sabitlendi.
+
 **Durum.** Açık, test altına alındı. Beklenen kod **tek bir sabitte**:
-`ApiProtocolContractTests.WRONG_VERB_STATUS = 404`. Düzeltme kararı verilirse test tarafı
-122 assertion değil, bir satır. Tek satırlık düzeltme: handler'ın gövdesini
+`com.pse.support.ApiContract.WRONG_VERB_STATUS = 404`. Sabit ayrı bir sınıfta duruyor
+çünkü iki süit ona bağlı — `ApiProtocolContractTests` (tarama) ve
+`AdminApiPathSplitTests` (aşağıya bakın). Düzeltme kararı verilirse test tarafı 122
+assertion değil, bir satır. Tek satırlık düzeltme: handler'ın gövdesini
 `HttpStatus.METHOD_NOT_ALLOWED`'a çevirmek ve `Allow` başlığını eklemek — beraberinde
-`admin-api.md`'nin iki satırı ve yukarıdaki test güncellenmeli.
+`admin-api.md`'nin iki satırı ve iki test güncellenmeli.
+
+**İki mekanizma birbirine karışıyor.** `handleNotFound` (`NoResourceFoundException` —
+"böyle bir yol yok") ile `handleWrongMethod` (bu bulgu — "yol var, metot yok") **birebir
+aynı gövdeyi** üretiyor: aynı durum kodu, aynı `"Not found"` metni. Yani yanıta bakarak
+hangisinin çalıştığı **ayırt edilemiyor**. Bu, kopyala-yapıştırın asıl bedeli.
+
+Somut sonucu: `AdminApiPathSplitTests.studentBugSubmissionHasNoAdminTwin` adının
+iddia ettiği şeyi kanıtlamıyordu. Adı "admin ikizi yok" diyor, yani yolun var olmadığını
+ima ediyor; oysa `/admin/reports` **var** — sadece GET eşliyor, POST eşlemiyor, ve
+gördüğü 404 bu bulgunun 404'ü. Ayırt edici sinyal gövdede olmadığı için ikinci bir
+istekle eklendi: aynı test artık `GET /admin/reports`'un **200** döndüğünü de assert
+ediyor. Böylece yol bir gün tamamen kaldırılsa test sessizce geçmeye devam etmez.
 
 **Yan bulgu — placeholder gölgelemesi.** Tarama, iki literal yolun UUID kardeşleri
 tarafından gölgelendiğini ortaya çıkardı: `GET /ratings/rate`,
@@ -571,9 +587,43 @@ Tomcat'in 512 baytlık multipart başlık sınırı da aynı catch-all dalına d
 neden: gövde/aktarım katmanı istisnaları için handler yok. Bu ayrı olarak
 F-18'de ölçülecek.
 
+**⚠ `ResponseEntityExceptionHandler`'ı genişleterek DÜZELTMEYİN.**
+
+Akla ilk gelen düzeltme bu ve üç ayrı nedenle yanlış. Üçü de bu projenin sürümüne karşı
+doğrulandı — Spring Framework **7.0.7** (Boot 4.0.6), `spring-webmvc-7.0.7.jar`.
+
+1. **Uygulama açılmıyor.** Denendi ve ölçüldü: context ayağa kalkmıyor,
+   `handlerExceptionResolver` bean'i şu hatayla patlıyor:
+
+   ```
+   IllegalStateException: Ambiguous @ExceptionHandler method mapped for
+   [ExceptionHandler{exceptionType=org.springframework.web.HttpRequestMethodNotSupportedException,
+   mediaType=*/*}]: {GlobalExceptionHandler.handleWrongMethod(...),
+   ResponseEntityExceptionHandler.handleException(...)}
+   ```
+
+   Çünkü proje `HttpRequestMethodNotSupportedException` için **zaten** kendi handler'ını
+   tanımlıyor (F-16) ve taban sınıfın toplu `@ExceptionHandler`'ı aynı tipi ikinci kez
+   eşliyor.
+
+2. **Bunu "çözmek" için `handleWrongMethod` silinirse üç bulgu birden sessizce kapanır.**
+   Taban sınıfın `handleException` metodunun eşlediği tipler arasında
+   `HttpMediaTypeNotSupportedException` (F-17), `HttpRequestMethodNotSupportedException`
+   (F-16) **ve** `MissingServletRequestParameterException` (F-14) birlikte var. F-16'nın
+   404'ü 405'e döner — yani `admin-api.md`'de belgelenmiş sözleşme, kimse istemeden
+   kırılır.
+
+3. **Hata gövdesi tüm hata yollarında değişir.** Taban sınıf `createProblemDetail` ile
+   `ProblemDetail` üretir (`application/problem+json`), projenin `BasicResponse`
+   `{message, success}` şeklini değil. Android istemcisinin hata ayrıştırması bu şekle
+   bağlı.
+
+**Doğru düzeltme** dar kapsamlı: `@ExceptionHandler(HttpMediaTypeNotSupportedException.class)`
+ekleyip projenin mevcut `BasicResponse` gövdesiyle 415 dönmek. Diğer iki bulguya
+dokunmaz, gövde şeklini değiştirmez.
+
 **Durum.** Açık, test altına alındı. Beklenen kod tek bir sabitte:
-`ApiProtocolContractTests.UNSUPPORTED_MEDIA_TYPE_STATUS = 500`. Tek satırlık düzeltme:
-`HttpMediaTypeNotSupportedException`'ı 415 dönen bir `@ExceptionHandler`'a bağlamak.
+`com.pse.support.ApiContract.UNSUPPORTED_MEDIA_TYPE_STATUS = 500`.
 
 ---
 

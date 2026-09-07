@@ -17,6 +17,7 @@ import com.pse.social.repository.AnswerVoteRepository;
 import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.NotificationRepository;
+import com.pse.support.ApiContract;
 import com.pse.support.TestDeliveryConfig;
 import com.pse.support.TestDeliveryConfig.CapturingLoginCodeDelivery;
 import com.pse.user.repository.StudentRepository;
@@ -78,7 +79,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ApiProtocolContractTests {
 
     /**
-     * What this API answers a request whose path exists but whose verb does not -- F-16.
+     * A path that exists, called with a verb it does not map -- F-16.
      *
      * <p>The correct answer is 405 with an {@code Allow} header.
      * {@code GlobalExceptionHandler.handleWrongMethod} answers <b>404 "Not found"</b>
@@ -88,21 +89,25 @@ class ApiProtocolContractTests {
      * states that {@code POST /admin/reports} answers 404, and that 404 is produced by
      * this very mapping.
      *
-     * <p>When the handler is fixed, this constant becomes 405 and
+     * <p>Held in {@link ApiContract} because {@link AdminApiPathSplitTests} depends on it
+     * too. When the handler is fixed, that constant becomes 405 and
      * {@link #wrongVerbCarriesTheProjectErrorBody()} needs an {@code Allow} assertion.
      */
-    private static final int WRONG_VERB_STATUS = 404;
+    private static final int WRONG_VERB_STATUS = ApiContract.WRONG_VERB_STATUS;
 
     /**
-     * What this API answers a body sent in a media type the handler cannot read -- F-17.
+     * A body in a media type the handler cannot read -- F-17.
      *
      * <p>The correct answer is 415. {@code GlobalExceptionHandler} declares no handler for
      * {@code HttpMediaTypeNotSupportedException} and does not extend
      * {@code ResponseEntityExceptionHandler}, so {@code @ExceptionHandler(Exception.class)}
      * claims it before Spring's own resolver can answer 415, and the caller is told the
      * backend broke.
+     *
+     * <p>Extending {@code ResponseEntityExceptionHandler} is <b>not</b> the fix -- see the
+     * finding. The narrow handler is.
      */
-    private static final int UNSUPPORTED_MEDIA_TYPE_STATUS = 500;
+    private static final int UNSUPPORTED_MEDIA_TYPE_STATUS = ApiContract.UNSUPPORTED_MEDIA_TYPE_STATUS;
 
     /**
      * Probed in this order, first one the path does not map wins. GET before the writes so

@@ -22,6 +22,7 @@ import com.pse.social.repository.AnswerVoteRepository;
 import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.NotificationRepository;
+import com.pse.support.ApiContract;
 import com.pse.support.TestDeliveryConfig;
 import com.pse.support.TestDeliveryConfig.CapturingLoginCodeDelivery;
 import com.pse.user.repository.StudentRepository;
@@ -323,6 +324,27 @@ class AdminApiPathSplitTests {
                 .andExpect(jsonPath("$.message").value("Is Admin"));
     }
 
+    /**
+     * The student's bug submission is the one app route with no administrative twin.
+     *
+     * <p>The refusal it asserts is not the mechanism the test name suggests. Two different
+     * things answer 404 here and {@code GlobalExceptionHandler} gives them <b>byte-identical
+     * bodies</b> -- same status, same {@code "Not found"} message -- so the response alone
+     * cannot tell them apart:
+     *
+     * <ul>
+     *   <li>{@code NoResourceFoundException}, meaning no such path, from
+     *       {@code handleNotFound}; and</li>
+     *   <li>{@code HttpRequestMethodNotSupportedException}, meaning the path exists but not
+     *       for this verb, from {@code handleWrongMethod} -- F-16 in docs/test-findings.md,
+     *       where 405 belongs.</li>
+     * </ul>
+     *
+     * <p>This route's 404 is the second one: {@code /admin/reports} very much exists, it
+     * just only maps GET. The GET assertion below is the distinguishing signal, since the
+     * bodies are no help -- and it is what stops the test from silently passing for the
+     * wrong reason if the path were ever removed outright.
+     */
     @Test
     void studentBugSubmissionHasNoAdminTwin() throws Exception {
         String studentToken = JsonPath.read(loginThrough("/auth", STUDENT_EMAIL, ""), "$.authToken");
@@ -340,7 +362,13 @@ class AdminApiPathSplitTests {
                         .header("Authorization", bearer(adminToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(report))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is(ApiContract.WRONG_VERB_STATUS));
+
+        // The path exists -- so the refusal above is about the verb, not the path. Without
+        // this the test would read as "there is no /admin/reports at all", which is false.
+        mockMvc.perform(get("/admin/reports").header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bugReports").isArray());
 
         assertEquals(1, bugReportRepository.count());
     }
