@@ -27,6 +27,8 @@ yaşıyorsa gerçekten kayıtlıdır.
 | [F-13](#f-13--token-iptali-tek-bir-koşula-bağlı) | Token iptali tek bir koşula bağlı | Bilgi — koruma mevcut | Test altına alındı |
 | [F-14](#f-14--zorunlu-query-parametresi-eksikken-500) | Zorunlu query parametresi eksikken 500 | Orta — yanlış HTTP kodu | Açık, test altına alındı |
 | [F-15](#f-15--bilinmeyen-derste-kategori-listesi-500) | Bilinmeyen derste kategori listesi 500 | Orta — yanlış HTTP kodu | Açık, test altına alındı |
+| [F-16](#f-16--yanlış-http-metodu-405-yerine-404-dönüyor) | Yanlış HTTP metodu 405 yerine 404 dönüyor | Orta — yanlış HTTP kodu, 122 rotanın hepsinde | Açık, test altına alındı |
+| [F-17](#f-17--desteklenmeyen-media-type-415-yerine-500-dönüyor) | Desteklenmeyen media type 415 yerine 500 dönüyor | Orta — yanlış HTTP kodu, gövde okuyan her rotada | Açık, test altına alındı |
 | [P-1](#p-1--kapsam-baseline-sayısı-yanlıştı) | Kapsam baseline sayısı yanlıştı | Süreç | **Çözüldü** (yeniden ölçüldü) |
 | [P-2](#p-2--integration-testleri-unit-hedeflerini-gizliyor) | Integration testleri unit hedeflerini gizliyor | Süreç | **Çözüldü** (yöntem değişti) |
 | [P-3](#p-3--lombok-jacocoda-filtrelenmiyor) | Lombok JaCoCo'da filtrelenmiyor | Süreç | Açık, bilinçli |
@@ -488,6 +490,90 @@ Bu endpoint de anonim erişime açık; rastgele bir UUID yeterli.
 **Nasıl bulundu.** F-14 ile aynı tarama.
 
 **Durum.** Açık, F-14 ile aynı biçimde test altına alındı.
+
+---
+
+### F-16 — Yanlış HTTP metodu 405 yerine 404 dönüyor
+
+**Nerede.** `GlobalExceptionHandler:77` (`handleWrongMethod`). API'nin **tamamı** — 122
+rotanın hepsi.
+
+**Ne oluyor.** Yolu var olan ama metodu eşleşmeyen bir istek
+`HttpRequestMethodNotSupportedException` üretiyor. Handler bunu **404 "Not found"**'a
+çeviriyor; doğrusu `Allow` başlığıyla birlikte **405**.
+
+```java
+@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+ResponseEntity<BasicResponse> handleWrongMethod(HttpRequestMethodNotSupportedException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(new BasicResponse("Not found", false));
+}
+```
+
+**Bilinçli bir sözleşme kararı mı, yanlış yakalama mı.** `git log -S` tek bir commit
+gösteriyor: **`c4286f1` "Api" / "APIs created." (2026-07-28)** — gerekçesiz toplu bir
+ilk commit. Gövde, hemen üstündeki `NoResourceFoundException` handler'ından **birebir
+kopyalanmış**: aynı durum kodu, aynı `"Not found"` metni. Dosyadaki diğer her handler
+anlamsal olarak doğru koda eşliyor (eksik başlık → 401, bütünlük ihlali → 409, doğrulama
+→ 400); şaşan tek eşleme bu. Yani **bilinmeyen yolların 404 dönmesini isteyen birinin
+yanlış yakalaması**, seçilmiş bir sözleşme değil.
+
+**Ama artık taşıyıcı.** Altı hafta sonra, `5a11d29` "split the admin API from the app API"
+(2026-09-07) commit'i bu davranışın üstüne iki bağımlı ekledi:
+
+- `docs/admin-api.md:48` ve `:670`: "`POST /admin/reports` … bir istek ona `404` yanıtı
+  verir." Bu 404'ü üreten şey tam olarak bu eşleme — `GET /admin/reports` var,
+  `POST /admin/reports` yok.
+- `AdminApiPathSplitTests.studentBugSubmissionHasNoAdminTwin` aynı 404'ü assert ediyor.
+
+Yani sıra şu: davranış önce oluştu, altı hafta sonra gözlemlenip belgelendi. Düzeltmek
+belgelenmiş bir ifadeyi ve geçen bir testi değiştirir.
+
+**Nasıl bulundu.** Protokol taraması (`ApiProtocolContractTests`), her yol şeklini
+eşlemediği bir metotla çağırarak.
+
+**Durum.** Açık, test altına alındı. Beklenen kod **tek bir sabitte**:
+`ApiProtocolContractTests.WRONG_VERB_STATUS = 404`. Düzeltme kararı verilirse test tarafı
+122 assertion değil, bir satır. Tek satırlık düzeltme: handler'ın gövdesini
+`HttpStatus.METHOD_NOT_ALLOWED`'a çevirmek ve `Allow` başlığını eklemek — beraberinde
+`admin-api.md`'nin iki satırı ve yukarıdaki test güncellenmeli.
+
+**Yan bulgu — placeholder gölgelemesi.** Tarama, iki literal yolun UUID kardeşleri
+tarafından gölgelendiğini ortaya çıkardı: `GET /ratings/rate`,
+`GET /ratings/{lectureId}`'ye düşüyor ve `"rate"` UUID olmadığı için **400** dönüyor;
+`GET /social/comments/report` ile `GET /social/comments/{lecture_id}` aynı durumda. Kusur
+değil — Spring'in normal eşleme önceliği — ama tarama bunu hesaba katmasaydı iki rotayı
+sessizce atlardı. `ApiProtocolContractTests.verbsReaching` bunu modelliyor.
+
+---
+
+### F-17 — Desteklenmeyen media type 415 yerine 500 dönüyor
+
+**Nerede.** `GlobalExceptionHandler` — eksik bir handler. `@RequestBody` okuyan **her**
+rota (bugün 26 tanesi).
+
+**Ne oluyor.** Gövdesi `Content-Type: text/plain` ile gönderilen bir istek
+`HttpMediaTypeNotSupportedException` üretiyor. Sınıf `ResponseEntityExceptionHandler`'ı
+**genişletmiyor** ve bu tip için `@ExceptionHandler` **yok**, dolayısıyla
+`@ExceptionHandler(Exception.class)` onu Spring'in kendi çözücüsü 415 cevaplayamadan
+kapıyor. Sonuç: **500 "Unexpected backend error"**, doğrusu **415**.
+
+Ayrımı net kılan şey şu: **doğru** media type içinde bozuk bir JSON temiz bir **400**
+dönüyor (`HttpMessageNotReadableException` sayılmış). Yani bu "endpoint çöpü gürültüyle
+reddediyor" değil, tek bir istisnanın işlenmemesi.
+
+**Nasıl bulundu.** Önce koddan öngörüldü (Faz 1 keşfi), sonra protokol taramasında
+doğrulandı: `everyBodyReadingRouteAnswersAnUnsupportedMediaTypeWithTheDeclaredStatus`
+gövde okuyan her rotayı `text/plain` ile çağırıyor ve hepsi 500 dönüyor.
+
+**Aynı kök, üretimde görülmüş.** Üretim loglarında `MaxUploadSizeExceededException` ve
+Tomcat'in 512 baytlık multipart başlık sınırı da aynı catch-all dalına düşüyor. Aynı
+neden: gövde/aktarım katmanı istisnaları için handler yok. Bu ayrı olarak
+F-18'de ölçülecek.
+
+**Durum.** Açık, test altına alındı. Beklenen kod tek bir sabitte:
+`ApiProtocolContractTests.UNSUPPORTED_MEDIA_TYPE_STATUS = 500`. Tek satırlık düzeltme:
+`HttpMediaTypeNotSupportedException`'ı 415 dönen bir `@ExceptionHandler`'a bağlamak.
 
 ---
 
