@@ -160,8 +160,7 @@ class RatingServiceTests {
                         Rating.class
                 );
 
-        verify(ratingRepository).save(captor.capture());
-
+        verify(ratingRepository).saveAndFlush(captor.capture());
 
         Rating saved = captor.getValue();
 
@@ -283,8 +282,7 @@ class RatingServiceTests {
 
         ArgumentCaptor<Rating> captor = ArgumentCaptor.forClass(Rating.class);
 
-        verify(ratingRepository).save(captor.capture());
-
+        verify(ratingRepository).saveAndFlush(captor.capture());
 
         Rating saved = captor.getValue();
 
@@ -383,7 +381,7 @@ class RatingServiceTests {
 
         verify(ratingRepository).flush();
 
-        verify(ratingRepository).save(existing);
+        verify(ratingRepository).saveAndFlush(existing);
     }
 
 
