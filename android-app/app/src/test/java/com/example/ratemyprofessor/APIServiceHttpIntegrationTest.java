@@ -120,7 +120,7 @@ public class APIServiceHttpIntegrationTest {
                 .setResponseCode(200)
                 .setBody("{\"message\":\"ok\",\"success\":true,\"lectures\":"
                         + "[{\"id\":\"lecture-1\",\"name\":\"Algorithms\",\"code\":\"240001\","
-                        + "\"semesterYear\":2026,\"semesterSeason\":\"WINTER\",\"active\":true,"
+                        + "\"semesterYear\":2026,\"semesterSeason\":\"WS\",\"active\":true,"
                         + "\"professorId\":\"prof-1\",\"commentCount\":3,\"ratingCount\":4,"
                         + "\"averageRating\":4.5}]}"));
 
