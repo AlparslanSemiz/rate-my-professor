@@ -15,6 +15,7 @@ import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerVote;
 import com.pse.social.model.Comment;
 import com.pse.social.model.CommentVote;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import com.pse.auth.dto.response.UserRatingDto;
 import com.pse.auth.dto.response.UserRatingResponse;
 import com.pse.rating.model.Rating;
 import com.pse.shared.enums.UserStatus;
+import com.pse.shared.error.ApiException;
 import com.pse.user.dto.StudentProfileResponse;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
@@ -48,7 +50,7 @@ public class StudentService {
     public StudentProfileResponse getUserInformation(UUID studentId) {
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null) {
-            return new StudentProfileResponse("Error, cannot authenticate user", false, null, null, 0, 0, 0, 0);
+            throw new ApiException(HttpStatus.NOT_FOUND, "Student not found");
         }
 
         //CredibilityScore = |Upvotes| - |DownVotes|
@@ -75,7 +77,7 @@ public class StudentService {
 
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null) {
-            return new UserRatingResponse("Error, cannot authenticate user", false, new ArrayList<>());
+            throw new ApiException(HttpStatus.NOT_FOUND, "Student not found");
         }
 
         List<UserRatingDto> ratingDtos = new ArrayList<>();
@@ -108,12 +110,12 @@ public class StudentService {
     public BasicResponse deleteAccount(Student student) {
 
         if (student == null) {
-            return new BasicResponse("Error, couldn't authenticate user", false);
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Not logged in");
         }
 
         //Soft delete in Database: Set "deleted" to true
         if( !softDeleteByKitEmail(student.getKitEmail())){
-            return new BasicResponse("Error, couldn't find student", false);
+            throw new ApiException(HttpStatus.NOT_FOUND, "Student not found");
         }
 
         return new BasicResponse("Deleted Account successfully: " + student.getKitEmail(), true);

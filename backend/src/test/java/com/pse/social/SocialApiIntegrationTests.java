@@ -751,7 +751,7 @@ class SocialApiIntegrationTests {
                                         )
                                 )
                 )
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(
                         jsonPath("$.success")
                                 .value(false)

@@ -2,6 +2,7 @@ package com.pse.social.service;
 
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.shared.enums.VoteType;
+import com.pse.shared.error.ApiException;
 import com.pse.social.dto.request.VoteAnswerRequest;
 import com.pse.social.dto.request.VoteCommentRequest;
 import com.pse.social.model.Answer;
@@ -18,11 +19,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -84,17 +87,18 @@ class SocialServiceVoteTests {
     // ---------- voteComment ----------
 
     @Test
-    void voteComment_unknownComment_returnsAFailureWithoutTouchingTheVoteTable() {
+    void voteComment_unknownComment_isNotFoundWithoutTouchingTheVoteTable() {
         // Given
         when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.empty());
 
-        // When
-        BasicResponse response =
-                service().voteComment(COMMENT_ID, student, new VoteCommentRequest(VoteType.UP));
+        // When / Then -- F-5: this was a 200 carrying success:false until it was corrected
+        assertThatThrownBy(() ->
+                service().voteComment(COMMENT_ID, student, new VoteCommentRequest(VoteType.UP)))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Comment not found")
+                .extracting(thrown -> ((ApiException) thrown).getStatus())
+                .isEqualTo(HttpStatus.NOT_FOUND);
 
-        // Then
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, cannot find comment");
         verifyNoInteractions(commentVoteRepository);
     }
 
@@ -203,17 +207,19 @@ class SocialServiceVoteTests {
     // ---------- voteAnswer ----------
 
     @Test
-    void voteAnswer_unknownAnswer_returnsAFailureWithoutTouchingTheVoteTable() {
+    void voteAnswer_unknownAnswer_isNotFoundWithoutTouchingTheVoteTable() {
         // Given
         when(answerRepository.findById(ANSWER_ID)).thenReturn(Optional.empty());
 
-        // When
-        BasicResponse response =
-                service().voteAnswer(ANSWER_ID, student, new VoteAnswerRequest(VoteType.UP));
+        // When / Then -- the two paths word this the same way now; the comment path said
+        // "cannot find comment" and this one "cannot find Answer", capital and all
+        assertThatThrownBy(() ->
+                service().voteAnswer(ANSWER_ID, student, new VoteAnswerRequest(VoteType.UP)))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Answer not found")
+                .extracting(thrown -> ((ApiException) thrown).getStatus())
+                .isEqualTo(HttpStatus.NOT_FOUND);
 
-        // Then -- note the capital A, unlike the comment path's message
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, cannot find Answer");
         verifyNoInteractions(answerVoteRepository);
     }
 

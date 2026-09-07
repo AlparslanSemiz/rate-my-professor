@@ -308,12 +308,12 @@ class ApiOwnershipMatrixTests {
      * The one per-user row the app tier addresses by id, reached with the wrong student's
      * token.
      *
-     * <p>Asserted on the <em>effect</em>, not on the status code, and that distinction is
-     * the finding: the refusal is real -- {@code findByRecipientAndId} scopes the lookup to
-     * the caller, so B's row is not touched -- but it comes back as HTTP 200 with
-     * {@code success:false}, which is F-5. A client cannot tell the refusal from a success
-     * by status alone, so this test does not accept a status as evidence of anything and
-     * checks the row instead.
+     * <p>Asserted on the <em>effect</em> first and on the status second, and the order is
+     * deliberate: the refusal is real -- {@code findByRecipientAndId} scopes the lookup to
+     * the caller, so B's row is not touched -- and it used to come back as HTTP 200 with
+     * {@code success:false}, which was F-5. The row check is what proved the refusal while
+     * the status could not, and it stays the primary assertion: a status is evidence about
+     * the answer, not about the table.
      */
     @Test
     void markingAnotherStudentsNotificationAsSeenDoesNotTouchTheRow() throws Exception {
@@ -334,9 +334,10 @@ class ApiOwnershipMatrixTests {
         assertFalse(after.isSeen(),
                 "another student's token marked this notification as seen -- this is an IDOR");
 
-        // Pinned, not endorsed: the refusal is correct, its status code is not. F-5.
-        assertEquals(200, status,
-                "the refusal now has a status of its own -- update this assertion and F-5");
+        // F-5, fixed: the refusal has a status of its own, so a client can tell it from a
+        // success without reading the body.
+        assertEquals(404, status,
+                "the refusal lost its own status code -- it is a 200 with success:false again");
     }
 
     /**

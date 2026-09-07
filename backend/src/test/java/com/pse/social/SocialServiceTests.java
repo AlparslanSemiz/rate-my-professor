@@ -14,6 +14,7 @@ import com.pse.social.dto.response.NotificationsResponse;
 import com.pse.social.model.*;
 import com.pse.social.repository.*;
 import com.pse.social.service.SocialService;
+import com.pse.shared.error.ApiException;
 import com.pse.user.model.Student;
 
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -68,7 +70,7 @@ class SocialServiceTests {
 
 
     @Test
-    void submitCommentReturnsErrorWhenLectureDoesNotExist() {
+    void submitCommentUnknownLectureIsNotFound() {
 
         Student student = mock(Student.class);
 
@@ -86,18 +88,20 @@ class SocialServiceTests {
         )).thenReturn(null);
 
 
-        BasicResponse response =
-                socialService.submitComment(
+        ApiException thrown = assertThrows(
+                ApiException.class,
+                () -> socialService.submitComment(
                         student,
                         request
-                );
+                )
+        );
 
 
-        assertFalse(response.success());
+        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
 
         assertEquals(
-                "Error, cannot submit comment",
-                response.message()
+                "Lecture not found",
+                thrown.getMessage()
         );
 
         verify(commentRepository, never()).save(any());
@@ -172,7 +176,7 @@ class SocialServiceTests {
 
 
     @Test
-    void voteCommentReturnsErrorWhenCommentDoesNotExist() {
+    void voteCommentUnknownCommentIsNotFound() {
 
         UUID commentId = UUID.randomUUID();
 
@@ -184,19 +188,21 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        BasicResponse response =
-                socialService.voteComment(
+        ApiException thrown = assertThrows(
+                ApiException.class,
+                () -> socialService.voteComment(
                         commentId,
                         student,
                         request
-                );
+                )
+        );
 
 
-        assertFalse(response.success());
+        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
 
         assertEquals(
-                "Error, cannot find comment",
-                response.message()
+                "Comment not found",
+                thrown.getMessage()
         );
 
         verify(commentVoteRepository, never()).save(any());
@@ -303,7 +309,7 @@ class SocialServiceTests {
 
 
     @Test
-    void submitAnswerReturnsErrorWhenCommentDoesNotExist() {
+    void submitAnswerUnknownCommentIsNotFound() {
 
         Student student = mock(Student.class);
 
@@ -321,18 +327,20 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        BasicResponse response =
-                socialService.submitAnswer(
+        ApiException thrown = assertThrows(
+                ApiException.class,
+                () -> socialService.submitAnswer(
                         student,
                         request
-                );
+                )
+        );
 
 
-        assertFalse(response.success());
+        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
 
         assertEquals(
-                "Error, couldn't find comment",
-                response.message()
+                "Comment not found",
+                thrown.getMessage()
         );
 
         verify(answerRepository, never()).save(any());
@@ -473,7 +481,7 @@ class SocialServiceTests {
 
 
     @Test
-    void voteAnswerReturnsErrorWhenAnswerDoesNotExist() {
+    void voteAnswerUnknownAnswerIsNotFound() {
 
         UUID answerId = UUID.randomUUID();
 
@@ -485,19 +493,21 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        BasicResponse response =
-                socialService.voteAnswer(
+        ApiException thrown = assertThrows(
+                ApiException.class,
+                () -> socialService.voteAnswer(
                         answerId,
                         student,
                         request
-                );
+                )
+        );
 
 
-        assertFalse(response.success());
+        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
 
         assertEquals(
-                "Error, cannot find Answer",
-                response.message()
+                "Answer not found",
+                thrown.getMessage()
         );
 
         verify(answerVoteRepository, never()).save(any());
@@ -549,7 +559,7 @@ class SocialServiceTests {
 
 
     @Test
-    void submitCommentReportReturnsErrorWhenCommentDoesNotExist() {
+    void submitCommentReportUnknownCommentIsNotFound() {
 
         Student student = mock(Student.class);
 
@@ -570,14 +580,16 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        BasicResponse response =
-                socialService.submitCommentReport(
+        ApiException thrown = assertThrows(
+                ApiException.class,
+                () -> socialService.submitCommentReport(
                         student,
                         request
-                );
+                )
+        );
 
 
-        assertFalse(response.success());
+        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
 
         verify(commentReportRepository, never()).save(any());
     }
@@ -675,7 +687,7 @@ class SocialServiceTests {
 
 
     @Test
-    void submitAnswerReportReturnsErrorWhenAnswerDoesNotExist() {
+    void submitAnswerReportUnknownAnswerIsNotFound() {
 
         Student student = mock(Student.class);
 
@@ -696,14 +708,16 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        BasicResponse response =
-                socialService.submitAnswerReport(
+        ApiException thrown = assertThrows(
+                ApiException.class,
+                () -> socialService.submitAnswerReport(
                         student,
                         request
-                );
+                )
+        );
 
 
-        assertFalse(response.success());
+        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
 
         verify(answerReportRepository, never()).save(any());
     }
@@ -772,7 +786,7 @@ class SocialServiceTests {
 
 
     @Test
-    void markNotificationAsSeenReturnsErrorWhenNotificationDoesNotBelongToStudent() {
+    void markNotificationAsSeenForeignNotificationIsNotFound() {
 
         Student student = mock(Student.class);
 
@@ -786,18 +800,20 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        BasicResponse response =
-                socialService.markNotificationAsSeen(
+        ApiException thrown = assertThrows(
+                ApiException.class,
+                () -> socialService.markNotificationAsSeen(
                         student,
                         notificationId
-                );
+                )
+        );
 
 
-        assertFalse(response.success());
+        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
 
         assertEquals(
-                "Notification Not Found",
-                response.message()
+                "Notification not found",
+                thrown.getMessage()
         );
     }
 

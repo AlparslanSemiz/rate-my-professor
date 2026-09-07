@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.pse.shared.util.ProfilePictureGenerator;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +47,7 @@ import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.CommentVoteRepository;
 import com.pse.social.repository.NotificationRepository;
+import com.pse.shared.error.ApiException;
 import com.pse.user.model.Student;
 
 
@@ -100,7 +102,7 @@ public class SocialService {
     public BasicResponse submitComment(Student student, CommentSubmitRequest request) {
 
         if (!submitComment(student, request.lectureID(), request.content())) {
-            return new BasicResponse("Error, cannot submit comment", false);
+            throw new ApiException(HttpStatus.NOT_FOUND, "Lecture not found");
         }
 
         return new BasicResponse("Comment submitted successfully", true);
@@ -138,7 +140,7 @@ public class SocialService {
 
         Comment comment = commentRepository.findById(commentId).orElse(null);
         if (comment == null) {
-            return new BasicResponse("Error, cannot find comment", false);
+            throw new ApiException(HttpStatus.NOT_FOUND, "Comment not found");
         }
 
         //check if user has already up/down voted this comment. If yes => update this entry
@@ -180,7 +182,7 @@ public class SocialService {
     public BasicResponse submitAnswer(Student student, AnswerSubmitRequest request) {
 
         if(!submitAnswer(student, request.commentID(), request.content())){
-            return new BasicResponse("Error, couldn't find comment",false);
+            throw new ApiException(HttpStatus.NOT_FOUND, "Comment not found");
         }
 
         return new BasicResponse("Answer submitted successfully",true);
@@ -228,7 +230,7 @@ public class SocialService {
 
         Answer answer = answerRepository.findById(answerID).orElse(null);
         if (answer == null) {
-            return new BasicResponse("Error, cannot find Answer", false);
+            throw new ApiException(HttpStatus.NOT_FOUND, "Answer not found");
         }
 
         //check if user has already up/down voted this comment. If yes => update this entry
@@ -253,7 +255,7 @@ public class SocialService {
     public BasicResponse submitCommentReport(Student student, CommentReportRequest request) {
 
         if(!submitCommentReport(student, request.commentID(), request.reportReason(), request.explanation())){
-            return new BasicResponse("Error, couldn't find comment",false);
+            throw new ApiException(HttpStatus.NOT_FOUND, "Comment not found");
         }
 
         return new BasicResponse("Comment Report submitted successfully",true);
@@ -295,7 +297,7 @@ public class SocialService {
     public BasicResponse submitAnswerReport(Student student, AnswerReportRequest request) {
 
         if(!submitAnswerReport(student, request.answerID(), request.reportReason(), request.explanation())){
-            return new BasicResponse("Error, couldn't find answer",false);
+            throw new ApiException(HttpStatus.NOT_FOUND, "Answer not found");
         }
 
         return new BasicResponse("Answer Report submitted successfully",true);
@@ -490,7 +492,7 @@ public class SocialService {
 
 
         if(notification == null) {
-            return new BasicResponse("Notification Not Found", false);
+            throw new ApiException(HttpStatus.NOT_FOUND, "Notification not found");
         }
 
         notification.setSeen(true);

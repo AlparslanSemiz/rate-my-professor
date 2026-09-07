@@ -8,6 +8,7 @@ import com.pse.rating.model.RatingCategory;
 import com.pse.rating.model.RatingTopic;
 import com.pse.shared.enums.UserStatus;
 import com.pse.shared.enums.VoteType;
+import com.pse.shared.error.ApiException;
 import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerVote;
 import com.pse.social.model.Comment;
@@ -20,11 +21,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -185,25 +188,22 @@ class StudentServiceTests {
     }
 
     /**
-     * The failure carries {@code success = false} and nulls, and the message still says
-     * "authenticate" although the only thing that happened is that no row matched the id.
-     * Pinned as-is: the wording reaches the client, so it cannot change silently.
+     * F-5. This used to answer HTTP 200 carrying {@code success = false} and nulls, with a
+     * message that said "authenticate" although the only thing that happened was that no row
+     * matched the id -- authentication had already succeeded in the security chain. Both
+     * halves are corrected: a 404, and a message that says what actually failed.
      */
     @Test
-    void getUserInformation_unknownStudent_returnsTheAuthenticationFailureShape() {
+    void getUserInformation_unknownStudent_isNotFoundRatherThanASuccessfulFailure() {
         // Given
         when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.empty());
 
-        // When
-        StudentProfileResponse response = service().getUserInformation(STUDENT_ID);
-
-        // Then
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, cannot authenticate user");
-        assertThat(response.username()).isNull();
-        assertThat(response.profilePicture()).isNull();
-        assertThat(response.averageRating()).isZero();
-        assertThat(response.credibilityScore()).isZero();
+        // When / Then
+        assertThatThrownBy(() -> service().getUserInformation(STUDENT_ID))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Student not found")
+                .extracting(thrown -> ((ApiException) thrown).getStatus())
+                .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     // ---------- getUserRatings ----------
@@ -242,18 +242,18 @@ class StudentServiceTests {
         assertThat(response.ratings()).isEmpty();
     }
 
+    /** F-5, and the same misleading "authenticate" wording as above. */
     @Test
-    void getUserRatings_unknownStudent_returnsTheAuthenticationFailureWithAnEmptyList() {
+    void getUserRatings_unknownStudent_isNotFoundRatherThanAnEmptyList() {
         // Given
         when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.empty());
 
-        // When
-        UserRatingResponse response = service().getUserRatings(STUDENT_ID);
-
-        // Then -- an empty list rather than null, so a caller can iterate either way
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, cannot authenticate user");
-        assertThat(response.ratings()).isEmpty();
+        // When / Then
+        assertThatThrownBy(() -> service().getUserRatings(STUDENT_ID))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Student not found")
+                .extracting(thrown -> ((ApiException) thrown).getStatus())
+                .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     // ---------- deleteAccount ----------
@@ -280,14 +280,19 @@ class StudentServiceTests {
         assertThat(saved.getValue().getStatus()).isEqualTo(UserStatus.DELETED);
     }
 
+    /**
+     * F-5. The one arm that is not a 404: no principal at all is an authentication failure,
+     * and 401 is what the rest of the API answers for it.
+     */
     @Test
-    void deleteAccount_nullStudent_returnsTheAuthenticationFailure() {
-        // When
-        BasicResponse response = service().deleteAccount(null);
+    void deleteAccount_nullStudent_isUnauthorizedRatherThanASuccessfulFailure() {
+        // When / Then
+        assertThatThrownBy(() -> service().deleteAccount(null))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Not logged in")
+                .extracting(thrown -> ((ApiException) thrown).getStatus())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
 
-        // Then
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, couldn't authenticate user");
         verifyNoInteractions(studentRepository);
     }
 
@@ -297,16 +302,17 @@ class StudentServiceTests {
      * an account it did not manage to delete.
      */
     @Test
-    void deleteAccount_emailNotInTheTable_returnsTheNotFoundFailureWithoutWriting() {
+    void deleteAccount_emailNotInTheTable_isNotFoundWithoutWriting() {
         // Given
         when(studentRepository.findByKitEmail("ada@kit.edu")).thenReturn(Optional.empty());
 
-        // When
-        BasicResponse response = service().deleteAccount(student());
+        // When / Then
+        assertThatThrownBy(() -> service().deleteAccount(student()))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Student not found")
+                .extracting(thrown -> ((ApiException) thrown).getStatus())
+                .isEqualTo(HttpStatus.NOT_FOUND);
 
-        // Then
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, couldn't find student");
         verify(studentRepository, never()).save(any());
     }
 }
