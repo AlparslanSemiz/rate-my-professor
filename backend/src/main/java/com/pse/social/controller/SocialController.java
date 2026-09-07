@@ -93,7 +93,7 @@ public class SocialController {
 
     }
 
-    @PostMapping("/comments/vote/answer{answer_id}")
+    @PostMapping("/comments/vote/answer/{answer_id}")
     public BasicResponse voteAnswer(@PathVariable UUID answer_id, @AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody VoteAnswerRequest request) {
 
         return socialService.voteAnswer(answer_id, principal.student(), request);
