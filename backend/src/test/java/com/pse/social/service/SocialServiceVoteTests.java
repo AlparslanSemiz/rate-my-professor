@@ -31,9 +31,10 @@ import static org.mockito.Mockito.when;
 
 /**
  * Voting is the one write path in {@link SocialService} that is neither transactional nor
- * audited, and the row it produces carries a database constraint the method never checks.
- * These tests pin what it actually does -- including the four gaps recorded as findings --
- * rather than what a vote endpoint might be expected to do.
+ * audited. These tests pin what it actually does -- including the gaps recorded as
+ * findings -- rather than what a vote endpoint might be expected to do. The vote type is
+ * now validated at the boundary rather than here (F-2), which the two null-vote tests
+ * below spell out.
  *
  * <p>Scope is the two vote methods only, hence the file name; the submit and report paths
  * are a separate batch.
@@ -171,13 +172,18 @@ class SocialServiceVoteTests {
     }
 
     /**
-     * Characterization: the vote type is never validated. A null reaches {@code setVote} and
-     * is handed to {@code save}, so a malformed request is only stopped by the
-     * {@code nullable = false} column -- at flush, outside any transaction this method
-     * opened, which is not where the caller can act on it.
+     * The service itself does not validate the vote type: a null still reaches
+     * {@code setVote} and {@code save}. Rejection lives at the boundary instead --
+     * {@code @NotNull} on {@link VoteCommentRequest} plus {@code @Valid} on the handler,
+     * which is how every other validated endpoint in this codebase does it. So the
+     * contract is "a null never gets this far", and the test that proves the 400 is
+     * {@code SocialApiIntegrationTests.voteWithoutAVoteTypeIsRejectedAsABadRequest}.
+     *
+     * <p>Kept because it is the only thing standing between a future unvalidated caller
+     * and a constraint violation at flush time. See F-2 in docs/test-findings.md.
      */
     @Test
-    void voteComment_nullVoteType_isSavedAsANullVoteRatherThanRejected() {
+    void voteComment_nullVoteType_reachesSaveBecauseValidationLivesAtTheBoundary() {
         // Given
         when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.of(comment));
         when(commentVoteRepository.findByStudentAndComment(student, comment))
@@ -255,9 +261,9 @@ class SocialServiceVoteTests {
         assertThat(existing.getVote()).isEqualTo(VoteType.UP);
     }
 
-    /** Same missing validation as the comment path. */
+    /** Same arrangement as the comment path: {@code @NotNull} at the boundary, not here. */
     @Test
-    void voteAnswer_nullVoteType_isSavedAsANullVoteRatherThanRejected() {
+    void voteAnswer_nullVoteType_reachesSaveBecauseValidationLivesAtTheBoundary() {
         // Given
         when(answerRepository.findById(ANSWER_ID)).thenReturn(Optional.of(answer));
         when(answerVoteRepository.findByStudentAndAnswer(student, answer))

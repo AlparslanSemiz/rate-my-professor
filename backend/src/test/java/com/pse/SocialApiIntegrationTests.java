@@ -184,6 +184,72 @@ class SocialApiIntegrationTests {
     }
 
 
+    /**
+     * A null voteType used to reach the vote row and only fail at flush, surfacing as a 409
+     * "State conflict" for what is really a malformed request. The @NotNull on the request
+     * record now stops it at the boundary. See F-2 in docs/test-findings.md.
+     */
+    @Test
+    void voteWithoutAVoteTypeIsRejectedAsABadRequest() throws Exception {
+        Session author = createSession("author@student.kit.edu");
+        Session voter = createSession("voter@student.kit.edu");
+        Lecture lecture = createLecture();
+        Comment comment = createComment(author.student(), lecture, "A comment to vote on");
+
+        mockMvc.perform(post("/social/comments/vote/comment/{comment_id}", comment.getId())
+                        .header("Authorization", bearer(voter.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"voteType\": null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Invalid request"));
+
+        // An absent field is the same case as an explicit null.
+        mockMvc.perform(post("/social/comments/vote/comment/{comment_id}", comment.getId())
+                        .header("Authorization", bearer(voter.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid request"));
+    }
+
+    @Test
+    void votingOnAnAnswerWithoutAVoteTypeIsRejectedAsABadRequest() throws Exception {
+        Session author = createSession("author@student.kit.edu");
+        Session voter = createSession("voter@student.kit.edu");
+        Lecture lecture = createLecture();
+        Comment comment = createComment(author.student(), lecture, "A comment");
+        createAnswer(author, comment, "An answer to vote on");
+        UUID answerId = answerRepository.findAll().getFirst().getId();
+
+        // The route really is /vote/answer<id> with no slash -- F-4, not fixed yet. Using the
+        // route as it is today keeps this test honest; it will need updating when F-4 lands.
+        mockMvc.perform(post("/social/comments/vote/answer" + answerId)
+                        .header("Authorization", bearer(voter.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"voteType\": null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid request"));
+    }
+
+    /** The guard must not reject a legitimate vote. */
+    @Test
+    void aVoteCarryingAVoteTypeIsStillAccepted() throws Exception {
+        Session author = createSession("author@student.kit.edu");
+        Session voter = createSession("voter@student.kit.edu");
+        Lecture lecture = createLecture();
+        Comment comment = createComment(author.student(), lecture, "A comment to vote on");
+
+        mockMvc.perform(post("/social/comments/vote/comment/{comment_id}", comment.getId())
+                        .header("Authorization", bearer(voter.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"voteType\": \"UP\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Comment vote saved successfully"));
+    }
+
+
     @Test
     void studentCannotMarkAnotherStudentsNotificationAsSeen() throws Exception {
         Session target = createSession("target@student.kit.edu");
