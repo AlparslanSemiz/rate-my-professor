@@ -6,6 +6,7 @@ import com.pse.audit.service.AuditWriter;
 import com.pse.auth.dto.request.LoginRequest;
 import com.pse.auth.dto.request.OTPRequest;
 import com.pse.auth.dto.request.ValidateCredentialsRequest;
+import com.pse.auth.dto.response.AuthMeResponse;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.dto.response.LoginResponse;
 import com.pse.auth.exception.InvalidAuthTokenException;
@@ -13,9 +14,12 @@ import com.pse.auth.model.SessionType;
 import com.pse.auth.model.Token;
 import com.pse.auth.repository.TokenRepository;
 import com.pse.auth.service.*;
+import org.mockito.ArgumentCaptor;
+import com.pse.moderation.model.Admin;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.security.AuthenticatedUser;
 import com.pse.security.TokenAuthenticationService;
+import com.pse.shared.enums.UserRole;
 import com.pse.shared.enums.UserStatus;
 import com.pse.shared.error.ApiException;
 import com.pse.user.model.Student;
@@ -26,6 +30,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -40,6 +47,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -753,5 +762,281 @@ class AuthServiceTests {
         verify(second).setRevoked(true);
 
         verify(tokenRepository).saveAll(tokens);
+    }
+
+    // ------------------------------------------------------------------------------------
+    // Batch 6. The arms the tests above leave open, in the house style: what the session tier
+    // resolves to, what an administrator's logout records, and the input normalisation that
+    // every login goes through. Named method_scenario_expectation; the tests above predate
+    // that scheme and are left as they are.
+    // ------------------------------------------------------------------------------------
+
+    private LoginRequest loginRequest(String email, SessionType sessionType) {
+        LoginRequest request = mock(LoginRequest.class);
+        when(request.email()).thenReturn(email);
+        lenient().when(request.loginToken()).thenReturn("ABC234");
+        lenient().when(request.sessionType()).thenReturn(sessionType);
+        return request;
+    }
+
+    private Student activeStudent(String email) {
+        Student student = new Student();
+        student.setKitEmail(email);
+        student.setUsername("student");
+        student.setStatus(UserStatus.ACTIVE);
+        return student;
+    }
+
+    private void loginReaches(String email, Student student) {
+        when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        lenient().when(httpRequest.getHeader("User-Agent")).thenReturn("JUnit");
+        when(rateLimitService.emailSubject(anyString())).thenReturn("email");
+        when(rateLimitService.ipSubject(anyString())).thenReturn("ip");
+        when(studentRepository.findByKitEmail(email))
+                .thenReturn(student == null ? Optional.empty() : Optional.of(student));
+        when(otpService.consume(email, "ABC234")).thenReturn(true);
+        lenient().when(tokenRepository.save(any(Token.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    @Test
+    void login_noSessionTypeRequestedAndNoAdminRow_issuesAnAppSession() {
+        String email = "student@student.kit.edu";
+        Student student = activeStudent(email);
+        loginReaches(email, student);
+        when(adminRepository.findByStudent(student)).thenReturn(Optional.empty());
+        when(bootstrapPolicy.shouldBootstrap(email)).thenReturn(false);
+
+        authService.login(loginRequest(email, null), httpRequest);
+
+        verify(tokenRepository).save(argThat(t -> t.getSessionType() == SessionType.APP));
+    }
+
+    @Test
+    void login_noSessionTypeRequestedButAnAdminRowExists_issuesAnAdminSession() {
+        // The default follows the account when the client says nothing. It is the only place
+        // an administrator session is handed out without being asked for, which is why the
+        // arm is worth stating rather than inferring from the one below.
+        String email = "admin@student.kit.edu";
+        Student student = activeStudent(email);
+        loginReaches(email, student);
+        when(adminRepository.findByStudent(student)).thenReturn(Optional.of(new Admin()));
+
+        authService.login(loginRequest(email, null), httpRequest);
+
+        verify(tokenRepository).save(argThat(t -> t.getSessionType() == SessionType.ADMIN));
+    }
+
+    @Test
+    void login_adminSessionAskedForWithoutAnAdminRow_isRefused() {
+        String email = "student@student.kit.edu";
+        Student student = activeStudent(email);
+        loginReaches(email, student);
+        when(adminRepository.findByStudent(student)).thenReturn(Optional.empty());
+        when(bootstrapPolicy.shouldBootstrap(email)).thenReturn(false);
+
+        assertThatThrownBy(() ->
+                authService.login(loginRequest(email, SessionType.ADMIN), httpRequest))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Admin access required");
+
+        verify(tokenRepository, never()).save(any());
+    }
+
+    @Test
+    void login_firstLoginOfABootstrapAddress_createsTheAdminRowBeforeTheTierIsResolved() {
+        // The ordering is the point: resolving the tier first would refuse the very request
+        // that is supposed to create the administrator.
+        String email = "boss@student.kit.edu";
+        Student student = activeStudent(email);
+        loginReaches(email, student);
+        when(adminRepository.findByStudent(student)).thenReturn(Optional.empty());
+        when(bootstrapPolicy.shouldBootstrap(email)).thenReturn(true);
+        when(adminRepository.save(any(Admin.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        authService.login(loginRequest(email, SessionType.ADMIN), httpRequest);
+
+        verify(adminRepository).save(argThat(admin -> admin.getStudent() == student));
+        verify(tokenRepository).save(argThat(t -> t.getSessionType() == SessionType.ADMIN));
+    }
+
+    @Test
+    void login_addressThatIsNotAKitAddress_isRefusedBeforeAnyRateLimitIsConsumed() {
+        assertThatThrownBy(() ->
+                authService.login(loginRequest("someone@gmail.com", null), httpRequest))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Invalid KIT email");
+
+        verifyNoInteractions(rateLimitService, otpService, tokenRepository);
+    }
+
+    @Test
+    void login_newAccount_getsAUsernameThatIsNotAlreadyTaken() {
+        // The generator can collide; the loop is what makes the column's unique constraint a
+        // formality rather than a 500 on somebody's first login.
+        String email = "fresh@student.kit.edu";
+        loginReaches(email, null);
+        when(studentRepository.existsByUsername(anyString())).thenReturn(true, false);
+        when(studentRepository.save(any(Student.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(adminRepository.findByStudent(any())).thenReturn(Optional.empty());
+        when(bootstrapPolicy.shouldBootstrap(email)).thenReturn(false);
+
+        authService.login(loginRequest(email, null), httpRequest);
+
+        verify(studentRepository, times(2)).existsByUsername(anyString());
+    }
+
+    @Test
+    void logoutAll_administrator_recordsAnAdminLogoutWithTheNumberOfRevokedSessions() {
+        Student student = activeStudent("admin@student.kit.edu");
+        Token current = new Token();
+        Token other = new Token();
+        Token alreadyRevoked = new Token();
+        alreadyRevoked.setRevoked(true);
+        AuthenticatedUser principal = new AuthenticatedUser(student, current, new Admin());
+        when(tokenRepository.findByStudentOrEmail(student, student.getKitEmail()))
+                .thenReturn(List.of(current, other, alreadyRevoked));
+
+        BasicResponse response = authService.logoutAll(principal);
+
+        assertThat(response.message()).contains("2 sessions");
+        verify(auditWriter).write(
+                eq(principal.admin()),
+                eq(AuditAction.ADMIN_LOGOUT),
+                eq(AuditTargetType.ADMIN_SESSION),
+                nullable(UUID.class),
+                eq("student all sessions"),
+                anyMap(),
+                argThat(metadata -> Integer.valueOf(2).equals(metadata.get("revokedSessions"))));
+        verify(auditWriter, never()).writeStudentAction(
+                any(), any(), any(), any(), any(), anyMap());
+    }
+
+    @Test
+    void me_studentSession_reportsTheStudentRoleAndNeverAsksAboutSuperusers() {
+        Student student = activeStudent("student@student.kit.edu");
+        AuthMeResponse response =
+                authService.me(new AuthenticatedUser(student, new Token(), null));
+
+        assertThat(response.user().role()).isEqualTo(UserRole.STUDENT);
+        assertThat(response.user().isSuperAdmin()).isFalse();
+        verifyNoInteractions(superuserPolicy);
+    }
+
+    @Test
+    void me_administratorSession_reportsTheAdminRoleAndTheSuperuserFlag() {
+        Student student = activeStudent("admin@student.kit.edu");
+        when(superuserPolicy.isSuperuser("admin@student.kit.edu")).thenReturn(true);
+
+        AuthMeResponse response =
+                authService.me(new AuthenticatedUser(student, new Token(), new Admin()));
+
+        assertThat(response.user().role()).isEqualTo(UserRole.ADMIN);
+        assertThat(response.user().isSuperAdmin()).isTrue();
+    }
+
+    @Test
+    void me_administratorWhoIsNotASuperuser_reportsTheAdminRoleWithoutTheFlag() {
+        Student student = activeStudent("admin@student.kit.edu");
+        when(superuserPolicy.isSuperuser("admin@student.kit.edu")).thenReturn(false);
+
+        AuthMeResponse response =
+                authService.me(new AuthenticatedUser(student, new Token(), new Admin()));
+
+        assertThat(response.user().role()).isEqualTo(UserRole.ADMIN);
+        assertThat(response.user().isSuperAdmin()).isFalse();
+    }
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "   "})
+    void login_withoutAUsableUserAgentHeader_publishesTheLoginAsUnknown(String userAgent) {
+        String email = "student@student.kit.edu";
+        Student student = activeStudent(email);
+        loginReaches(email, student);
+        when(httpRequest.getHeader("User-Agent")).thenReturn(userAgent);
+        when(adminRepository.findByStudent(student)).thenReturn(Optional.empty());
+        when(bootstrapPolicy.shouldBootstrap(email)).thenReturn(false);
+
+        authService.login(loginRequest(email, null), httpRequest);
+
+        ArgumentCaptor<SuccessfulLoginEvent> event =
+                ArgumentCaptor.forClass(SuccessfulLoginEvent.class);
+        verify(eventPublisher).publishEvent(event.capture());
+        assertThat(event.getValue().userAgent()).isEqualTo("Unknown");
+    }
+
+    @Test
+    void login_absurdlyLongUserAgent_isTruncatedBeforeItIsStored() {
+        // Attacker-supplied and unbounded; the column is not. Truncating here is what keeps a
+        // 100 kB header from failing the insert on an otherwise valid login.
+        String email = "student@student.kit.edu";
+        Student student = activeStudent(email);
+        loginReaches(email, student);
+        when(httpRequest.getHeader("User-Agent")).thenReturn("U".repeat(600));
+        when(adminRepository.findByStudent(student)).thenReturn(Optional.empty());
+        when(bootstrapPolicy.shouldBootstrap(email)).thenReturn(false);
+
+        authService.login(loginRequest(email, null), httpRequest);
+
+        ArgumentCaptor<SuccessfulLoginEvent> event =
+                ArgumentCaptor.forClass(SuccessfulLoginEvent.class);
+        verify(eventPublisher).publishEvent(event.capture());
+        assertThat(event.getValue().userAgent()).hasSize(500);
+    }
+
+    @Test
+    void login_noEmailAtAll_isRefusedAsAnInvalidKitAddress() {
+        LoginRequest request = mock(LoginRequest.class);
+        when(request.email()).thenReturn(null);
+
+        assertThatThrownBy(() -> authService.login(request, httpRequest))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Invalid KIT email");
+    }
+
+    @Test
+    void login_deletedAccount_isRefusedTheSameWayABlockedOneIs() {
+        String email = "deleted@student.kit.edu";
+        Student student = activeStudent(email);
+        student.setStatus(UserStatus.DELETED);
+        when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(rateLimitService.emailSubject(anyString())).thenReturn("email");
+        when(rateLimitService.ipSubject(anyString())).thenReturn("ip");
+        when(studentRepository.findByKitEmail(email)).thenReturn(Optional.of(student));
+
+        assertThatThrownBy(() -> authService.login(loginRequest(email, null), httpRequest))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Account is not active");
+
+        verify(otpService, never()).consume(anyString(), anyString());
+        verify(tokenRepository, never()).save(any());
+    }
+
+    @Test
+    void validate_wellFormedHeaderThatResolvesToNobody_reportsTheTokenAsWrong() {
+        // A malformed header throws; a well-formed one carrying a token nobody holds comes
+        // back as null, and validate has to answer rather than propagate that difference.
+        when(tokenAuthenticationService.authenticate("gone")).thenReturn(Optional.empty());
+
+        BasicResponse response = authService.validate(
+                "Bearer gone", new ValidateCredentialsRequest("student@student.kit.edu"));
+
+        assertThat(response.success()).isFalse();
+        assertThat(response.message()).isEqualTo("Error, wrong Auth-Token");
+    }
+
+    @Test
+    void validate_requestWithoutAnEmail_reportsTheEmailAsWrongRatherThanThrowing() {
+        Student student = activeStudent("student@student.kit.edu");
+        when(tokenAuthenticationService.authenticate("token"))
+                .thenReturn(Optional.of(new AuthenticatedUser(student, new Token(), null)));
+
+        BasicResponse response =
+                authService.validate("Bearer token", new ValidateCredentialsRequest(null));
+
+        assertThat(response.success()).isFalse();
+        assertThat(response.message()).isEqualTo("Error, wrong email for auth Token");
     }
 }
