@@ -195,7 +195,7 @@ olmadığı belli olan dört davranış:
 değişkeninden önce eğik çizgi yok, yani gerçek rota `/social/comments/vote/answer<id>`.
 Yorum tarafındaki kardeş endpoint (`:73`) doğru yazılmış (`.../vote/comment/{comment_id}`).
 Controller seviyesi bir kusur, unit katmanının dışında; bu batch'te düzeltilmedi, kayda
-geçti.
+geçti. (API/rol batch'inde düzeltildi — güncel durum için F-4'e bakın.)
 
 ### Silinen ölü kod — `StudentService`'in ikinci moderasyon yolu
 

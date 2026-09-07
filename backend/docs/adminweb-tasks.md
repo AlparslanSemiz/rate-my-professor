@@ -66,10 +66,11 @@ New path = `/admin` + old path.
 
 - [ ] Set one base path (`https://<host>/admin`) and move the calls above onto it.
 
-**The two creates change their error shape.** `POST /data/lectures` and
-`POST /data/professor` used to check the caller inside the handler and answer
-`200 {"success": false}` to a non-administrator. Their `/admin` versions are refused by the
-security chain and answer a plain **`403`**. If the panel branches on
+**The two creates answer `403`.** `POST /data/lectures` and `POST /data/professor` are both
+refused by the security chain with a plain **`403`** when the caller is not an administrator,
+and so are their `/admin` versions. `POST /data/professor` used to check the caller inside
+the handler and answer `200 {"success": false}` instead; that is fixed, so the legacy and
+`/admin` paths no longer differ in error shape. If the panel branches on
 `success === false` for these two calls, it needs to handle the status code as well.
 
 - [ ] Handle `403` on the two catalogue creates.

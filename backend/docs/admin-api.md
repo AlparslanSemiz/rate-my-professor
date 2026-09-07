@@ -562,7 +562,7 @@ admin-only and return every row regardless of `active`.
 | `GET /admin/data/lectures/all` | — | Admin-only. Every lecture, active or not. |
 | `GET /data/lectures/{id}` | — | Public. `404`-shaped as `{"message":"...","success":false,"lecture":null}` rather than an HTTP 404 if not found. |
 | `POST /admin/data/lectures` | `{"name","code","semesterYear","semesterSeason","active","professorIds"}` | Refused with a plain `403` by the security chain when the caller is not an admin. `active` is currently ignored; new lectures are always created active. `409`-shaped as `{"success":false}` on a duplicate name, not an HTTP `409`. |
-| `POST /data/lectures` | same | **Legacy, removed once the panel has moved.** Same write, but it checks the caller internally rather than through the security chain and answers `200 {"success":false}` — not `403` — when the caller is not an admin. |
+| `POST /data/lectures` | same | **Legacy, removed once the panel has moved.** Same write, and refused with a plain `403` by the security chain exactly like the `/admin` version. Earlier revisions of this table described a `200 {"success":false}` here; that was never true of this path — `SecurityConfig` has always matched it. |
 | `PATCH /admin/data/lectures/{id}` | any subset of `{"name","code","semesterYear","semesterSeason","active","lectureType","professorIds"}` | `LECTURE_UPDATED` audit event. |
 | `DELETE /admin/data/lectures/{id}` | none | Deletes the lecture and every comment, answer and rating filed under it. Use `active = false` instead to take a lecture out of the app while keeping its history. `LECTURE_DELETED` audit event. |
 | `GET /data/professor` | — | Public. Active professors only. |
@@ -570,7 +570,7 @@ admin-only and return every row regardless of `active`.
 | `GET /data/professor/{id}` | — | Public. |
 | `GET /data/professor/id?firstName=&lastName=` | — | Public. Returns a bare UUID string, or `null` if no match — not wrapped in a response object. |
 | `POST /admin/data/professor` | `{"firstName","lastName","lectureIDs"}` | Refused with a plain `403`, like `POST /admin/data/lectures`. |
-| `POST /data/professor` | same | **Legacy, removed once the panel has moved.** Same non-standard auth/error shape as the legacy `POST /data/lectures`. |
+| `POST /data/professor` | same | **Legacy, removed once the panel has moved.** Refused with a plain `403`, like the `/admin` version. This route did once check the caller inside the handler — answering `200 {"success":false}` to a non-admin, and a `500` to an anonymous caller because the principal it read was null — and is now matched by the security chain like every other `/data` write. |
 | `PATCH /admin/data/professor/{id}` | any subset of `{"firstName","lastName","active","lectureIds"}` | `PROFESSOR_UPDATED` audit event. |
 | `DELETE /admin/data/professor/{id}` | none | Detaches the professor from every lecture; the lectures themselves survive. `PROFESSOR_DELETED` audit event. |
 

@@ -15,7 +15,7 @@ yaşıyorsa gerçekten kayıtlıdır.
 | [F-1](#f-1--oy-verme-audit-yazmıyor) | Oy verme audit yazmıyor | Yüksek — moderasyon kör noktası | Açık, karakterize edildi |
 | [F-2](#f-2--votetype-doğrulanmıyor) | `voteType` doğrulanmıyor, `null` 409'a dönüşüyor | Orta — yanlış HTTP kodu | **Çözüldü** (`43e923b`) |
 | [F-3](#f-3--oy-geri-çekilemiyor) | Oy geri çekilemiyor (toggle-off yok) | Orta — ürün boşluğu | Açık, karakterize edildi |
-| [F-4](#f-4--voteanswer-rotasında-eğik-çizgi-eksik) | `/vote/answer` rotasında eğik çizgi eksik | Orta — rota yanlış | Açık; sınıf tarandı, tek örnek |
+| [F-4](#f-4--voteanswer-rotasında-eğik-çizgi-eksik) | `/vote/answer` rotasında eğik çizgi eksik | Orta — rota yanlış | **Çözüldü** (API/rol batch'i) |
 | [F-5](#f-5--başarısızlıklar-http-200-ile-dönüyor) | Başarısızlıklar HTTP 200 ile dönüyor | Orta — sessiz hata | Açık, sözleşme sabitlendi |
 | [F-6](#f-6--studentservicein-ikinci-moderasyon-yolu) | `StudentService`'in ikinci, zayıf moderasyon yolu | Yüksek — koruma atlanabilirdi | **Çözüldü** (silindi) |
 | [F-7](#f-7--normalizeip-tek-virgülde-çöküyordu) | `normalizeIp` tek virgülde çöküyordu | Orta — login e-postasında hata | **Çözüldü** (`8fc2901`) |
@@ -25,6 +25,8 @@ yaşıyorsa gerçekten kayıtlıdır.
 | [F-11](#f-11--uyarı-geri-almada-kontroluygulama-yarışı) | Uyarı geri almada kontrol/uygulama yarışı | Düşük — nadir | Açık, kayda geçti |
 | [F-12](#f-12--boş-hedef-listesinde-gereksiz-yönetici-sorgusu) | Boş hedef listesinde gereksiz yönetici sorgusu | Çok düşük | Açık, karakterize edildi |
 | [F-13](#f-13--token-iptali-tek-bir-koşula-bağlı) | Token iptali tek bir koşula bağlı | Bilgi — koruma mevcut | Test altına alındı |
+| [F-14](#f-14--zorunlu-query-parametresi-eksikken-500) | Zorunlu query parametresi eksikken 500 | Orta — yanlış HTTP kodu | Açık, test altına alındı |
+| [F-15](#f-15--bilinmeyen-derste-kategori-listesi-500) | Bilinmeyen derste kategori listesi 500 | Orta — yanlış HTTP kodu | Açık, test altına alındı |
 | [P-1](#p-1--kapsam-baseline-sayısı-yanlıştı) | Kapsam baseline sayısı yanlıştı | Süreç | **Çözüldü** (yeniden ölçüldü) |
 | [P-2](#p-2--integration-testleri-unit-hedeflerini-gizliyor) | Integration testleri unit hedeflerini gizliyor | Süreç | **Çözüldü** (yöntem değişti) |
 | [P-3](#p-3--lombok-jacocoda-filtrelenmiyor) | Lombok JaCoCo'da filtrelenmiyor | Süreç | Açık, bilinçli |
@@ -189,10 +191,14 @@ Taramanın kendisi tekrarlanabilir olsun diye: sınıf düzeyindeki `@RequestMap
 **dizi biçimini** (`@RequestMapping({"/admin/users", "/users"})`) hesaba katmayan bir tarama
 altı sahte çakışma üretiyor — moderasyon controller'larının hepsi bu biçimi kullanıyor.
 
-**Durum.** Açık, düzeltilmedi — bu bulgunun kapsamı tarama, düzeltme değil. Düzeltmek
-**kırıcı bir değişiklik**: istemci bugünkü (bozuk) rotayı kullanıyorsa yeni rota ile birlikte
-eskisinin de bir süre servis edilmesi gerekebilir. Tek örnek olduğu artık bilindiğine göre
-karar tek bir endpoint'in kararı — API/rol batch'ine kalıyor.
+**Durum.** **Çözüldü** — API/rol batch'inde. Rota artık
+`POST /social/comments/vote/answer/{answer_id}` (`SocialController:96`).
+
+Eski rota **servis edilmiyor**: kırıcı bir değişiklik olduğu bilinerek, iki rotayı bir süre
+birlikte servis etmek yerine temiz düzeltme seçildi. Android istemci yeni yolu kullanan bir
+sürüm çıkana kadar oy verme çağrısında **404** alır — istemci değişikliği bununla birlikte
+inmeli. Yetkilendirme tarafında bir şey değişmiyor: rota `/social/comments/vote/**`
+matcher'ının altında kalmaya devam ediyor, yani oy vermek hâlâ oturum gerektiriyor.
 
 ---
 
@@ -429,6 +435,59 @@ AccountServiceTests
 İkinci test bu batch'in en değerli tek testi: koruma bir gün kaldırılırsa kırmızıya düşer.
 
 **Durum.** Test altına alındı.
+
+---
+
+### F-14 — Zorunlu query parametresi eksikken 500
+
+**Nerede.** `ProfessorController:68` (`GET /data/professor/id`).
+
+**Ne oluyor.** İki parametre de `@RequestParam` ile zorunlu:
+
+```java
+public UUID getProfessorID(@RequestParam String firstName, @RequestParam String lastName)
+```
+
+Parametresiz çağrıldığında Spring `MissingServletRequestParameterException` atıyor.
+`GlobalExceptionHandler` bu tipi **karşılamıyor** — `MethodArgumentNotValidException`,
+`HandlerMethodValidationException`, `ConstraintViolationException`,
+`HttpMessageNotReadableException` ve `MethodArgumentTypeMismatchException` sayılmış, bu
+değil. Sonuç catch-all'a düşüyor: **500 "Unexpected backend error"**, doğrusu **400**.
+
+Endpoint anonim erişime açık, yani bunu tetiklemek için oturum bile gerekmiyor.
+
+**Nasıl bulundu.** API/rol batch'inin rota taraması (`ApiAuthorizationMatrixTests`)
+`declaredPublicRoutesAreReachableWithoutAToken` içinde her public rotayı tokensız çağırdı;
+bu rota 500 döndü.
+
+**Durum.** Açık. Davranış test altına alındı: rota
+`PUBLIC_ROUTES_ANSWERING_SERVER_ERROR` listesinde ve test 500 **beklemeye** devam ediyor,
+yani düzeltildiği anda kırmızıya düşüp listenin küçültülmesini isteyecek. Düzeltme tek
+satır: `MissingServletRequestParameterException`'ı `handleBadRequest`'in tip listesine
+eklemek. F-5 ailesinden — kapsam kararı yine sözleşme kararı.
+
+---
+
+### F-15 — Bilinmeyen derste kategori listesi 500
+
+**Nerede.** `RatingService:187` (`GET /ratings/{lectureId}/categories`).
+
+**Ne oluyor.**
+
+```java
+Lecture lecture = lectureService.getById(lectureId);
+for (RatingCategory category : lecture.getLectureType().getDefaultCategories()) {
+```
+
+`getById` bulamadığında `null` dönüyor ve arada kontrol yok, dolayısıyla var olmayan bir
+ders id'si `NullPointerException` → catch-all → **500**. Doğrusu 404, ya da kardeş
+endpoint'in yaptığı gibi 404 şeklinde bir gövde.
+
+Bu endpoint de anonim erişime açık; rastgele bir UUID yeterli.
+
+**Nasıl bulundu.** F-14 ile aynı tarama.
+
+**Durum.** Açık, F-14 ile aynı biçimde test altına alındı.
 
 ---
 

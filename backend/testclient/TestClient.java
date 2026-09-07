@@ -148,7 +148,7 @@ public class TestClient {
     }
 
     /**
-     * Simple check to see if user is succesfully logged in.
+     * Simple check to see if user is successfully logged in.
      */
     public static void me() throws Exception {
 
