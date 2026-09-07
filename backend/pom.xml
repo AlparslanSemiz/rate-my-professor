@@ -190,7 +190,18 @@
 										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.85</minimum>
+											<minimum>0.90</minimum>
+										</limit>
+										<!--
+											A floor, not a target. Without it a heavily branched method
+											can arrive with one happy-path test and pull branch coverage
+											down without failing anything. Both limits sit in one rule so
+											a single failure message names both counters.
+										-->
+										<limit>
+											<counter>BRANCH</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.73</minimum>
 										</limit>
 									</limits>
 								</rule>
