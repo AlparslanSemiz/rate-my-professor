@@ -13,15 +13,15 @@ yaşıyorsa gerçekten kayıtlıdır.
 |---|---|---|---|
 | [BUG-3](#bug-3--profesör-ataması-sırası-geri-almayı-sessizce-reddediyor) | Profesör ataması sırası geri almayı reddediyor | Yüksek — kullanıcıya kararsız görünüyor | Açık, karakterize edildi |
 | [F-1](#f-1--oy-verme-audit-yazmıyor) | Oy verme audit yazmıyor | Yüksek — moderasyon kör noktası | Açık, karakterize edildi |
-| [F-2](#f-2--votetype-doğrulanmıyor) | `voteType` doğrulanmıyor, `null` 409'a dönüşüyor | Orta — yanlış HTTP kodu | Açık, karakterize edildi |
+| [F-2](#f-2--votetype-doğrulanmıyor) | `voteType` doğrulanmıyor, `null` 409'a dönüşüyor | Orta — yanlış HTTP kodu | **Çözüldü** (`43e923b`) |
 | [F-3](#f-3--oy-geri-çekilemiyor) | Oy geri çekilemiyor (toggle-off yok) | Orta — ürün boşluğu | Açık, karakterize edildi |
-| [F-4](#f-4--voteanswer-rotasında-eğik-çizgi-eksik) | `/vote/answer` rotasında eğik çizgi eksik | Orta — rota yanlış | Açık, kayda geçti |
+| [F-4](#f-4--voteanswer-rotasında-eğik-çizgi-eksik) | `/vote/answer` rotasında eğik çizgi eksik | Orta — rota yanlış | Açık; sınıf tarandı, tek örnek |
 | [F-5](#f-5--başarısızlıklar-http-200-ile-dönüyor) | Başarısızlıklar HTTP 200 ile dönüyor | Orta — sessiz hata | Açık, sözleşme sabitlendi |
 | [F-6](#f-6--studentservicein-ikinci-moderasyon-yolu) | `StudentService`'in ikinci, zayıf moderasyon yolu | Yüksek — koruma atlanabilirdi | **Çözüldü** (silindi) |
 | [F-7](#f-7--normalizeip-tek-virgülde-çöküyordu) | `normalizeIp` tek virgülde çöküyordu | Orta — login e-postasında hata | **Çözüldü** (`8fc2901`) |
 | [F-8](#f-8--ipinfo_token-boşken-sessiz-başarısızlık) | `IPINFO_TOKEN` boşken sessiz başarısızlık | Orta — teşhis edilemiyordu | **Kısmen çözüldü** |
 | [F-9](#f-9--readonly-transaction-içinde-yazma) | `readOnly` transaction içinde alan yazma | Düşük — integration sorusu | Açık, kayda geçti |
-| [F-10](#f-10--istemciye-giden-yazım-hataları) | İstemciye giden yazım hataları | Düşük — kozmetik, ama sözleşme | Açık, sabitlendi |
+| [F-10](#f-10--istemciye-giden-yazım-hataları) | İstemciye giden yazım hataları | Düşük — kozmetik, ama sözleşme | **Çözüldü** (`edaf2bc`), beşi açık |
 | [F-11](#f-11--uyarı-geri-almada-kontroluygulama-yarışı) | Uyarı geri almada kontrol/uygulama yarışı | Düşük — nadir | Açık, kayda geçti |
 | [F-12](#f-12--boş-hedef-listesinde-gereksiz-yönetici-sorgusu) | Boş hedef listesinde gereksiz yönetici sorgusu | Çok düşük | Açık, karakterize edildi |
 | [F-13](#f-13--token-iptali-tek-bir-koşula-bağlı) | Token iptali tek bir koşula bağlı | Bilgi — koruma mevcut | Test altına alındı |
@@ -112,8 +112,30 @@ SocialServiceVoteTests
   voteAnswer_nullVoteType_isSavedAsANullVoteRatherThanRejected
 ```
 
-**Durum.** Açık. Düzeltmesi küçük: request record'una `@NotNull` ya da metotta erken bir
-`ApiException(BAD_REQUEST)`.
+**Durum.** **Çözüldü** — commit `43e923b`.
+
+`VoteCommentRequest.voteType` ve `VoteAnswerRequest.voteType` `@NotNull` aldı, iki handler
+da `@Valid @RequestBody` oldu. Codebase'in doğrulama yaptığı her endpoint böyle yapıyor ve
+`AddLectureRequest` zaten bir enum alanında (`@NotNull SemesterSeason`) birebir aynı
+örneği taşıyordu. `GlobalExceptionHandler` ihlali **400 "Invalid request"**'e çeviriyor.
+
+Servise **guard eklenmedi**: doğrulama sınırda duruyor. Gerekçe, `SocialService`'in hiçbir
+metodunun exception atmaması (F-5) — servise `ApiException` koymak sınıfa ikinci bir hata
+sözleşmesi sokardı, ve servisin tek çağıranı bu controller.
+
+Yeni testler `SocialApiIntegrationTests` içinde: `voteWithoutAVoteTypeIsRejectedAsABadRequest`
+(hem açık `null` hem alanın hiç olmaması), `votingOnAnAnswerWithoutAVoteTypeIsRejectedAsABadRequest`,
+ve `aVoteCarryingAVoteTypeIsStillAccepted` — son test guard'ın meşru bir oyu reddetmediğini
+gösteriyor.
+
+`SocialServiceVoteTests`'teki iki test silinmedi, yeniden adlandırıldı:
+`voteComment_nullVoteType_reachesSaveBecauseValidationLivesAtTheBoundary` (ve `voteAnswer`
+eşi). Servis hâlâ doğrulamıyor, testler de bunu söylüyor artık — ve ileride sınırı atlayan
+bir çağıran belirirse flush'taki constraint ihlaliyle arasındaki tek kayıt bu.
+
+Doğrulama: `@NotNull` geçici olarak kaldırıldığında yeni test
+`Status expected:<400> but was:<409>` ile kırmızıya düşüyor — yani kusur bulguda yazıldığı
+gibiydi ve test onu gerçekten yakalıyor.
 
 ---
 
@@ -150,9 +172,27 @@ Yorum tarafındaki kardeş endpoint (`:71`) doğru yazılmış:
 rota bağlamayı değil. Hiçbir test oy endpoint'ine HTTP isteği atmıyor — bulgu, oy yolunu
 okurken çıktı.
 
-**Durum.** Açık, düzeltilmedi. Düzeltmek **kırıcı bir değişiklik**: istemci bugünkü
-(bozuk) rotayı kullanıyorsa yeni rota ile birlikte eskisinin de bir süre servis edilmesi
-gerekebilir. API/rol batch'inde karara bağlanmalı.
+**Sınıf geneli tarandı — tek örnek bu.** Rota bir sınıf kusuru mu diye 19 controller'daki
+**110 verb+path rotasının tamamı** tarandı: yol değişkeninden önce ayırıcısı eksik olan
+başka **hiçbir** mapping yok.
+
+Tarama üç şeyi daha kontrol etti, hiçbiri çıkmadı: çifte eğik çizgi (0), sondaki eğik çizgi
+(0), ve belirsiz (aynı verb + aynı yol) mapping (0).
+
+Tarama sırasında bulunan tek komşu nokta — kusur değil:
+
+- `RatingController:55` metot yolu `"own/{lectureId}"`, yani başında eğik çizgi yok. Spring
+  sınıf öneki ile birleştirirken ayırıcıyı kendisi koyuyor, dolayısıyla rota doğru çalışıyor
+  (`/ratings/own/{lectureId}`). Yalnızca codebase'in geri kalanından farklı yazılmış.
+
+Taramanın kendisi tekrarlanabilir olsun diye: sınıf düzeyindeki `@RequestMapping`'in
+**dizi biçimini** (`@RequestMapping({"/admin/users", "/users"})`) hesaba katmayan bir tarama
+altı sahte çakışma üretiyor — moderasyon controller'larının hepsi bu biçimi kullanıyor.
+
+**Durum.** Açık, düzeltilmedi — bu bulgunun kapsamı tarama, düzeltme değil. Düzeltmek
+**kırıcı bir değişiklik**: istemci bugünkü (bozuk) rotayı kullanıyorsa yeni rota ile birlikte
+eskisinin de bir süre servis edilmesi gerekebilir. Tek örnek olduğu artık bilindiğine göre
+karar tek bir endpoint'in kararı — API/rol batch'ine kalıyor.
 
 ---
 
@@ -294,9 +334,34 @@ bir şey yok; davranış Hibernate'in ve `readOnly` bayrağının işi.
 Bu dizgiler `BasicResponse.message` içinde istemciye gidiyor, yani kullanıcı arayüzünde
 görünebiliyorlar.
 
-**Durum.** Açık. Testler dizgileri **olduğu gibi** sabitledi
-(`StudentServiceTests.deleteAccount_*`), çünkü mesaj bir sözleşme. Düzeltilirse testler de
-güncellenmeli — bu bilinçli: kullanıcının gördüğü metin sessizce değişemesin.
+**Durum.** **Çözüldü** — commit `edaf2bc`. Üç dizgi düzeltildi:
+
+```
+"Error, couldn't authenticate user"
+"Error, couldn't find student"
+"Deleted Account successfully: ..."
+```
+
+`StudentServiceTests`'in bu dizgileri sabitleyen assertion'ları aynı commit'te güncellendi —
+zaten metnin sessizce değişmemesi için varlar, yani metinle birlikte değişmeleri gerekiyor.
+`AccountServiceTests` de `StudentService`'in başarısızlık mesajını stub'ladığı için o stub
+da taşındı; bırakılsa artık var olmayan bir dizgiyi belgelerdi.
+
+**Beşi hâlâ açık.** `src/main`'de aynı yazım hatası sekiz yerde vardı; bu bulgu yalnızca
+`deleteAccount`'un üçünü kapsıyordu. Kalanlar:
+
+| Yer | Dizgi |
+|---|---|
+| `ProfessorController:55` | `"Error, couldnt authenticate Admin"` |
+| `RatingService:168` | `"Error, couldnt find rating for Lecture: "` |
+| `SocialService:184` | `"Error, couldnt finde comment"` — ayrıca `finde` |
+| `SocialService:257` | `"Error, couldnt finde comment"` — ayrıca `finde` |
+| `SocialService:299` | `"Error, couldnt find answer"` |
+
+Bunlar bilinçli olarak kapsam dışı bırakıldı ki metin geçişi tek ve gözden geçirilebilir bir
+değişiklik olsun. `ProfessorController:55` dizgisinin iki testi var
+(`ProfessorControllerTests:119`, `ProfessorApiIntegrationTests:450`), yani onu düzeltmek de
+test güncellemesi gerektiriyor.
 
 ---
 
