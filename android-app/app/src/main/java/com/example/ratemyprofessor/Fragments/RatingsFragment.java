@@ -298,7 +298,9 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                     List<Rating> ratings = searchService.getLectureRatings(lecture.id, Rater.AVERAGE);
                     List<TopicAverageResponse> topicRatings = new ArrayList<>();
                     for (Rating rating : ratings) {
-                        topicRatings.add(new TopicAverageResponse(rating.category, rating.score));
+                        if (!rating.category.equals(RatingCategory.OVERALL)) {
+                            topicRatings.add(new TopicAverageResponse(rating.category, rating.score));
+                        }
                     }
                     showRatings(null, topicRatings);
                 }
@@ -321,6 +323,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                     List<TopicAverageResponse> ratings = body.ratings();
                     // Dont know why we even get "null" categories but it happens
                     ratings.removeIf(rating -> rating.category() == null);
+                    ratings.removeIf(rating -> rating.category().equals(RatingCategory.OVERALL));
                     Log.d("HEREHEREHERE", "BITTEEEEE");
                     updateLocalRatingsFromResponse(ratings);
                     for (TopicAverageResponse rating : ratings) {
@@ -330,7 +333,9 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                         List<Rating> storedUserRatings = searchService.getLectureRatings(lecture.id, Rater.USER);
                         List<TopicAverageResponse> userRatings = new ArrayList<>();
                         for (Rating rating : storedUserRatings) {
-                            userRatings.add(new TopicAverageResponse(rating.category, rating.score));
+                            if (!rating.category.equals(RatingCategory.OVERALL)) {
+                                userRatings.add(new TopicAverageResponse(rating.category, rating.score));
+                            }
                         }
                         runOnUiThread(() -> showRatings(ratings, formatUserRatings(ratings, userRatings)));
                     });
@@ -361,7 +366,9 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                 List<TopicAverageResponse> topicRatings = new ArrayList<>();
                 List<RatingCategoryResponse> categories = body.categories();
                 for (RatingCategoryResponse category : categories) {
-                    topicRatings.add(new TopicAverageResponse(category.category(), 0));
+                    if (!category.equals(RatingCategory.OVERALL)) {
+                        topicRatings.add(new TopicAverageResponse(category.category(), 0));
+                    }
                 }
                 showRatings(topicRatings, null);
             }
@@ -482,6 +489,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                         // update View
                         updateLocalRatingsFromRequest(requestList);
                         insertAverageRatings(lecture);
+                        // TODO Update prof rating
                     }
 
                     @Override

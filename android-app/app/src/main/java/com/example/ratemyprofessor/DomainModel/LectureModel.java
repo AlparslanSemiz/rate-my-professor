@@ -11,5 +11,6 @@ public record LectureModel(
         boolean active,
         List<Professor> professors,
         int commentCount,
-        int ratingCount
+        int ratingCount,
+        double averageRating
 ) {}

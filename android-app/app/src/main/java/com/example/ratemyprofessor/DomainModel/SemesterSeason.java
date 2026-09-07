@@ -8,10 +8,10 @@ public enum SemesterSeason {
     /**
      * Summer term.
      */
-    SUMMER,
+    SS,
 
     /**
      * Winter term.
      */
-    WINTER
+    WS
 }
