@@ -29,17 +29,21 @@ really recorded if it lives in a test.
 | [F-15](#f-15--500-for-the-category-list-of-an-unknown-lecture) | 500 for the category list of an unknown lecture | Medium — wrong HTTP code | Open, put under test |
 | [F-16](#f-16--the-wrong-http-method-returns-404-instead-of-405) | The wrong HTTP method returns 404 instead of 405 | Medium — wrong HTTP code, on all 122 routes | Open, put under test |
 | [F-17](#f-17--an-unsupported-media-type-returns-500-instead-of-415) | An unsupported media type returns 500 instead of 415 | Medium — wrong HTTP code, on every route that reads a body | **Fixed** |
+| [F-18](#f-18--the-project-id-reaches-gitlab-encoded-twice) | The GitLab project id reaches the tracker encoded twice | High — the integration is dead for a path-shaped id | **Fixed** |
 | [P-1](#p-1--the-coverage-baseline-number-was-wrong) | The coverage baseline number was wrong | Process | **Fixed** (re-measured) |
 | [P-2](#p-2--integration-tests-hide-unit-targets) | Integration tests hide unit targets | Process | **Fixed** (method changed) |
 | [P-3](#p-3--lombok-is-not-filtered-in-jacoco) | Lombok is not filtered in JaCoCo | Process | Open, deliberate |
+| [P-4](#p-4--a-moved-test-file-was-copied-not-moved) | A "moved" test file was copied, not moved | Process | **Fixed** (duplicates deleted) |
 
 BUG-1 and BUG-2 (the cursor and approximate-location bug reports) are in
 [test-plan.md](test-plan.md#findings); neither was reproducible on the backend and they stay
 there.
 
-The numbers stop at F-17 on purpose. The ownership / IDOR sweep ran and raised nothing — what
-it covered and how is under [Negative results](#negative-results), because a sweep that finds
-nothing is only worth something if its coverage is written down.
+The ownership / IDOR sweep ran and raised nothing — what it covered and how is under
+[Negative results](#negative-results), because a sweep that finds nothing is only worth
+something if its coverage is written down. F-18 comes from batch 5 instead: the first defect
+found by a *unit* test in several batches, and the only one so far that would have taken a
+feature down completely rather than answering with the wrong status code.
 
 ---
 
@@ -669,6 +673,54 @@ would stay green if someone later replaced the narrow handler with
 
 ---
 
+### F-18 — The project id reaches GitLab encoded twice
+
+**Where.** `RestClientGitLabClient.createIssue`.
+
+**What happened.** The path was assembled by hand:
+
+```java
+String path = "/api/v4/projects/" + URLEncoder.encode(projectId, UTF_8) + "/issues";
+```
+
+`RestClient.uri(String)` treats its argument as a URI template and encodes it as well, so the
+percent sign of the first encoding was encoded again. A project id of `group/project` left the
+backend as `group%252Fproject`. GitLab decodes that once, looks for a project literally named
+`group%2Fproject`, and answers 404 — which the broad `catch (RuntimeException)` turns into the
+same **502 "Could not reach GitLab"** an unreachable tracker gives.
+
+**Why it matters.** GitLab addresses a project either by its numeric id or by its URL-encoded
+path, and the path form is what its own documentation shows. A numeric id is unaffected —
+`URLEncoder.encode("42")` is `"42"` — which is why nobody saw this: the deployment happens to
+use a numeric `GITLAB_PROJECT_ID`. Configured the other way, **every** bug report submission
+fails, and the log names only `HttpClientErrorException$NotFound`, so the cause is not visible
+from the symptom.
+
+**Fixed.** The id goes in as a URI variable instead, and `RestClient` encodes it exactly once:
+
+```java
+.uri("/api/v4/projects/{projectId}/issues", projectId)
+```
+
+**Test.**
+```
+RestClientGitLabClientTests
+  createIssue_projectIdWithASlash_encodesItIntoASinglePathSegment
+```
+Written before the fix and red on the real URI (`group%252Fproject` against the expected
+`group%2Fproject`), which is how the defect was found in the first place — the test was written
+to state the intended request, not to reproduce a report.
+
+**A second defect, found by the same batch and fixed in it.** Adding the package-private
+constructor the test drives left the class with two constructors and neither marked, so the
+container stopped being able to build the bean at all — `No default constructor found`, every
+`@SpringBootTest` red. The public constructor now carries `@Autowired`. Worth recording because
+of *which* tests caught it: the unit tests were green throughout; the API sweeps and the
+context-loading tests are what refused. That is the argument for keeping both layers.
+
+
+---
+
 ## Negative results
 
 A sweep that finds nothing is only worth something if what it covered is written down.
@@ -678,8 +730,8 @@ Otherwise the next person repeats it, or worse, assumes it was never done.
 
 `ApiOwnershipMatrixTests` asks the question `ApiAuthorizationMatrixTests` does not: once a
 caller *is* authenticated, can they reach a row belonging to somebody else? **No route was
-found that lets them.** No finding was raised, which is why the F-numbers stop at F-17 and
-F-18 is still free.
+found that lets them.** No finding was raised; the sweep contributed no number of its own,
+and F-18 was taken later by batch 5.
 
 **What was covered.** All 61 id-taking routes, read from Spring's handler mappings rather
 than listed by hand, each classified into one of four sets with the reason recorded next to
@@ -774,6 +826,25 @@ covered through serialization it deletes more *covered* lines than uncovered one
 the `<excludes>` list was not widened either (adding `**/model/**` or `**/dto/**` would have
 bought several points without a single test). These would not clear the ratchet, they would
 redefine it.
+
+### P-4 — A "moved" test file was copied, not moved
+
+`docs/test-plan.md` recorded that `StudentServiceTests` "sat in the `com.pse` root while the
+class lives in `com.pse.user.service`. It was moved". It was not moved — it was copied, and so
+was `AccountServiceTests`. Both originals stayed in `com.pse.user` and kept running: 16 tests
+pinning behaviour that the rewritten versions in `com.pse.user.service` already pin, in the old
+style the rewrite existed to replace (`@InjectMocks`, JUnit `assertEquals`, camel-case names).
+
+**Why it is worth a number.** Not the runtime — 16 fast unit tests cost nothing. The problem is
+that a duplicate makes the suite lie about itself: two classes state the same contract, and
+nothing says which one to edit when the contract changes. The likely outcome is one being
+updated and the other left behind, at which point the suite contains two different answers to
+the same question and both are green.
+
+**Fixed** in batch 5: the two originals were deleted. The proof that they were pure duplication
+is that the bundle did not move — `StudentService` and `AccountService` stayed at 0 missed lines
+and the same branch counts, before and after, to the line.
+
 
 ---
 

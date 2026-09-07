@@ -1,34 +1,36 @@
 # Test plan
 
 Layers: **unit → API/role → integration → E2E**. Every batch adds its own section. The unit
-layer is covered by batches 1–4, the API/role layer by the authorization, protocol and
+layer is covered by batches 1–5, the API/role layer by the authorization, protocol and
 ownership sweeps below. The integration and E2E layers have not been started; what blocks the
 first of them is the Testcontainers question under [Open questions](#open-questions).
 
 ### Where it stands
 
-**668 tests, 0 failures**, 2 skipped (the `@Disabled` `DemoApplicationTests`, and
-`PostgreSqlMigrationSmokeTests`, which runs on CI only). Bundle **93.97% LINE** (3178/3382),
-**84.27% BRANCH** (970/1151). Line coverage is gated in two tiers — **90% mandatory,
-94% target** — and BRANCH has a single floor at 0.82.
+**677 tests, 0 failures**, 2 skipped (the `@Disabled` `DemoApplicationTests`, and
+`PostgreSqlMigrationSmokeTests`, which runs on CI only). Bundle **94.86% LINE** (3209/3383),
+**86.01% BRANCH** (990/1151). Line coverage is gated in two tiers — **90% mandatory,
+94% target** — and BRANCH has a single floor at 0.84.
 
-Line coverage currently sits **just under the target**, so `coverage:line-target` is yellow:
-93.97% against 94%, which is **2 covered lines** away. That is the tier working rather than
-failing — the `bugFixes2` merge grew the production code by 20 lines and the covered count by
-17, and the warning is what says so. Either cover the shortfall or move
-`COVERAGE_LINE_TARGET`; the pipeline passes either way.
+Line coverage is **above the target** since batch 5, by 29 covered lines, so
+`coverage:line-target` is green rather than yellow. The batch that did it was chosen for the
+opposite reason: `RestClientGitLabClient` was the one class the *Deliberately uncovered* table
+had to describe as debt rather than as a decision, and clearing the target was what closing it
+happened to buy.
 
 | Layer | State |
 |---|---|
-| Unit | Batches 1–4 done. |
+| Unit | Batches 1–5 done. |
 | API / role | The three sweeps below. |
 | Integration | **Not started** — blocked on the Testcontainers decision. |
 | E2E | **Not started.** |
 
-The spread between LINE and BRANCH was 15 points before batch 4 and is **9.7** after it. What
-is left is spread thin rather than concentrated, with one exception: `RestClientGitLabClient`
-still has 18 missed branches of 22 and is the only untested adapter with no principled reason
-(see *Deliberately uncovered*).
+The spread between LINE and BRANCH was 15 points before batch 4, 9.7 after it, and is **8.9**
+after batch 5. What is left is genuinely spread thin now — no single class holds a
+concentration the way the moderation services or the GitLab client did. The four largest
+remaining branch gaps are `ModerationUserService` (27), `ModerationBugReportService` (15),
+`AuthService` (14) and `SocialService` (13); the first of those is mostly Criteria predicates,
+which belong to the integration layer rather than to a unit test.
 
 ### The metric
 
@@ -130,7 +132,7 @@ To keep them apart: these numbers measure different things; this is not an incon
   `coverage:line-target` job — `allow_failure: true` — turns the same condition into a
   visible yellow mark on the pipeline while letting it pass. It is where the suite is
   trying to be, not a gate.
-- **The BRANCH floor, `0.82`,** in the pom only. A floor, not a target: without it a
+- **The BRANCH floor, `0.84`,** in the pom only. A floor, not a target: without it a
   heavily branched method can arrive with one happy-path test and pull branch coverage down
   without failing anything. Batch 4 was chosen by this counter rather than by LINE, because
   every class it touched was already above 82% LINE and a line target would never have
@@ -227,6 +229,81 @@ used to do both jobs was split into the two it was actually doing. See *Three di
 coverage numbers* above. Verified green at both values.
 
 
+## Batch 5 — the GitLab adapter, and a duplicate deleted
+
+Target: the one entry in *Deliberately uncovered* that had to be written down as **debt**.
+`RestClientGitLabClient` was at 23.1% LINE and 4 of 22 branches — the largest single branch gap
+left outside the moderation services, and the only untested adapter whose absence had no
+principled reason behind it.
+
+| Class | LINE missed | BRANCH missed | Tests |
+|---|---|---|---|
+| `RestClientGitLabClient` | 30 → **0** | 18 → **0** | 25 |
+
+Bundle: 93.97% → **94.86% LINE**, 84.27% → **86.01% BRANCH**. The line target (94%) is cleared
+for the first time, so `coverage:line-target` stops warning.
+
+### How the HTTP conversation is driven
+
+Not by mocking the fluent `RestClient` chain, which is what `LoginLocationServiceTests` does.
+That chain is three calls deep; this one is six (`post().uri().header().contentType().body()
+.retrieve().body()`), and a mock of it pins the *shape of the call* rather than its result —
+every future edit to the request would break the test whether or not the behaviour changed.
+
+`MockRestServiceServer.bindTo(RestClient.Builder)` is used instead: real status codes, real
+error types, no network. The failure arms close by themselves because the client library throws
+what it really throws, and the assertions are about the request that went out and the answer
+that came back rather than about which builder methods were called.
+
+**This required a seam.** The class assembled its own `RestClient` in the constructor, so
+nothing could be injected. A second, package-private constructor was added — the public
+`@Value` one delegates to it — and the test lives in the mirror package to reach it. The
+production wiring is unchanged; `RestClientConfig`'s javadoc already records why a
+`RestClient.Builder` cannot simply be injected here (`spring-boot-restclient` is not on the
+classpath, so Boot auto-configures no builder).
+
+### What it found
+
+Two defects, both fixed, both written up in
+[test-findings.md](test-findings.md#f-18--the-project-id-reaches-gitlab-encoded-twice):
+
+- **F-18** — the project id was encoded by hand *and* by the URI template, so a path-shaped id
+  (`group/project`) reached GitLab as `group%252Fproject` and every issue creation answered 502.
+  Found by writing down the request that ought to go out, not by chasing a report.
+- The seam itself broke the container: two constructors with neither marked meant Spring looked
+  for a default constructor and no `@SpringBootTest` could start. The unit tests stayed green
+  the whole time — the API sweeps and the context tests are what caught it. `@Autowired` on the
+  public constructor closes it.
+
+### The token, which is the point of the class
+
+Three of the 25 tests exist for one property: the credential never leaves the backend. The
+header carries it; the log line carries the exception **class name** and nothing else; the
+message the administrator receives says "Could not reach GitLab" whatever went wrong. The
+failure test hands the client an exception whose own message contains the token, then asserts
+that neither the log nor the `ApiException` repeats it. A future edit turning `{}` into
+`exception.getMessage()` — an entirely reasonable-looking change — now fails a test instead of
+writing a credential into the logs.
+
+The cost is pinned too: a revoked token and an unreachable tracker are **indistinguishable** to
+the caller, both 502. That is characterization, not endorsement.
+
+### Also in this batch
+
+The two duplicate test classes in `com.pse.user` were deleted (P-4 in the findings). The bundle
+did not move by a single line, which is the proof that they were duplication rather than
+coverage.
+
+### The gates moved
+
+`jacoco:check` went BRANCH `0.82` → **`0.84`**, following the same rule as batch 2 and batch 4:
+about one and a half points below what is measured. LINE stays at `0.90` — it is the mandatory
+floor of the two-tier arrangement, and the 94% target lives in CI, not in the pom.
+
+Verified the same way as before: with BRANCH temporarily at `0.90`, `./mvnw verify` went red
+with "branches covered ratio is 0.86, but expected minimum is 0.90", and green at `0.84`.
+
+
 ## The API / role batch
 
 A different layer with a different metric. Coverage is not the measure here: these tests drive
@@ -298,17 +375,23 @@ the owner-scoped column one line long.
 
 ## Deliberately uncovered
 
-Three classes are visibly low and none of them is an oversight. Saying so here is the point:
-an unexplained 0% reads as neglect, and the next person re-derives the reason or, worse,
-writes a test that pins an adapter's plumbing.
+Two classes are visibly low and neither is an oversight. Saying so here is the point: an
+unexplained 0% reads as neglect, and the next person re-derives the reason or, worse, writes a
+test that pins an adapter's plumbing. The table had a third row until batch 5 —
+`RestClientGitLabClient`, described there as debt rather than as a decision. It is covered now,
+and the row is gone rather than reworded, which is the only honest way to keep this list
+readable: everything still in it is a decision.
 
 | Class | LINE | Why |
 |---|---|---|
 | `MailService` | **0.0%** (0/46) | An SMTP adapter behind `LoginCodeDelivery` / `LoginSuccessDelivery`. Every test substitutes `CapturingLoginCodeDelivery` through `TestDeliveryConfig`, so the real class is never constructed. Testing it means mocking `JavaMailSender` and asserting on a `MimeMessageHelper` — that is, asserting that the adapter calls the library the way the library documents. Its logic worth testing (the location lookup, the template fill) already lives in `LoginLocationService` and `MailTemplateService`. |
 | `MailTemplateService` | **7.7%** (1/13) | Its entire job is reading template files from `static/mail/` off the classpath and substituting `{{placeholders}}`. The house rule for unit tests is no file system; a test here would either break that rule or assert over its own fixture. It is a candidate for the integration layer, not this one. |
-| `RestClientGitLabClient` | **23.1%** (9/39, 4/22 branch) | An HTTP adapter behind `GitLabClient`, substituted in tests by `RecordingGitLabClient` (`@Primary`). Unlike the two above, **this one has no principled excuse** — `LoginLocationServiceTests` shows exactly how to test a `RestClient` caller by mocking the fluent chain, and the same could be done here. It is simply not done yet, and at 18 missed branches it is the largest single branch gap outside the moderation services. |
 
-The distinction matters more than the numbers: the first two are decisions, the third is debt.
+`MailService` stays out of reach of the suite by construction: the `LoginCodeDelivery` /
+`LoginSuccessDelivery` seam is substituted in every context, so no test can reach the real SMTP
+adapter by accident. `MailTemplateService` is the one to revisit when the integration layer
+starts — a real classpath and a real template file is exactly what it needs, and exactly what a
+unit test is not allowed to give it.
 
 ---
 
@@ -442,10 +525,14 @@ batch, **after** the deletion; that is why the 3341 in this document is smaller 
 ### A test file in the wrong package
 
 `StudentServiceTests` sat in the `com.pse` root while the class lives in
-`com.pse.user.service`. It was moved to `com/pse/user/service/` and converted to the house
-style: a manual constructor factory instead of `@InjectMocks`, AssertJ instead of JUnit
-`assertEquals`. The same move as `1cd449b` (ProfessorServiceTests). The two existing
-credibility tests were kept, only renamed into the `method_scenario_expectation` scheme.
+`com.pse.user.service`. A version in the house style was written at `com/pse/user/service/`: a
+manual constructor factory instead of `@InjectMocks`, AssertJ instead of JUnit `assertEquals`,
+`method_scenario_expectation` names. The same intent as `1cd449b` (ProfessorServiceTests).
+
+**This entry said "it was moved". It was not.** The original stayed where it was, and so did
+`AccountServiceTests`, so 16 tests went on pinning the same contract twice, in the style the
+rewrite existed to replace. Both were deleted in batch 5 and the bundle did not move; the
+process finding is [P-4](test-findings.md#p-4--a-moved-test-file-was-copied-not-moved).
 
 ### Prompt/code mismatches
 
@@ -878,8 +965,8 @@ dependency changes the CI contract — a decision for the integration batch.
   `ModerationBugReportService`; and a `before` half carrying one field leaving the others
   `null`.
 - **Deliberately not tested:** `ModerationBugReportService.update` itself, and the GitLab issue
-  the report may be linked to — `RestClientGitLabClient` is a separate class and is not covered
-  at all (see *Deliberately uncovered*).
+  the report may be linked to — `RestClientGitLabClient` is a separate class, covered by its own
+  tests since batch 5.
 - **Mocks used:** `BugReportRepository` and `ModerationBugReportService`. The service is mocked
   rather than stubbed because what has to be verified is the delegation: the handler does not
   write the fields itself, it calls the same path the panel calls, so the revert inherits that
@@ -1041,3 +1128,45 @@ dependency changes the CI contract — a decision for the integration batch.
 - **Residual risk:** 12 branches remain, in `getRatings`'s specification lambda and the
   listing helpers.
 - **Test count:** 29
+
+### RestClientGitLabClient
+
+- **Responsibility:** opens an issue in the project's GitLab tracker, and decides whether the
+  integration is configured at all. The only class in the codebase that holds a credential and
+  sends it somewhere.
+- **Behaviours tested:**
+  - `isEnabled`: all three of base URL, project id and token required; `null`, empty and
+    whitespace-only each rejected for each of them; a base URL of nothing but slashes
+    (`"///"`) disabling the integration, because the trailing-slash trim runs before the
+    emptiness check
+  - `createIssue` with the integration off: **503** `"GitLab integration is not configured"`,
+    with **no request sent at all** — asserted by the mock server, which fails on any request
+    it was not told to expect
+  - The request itself: `POST /api/v4/projects/{id}/issues`, the `PRIVATE-TOKEN` header, the
+    JSON content type, and `title` / `description` in the body
+  - **F-18:** a project id shaped like `group/project` reaching the tracker as **one** path
+    segment (`group%2Fproject`), not as a double-encoded `group%252Fproject`
+  - Project id and token trimmed before use
+  - The answer: an empty body and a body with no `web_url` both **502**; an `iid` that is
+    missing or not a number giving a `CreatedIssue` with a `null` issue number and the URL
+    intact
+  - Failures: a 500, a 401 and a transport failure all becoming **502 "Could not reach
+    GitLab"**, and the client's own 502 **not** being rewritten by the catch-all
+  - **The credential:** given a failure whose own message contains the token, neither the log
+    line nor the message the caller receives repeats it, and the log carries no stack trace
+- **Deliberately not tested:** the configured timeouts. They live in a
+  `SimpleClientHttpRequestFactory` built in the constructor; asserting on them means either
+  reflection over a Spring class or a real slow socket, and the mock server bypasses the
+  factory entirely. Also not tested: what GitLab does with the issue — that is the tracker's
+  behaviour, not this class's.
+- **Mocks used:** none in the Mockito sense. `MockRestServiceServer` bound to a
+  `RestClient.Builder` drives the HTTP conversation, and Logback's `ListAppender` reads the log,
+  because "the token is not in the log" is an assertion about a log line and nothing else can
+  make it.
+- **Residual risk:** a revoked token and an unreachable tracker are indistinguishable to the
+  caller — both 502 — so an administrator whose issue creation stops working cannot tell from
+  the response which one to fix; the distinction exists only in the ERROR line, and only as an
+  exception class name. Narrowing that is a product decision, not a test one. The `@Autowired`
+  marker on the public constructor is now load-bearing: removing it breaks every
+  `@SpringBootTest`, and nothing in the unit layer would notice.
+- **Test count:** 25
