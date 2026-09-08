@@ -588,17 +588,36 @@ as `lecture`):
 ```json
 {
   "id":"lecture-uuid",
-  "name":"Algorithms",
+  "name":"Algorithmen 1",
   "code":"CS101",
   "semesterYear":2026,
-  "semesterSeason":"WINTER",
+  "semesterSeason":"SS",
+  "semesterLabel":"SS26",
+  "title":"SS26 Algorithmen 1 — Anna Bauer, Peter Sanders",
   "active":true,
   "lectureType":"LECTURE_AND_EXERCISE",
-  "professors":[{"id":"prof-uuid","firstName":"Jane","lastName":"Doe","active":true}],
+  "professors":[{"id":"prof-uuid","firstName":"Anna","lastName":"Bauer","active":true}],
   "commentCount":3,
-  "ratingCount":12
+  "ratingCount":12,
+  "averageRating":4.25
 }
 ```
+
+`semesterSeason` is `SS` or `WS` and nothing else. This example said `WINTER` until
+2026-09-08, which is not a value the enum accepts: a request carrying it is rejected with
+`400 {"message":"Invalid request"}`. The same example was also missing `averageRating`.
+
+`semesterLabel` and `title` are **derived, not stored** — there is no column behind either and
+neither can be written. `semesterLabel` is the semester as the university writes it: `SS26`,
+and `WS25/26` for a winter semester, which spans two calendar years. `semesterYear` on a
+winter row is the year the semester **starts** in. `title` is `semesterLabel`, the name, and
+the teaching staff, joined with an em dash — the string a client shows above a rating.
+
+`professors` is ordered by last name, then first name, then id, and that order is now
+guaranteed: it is read out of a `Set` and used to come back in a different order between two
+requests. It is **alphabetical, not by role** — `lecture_professors` records only that a
+person teaches a lecture, so nothing in the schema says who lectures and who runs an exercise
+group. Putting the lecturer first would need a column on the join table.
 
 `lectureType` is `LECTURE_ONLY` or `LECTURE_AND_EXERCISE`; it decides which
 `RatingCategory` values the lecture offers on `GET /admin/ratings`. Changing it does not

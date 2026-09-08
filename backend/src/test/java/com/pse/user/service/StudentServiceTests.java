@@ -7,6 +7,7 @@ import com.pse.rating.model.Rating;
 import com.pse.rating.model.RatingCategory;
 import com.pse.rating.model.RatingTopic;
 import com.pse.shared.enums.UserStatus;
+import com.pse.shared.enums.SemesterSeason;
 import com.pse.shared.enums.VoteType;
 import com.pse.shared.error.ApiException;
 import com.pse.social.model.Answer;
@@ -90,9 +91,22 @@ class StudentServiceTests {
      * A rating on its own lecture with one topic, so the weighted average is a real number
      * rather than the zero an empty topic list returns.
      */
+    /**
+     * A lecture with the columns the schema declares {@code nullable = false} actually set.
+     * {@code new Lecture()} leaves {@code semesterSeason} null, which no row in the database
+     * can be, and a response builder that reads it is right to fail on one.
+     */
+    private static Lecture lecture() {
+        Lecture lecture = new Lecture();
+        lecture.setName("Algorithmen 1");
+        lecture.setSemesterYear(2026);
+        lecture.setSemesterSeason(SemesterSeason.SS);
+        return lecture;
+    }
+
     private static Rating ratingScoring(double value) {
         Rating rating = new Rating();
-        rating.setLecture(new Lecture());
+        rating.setLecture(lecture());
         RatingTopic topic = new RatingTopic();
         topic.setCategory(RatingCategory.ORGANIZATION);
         topic.setValue(value);

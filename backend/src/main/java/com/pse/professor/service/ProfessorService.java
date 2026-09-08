@@ -3,6 +3,7 @@ package com.pse.professor.service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -175,7 +176,15 @@ public class ProfessorService {
                 professor.isActive(),
                 professor.getAverageRating(),
                 professor.getRatingCount(),
-                professor.getLectures().stream().map(Lecture::getId).toList()
+                // Sorted for the same reason LectureService sorts the professors of a
+                // lecture: professor.getLectures() is a Set, so the ids come out in a
+                // different order between two requests otherwise. By name and not by id,
+                // because an id order is meaningless to whoever reads the response.
+                professor.getLectures().stream()
+                        .sorted(Comparator.comparing(Lecture::getName)
+                                .thenComparing(Lecture::getId))
+                        .map(Lecture::getId)
+                        .toList()
         );
     }
 

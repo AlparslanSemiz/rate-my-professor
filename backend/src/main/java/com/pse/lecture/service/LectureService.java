@@ -1,12 +1,14 @@
 package com.pse.lecture.service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.pse.professor.service.ProfessorService;
 import com.pse.rating.model.Rating;
@@ -200,17 +202,37 @@ public class LectureService {
 
 
     /**
+     * Orders the teaching staff of a lecture: last name, then first name, then id.
+     *
+     * <p>The same order {@code ProfessorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc}
+     * already uses for the professor listings, so the two surfaces agree. The id is the
+     * tie-breaker and is only there to make the sort total -- two people can share a name.
+     *
+     * <p><b>It is alphabetical, not by role.</b> {@code lecture_professors} records that a
+     * person teaches a lecture and nothing else, so the schema cannot say who lectures and
+     * who runs an exercise group; that would need a column on the join table. Alphabetical
+     * is what the data supports, and it is stable, which is the defect being fixed.
+     */
+    private static final Comparator<Professor> BY_NAME =
+            Comparator.comparing(Professor::getLastName)
+                    .thenComparing(Professor::getFirstName)
+                    .thenComparing(Professor::getId);
+
+    /**
      * Creates a LectureResponse for a given Lecture.
      * @param lecture to be parsed
      * @return a LectureResponse
      */
     public static LectureResponse createLectureResponse(Lecture lecture) {
 
-        List<ProfessorShortResponse> professorResponses = new ArrayList<>();
-
-        for (Professor professor : lecture.getProfessors()) {
-            professorResponses.add(ProfessorService.createProfessorShortResponse(professor));
-        }
+        // Sorted, not iterated as it comes. lecture.getProfessors() is a Set and Professor
+        // overrides neither equals nor hashCode, so the iteration order is identity-hash
+        // order and can differ on every run -- the read side of BUG-3. An unordered list is
+        // invisible in a JSON payload and obvious in a title built from it.
+        List<ProfessorShortResponse> professorResponses = lecture.getProfessors().stream()
+                .sorted(BY_NAME)
+                .map(ProfessorService::createProfessorShortResponse)
+                .toList();
 
         double sum = 0;
         int count = 0;
@@ -229,12 +251,17 @@ public class LectureService {
 
 
 
+        String semesterLabel =
+                lecture.getSemesterSeason().label(lecture.getSemesterYear());
+
         return new LectureResponse(
                 lecture.getId(),
                 lecture.getName(),
                 lecture.getCode(),
                 lecture.getSemesterYear(),
                 lecture.getSemesterSeason(),
+                semesterLabel,
+                title(semesterLabel, lecture.getName(), professorResponses),
                 lecture.isActive(),
                 lecture.getLectureType(),
                 professorResponses,
@@ -243,6 +270,28 @@ public class LectureService {
                 averageRating
         );
 
+    }
+
+    /**
+     * {@code "SS26 Algorithmen 1 -- Peter Sanders, Uebungsleiter 1"}, with an em dash.
+     *
+     * <p>Built here so that every client shows one string rather than three near-identical
+     * ones. A lecture nobody is assigned to is just {@code "SS26 Algorithmen 1"}: the
+     * separator belongs to the names, and a title ending in a dash reads as a bug.
+     */
+    private static String title(String semesterLabel,
+                                String name,
+                                List<ProfessorShortResponse> professors) {
+
+        String heading = semesterLabel + " " + name;
+
+        if (professors.isEmpty()) {
+            return heading;
+        }
+
+        return heading + " \u2014 " + professors.stream()
+                .map(professor -> professor.firstName() + " " + professor.lastName())
+                .collect(Collectors.joining(", "));
     }
 
     public Lecture getById(UUID id) {

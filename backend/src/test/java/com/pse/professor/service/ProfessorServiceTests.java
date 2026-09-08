@@ -5,6 +5,7 @@ import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.professor.dto.request.ProfessorAddRequest;
 import com.pse.professor.dto.response.ProfessorDetailResponse;
+import com.pse.professor.dto.response.ProfessorResponse;
 import com.pse.professor.dto.response.ProfessorsResponse;
 import com.pse.professor.model.Professor;
 import com.pse.audit.model.AuditAction;
@@ -574,5 +575,40 @@ class ProfessorServiceTests {
         assertThat(professorService.addProfessor(principal, request).success()).isFalse();
 
         verifyNoInteractions(auditWriter);
+    }
+
+    /**
+     * {@code lectureIds} comes out of {@code Professor.lectures}, a {@code Set}, so it has the
+     * same defect the professor list of a lecture had: no order of its own, and therefore a
+     * different one between two requests. Fed a {@code LinkedHashSet} in the wrong order for
+     * the same reason as {@code LectureServiceTests} -- a real {@code HashSet} would make the
+     * test depend on identity-hash order and be flaky about a defect that is not.
+     */
+    @Test
+    void createProfessorResponse_lecturesInAnyOrder_answersTheirIdsByLectureName() {
+
+        Professor professor = new Professor();
+        professor.setFirstName("Peter");
+        professor.setLastName("Sanders");
+
+        Lecture algorithms = lectureNamed("Algorithmen 1");
+        Lecture theory = lectureNamed("Theoretische Grundlagen");
+        Lecture programming = lectureNamed("Programmieren");
+
+        professor.setLectures(new LinkedHashSet<>(List.of(theory, programming, algorithms)));
+
+
+        ProfessorResponse response = ProfessorService.createProfessorResponse(professor);
+
+
+        assertThat(response.lectureIds())
+                .containsExactly(algorithms.getId(), programming.getId(), theory.getId());
+    }
+
+    private static Lecture lectureNamed(String name) {
+        Lecture lecture = new Lecture();
+        lecture.setId(UUID.randomUUID());
+        lecture.setName(name);
+        return lecture;
     }
 }

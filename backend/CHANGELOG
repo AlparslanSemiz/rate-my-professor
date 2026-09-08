@@ -413,3 +413,58 @@ match on the corrected spelling.
 Not in this file, because no interface changed: the four test layers (unit, API/role,
 contract, integration, end-to-end -- 869 tests), the CI/CD repairs, and the audit and revert
 fixes that are internal. docs/test-plan.md and docs/test-findings.md hold those.
+
+
+///// 8.09 (3)
+
+
+LectureResponse gained two fields, and its professor list has a fixed order now.
+
+public record LectureResponse(
+        UUID id,
+        String name,
+        String code,
+        int semesterYear,
+        SemesterSeason semesterSeason,
++++     String semesterLabel,
++++     String title,
+        boolean active,
+        LectureType lectureType,
+        List<ProfessorShortResponse> professors,
+        int commentCount,
+        int ratingCount,
+        double averageRating
+) {}
+
+"semesterLabel" is the semester the way it is written at the university:
+
+    SS26        summer semester 2026
+    WS25/26     winter semester, which spans two calendar years
+
+"semesterYear" on a winter lecture is the year the semester STARTS in. Say so if your data
+means the other one, because nothing in the schema records which.
+
+"title" is what a rating screen puts above a lecture:
+
+    "SS26 Algorithmen 1 — Peter Sanders, Anna Bauer"
+
+and, for a lecture with nobody assigned to it, just "SS26 Algorithmen 1" — no trailing dash.
+Both fields are derived: there is no column behind either, and neither can be written.
+
+They are computed here and not in each client so that the "WS25/26" rule lives in one place.
+Three apps formatting it themselves is three chances to publish "WS25".
+
+"professors" is now ordered by last name, then first name, then id, in every response that
+carries a lecture. It used to come out of a Set in whatever order the JVM felt like, which
+could differ between two requests for the same lecture. If you build your own title, this is
+what made it reshuffle. The same applies to "lectureIds" in ProfessorResponse, ordered by
+lecture name now.
+
+One thing this does NOT do: the order is alphabetical, not "lecturer first, exercise leaders
+after". The database records that a person teaches a lecture and nothing more, so nobody can
+tell a professor from an Übungsleiter. That needs a new column on lecture_professors — tell
+us if you want it.
+
+Also corrected in docs/admin-api.md, where it had been wrong since the file was written: the
+LectureResponse example showed "semesterSeason":"WINTER". The only accepted values are "SS"
+and "WS"; "WINTER" is answered with 400 {"message":"Invalid request"}.

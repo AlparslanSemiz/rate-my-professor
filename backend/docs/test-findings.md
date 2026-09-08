@@ -32,6 +32,7 @@ really recorded if it lives in a test.
 | [F-18](#f-18--the-project-id-reaches-gitlab-encoded-twice) | The GitLab project id reaches the tracker encoded twice | High — the integration is dead for a path-shaped id | **Fixed** |
 | [F-19](#f-19--two-audit-response-fields-are-null-by-design-and-the-schema-said-otherwise) | Three audit response fields are null by design, declared non-nullable | Medium — the API contradicts its own schema | **Fixed** |
 | [F-20](#f-20--creating-a-lecture-or-a-professor-was-not-audited) | Creating a lecture or professor wrote no audit entry | Medium — a hole in the administrative record | **Fixed** |
+| [F-21](#f-21--the-professor-list-of-a-lecture-comes-back-in-a-different-order-each-time) | A lecture's professor list has no stable order | Medium — any title built from it reshuffles | **Fixed** |
 | [P-1](#p-1--the-coverage-baseline-number-was-wrong) | The coverage baseline number was wrong | Process | **Fixed** (re-measured) |
 | [P-2](#p-2--integration-tests-hide-unit-targets) | Integration tests hide unit targets | Process | **Fixed** (method changed) |
 | [P-3](#p-3--lombok-is-not-filtered-in-jacoco) | Lombok is not filtered in JaCoCo | Process | **Closed — decided against** |
@@ -39,7 +40,8 @@ really recorded if it lives in a test.
 | [P-5](#p-5--coverage-measured-without-clean-is-not-the-coverage-ci-measures) | Coverage measured without `clean` is inflated by the previous run | Process | **Fixed** (figures re-measured) |
 
 **Nothing in this document is open.** Twelve were closed in one pass; P-5 came later from the
-integration layer, and F-19, F-20 later still from the end-to-end work. What each one's
+integration layer, F-19 and F-20 later still from the end-to-end work, and F-21 last of all
+— not from a test run but from asking what a still-open feature request would actually need. What each one's
 **Status** records is either the fix or, for P-3 alone, the decision not to make one. Four
 changed a client-visible contract — F-3, F-5, F-16 and F-20 — and each was closed deliberately
 rather than quietly; each says below what a client sees differently.
@@ -905,6 +907,60 @@ administrator acted. Pinned by unit tests in both services (including that a ref
 records nothing), by `AdminApiIntegrationTests.creatingALectureIsRecordedAndIsNotRevertible`, and
 end to end by the admin journey. **Client-visible**, so it has a `CHANGELOG` entry: two new values
 can appear in `/admin/audit-logs` and in its `meta`.
+
+---
+
+### F-21 — The professor list of a lecture comes back in a different order each time
+
+**Where.** `LectureService.createLectureResponse`, and the same shape one record over in
+`ProfessorService.createProfessorResponse`.
+
+**What happens.** `LectureResponse.professors` is built by iterating `Lecture.professors`,
+which is a `Set`, into an ordered `List`. `Professor` overrides neither `equals` nor
+`hashCode`, so the iteration order is identity-hash order and can differ between two requests
+in the same process. `ProfessorResponse.lectureIds` has it the other way round, out of
+`Professor.lectures`.
+
+**Why it matters now.** It was invisible while the field was only a list of names to render
+somewhere on a page. The open item in [TODO.md](TODO.md) — a rating titled
+`SS26 Algorithmen 1 — Peter Sanders, Übungsleiter 1, …` — turns that list into a **string**,
+and an unstable order in a string is something a user sees: the same lecture is titled
+differently on two consecutive refreshes.
+
+**This is the read side of [BUG-3](#bug-3--professor-assignment-order-silently-refuses-a-revert).**
+BUG-3 was the same `Set` reaching the audit comparison, where it refused legitimate reverts;
+it was fixed by comparing as a multiset. That fix was scoped, correctly, to the comparison —
+nobody was asking the read path to be ordered at the time. So the two halves were found a
+month apart from opposite ends: one from a revert that would not apply, one from a title that
+would not sit still.
+
+**Tests.**
+```
+LectureServiceTests
+  createLectureResponse_professorsInAnyOrder_answersThemByName
+  createLectureResponse_sameLastName_ordersByFirstName
+  createLectureResponse_carriesTheSemesterLabelAndTheTitle
+ProfessorServiceTests
+  createProfessorResponse_lecturesInAnyOrder_answersTheirIdsByLectureName
+```
+Built the way BUG-3's were, and for the same reason: the fixture is a `LinkedHashSet` in a
+deliberately wrong order, never a real `HashSet`. A test that fed in a `HashSet` and asserted
+on what came out would be asserting on identity-hash order — flaky, and it would have put the
+flakiness in the test rather than in the defect. All four were run against the unsorted
+builders first and fail there.
+
+**Status. Fixed.** Both responses sort: a lecture's staff by last name, first name, id — the
+order `ProfessorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc` already uses, so
+the two surfaces agree — and a professor's lectures by name.
+
+**What the fix deliberately does not do.** The order is alphabetical, and the item that
+prompted it shows the lecturer first and the exercise leaders after. That ordering is not
+available: `lecture_professors` records that a person teaches a lecture and nothing else, so
+no query can tell a professor from an *Übungsleiter*. Producing the requested order needs a
+column on the join table, which is a migration and an admin-API change, and that is the team's
+call rather than something to infer from a name. Written up here so the difference between
+"stable" and "by role" is on the record, and in [admin-api.md](admin-api.md) so a client
+reading the contract sees it.
 
 ---
 
