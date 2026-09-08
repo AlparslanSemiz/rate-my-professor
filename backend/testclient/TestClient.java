@@ -21,7 +21,15 @@ public class TestClient {
 
     private static final HttpClient client = HttpClient.newHttpClient();
 
-    private static String authToken = "REDACTED  ";
+    /**
+     * Read from the environment, never written here. A bearer token committed to a tracked
+     * file is a credential published to everyone who can clone the repository, and it stays
+     * in the history after it is edited out -- so the one that used to sit on this line has
+     * to be revoked server-side rather than merely deleted.
+     *
+     * <p>Run with: {@code TEST_CLIENT_TOKEN=<token> java testclient/TestClient.java}
+     */
+    private static String authToken = System.getenv("TEST_CLIENT_TOKEN");
 
 
 
@@ -146,26 +154,6 @@ public class TestClient {
         System.out.println("AUTH TOKEN:");
         System.out.println(authToken);
     }
-
-    /**
-     * Simple check to see if user is successfully logged in.
-     */
-    public static void me() throws Exception {
-
-        
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(SERVER_IP + "/auth/me"))
-            .header("Authorization", "Bearer " + authToken)
-            .GET()
-            .build();
-
-        HttpResponse<String> response =
-            client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        System.out.println("ME STATUS: " + response.statusCode());
-        System.out.println(response.body());
-    }
-    
 
     /**
      * Very simple JSON extraction.
