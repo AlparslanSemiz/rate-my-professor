@@ -3,11 +3,7 @@ package com.pse.config;
 import com.pse.support.TestDeliveryConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithAnonymousUser;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -19,16 +15,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.pse.support.ApiIntegrationTest;
 
 /**
  * Covers the two ways the Admin Web was locked out of the deployed backend: an empty
  * origin allow-list, which answered every browser call with 403, and CORS preflight
  * being evaluated by the role matchers, which answered admin routes with 401.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Import(TestDeliveryConfig.class)
+@ApiIntegrationTest
 class CorsConfigurationTests {
 
     private static final String ALLOWED_ORIGIN = "http://localhost:5173";

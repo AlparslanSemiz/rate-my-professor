@@ -4,24 +4,20 @@ import com.pse.support.TestDeliveryConfig;
 import com.pse.support.TestGitLabConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import com.pse.support.ApiIntegrationTest;
 
 /**
  * Flyway owns production schema changes. This keeps the known production backfill guard in
  * place for the baseline migration: a NOT NULL column added to a populated table needs a
  * database default or a dedicated data backfill.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@Import({TestDeliveryConfig.class, TestGitLabConfig.class})
+@ApiIntegrationTest
 class SchemaDefaultsTests {
 
     @Autowired JdbcTemplate jdbcTemplate;

@@ -33,11 +33,7 @@ import com.pse.user.repository.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -62,6 +58,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.pse.support.ApiIntegrationTest;
+import com.pse.support.DatabaseReset;
 
 /**
  * The ownership matrix: can one student reach another student's resource by its id?
@@ -76,10 +74,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * new endpoint taking an id cannot join the API without someone classifying it. Findings
  * are recorded from F-18 in docs/test-findings.md.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Import({TestDeliveryConfig.class, com.pse.support.TestGitLabConfig.class})
+@ApiIntegrationTest
 class ApiOwnershipMatrixTests {
 
     /**
@@ -215,6 +210,8 @@ class ApiOwnershipMatrixTests {
     private static final String STUDENT_B = "owner-b@student.kit.edu";
     private static final String ADMIN_EMAIL = "admin@student.kit.edu";
 
+    @Autowired DatabaseReset databaseReset;
+
     @Autowired MockMvc mockMvc;
     @Autowired CapturingLoginCodeDelivery codeDelivery;
     @Autowired RequestMappingHandlerMapping handlerMapping;
@@ -240,24 +237,7 @@ class ApiOwnershipMatrixTests {
 
     @BeforeEach
     void cleanDatabase() {
-        auditLogRepository.deleteAll();
-        notificationRepository.deleteAll();
-        warningRepository.deleteAll();
-        answerReportRepository.deleteAll();
-        answerVoteRepository.deleteAll();
-        answerRepository.deleteAll();
-        commentReportRepository.deleteAll();
-        commentVoteRepository.deleteAll();
-        commentRepository.deleteAll();
-        bugReportRepository.deleteAll();
-        ratingRepository.deleteAll();
-        tokenRepository.deleteAll();
-        otpRepository.deleteAll();
-        rateLimitRepository.deleteAll();
-        adminRepository.deleteAll();
-        lectureRepository.deleteAll();
-        professorRepository.deleteAll();
-        studentRepository.deleteAll();
+        databaseReset.all();
         codeDelivery.clear();
     }
 

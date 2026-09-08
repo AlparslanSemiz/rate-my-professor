@@ -24,14 +24,10 @@ import com.pse.user.repository.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.method.HandlerMethod;
@@ -52,6 +48,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.pse.support.ApiIntegrationTest;
+import com.pse.support.DatabaseReset;
 
 /**
  * The authorization matrix, asserted against the routes the application actually
@@ -70,10 +68,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * anonymous boundary across every tier and the {@code authenticated()} tier, which had no
  * role coverage at all.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Import({TestDeliveryConfig.class, com.pse.support.TestGitLabConfig.class})
+@ApiIntegrationTest
 class ApiAuthorizationMatrixTests {
 
     /**
@@ -117,6 +112,8 @@ class ApiAuthorizationMatrixTests {
 
     private static final String STUDENT_EMAIL = "matrix-student@student.kit.edu";
 
+    @Autowired DatabaseReset databaseReset;
+
     @Autowired MockMvc mockMvc;
     @Autowired CapturingLoginCodeDelivery codeDelivery;
     @Autowired RequestMappingHandlerMapping handlerMapping;
@@ -141,23 +138,7 @@ class ApiAuthorizationMatrixTests {
 
     @BeforeEach
     void cleanDatabase() {
-        auditLogRepository.deleteAll();
-        notificationRepository.deleteAll();
-        warningRepository.deleteAll();
-        answerReportRepository.deleteAll();
-        answerVoteRepository.deleteAll();
-        answerRepository.deleteAll();
-        commentReportRepository.deleteAll();
-        commentRepository.deleteAll();
-        bugReportRepository.deleteAll();
-        ratingRepository.deleteAll();
-        tokenRepository.deleteAll();
-        otpRepository.deleteAll();
-        rateLimitRepository.deleteAll();
-        adminRepository.deleteAll();
-        lectureRepository.deleteAll();
-        professorRepository.deleteAll();
-        studentRepository.deleteAll();
+        databaseReset.all();
         codeDelivery.clear();
     }
 

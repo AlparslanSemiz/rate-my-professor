@@ -10,9 +10,6 @@ import com.pse.support.TestGitLabConfig;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -20,6 +17,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.pse.support.ApiIntegrationTest;
 
 /**
  * BUG-1's mechanism, measured rather than assumed.
@@ -37,9 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>These tests pin what is actually true, so the hypothesis stops being folklore.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@Import({TestDeliveryConfig.class, TestGitLabConfig.class})
+@ApiIntegrationTest
 class AuditTimestampPrecisionTests {
 
     @Autowired AuditLogRepository auditLogRepository;

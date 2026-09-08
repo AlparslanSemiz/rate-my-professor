@@ -12,10 +12,6 @@ import io.swagger.v3.parser.core.models.SwaggerParseResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
@@ -27,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.pse.support.ApiIntegrationTest;
 
 /**
  * The generated OpenAPI schema, checked against the API it claims to describe.
@@ -38,10 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * the same way -- read the truth from Spring's own mapping, and require the schema to cover
  * it -- rather than sampling a few paths.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@AutoConfigureMockMvc
-@Import({TestDeliveryConfig.class, TestGitLabConfig.class})
+@ApiIntegrationTest
 class OpenApiContractTests {
 
     private static final String ADMIN_EMAIL = "openapi-admin@student.kit.edu";

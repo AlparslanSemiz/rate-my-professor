@@ -29,11 +29,7 @@ import com.pse.user.repository.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -54,6 +50,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.pse.support.ApiIntegrationTest;
+import com.pse.support.DatabaseReset;
 
 /**
  * The admin panel and the app are two APIs. {@code /admin/auth/login} mints an
@@ -68,10 +66,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * built on it exercise the legacy branch and would stay green with the admin session path
  * broken.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Import({TestDeliveryConfig.class, com.pse.support.TestGitLabConfig.class})
+@ApiIntegrationTest
 class AdminApiPathSplitTests {
 
     /** Matches app.auth.admin-bootstrap-emails in application-test.properties. */
@@ -96,6 +91,8 @@ class AdminApiPathSplitTests {
             "/admin/data/professor/all"
     );
 
+    @Autowired DatabaseReset databaseReset;
+
     @Autowired MockMvc mockMvc;
     @Autowired CapturingLoginCodeDelivery codeDelivery;
     @Autowired StudentRepository studentRepository;
@@ -118,23 +115,7 @@ class AdminApiPathSplitTests {
 
     @BeforeEach
     void cleanDatabase() {
-        auditLogRepository.deleteAll();
-        notificationRepository.deleteAll();
-        warningRepository.deleteAll();
-        answerReportRepository.deleteAll();
-        answerVoteRepository.deleteAll();
-        answerRepository.deleteAll();
-        commentReportRepository.deleteAll();
-        commentRepository.deleteAll();
-        bugReportRepository.deleteAll();
-        ratingRepository.deleteAll();
-        tokenRepository.deleteAll();
-        otpRepository.deleteAll();
-        rateLimitRepository.deleteAll();
-        adminRepository.deleteAll();
-        lectureRepository.deleteAll();
-        professorRepository.deleteAll();
-        studentRepository.deleteAll();
+        databaseReset.all();
         codeDelivery.clear();
     }
 

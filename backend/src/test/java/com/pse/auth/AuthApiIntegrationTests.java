@@ -20,25 +20,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.pse.support.ApiIntegrationTest;
+import com.pse.support.DatabaseReset;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Import({
-        TestDeliveryConfig.class,
-        com.pse.support.TestGitLabConfig.class
-})
+@ApiIntegrationTest
 class AuthApiIntegrationTests {
+
+    @Autowired
+    DatabaseReset databaseReset;
 
     @Autowired
     MockMvc mockMvc;
@@ -104,32 +99,15 @@ class AuthApiIntegrationTests {
     @BeforeEach
     void cleanDatabase() {
 
-        auditLogRepository.deleteAll();
+        databaseReset.all();
 
-        notificationRepository.deleteAll();
-        warningRepository.deleteAll();
 
-        answerReportRepository.deleteAll();
-        answerVoteRepository.deleteAll();
-        answerRepository.deleteAll();
 
-        commentReportRepository.deleteAll();
-        commentVoteRepository.deleteAll();
-        commentRepository.deleteAll();
 
-        bugReportRepository.deleteAll();
-        ratingRepository.deleteAll();
 
-        tokenRepository.deleteAll();
-        otpRepository.deleteAll();
-        rateLimitRepository.deleteAll();
 
-        adminRepository.deleteAll();
 
-        lectureRepository.deleteAll();
-        professorRepository.deleteAll();
 
-        studentRepository.deleteAll();
 
         codeDelivery.clear();
     }

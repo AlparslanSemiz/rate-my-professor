@@ -26,10 +26,6 @@ import com.pse.user.repository.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -40,6 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.pse.support.ApiIntegrationTest;
+import com.pse.support.DatabaseReset;
 
 /**
  * Every endpoint here was hit by the same bug: open-in-view is disabled, so a
@@ -51,11 +49,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * lazy collection on the response path to be non-empty, so a regression here
  * fails loudly instead of only in production.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Import(TestDeliveryConfig.class)
+@ApiIntegrationTest
 class LazyLoadingRegressionTests {
+
+    @Autowired DatabaseReset databaseReset;
 
     @Autowired MockMvc mockMvc;
     @Autowired StudentRepository studentRepository;
@@ -70,15 +67,7 @@ class LazyLoadingRegressionTests {
 
     @BeforeEach
     void cleanDatabase() {
-        notificationRepository.deleteAll();
-        answerRepository.deleteAll();
-        commentRepository.deleteAll();
-        ratingRepository.deleteAll();
-        tokenRepository.deleteAll();
-        lectureRepository.deleteAll();
-        professorRepository.deleteAll();
-        adminRepository.deleteAll();
-        studentRepository.deleteAll();
+        databaseReset.all();
     }
 
     @Test

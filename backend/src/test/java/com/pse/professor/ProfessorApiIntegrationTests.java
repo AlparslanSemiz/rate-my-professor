@@ -32,11 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -47,15 +43,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.pse.support.ApiIntegrationTest;
+import com.pse.support.DatabaseReset;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Import({
-        TestDeliveryConfig.class,
-        com.pse.support.TestGitLabConfig.class
-})
+@ApiIntegrationTest
 class ProfessorApiIntegrationTests {
+
+    @Autowired
+    DatabaseReset databaseReset;
 
     @Autowired
     private MockMvc mockMvc;
@@ -114,30 +109,14 @@ class ProfessorApiIntegrationTests {
 
     @BeforeEach
     void setUp() {
-        auditLogRepository.deleteAll();
-        notificationRepository.deleteAll();
-        warningRepository.deleteAll();
+        databaseReset.all();
 
-        answerReportRepository.deleteAll();
-        answerVoteRepository.deleteAll();
-        answerRepository.deleteAll();
 
-        commentReportRepository.deleteAll();
-        commentRepository.deleteAll();
 
-        bugReportRepository.deleteAll();
-        ratingRepository.deleteAll();
 
-        tokenRepository.deleteAll();
-        otpRepository.deleteAll();
-        rateLimitRepository.deleteAll();
 
-        adminRepository.deleteAll();
 
-        lectureRepository.deleteAll();
-        professorRepository.deleteAll();
 
-        studentRepository.deleteAll();
     }
 
 

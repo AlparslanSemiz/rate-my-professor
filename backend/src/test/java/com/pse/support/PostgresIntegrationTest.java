@@ -4,6 +4,7 @@ import com.pse.DemoApplication;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ContextConfiguration;
 
 import java.lang.annotation.Documented;
@@ -28,11 +29,14 @@ import java.lang.annotation.Target;
  * class annotated with this gets exactly the context it would have got from the four
  * annotations written out — the cache key is unchanged.
  *
- * <p><b>Deliberately no {@code @Import}.</b> {@link TestDeliveryConfig} and
- * {@link TestGitLabConfig} would change the context key for every class at once, and nothing
- * here needs them: {@link AdminSessions} mints a usable admin bearer token by writing rows, so
- * no test in this layer drives the login flow or reaches a tracker. Add one only by adding it
- * here, for all of them, and expect the schema reset to move.
+ * <p><b>Deliberately no {@link TestDeliveryConfig} or {@link TestGitLabConfig}.</b> Either would
+ * change the context key for every class at once, and nothing here needs them:
+ * {@link AdminSessions} mints a usable admin bearer token by writing rows, so no test in this
+ * layer drives the login flow or reaches a tracker. {@link PostgresE2ETest} does need both, which
+ * is why it is a separate context and a separate CI invocation.
+ *
+ * <p>{@link DatabaseReset} is imported, which is the rule this paragraph describes being followed
+ * rather than broken: it was added here, for all of them, at once.
  *
  * <p>The {@code POSTGRES_SMOKE_JDBC_URL} condition is part of the bundle on purpose. It is what
  * makes these tests select themselves into the {@code server:postgres-integration} job and skip
@@ -44,6 +48,7 @@ import java.lang.annotation.Target;
 @SpringBootTest(classes = DemoApplication.class)
 @AutoConfigureMockMvc
 @ContextConfiguration(initializers = PostgresTestDatabase.class)
+@Import(DatabaseReset.class)
 @EnabledIfEnvironmentVariable(named = PostgresTestDatabase.URL_VARIABLE, matches = ".+")
 public @interface PostgresIntegrationTest {
 }
