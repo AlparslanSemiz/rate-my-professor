@@ -188,7 +188,7 @@ server:postgres-integration:
         fi
       }
 
-      run_layer integration PostgreSqlMigrationSmokeTests,AuditTimestampPrecisionPostgresTests,CursorPaginationPostgresTests,AuditJsonbRoundTripPostgresTests,ReadOnlyTransactionSweepPostgresTests
+      run_layer integration PostgreSqlMigrationSmokeTests,AuditTimestampPrecisionPostgresTests,CursorPaginationPostgresTests,AuditJsonbRoundTripPostgresTests,ReadOnlyTransactionSweepPostgresTests,ConcurrencyPostgresTests
       run_layer e2e EndToEndJourneyTests
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
