@@ -9,20 +9,21 @@ import androidx.room.TypeConverters;
 
 import com.example.ratemyprofessor.Adapters.LocalDateTimeConverter;
 import com.example.ratemyprofessor.Adapters.SearchService;
-import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.CommentModel;
 import com.example.ratemyprofessor.DomainModel.Instructor;
 import com.example.ratemyprofessor.DomainModel.Lecture;
 import com.example.ratemyprofessor.DomainModel.LectureModel;
 import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.Rating;
-import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -44,6 +45,10 @@ import retrofit2.Response;
 )
 @TypeConverters(LocalDateTimeConverter.class)
 public abstract class Database extends RoomDatabase {
+
+    public interface UpdateCallback {
+        void onComplete(boolean successful);
+    }
 
     /**
      * File name of the database on the device.
@@ -102,39 +107,46 @@ public abstract class Database extends RoomDatabase {
      * @param apiService the service used to load the current data from the server
      */
     public void updateDB(APIService apiService) {
-        if (NO_UPDATE) return;
+        updateDB(apiService, successful -> { });
+    }
+
+    public void updateDB(APIService apiService, UpdateCallback callback) {
+        if (NO_UPDATE) {
+            callback.onComplete(true);
+            return;
+        }
         Log.d(TAG, "updateDB started");
 
         SearchService service = searchService();
-        // Room forbids database access on the main thread, so all writes go through this executor.
         ExecutorService executor = createUpdateExecutor();
+        AtomicInteger remainingUpdates = new AtomicInteger(2);
+        AtomicBoolean allSuccessful = new AtomicBoolean(true);
+        Consumer<Boolean> updateFinished = successful -> {
+            if (!successful) {
+                allSuccessful.set(false);
+            }
+            if (remainingUpdates.decrementAndGet() == 0) {
+                executor.shutdown();
+                callback.onComplete(allSuccessful.get());
+            }
+        };
 
-        //the calls to the server for updating
         refreshTable(
                 apiService.getProfessors(),
                 ProfessorsResponse::professors,
-                service::deleteProfessors,
-                service::insertProfessor,
+                service::replaceProfessors,
                 executor,
+                updateFinished,
                 "professors"
         );
 
         refreshTable(
                 apiService.getLectures(),
                 LecturesResponse::lectures,
-                this::deleteLectures,
-                this::insertLecture,
+                this::replaceLectures,
                 executor,
+                updateFinished,
                 "lectures"
-        );
-
-        refreshTable(
-                apiService.getAllComments(),
-                CommentsResponse::comments,
-                service::deleteComments,
-                this::insertComment,
-                executor,
-                "comments"
         );
     }
 
@@ -150,19 +162,19 @@ public abstract class Database extends RoomDatabase {
      *
      * @param call       the request that loads the new data
      * @param extractor  reads the entity list out of the response body
-     * @param clearTable deletes the current rows of the table
-     * @param insert     inserts a single entity into the table
-     * @param executor   the background thread the database writes run on
-     * @param label      name of the table, used for logging
+     * @param replaceTable atomically replaces the locally stored entities
+     * @param executor the background thread the database writes run on
+     * @param updateFinished receives the result of this individual update
+     * @param label name of the table, used for logging
      * @param <R>        the response type of the request
      * @param <E>        the entity type stored in the table
      */
     private <R, E> void refreshTable(
             Call<R> call,
             Function<R, List<E>> extractor,
-            Runnable clearTable,
-            Consumer<E> insert,
+            Consumer<List<E>> replaceTable,
             ExecutorService executor,
+            Consumer<Boolean> updateFinished,
             String label
     ) {
         // retrofit2.Callback has to be written out here: RoomDatabase brings its own nested
@@ -173,22 +185,26 @@ public abstract class Database extends RoomDatabase {
                 // A failed request has no body at all, so both checks are needed before reading it.
                 if (!response.isSuccessful() || response.body() == null) {
                     Log.d(TAG, "Update of " + label + " failed: response not successful");
+                    updateFinished.accept(false);
                     return;
                 }
 
                 List<E> entities = extractor.apply(response.body());
                 if (entities == null) {
                     Log.e(TAG, "Update of " + label + " failed: response body is null");
+                    updateFinished.accept(false);
                     return;
                 }
 
                 Log.d(TAG, "Received " + entities.size() + " " + label);
 
-                // delete the table and add the new rows one by one
                 executor.execute(() -> {
-                    clearTable.run();
-                    for (E entity : entities) {
-                        insert.accept(entity);
+                    try {
+                        replaceTable.accept(entities);
+                        updateFinished.accept(true);
+                    } catch (RuntimeException exception) {
+                        Log.e(TAG, "Update of " + label + " failed while writing", exception);
+                        updateFinished.accept(false);
                     }
                 });
             }
@@ -196,43 +212,33 @@ public abstract class Database extends RoomDatabase {
             @Override
             public void onFailure(Call<R> call, Throwable throwable) {
                 Log.d(TAG, "Update of " + label + " failed: " + throwable.getMessage());
+                updateFinished.accept(false);
             }
         });
     }
 
-    /**
-     * We need special handling for comments because of the hierarchical structure of the
-     * incoming data.
-     */
-    private void insertComment(Comment comment) {
-        Log.println(Log.DEBUG, "comments", comment.commentID());
+    private void replaceLectures(List<LectureModel> models) {
         SearchService service = searchService();
-        service.insertComment(parseCommentToModel(comment, null));
-        // We will store replies too when the unique-id problem is solved.
-        for (Comment reply : comment.answers()) {
-            Log.println(Log.DEBUG, "replies", reply.commentID());
-            service.insertComment(parseCommentToModel(reply, reply.commentID()));
-        }
-    }
-    private CommentModel parseCommentToModel(Comment comment, String parentID) {
-        return new CommentModel(comment.commentID(), parentID, comment.content(),
-                comment.status(), comment.studentUsername(), comment.lectureID(),
-                comment.createdAt(), comment.downVotes(), comment.upVotes());
-    }
+        List<Lecture> lectures = new ArrayList<>();
+        List<Instructor> instructors = new ArrayList<>();
 
-    //
-    private void insertLecture(LectureModel model) {
-        SearchService searchService = searchService();
-        Lecture lecture = new Lecture(model.id(), model.name(), model.code(), model.semesterYear(),
-                model.semesterSeason(), model.active(), model.commentCount(), model.ratingCount(), model.averageRating());
-        searchService.insertLecture(lecture);
-        for (Professor professor : model.professors()) {
-            searchService.insertInstructor(new Instructor(model.id(), model.name(), professor.id));
+        for (LectureModel model : models) {
+            lectures.add(new Lecture(
+                    model.id(),
+                    model.name(),
+                    model.code(),
+                    model.semesterYear(),
+                    model.semesterSeason(),
+                    model.active(),
+                    model.commentCount(),
+                    model.ratingCount(),
+                    model.averageRating()
+            ));
+            for (Professor professor : model.professors()) {
+                instructors.add(new Instructor(model.id(), model.name(), professor.id));
+            }
         }
-    }
-    private void deleteLectures() {
-        SearchService searchService = searchService();
-        searchService.deleteLectures();
-        searchService.deleteInstructors();
+
+        service.replaceLectures(lectures, instructors);
     }
 }
