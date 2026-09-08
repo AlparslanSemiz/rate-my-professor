@@ -62,6 +62,9 @@ public class SessionApplicationAndUtilityTest {
         session.saveMailAddress("student@kit.edu");
         assertFalse(session.isLoggedIn());
 
+        session.saveTokens("123456", "");
+        assertFalse(session.isLoggedIn());
+
         session.saveTokens("123456", "auth-token");
         LoginSession reopened = LoginSession.from(context);
 

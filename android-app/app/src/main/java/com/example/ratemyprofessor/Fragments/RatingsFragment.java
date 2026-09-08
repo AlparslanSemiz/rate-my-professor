@@ -97,6 +97,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
     List<Comment> comments;
     CommentsAdapter commentsAdapter;
+    private boolean serverCommentsLoaded;
 
     RatingAdapter ratingAdapter;
 
@@ -156,53 +157,124 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         }
     }
 
-    private List<Comment> commentModelToComment(List<CommentModel> models) {
-        ArrayList<Comment> comments = new ArrayList<>();
+    private List<Comment> commentModelsToComments(
+            SearchService searchService,
+            List<CommentModel> models
+    ) {
+        List<Comment> cachedComments = new ArrayList<>();
         for (CommentModel model : models) {
-            comments.add(new Comment(model.commentID(), model.content(), model.status(),
-                    model.studentUsername(), model.lectureID(), null, model.createdAt(),
-                    model.downVotes(), model.upVotes(), new ArrayList<>()));
+            List<Comment> replies = new ArrayList<>();
+            for (CommentModel reply : searchService.getReplies(model.commentID())) {
+                replies.add(commentModelToComment(reply, new ArrayList<>()));
+            }
+            cachedComments.add(commentModelToComment(model, replies));
         }
-        return comments;
+        return cachedComments;
+    }
+
+    private Comment commentModelToComment(CommentModel model, List<Comment> replies) {
+        return new Comment(
+                model.commentID(),
+                model.content(),
+                model.status(),
+                model.studentUsername(),
+                model.lectureID(),
+                null,
+                model.createdAt(),
+                model.downVotes(),
+                model.upVotes(),
+                replies
+        );
+    }
+
+    private List<CommentModel> commentsToModels(List<Comment> serverComments) {
+        List<CommentModel> models = new ArrayList<>();
+        for (Comment comment : serverComments) {
+            models.add(commentToModel(comment, null));
+            if (comment.answers() != null) {
+                for (Comment reply : comment.answers()) {
+                    models.add(commentToModel(reply, comment.commentID()));
+                }
+            }
+        }
+        return models;
+    }
+
+    private CommentModel commentToModel(Comment comment, String parentId) {
+        return new CommentModel(
+                comment.commentID(),
+                parentId,
+                comment.content(),
+                comment.status(),
+                comment.studentUsername(),
+                comment.lectureID(),
+                comment.createdAt(),
+                comment.downVotes(),
+                comment.upVotes()
+        );
+    }
+
+    private void showComments(List<Comment> commentsToShow) {
+        if (binding == null) {
+            return;
+        }
+        comments = commentsToShow;
+        commentsAdapter = new CommentsAdapter(
+                requireContext(),
+                comments,
+                RatingsFragment.this,
+                CommentType.COMMENT
+        );
+        binding.commentList.setAdapter(commentsAdapter);
     }
 
     /**
      * Gets the comments for the offering to display them.
      */
     private void getComments() {
-        Call<CommentsResponse> commentsResponseCall = apiService.getComments(lecture.id);
+        SearchService searchService = Database.getInstance(requireContext()).searchService();
+        executorService.execute(() -> {
+            List<Comment> cachedComments = commentModelsToComments(
+                    searchService,
+                    searchService.getComments(lecture.id)
+            );
+            runOnUiThread(() -> {
+                if (!serverCommentsLoaded) {
+                    showComments(cachedComments);
+                }
+            });
+        });
+
         if (!AuthManager.getInstance().isLoggedIn()) {
-            SearchService searchService = Database.getInstance(getContext()).searchService();
-            executorService.execute(() -> {
-                comments = commentModelToComment(searchService.getComments(lecture.id));
-                commentsAdapter = new CommentsAdapter(getContext(), comments, RatingsFragment.this, CommentType.COMMENT);
-                binding.commentList.setAdapter(commentsAdapter);
-            });
-            Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
-        } else {
-            commentsResponseCall.enqueue(new Callback<CommentsResponse>() {
-                @Override
-                public void onResponse(Call<CommentsResponse> call, Response<CommentsResponse> response) {
-                    CommentsResponse body = response.body();
-                    if (!response.isSuccessful() || body == null || body.comments() == null) {
-                        Log.d(TAG, "couldn't get the comments");
-                        return;
-                    }
-
-                    // Copied into an own list, because folding answers in and out modifies it.
-                    comments = new ArrayList<>(body.comments());
-                    runOnUiThread(() -> {
-                        commentsAdapter = new CommentsAdapter(getContext(), comments, RatingsFragment.this, CommentType.COMMENT);
-                        binding.commentList.setAdapter(commentsAdapter);
-                    });
-                }
-
-                @Override
-                public void onFailure(Call<CommentsResponse> call, Throwable throwable) {
-                    Log.d(TAG, "couldn't get the comments: " + throwable.getMessage());
-                }
-            });
+            return;
         }
+
+        Call<CommentsResponse> commentsResponseCall = apiService.getComments(lecture.id);
+        commentsResponseCall.enqueue(new Callback<CommentsResponse>() {
+            @Override
+            public void onResponse(Call<CommentsResponse> call, Response<CommentsResponse> response) {
+                CommentsResponse body = response.body();
+                if (!response.isSuccessful() || body == null || body.comments() == null) {
+                    Log.d(TAG, "couldn't get the comments");
+                    return;
+                }
+
+                serverCommentsLoaded = true;
+                List<Comment> freshComments = new ArrayList<>(body.comments());
+                showComments(freshComments);
+
+                List<CommentModel> models = commentsToModels(freshComments);
+                executorService.execute(() -> searchService.replaceCommentsForLecture(
+                        lecture.id,
+                        models
+                ));
+            }
+
+            @Override
+            public void onFailure(Call<CommentsResponse> call, Throwable throwable) {
+                Log.d(TAG, "couldn't get the comments: " + throwable.getMessage());
+            }
+        });
     }
 
     /**
@@ -282,6 +354,8 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         Log.d(TAG, "loading ratings for id: " + lecture.id);
 
         SearchService searchService = Database.getInstance(getContext()).searchService();
+        loadCachedRatings(searchService, lecture);
+
         if (!AuthManager.getInstance().isLoggedIn()) {
             Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
             executorService.execute(new Runnable() {
@@ -294,7 +368,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                             topicRatings.add(new TopicAverageResponse(rating.category, rating.score));
                         }
                     }
-                    showRatings(null, topicRatings);
+                    showRatings(topicRatings, null);
                 }
             });
         } else {
@@ -308,15 +382,16 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                         return;
                     }
 
+                    List<TopicAverageResponse> ratings = body.ratings();
+                    // Dont know why we even get "null" categories but it happens
+                    System.out.println(ratings.size());
+                    ratings.removeIf(rating -> rating.category() == null);
+                    ratings.removeIf(rating -> rating.category().equals(RatingCategory.OVERALL));
+                    System.out.println(ratings.size());
                     if (body.ratings().isEmpty()) {
                         setEmptyRating();
                         return;
                     }
-                    List<TopicAverageResponse> ratings = body.ratings();
-                    // Dont know why we even get "null" categories but it happens
-                    ratings.removeIf(rating -> rating.category() == null);
-                    ratings.removeIf(rating -> rating.category().equals(RatingCategory.OVERALL));
-                    Log.d("HEREHEREHERE", "BITTEEEEE");
                     updateLocalRatingsFromResponse(ratings);
                     for (TopicAverageResponse rating : ratings) {
                         System.out.println(rating.category() + "->" + rating.value());
@@ -340,6 +415,32 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                 }
             });
         }
+    }
+
+    private void loadCachedRatings(SearchService searchService, Lecture lecture) {
+        executorService.execute(() -> {
+            List<Rating> storedAverages = searchService.getLectureRatings(lecture.id, Rater.AVERAGE);
+            List<Rating> storedUserRatings = searchService.getLectureRatings(lecture.id, Rater.AVERAGE);
+            List<TopicAverageResponse> average = new ArrayList<>();
+            List<TopicAverageResponse> userRatings = new ArrayList<>();
+
+            for (Rating rating : storedAverages) {
+                if (rating.category != RatingCategory.OVERALL) {
+                    average.add(new TopicAverageResponse(rating.category, rating.score));
+                }
+            }
+            for (Rating rating : storedUserRatings) {
+                if (rating.category != RatingCategory.OVERALL) {
+                    userRatings.add(new TopicAverageResponse(rating.category, rating.score));
+                }
+            }
+
+            if (!average.isEmpty()) {
+                runOnUiThread(() -> showRatings(average, formatUserRatings(average, userRatings)));
+            }
+
+
+        });
     }
 
     private void setEmptyRating() {
@@ -398,28 +499,37 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         RecyclerView recyclerView = binding.ratingView;
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
 
-        if (ratings == null || userRatings == null) {
+        if (ratings == null || ratings.isEmpty()) {
+            System.out.println(ratings == null);
+            System.out.println(ratings.isEmpty());
             System.out.println(":(");
             return;
         }
-
         // Sorting the categories alphabetically, so they always come out in the same order
         ArrayList<TopicAverageResponse> ratingsSorted = new ArrayList<>(ratings);
-        ArrayList<TopicAverageResponse> userRatingsSorted = new ArrayList<>(userRatings);
-
         ratingsSorted.sort(Comparator.comparing(
                 r -> r.category().getDisplayName(),
                 String.CASE_INSENSITIVE_ORDER
         ));
+        System.out.println("1");
 
-        userRatingsSorted.sort(Comparator.comparing(
-                r -> r.category().getDisplayName(),
-                String.CASE_INSENSITIVE_ORDER
-        ));
+        if (userRatings == null || userRatings.isEmpty()) {
+            System.out.println("2");
+            ratingAdapter = new RatingAdapter(ratingsSorted, (ArrayList<TopicAverageResponse>) userRatings);
+            recyclerView.setAdapter(ratingAdapter);
+        } else {
+            System.out.println("3");
+            ArrayList<TopicAverageResponse> userRatingsSorted = new ArrayList<>(userRatings);
 
 
-        ratingAdapter = new RatingAdapter(ratingsSorted, userRatingsSorted);
-        recyclerView.setAdapter(ratingAdapter);
+            userRatingsSorted.sort(Comparator.comparing(
+                    r -> r.category().getDisplayName(),
+                    String.CASE_INSENSITIVE_ORDER
+            ));
+
+            ratingAdapter = new RatingAdapter(ratingsSorted, userRatingsSorted);
+            recyclerView.setAdapter(ratingAdapter);
+        }
 
         // Nothing was rated yet, so there is no average to show either. Without this the
         // division below would produce NaN.
@@ -557,7 +667,6 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
     @Override
     public void reportComment(String commentID) {
-        //showCommentReportDialog(commentID, CommentType.COMMENT);
         CommentHelper.showCommentReportDialog(getLayoutInflater(), apiService, getContext(), commentID, CommentType.COMMENT);
     }
 
