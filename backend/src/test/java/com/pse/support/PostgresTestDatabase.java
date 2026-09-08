@@ -28,10 +28,15 @@ import java.sql.Statement;
  *
  * <p><b>Share the context.</b> {@link #initialize} drops and recreates the {@code public}
  * schema, so two contexts using it would wipe each other. Test classes must therefore carry
- * <em>identical</em> context configuration -- same annotations, same initializer -- so Spring's
- * context cache hands them one context and the reset happens once. Anything that would fork a
- * second context (a {@code @MockitoBean}, different properties) has to reset the schema itself
- * instead.
+ * <em>identical</em> context configuration, which is what {@link PostgresIntegrationTest}
+ * exists to guarantee -- annotate with that rather than restating it. Anything that would fork
+ * a second context (a {@code @MockitoBean}, different properties) has to reset the schema
+ * itself instead.
+ *
+ * <p>{@link #resetPublicSchema} announces itself on stdout, and that line is the only evidence
+ * the sharing actually held: one line in the job log means one context, and two means the
+ * classes forked and wiped each other. Without it a fork looks like unrelated flakiness in
+ * whichever class happened to run second.
  */
 public final class PostgresTestDatabase
         implements ApplicationContextInitializer<ConfigurableApplicationContext> {
@@ -67,7 +72,15 @@ public final class PostgresTestDatabase
         ).applyTo(context);
     }
 
+    /**
+     * Wipes the schema so the migrations run against an empty database.
+     *
+     * <p>The line it prints is a guard, not progress reporting: see the class javadoc. It goes
+     * to stdout rather than through a logger because a logger's output depends on a level
+     * somebody can configure away, and a guard nobody can see is not a guard.
+     */
     private static void resetPublicSchema(String jdbcUrl, String username, String password) {
+        System.out.println("PostgresTestDatabase: resetting the public schema at " + jdbcUrl);
         try (Connection connection = connectWithRetry(jdbcUrl, username, password);
              Statement statement = connection.createStatement()) {
             statement.execute("DROP SCHEMA IF EXISTS public CASCADE");

@@ -1,19 +1,14 @@
 package com.pse.audit;
 
-import com.pse.DemoApplication;
 import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditActorType;
 import com.pse.audit.model.AuditLog;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.repository.AuditLogRepository;
-import com.pse.support.PostgresTestDatabase;
+import com.pse.support.PostgresIntegrationTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -39,13 +34,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * pagination test in it is one step further from the thing it claims to check.
  *
  * <p>Skipped unless {@code POSTGRES_SMOKE_JDBC_URL} is set, so a developer machine with no
- * database runs the rest of the suite unaffected. The annotations are identical to
- * {@code PostgreSqlMigrationSmokeTests} on purpose -- see {@link PostgresTestDatabase}.
+ * database runs the rest of the suite unaffected -- that condition comes with
+ * {@link PostgresIntegrationTest}, along with the context this shares with every other class
+ * in this layer.
  */
-@SpringBootTest(classes = DemoApplication.class)
-@AutoConfigureMockMvc
-@ContextConfiguration(initializers = PostgresTestDatabase.class)
-@EnabledIfEnvironmentVariable(named = PostgresTestDatabase.URL_VARIABLE, matches = ".+")
+@PostgresIntegrationTest
 class AuditTimestampPrecisionPostgresTests {
 
     @Autowired AuditLogRepository auditLogRepository;
