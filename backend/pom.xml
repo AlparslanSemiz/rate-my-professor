@@ -272,4 +272,94 @@
 		</plugins>
 	</build>
 
+	<!--
+		Mutation testing, in a profile so it never runs in the ordinary build.
+
+		Why it is worth having: this project has been mutation-testing by hand all along, and
+		saying so is the argument for automating it. docs/test-plan.md records a cursor predicate
+		deliberately broken to prove a sweep could go red, three files checked by hand for
+		inverted AssertJ arguments, a status code set wrong to prove four tests read it, and a
+		content filter neutered to prove two tests caught it. Each of those is one mutant, chosen
+		by a person. PIT generates them.
+
+		It answers the question coverage cannot. 95.9% line coverage says every line ran; it says
+		nothing about whether any assertion would have failed had the line been wrong. P-6 (a
+		sweep asserting "not refused", which a 404 also satisfies) is exactly a surviving
+		mutant, and it was found by reading the test rather than by running anything.
+
+		The scoping below is what makes it fast and is also what limits it: a SURVIVED mutant
+		means "these eighteen unit tests do not kill it", not "the suite does not catch it".
+		The first run proved that distinction matters. See the mutation:nightly job in
+		.gitlab-ci.yml for the worked example.
+
+		Run it with:  ./mvnw -Ppitest test-compile org.pitest:pitest-maven:mutationCoverage
+	-->
+	<profiles>
+		<profile>
+			<id>pitest</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.pitest</groupId>
+						<artifactId>pitest-maven</artifactId>
+						<version>1.30.0</version>
+						<dependencies>
+							<dependency>
+								<groupId>org.pitest</groupId>
+								<artifactId>pitest-junit5-plugin</artifactId>
+								<version>1.2.3</version>
+							</dependency>
+						</dependencies>
+						<configuration>
+							<!--
+								Services only, and paired with targetTests below rather than left to
+								default. The scoping is what makes this runnable at all: every one of
+								the eighteen service test classes is plain JUnit with no Spring
+								context (the house rule in CLAUDE.md), so PIT re-runs them per
+								mutant without starting a context. Pointed at the whole suite it would
+								start one per mutant instead, which is the difference between minutes
+								and hours.
+							-->
+							<targetClasses>
+								<param>com.pse.*.service.*</param>
+								<param>com.pse.audit.revert.*</param>
+								<param>com.pse.security.*</param>
+							</targetClasses>
+							<targetTests>
+								<param>com.pse.*.*ServiceTests</param>
+								<param>com.pse.*.*.*ServiceTests</param>
+								<param>com.pse.*.*.*ServiceVoteTests</param>
+								<param>com.pse.audit.revert.*Tests</param>
+								<param>com.pse.security.*Tests</param>
+							</targetTests>
+							<excludedClasses>
+								<!--
+									Both are recorded under "Deliberately uncovered" in
+									docs/test-plan.md and have no unit tests at all. A class with no
+									test has every mutant survive, which is not information PIT is
+									adding: it is a decision already written down, restated as
+									dozens of findings that would bury the real ones.
+								-->
+								<param>com.pse.auth.service.MailService</param>
+								<param>com.pse.auth.service.MailTemplateService</param>
+							</excludedClasses>
+							<outputFormats>
+								<param>HTML</param>
+								<param>XML</param>
+							</outputFormats>
+							<timestampedReports>false</timestampedReports>
+							<!--
+								No mutationThreshold on purpose. The first run surfaces every surviving
+								mutant the suite has ever had, none of which is a regression, and a
+								gate that fails on the day it is introduced teaches people to pass -DskipTests
+								rather than to read it. A threshold is worth setting once the report has
+								been triaged once, the same order the coverage floors were raised in.
+							-->
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 </project>

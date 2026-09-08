@@ -441,6 +441,49 @@ secrets:history:
       - gitleaks.json
     expire_in: 1 month
 
+# Mutation testing. Schedule-only and allow_failure, like every job here whose red is
+# expected rather than new.
+#
+# What it adds over coverage: the suite is at 95.9% line coverage, which says every line ran.
+# It says nothing about whether any assertion would have failed had the line been wrong, and
+# that gap has been found by hand more than once in this repository (P-6 most clearly, an
+# assertion that could not fail). PIT answers it mechanically.
+#
+# The first run scored 67%: 1194 mutants, 797 killed, 73 survived, 324 with no coverage.
+# There is deliberately no threshold yet; see the pitest profile in pom.xml for why.
+#
+# READ THE REPORT WITH THIS CAVEAT, which the first run taught the hard way. The profile runs
+# only the eighteen context-free service unit tests, because pointing PIT at the whole suite
+# would start a Spring context per mutant and take hours instead of two minutes. That scoping
+# is also the report's main weakness:
+#
+#   NO_COVERAGE  the unit tests never reach the line. Says nothing about the suite -- the API,
+#                integration and end-to-end layers are not running here.
+#   SURVIVED     the unit tests reach it and do not kill it. A CANDIDATE, not a finding: the
+#                mutant may still be caught by a layer outside this profile.
+#
+# Checked empirically rather than assumed. "removed call to protectAdministrator" in
+# warnStudent survived here and looked like an untested authorization guard; deleting that call
+# for real turned two AdminApiIntegrationTests red. The guard was covered all along, by a layer
+# PIT was not running. So a survivor is worth investigating and is not worth a test until it
+# has been checked against the other layers -- writing one anyway just duplicates coverage that
+# already exists, which is what P-2 and P-4 in docs/test-findings.md are about.
+mutation:nightly:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      allow_failure: true
+  script:
+    # PIT prints its own summary line -- "Generated N mutations Killed M (X%)" -- to stdout,
+    # so the score is in this job's log without anything extra parsing it back out.
+    - ./mvnw -B -ntp -Ppitest test-compile org.pitest:pitest-maven:mutationCoverage
+  artifacts:
+    when: always
+    paths:
+      - target/pit-reports/
+    expire_in: 1 month
+
 health:check:
   stage: test
   image: alpine:3.20
