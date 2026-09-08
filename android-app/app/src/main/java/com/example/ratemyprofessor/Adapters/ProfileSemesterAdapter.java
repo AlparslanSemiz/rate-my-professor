@@ -1,5 +1,6 @@
 package com.example.ratemyprofessor.Adapters;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -7,11 +8,16 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.ratemyprofessor.DomainModel.Lecture;
 import com.example.ratemyprofessor.DomainModel.Semester;
+import com.example.ratemyprofessor.ServerCommunication.Database;
 import com.example.ratemyprofessor.databinding.ItemLectureSemesterWithRatingBinding;
+import com.example.ratemyprofessor.logic.RatingColorCalculator;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * The adapter for semesters (lower list) in {@link com.example.ratemyprofessor.Fragments.ProfileFragment}
@@ -25,9 +31,26 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
     private final List<Semester> semesters;
     private final OnSemesterClickListener listener;
 
-    public ProfileSemesterAdapter(List<Semester> semesters, OnSemesterClickListener listener) {
+    private final Context context;
+
+    private final String lectureTitle;
+
+    private final String profId;
+
+    private final SearchService searchService;
+
+    private final ExecutorService executor;
+
+    public ProfileSemesterAdapter(Context context, List<Semester> semesters, OnSemesterClickListener listener,
+                                  String lectureTitle, String profId) {
+        this.context = context;
         this.semesters = semesters;
         this.listener = listener;
+        this.lectureTitle = lectureTitle;
+        this.profId = profId;
+
+        searchService = Database.getInstance(context).searchService();
+        executor = Executors.newSingleThreadExecutor();
     }
 
     @NonNull
@@ -35,7 +58,6 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
     public SemesterViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ItemLectureSemesterWithRatingBinding binding = ItemLectureSemesterWithRatingBinding.inflate(LayoutInflater.from(parent.getContext()),
                 parent,false);
-        // R.layout.item_lecture_semester_with_rating ?
         return new SemesterViewHolder(binding);
     }
 
@@ -44,7 +66,28 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
         Semester semester = semesters.get(position);
 
         holder.textView.setText(semester.semesterSeason().toString() + " " + semester.semesterYear());
-        holder.itemView.setOnClickListener(v -> listener.onSemesterClick(semester));
+
+        executor.execute(() -> {
+            List<Lecture> lectureList = searchService.getLecture(profId, lectureTitle,
+                    semester.semesterYear(), semester.semesterSeason());
+
+            if (lectureList.isEmpty()) {
+                return;
+            }
+            Lecture lecture = lectureList.get(0);
+
+            // Using Post to return to the UI thread
+            holder.itemView.post(() -> {
+                holder.averageRating.setText(String.format(Locale.getDefault(), RATING_FORMAT,
+                        lecture.averageRating));
+                holder.averageRating.setTextColor(RatingColorCalculator.calculateColour(context,
+                        lecture.averageRating));
+            });
+        });
+
+        holder.itemView.setOnClickListener(
+                v -> listener.onSemesterClick(semester)
+        );
     }
 
     @Override

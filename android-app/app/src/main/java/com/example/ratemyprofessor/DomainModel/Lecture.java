@@ -59,8 +59,10 @@ public class Lecture {
      */
     public int ratingCount;
 
+    public double averageRating;
+
     public Lecture(String id, String name, String code, int semesterYear, SemesterSeason semesterSeason,
-                   boolean active, int commentCount, int ratingCount) {
+                   boolean active, int commentCount, int ratingCount, double averageRating) {
         this.name = name;
         this.code = code;
         this.id = id;
@@ -69,6 +71,7 @@ public class Lecture {
         this.active = active;
         this.commentCount = commentCount;
         this.ratingCount = ratingCount;
+        this.averageRating = averageRating;
     }
 
 }

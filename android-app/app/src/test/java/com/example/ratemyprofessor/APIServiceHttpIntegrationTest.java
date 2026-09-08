@@ -12,7 +12,7 @@ import com.example.ratemyprofessor.ServerCommunication.APIService;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
 import com.example.ratemyprofessor.ServerCommunication.Requests.LoginRequest;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ServerResponse;
 import com.google.gson.Gson;
@@ -106,7 +106,7 @@ public class APIServiceHttpIntegrationTest {
                         + "[{\"id\":\"prof-1\",\"firstName\":\"Ada\",\"lastName\":\"Lovelace\","
                         + "\"averageRating\":4.5,\"ratingCount\":12}]}"));
 
-        Response<ProfessorResponse> response = apiService.getProfessors().execute();
+        Response<ProfessorsResponse> response = apiService.getProfessors().execute();
 
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());
@@ -121,7 +121,8 @@ public class APIServiceHttpIntegrationTest {
                 .setBody("{\"message\":\"ok\",\"success\":true,\"lectures\":"
                         + "[{\"id\":\"lecture-1\",\"name\":\"Algorithms\",\"code\":\"240001\","
                         + "\"semesterYear\":2026,\"semesterSeason\":\"WS\",\"active\":true,"
-                        + "\"professorId\":\"prof-1\",\"commentCount\":3,\"ratingCount\":4}]}"));
+                        + "\"professorId\":\"prof-1\",\"commentCount\":3,\"ratingCount\":4,"
+                        + "\"averageRating\":4.5}]}"));
 
         Response<LecturesResponse> response = apiService.getLectures().execute();
 

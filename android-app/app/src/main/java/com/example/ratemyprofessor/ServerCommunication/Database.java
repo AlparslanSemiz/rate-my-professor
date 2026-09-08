@@ -18,7 +18,7 @@ import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.Rating;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -38,7 +38,9 @@ import retrofit2.Response;
  */
 @androidx.room.Database(
         entities = {Lecture.class, Professor.class, CommentModel.class, Instructor.class, Rating.class},
-        version = 10
+        version = 11,
+        exportSchema = false
+
 )
 @TypeConverters(LocalDateTimeConverter.class)
 public abstract class Database extends RoomDatabase {
@@ -110,7 +112,7 @@ public abstract class Database extends RoomDatabase {
         //the calls to the server for updating
         refreshTable(
                 apiService.getProfessors(),
-                ProfessorResponse::professors,
+                ProfessorsResponse::professors,
                 service::deleteProfessors,
                 service::insertProfessor,
                 executor,
@@ -222,7 +224,7 @@ public abstract class Database extends RoomDatabase {
     private void insertLecture(LectureModel model) {
         SearchService searchService = searchService();
         Lecture lecture = new Lecture(model.id(), model.name(), model.code(), model.semesterYear(),
-                model.semesterSeason(), model.active(), model.commentCount(), model.ratingCount());
+                model.semesterSeason(), model.active(), model.commentCount(), model.ratingCount(), model.averageRating());
         searchService.insertLecture(lecture);
         for (Professor professor : model.professors()) {
             searchService.insertInstructor(new Instructor(model.id(), model.name(), professor.id));

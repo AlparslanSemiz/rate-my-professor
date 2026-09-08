@@ -23,7 +23,7 @@ import com.example.ratemyprofessor.DomainModel.Semester;
 import com.example.ratemyprofessor.DomainModel.SemesterSeason;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -65,7 +65,8 @@ public class DatabaseSyncTest {
                 true,
                 Collections.singletonList(professor),
                 2,
-                8
+                8,
+                4.0
         );
         LocalDateTime createdAt = LocalDateTime.of(2026, 8, 3, 10, 0);
         Comment reply = new Comment(
@@ -93,7 +94,7 @@ public class DatabaseSyncTest {
                 Collections.singletonList(reply)
         );
         APIService apiService = apiService(
-                FakeCall.response(new ProfessorResponse("ok", true, Collections.singletonList(professor))),
+                FakeCall.response(new ProfessorsResponse("ok", true, Collections.singletonList(professor))),
                 FakeCall.response(new LecturesResponse("ok", true, Collections.singletonList(lecture))),
                 FakeCall.response(new CommentsResponse("ok", true, Collections.singletonList(comment)))
         );
@@ -135,7 +136,7 @@ public class DatabaseSyncTest {
         RecordingSearchService searchService = new RecordingSearchService();
         TestDatabase database = new TestDatabase(searchService);
         APIService apiService = apiService(
-                FakeCall.response(Response.<ProfessorResponse>success(null)),
+                FakeCall.response(Response.<ProfessorsResponse>success(null)),
                 FakeCall.failure(new IOException("offline")),
                 FakeCall.response(new CommentsResponse("ok", true, null))
         );
@@ -152,7 +153,7 @@ public class DatabaseSyncTest {
     }
 
     private static APIService apiService(
-            Call<ProfessorResponse> professors,
+            Call<ProfessorsResponse> professors,
             Call<LecturesResponse> lectures,
             Call<CommentsResponse> comments
     ) {
@@ -447,4 +448,7 @@ public class DatabaseSyncTest {
 
         }
     }
+
+
+
 }

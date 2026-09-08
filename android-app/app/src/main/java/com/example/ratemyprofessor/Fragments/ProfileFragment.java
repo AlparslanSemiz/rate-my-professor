@@ -25,8 +25,10 @@ import com.example.ratemyprofessor.DomainModel.Semester;
 import com.example.ratemyprofessor.ServerCommunication.Database;
 
 import com.example.ratemyprofessor.databinding.FragmentProfileBinding;
+import com.example.ratemyprofessor.logic.RatingColorCalculator;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -43,6 +45,11 @@ import java.util.concurrent.Executors;
 public class ProfileFragment extends Fragment {
 
     private static final String TAG = "ProfileFragment";
+
+    /**
+     * Format of the average shown on top of the screen, always with one decimal.
+     */
+    private static final String RATING_FORMAT = "%.1f";
 
     private FragmentProfileBinding binding;
     private SelectionType selectionType;
@@ -81,7 +88,12 @@ public class ProfileFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         binding = FragmentProfileBinding.inflate(inflater, container, false);
-        binding.averageRatingBackground.setText("5.0");
+
+
+        binding.averageRatingBackground.setText(String.format(Locale.ROOT, RATING_FORMAT,
+                professor.averageRating));
+        binding.averageRatingBackground.setTextColor(RatingColorCalculator.calculateColour(requireContext(),
+                professor.averageRating));
         binding.lectureList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         binding.semesterList.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.backButton.setOnClickListener(v -> requireActivity().getOnBackPressedDispatcher().onBackPressed());
@@ -199,12 +211,16 @@ public class ProfileFragment extends Fragment {
         RecyclerView semesterList = binding.semesterList;
 
         executor.execute(() -> {
-            List<Semester> semesters =
-                    service.getSemestersByProfessorAndLectureTitle(professor.id, lectureTitle);
+            List<Semester> semesters = service.getSemestersByProfessorAndLectureTitle(professor.id, lectureTitle);
             Log.d(TAG, "semesters " + semesters);
 
-            ProfileSemesterAdapter adapter = new ProfileSemesterAdapter(semesters, this::openLectureProfile);
-            runOnUiThread(() -> semesterList.setAdapter(adapter));
+
+            runOnUiThread(() -> {
+                ProfileSemesterAdapter adapter =
+                        new ProfileSemesterAdapter(requireContext(), semesters,
+                                this::openLectureProfile, lectureTitle, professor.id);
+                semesterList.setAdapter(adapter);
+            });
         });
     }
 

@@ -39,12 +39,26 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
      */
     private Map<RatingCategory, Double> changedRatings;
 
+    /**
+     * Constructor for the rating adapter. Removes "overall" rating from each list
+     */
     public RatingAdapter(List<TopicAverageResponse> ratings, List<TopicAverageResponse> userRatings) {
         this.ratings = ratings;
         this.userRatings = userRatings;
+        // Removes "overall" rating from each list
+//        for (TopicAverageResponse rating : ratings) {
+//            if (rating.category().equals(RatingCategory.OVERALL)) {
+//                this.ratings.remove(rating);
+//            }
+//        }
+//        for (TopicAverageResponse rating : userRatings) {
+//            if (rating.category().equals(RatingCategory.OVERALL)) {
+//                this.userRatings.remove(rating);
+//            }
+//        }
         changedRatings = new HashMap<>();
         if (userRatings != null) {
-            for (TopicAverageResponse rating : userRatings) {
+            for (TopicAverageResponse rating : this.userRatings) {
                 changedRatings.put(rating.category(), rating.value());
             }
         }

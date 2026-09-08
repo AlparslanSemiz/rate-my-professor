@@ -132,7 +132,7 @@ public interface SearchService {
      * @param season       the term of the semester
      * @return the matching offering, or an empty list when there is none
      */
-    @Query("SELECT * FROM lectures JOIN instructors ON instructors.lectureID = lectures.id " +
+    @Query("SELECT lectures.* FROM lectures JOIN instructors ON instructors.lectureID = lectures.id " +
             "WHERE instructors.professorId = :professorId AND lectures.name = :lectureTitle AND " +
             "lectures.semesterYear = :semesterYear AND lectures.semesterSeason = :season")
     List<Lecture> getLecture(String professorId, String lectureTitle, int semesterYear, SemesterSeason season);
