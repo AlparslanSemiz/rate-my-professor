@@ -153,29 +153,43 @@ server:postgres-integration:
     POSTGRES_SMOKE_USERNAME: postgres
     POSTGRES_SMOKE_PASSWORD: postgres_smoke_password
   script:
-    # Named rather than pattern-matched: this job's cost is one Spring context per distinct
-    # configuration, and adding a class here is the moment to check it shares the existing
-    # one. Carrying @PostgresIntegrationTest is what makes it share; the log line below is how
-    # you know it did. See com.pse.support.PostgresIntegrationTest.
+    # Two Maven invocations, and the split is the point. The integration classes share one
+    # Spring context; the end-to-end ones need a different one (a real port, plus the mail
+    # capture) and two contexts against one database would reset the schema under each other.
+    # Separate JVMs cannot interleave, so each invocation is checked for exactly one context
+    # rather than the guard being weakened to allow two.
+    #
+    # Classes are named rather than pattern-matched: this job's cost is one Spring context per
+    # distinct configuration, and adding a class here is the moment to check which annotation
+    # it carries. See com.pse.support.PostgresIntegrationTest and PostgresE2ETest.
     - |
-      # Written to a file rather than piped through tee: a pipe hands the job tee's exit
-      # status, so a failing test suite would pass. The log is printed either way.
-      if ./mvnw -B -ntp -Dtest=PostgreSqlMigrationSmokeTests,AuditTimestampPrecisionPostgresTests,CursorPaginationPostgresTests,AuditJsonbRoundTripPostgresTests,ReadOnlyTransactionSweepPostgresTests test > postgres-integration.log 2>&1; then
-        cat postgres-integration.log
-      else
-        cat postgres-integration.log
-        exit 1
-      fi
-    - |
-      # One context, or the classes wiped each other's schema mid-run and everything above
-      # proved nothing. PostgresTestDatabase prints this line once per context it initialises.
-      resets=$(grep -c "PostgresTestDatabase: resetting the public schema" postgres-integration.log || true)
-      echo "Spring contexts started against PostgreSQL: $resets"
-      if [ "$resets" != "1" ]; then
-        echo "Expected exactly one. More than one means two test classes carry different context"
-        echo "configuration and reset the schema under each other -- see PostgresIntegrationTest."
-        exit 1
-      fi
+      run_layer() {
+        name="$1"
+        classes="$2"
+        log="postgres-$name.log"
+
+        # Written to a file rather than piped through tee: a pipe hands the job tee's exit
+        # status, so a failing test suite would pass. The log is printed either way.
+        if ./mvnw -B -ntp -Dtest="$classes" test > "$log" 2>&1; then
+          cat "$log"
+        else
+          cat "$log"
+          exit 1
+        fi
+
+        # One context, or the classes wiped each other's schema mid-run and everything above
+        # proved nothing. PostgresTestDatabase prints this line once per context it starts.
+        resets=$(grep -c "PostgresTestDatabase: resetting the public schema" "$log" || true)
+        echo "$name: Spring contexts started against PostgreSQL: $resets"
+        if [ "$resets" != "1" ]; then
+          echo "Expected exactly one. More than one means two classes in this invocation carry"
+          echo "different context configuration and reset the schema under each other."
+          exit 1
+        fi
+      }
+
+      run_layer integration PostgreSqlMigrationSmokeTests,AuditTimestampPrecisionPostgresTests,CursorPaginationPostgresTests,AuditJsonbRoundTripPostgresTests,ReadOnlyTransactionSweepPostgresTests
+      run_layer e2e EndToEndJourneyTests
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: never

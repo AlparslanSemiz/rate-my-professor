@@ -41,6 +41,7 @@ node_modules/
 
 ### CI job scratch (server:postgres-integration writes it, then greps it)
 postgres-integration.log
+postgres-e2e.log
 
 ### Local working notes (not repo history)
 CLAUDE.md
