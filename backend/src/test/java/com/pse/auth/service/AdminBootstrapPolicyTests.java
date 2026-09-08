@@ -68,7 +68,7 @@ class AdminBootstrapPolicyTests {
 
     /**
      * The parameter is named normalizedEmail and means it: the lookup is exact, so an
-     * un-normalized argument silently misses. AuthService lowercases before it asks.
+     * un-normalized argument silently misses. KitEmail lowercases before the caller asks.
      */
     @Test
     void shouldBootstrap_argumentThatIsNotNormalized_returnsFalse() {

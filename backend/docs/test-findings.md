@@ -7,6 +7,14 @@ where each finding stands.
 Every finding is given together with the name of the test that pins it: a finding is only
 really recorded if it lives in a test.
 
+> **Class names and line numbers below are as they were when the finding was made.** A
+> single-responsibility refactor has since split most of the large services, and these entries
+> have deliberately not been rewritten: an entry that says where a defect *was* is a record,
+> and editing it to name a class that did not exist then makes it a worse one.
+> [test-plan.md](test-plan.md#the-single-responsibility-refactor) carries the old-to-new
+> mapping. The findings themselves, and the tests that pin them, all moved with their code and
+> are all still green.
+
 ## At a glance
 
 **29 findings. 26 fixed, 2 closed as a recorded decision (P-3, P-7), 1 an existing protection

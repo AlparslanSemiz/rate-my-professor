@@ -11,12 +11,18 @@ Testcontainers question — turned out not to be a blocker at all; see
 
 ### Where it stands
 
-**876 tests, 0 failures**, 31 skipped locally (the `@Disabled` `DemoApplicationTests`, the
+**927 tests, 0 failures**, 31 skipped locally (the `@Disabled` `DemoApplicationTests`, the
 twenty-four PostgreSQL integration tests and the six end-to-end journeys, all of which run in
 CI).
-Bundle **95.91% LINE** (3328/3470), **90.61% BRANCH** (1061/1171). Line coverage is gated in two
+Bundle **96.48% LINE** (3339/3461), **92.71% BRANCH** (1004/1083). Line coverage is gated in two
 tiers — **90% mandatory, 95% target** — and BRANCH has a single floor, ratcheted to 0.88 now
 that batch 7 has cleared it.
+
+Both figures moved on the refactor rather than on new coverage work: the denominators fell as
+duplicated code was collapsed, and the classes that came out of the split are small enough to
+test directly. Fifty-one of the tests are new, and every one of them was written because
+something the refactor touched turned out to have nothing pinning it — see
+[The single-responsibility refactor](#the-single-responsibility-refactor).
 
 > Those are `./mvnw clean verify` numbers, and the `clean` is not decoration. JaCoCo's
 > `prepare-agent` appends by default, so `target/jacoco.exec` accumulates across runs and a
@@ -901,6 +907,79 @@ pointing PIT at the whole suite would start a Spring context per mutant. So `SUR
 alarming survivor turned out to be covered by two `AdminApiIntegrationTests` all along. A
 survivor is a candidate to investigate, not a finding.
 
+## The single-responsibility refactor
+
+Seven commits that moved code and changed no interface. No route, status code, response field
+or message string differs, which is why the `CHANGELOG` has no entry for any of it and why the
+API, contract and E2E layers were expected to stay green **unedited** — that expectation is
+what the work was checked against.
+
+The sections above are a record of what was tested when, and they name classes by the names
+those classes had at the time. They have not been rewritten. This table is how a reader gets
+from one of those names to where the code and its tests live now.
+
+| Was | Is now |
+| --- | --- |
+| `AuthService` (468 lines, 18 constructor parameters) | `LoginCodeService`, `SessionIssuer`, `SessionRevoker`, `IdentityService`, plus `SessionAuditWriter`, `StudentProvisioning`, `KitEmail` |
+| `SocialService` (591) | `CommentService`, `AnswerService`, `VoteService`, `ContentReportService`, `NotificationService`, `SocialResponseMapper`, `ContentAudit` |
+| `ModerationUserService` (843) | `UserDirectoryService`, `StudentProfileService`, `StudentLifecycleService`, `WarningService`, plus `ModeratedStudents`, `UserListQuery`, `UserResponseMapper` |
+| `ModerationContentService` (430) | `ContentModerationService`, `RatingModerationService`, `UserReferenceMapper` |
+| `ModerationCatalogService` (350) | `LectureModerationService`, `ProfessorModerationService`, `CatalogueEdits` |
+| `LoginLocationService` (342) | `LoginLocationService` (geo-IP only), `LoginMapFragment`, `Coordinates` |
+| `MailService` (194) | `HtmlMailSender`, `LoginCodeMail`, `LoginNotificationMail` |
+| `HashGenerator` | `TokenHasher` (SHA-256, session tokens), `OtpHasher` (Argon2, login codes) |
+| `LectureService` / `ProfessorService` response builders | `LectureResponseMapper`, `ProfessorResponseMapper`, `LectureLabels`, `RatingAverages`, `ProfessorRatings` |
+| the paging block in three listings | `shared/page/KeysetPage` |
+| `toCountMap` in two services | `shared/repository/IdCount`, a Spring Data projection |
+| `escapeHtml` in two classes | `shared/util/Html` |
+
+Test classes moved with the code they cover and their bodies are unchanged, so the numbers in
+the batch tables above still describe the same assertions under different file names.
+`AuthServiceTests` became four classes, `SocialServiceTests` five, `ModerationUserServiceTests`
+three, `ModerationContentServiceTests` and `ModerationCatalogServiceTests` two each.
+`SocialServiceVoteTests` is `VoteServiceTests`, and the four `null` collaborators it passed on
+purpose are gone — not because the intent was dropped but because the class under test now has
+exactly the five collaborators the vote methods use, which is the same statement made
+structurally.
+
+### What the refactor found
+
+Splitting a class does not find defects. Asking what pins each half does, and these are the
+gaps that answered "nothing":
+
+- **The grouped counts** feeding `UserResponse.warnings`, `UserReferenceResponse.warnings` and
+  the role field. Converting five `List<Object[]>` queries to a projection left the whole suite
+  green, which proved nothing — no unit test stubbed those queries. The alias was deliberately
+  broken to confirm `AdminApiIntegrationTests.warningIsDeliveredToTheStudentWithoutRestrictingThem`
+  goes red on it, and `UserReferenceMapperTests` now pins the two derived fields directly.
+- **`KeysetPage`.** Three listings resume their pages through it and a boundary error there
+  drops or repeats a row on all three. The services reach it with mocked repositories and so
+  never execute the slice at all; `KeysetPageTests` does, twenty cases including a full page,
+  an empty one and a limit of zero.
+- **`ContentAudit.metadataFor`.** The 120-character preview boundary had no test in the
+  mutation profile's reach; both mutants survived. Four cases now.
+- **`KitEmail`.** The same pattern and the same message existed in three places. The rule now
+  has one home and fifteen cases of its own.
+- **Configuration binding.** `RateLimitProperties` is exercised by an API test that spends
+  exactly three login codes, but `@DefaultValue("3")` and the configured `3` are the same
+  number, so the test could not tell binding from default. Setting the default to 99 and
+  watching the test still pass is what showed the value comes from
+  `application-test.properties`.
+
+### What it did not do
+
+- **`ModerationCommentService` and `ModerationAnswerReportService` are still two classes.**
+  They are the same 150 lines twice and merging them was the plan. Measured, the differences
+  are wide rather than deep — two tables, two repositories, two sets of audit constants, two
+  response shapes — and a template method over them needs thirteen abstract methods to save
+  a hundred and twenty lines, which separates the algorithm from its data for no gain. The one
+  rule that could silently diverge, `ACTION_TAKEN` being the only status that hides content,
+  is extracted as `ReportOutcome.visibilityFor`. The rest is plumbing the compiler keeps
+  honest. The same reasoning applies to `VoteService.voteComment`/`voteAnswer` and to the two
+  methods in `ContentReportService`, and is written in each of those classes.
+- **No behaviour was corrected.** Everything the work turned up that is client-visible went to
+  the backlog in [TODO.md](TODO.md) instead, unfixed and named.
+
 ## Deliberately uncovered
 
 Two classes are visibly low and neither is an oversight. Saying so here is the point: an
@@ -1286,8 +1365,10 @@ itself is real and visible in the test profile; only the citation was.)
 
 ### LoginLocationService
 
-- **Responsibility:** resolves the approximate location for an IP address and renders the map
-  HTML embedded in the login notification email.
+- **Responsibility:** resolves the approximate location for an IP address.
+- **Note:** it used to render the login mail's map HTML as well. That half is
+  `LoginMapFragment` now, with its own dossier below; the cases listed here are the ones that
+  stayed. The coordinate predicate both halves needed is `Coordinates.isValid`.
 - **Behaviours tested:**
   - The resolved path: a full response, city only, an empty region (no double comma), and
     that **only the first address** in an X-Forwarded-For list is queried (verified by
@@ -1324,6 +1405,22 @@ itself is real and visible in the test profile; only the citation was.)
   `locationLookupEnabled` in `GET /system/status`. A per-request warning is still deliberately
   not added.
 - **Test count:** 42 (good: 12, bad: 30)
+
+### LoginMapFragment
+
+- **Responsibility:** the map in the login notification mail — a rendered static image when
+  Geoapify is configured and the coordinates are usable, a "View on Google Maps" button
+  otherwise, and nothing at all when there is no location to show.
+- **Behaviours tested:** that valid coordinates and a key render an `<img>` with the pair
+  emitted **lonlat**, which is the order Geoapify takes and the reverse of what IPinfo
+  returns; that a blank key falls back to the button; the coordinate formats that decide
+  between image and button, whitespace around the comma included; that no coordinates and no
+  URL render **nothing** rather than an empty box; and that a hostile maps URL is escaped
+  into the `href` rather than interpolated raw.
+- **Deliberately not tested:** the exact CSS in the two text blocks.
+- **Mocks used:** none. It has one `@Value` and no collaborators.
+- **Residual risk:** that Geoapify changes its URL contract. Nothing here would notice.
+- **Test count:** 5, moved from `LoginLocationServiceTests` with the code.
 
 ### CatalogueRevertHandler.LectureHandler / .ProfessorHandler
 
@@ -1435,7 +1532,7 @@ itself is real and visible in the test profile; only the citation was.)
   branches are the way they are.
 - **Test count:** 9 (good: 4, bad: 5)
 
-### SocialService (voteComment / voteAnswer)
+### VoteService (was `SocialService.voteComment` / `voteAnswer`)
 
 - **Responsibility:** votes on a comment or an answer; a second vote by the same student has
   to update the existing row, because the table has a unique constraint on
@@ -1637,7 +1734,7 @@ itself is real and visible in the test profile; only the citation was.)
   keep working if the sets ever have to be trimmed.
 - **Test count:** 7
 
-### ModerationCatalogService
+### LectureModerationService, ProfessorModerationService (was `ModerationCatalogService`)
 
 - **Responsibility:** the catalogue behind the ratings — correcting a lecture or a professor
   that was entered wrong, and the assignment between them.
@@ -1666,10 +1763,15 @@ itself is real and visible in the test profile; only the citation was.)
   states the fix, which is what a deterministic characterization test is for.
 - **Test count:** 29
 
-### ModerationUserService
+### UserDirectoryService, StudentProfileService, WarningService (was `ModerationUserService`)
 
-- **Responsibility:** the administrator's view of an account — listing, filtering, and the
-  field edit with its protection rules.
+- **Responsibility:** the administrator's view of an account — listing and filtering
+  (`UserDirectoryService`), the field edit with its protection rules
+  (`StudentProfileService`), and warnings (`WarningService`). The guards the mutating
+  endpoints share are `ModeratedStudents`; the query parsing is `UserListQuery`.
+- **Where each behaviour below is tested:** the query-parameter rejections in
+  `UserDirectoryServiceTests`, the protection matrix in `StudentProfileServiceTests`, the
+  warning lifecycle in `WarningServiceTests`.
 - **Behaviours tested:**
   - Every query-parameter rejection, each verified to happen **before the first repository
     call**: limit out of range or not a number, a cursor with no limit (refused before the
