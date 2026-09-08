@@ -1,6 +1,7 @@
 package com.pse.audit.dto;
 
 import com.pse.audit.model.AuditAction;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.Map;
 import java.util.UUID;
@@ -26,7 +27,7 @@ public record AuditLogResponse(
         Map<String, Object> changes,
         Map<String, Object> metadata,
         boolean revertible,
-        String revertBlockedReason,
-        UUID revertedByAuditId
+        @Schema(nullable = true) String revertBlockedReason,
+        @Schema(nullable = true) UUID revertedByAuditId
 ) {
 }
