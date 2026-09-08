@@ -1,5 +1,6 @@
 package com.example.ratemyprofessor.ServerCommunication;
 
+import com.example.ratemyprofessor.BuildConfig;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
@@ -65,9 +66,6 @@ public class RetrofitClient {
      * Builds the HTTP client with the timeouts and the request logging used for debugging.
      */
     private static OkHttpClient buildHttpClient() {
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-
         //Filter out IPv6 traffic because it doesn't work right now.
         Dns ipv4OnlyDns = hostname -> {
             List<InetAddress> addresses = Dns.SYSTEM.lookup(hostname);
@@ -82,12 +80,18 @@ public class RetrofitClient {
             return ipv4Addresses;
         };
 
-        return new OkHttpClient.Builder()
+        OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                .addInterceptor(loggingInterceptor)
-                .dns(ipv4OnlyDns)
-                .build();
+                .dns(ipv4OnlyDns);
+
+        if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BASIC);
+            builder.addInterceptor(loggingInterceptor);
+        }
+
+        return builder.build();
     }
 
     /**

@@ -30,6 +30,9 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ *  tests the search functionality of the search screen.
+ */
 @RunWith(AndroidJUnit4.class)
 public class SearchAndFilterInstrumentedTest {
     private Database database;

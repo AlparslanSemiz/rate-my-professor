@@ -47,6 +47,9 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * tests if the app takes complex, nested data from th server and parses and stores it correctly.
+ */
 @RunWith(RobolectricTestRunner.class)
 public class DatabaseSyncTest {
 
@@ -103,7 +106,7 @@ public class DatabaseSyncTest {
 
         assertEquals(1, searchService.deleteProfessorsCalls);
         assertEquals(1, searchService.deleteLecturesCalls);
-        assertEquals(1, searchService.deleteCommentsCalls);
+        assertEquals(0, searchService.deleteCommentsCalls);
         assertEquals(1, searchService.deleteInstructorsCalls);
         assertSame(professor, searchService.insertedProfessors.get(0));
 
@@ -118,17 +121,7 @@ public class DatabaseSyncTest {
         assertEquals("Algorithms", insertedInstructor.lectureTitle);
         assertEquals("prof-1", insertedInstructor.professorID);
 
-        CommentModel insertedComment = searchService.insertedComments.get(0);
-        assertEquals("comment-1", insertedComment.commentID());
-        assertNull(insertedComment.parentID());
-        assertEquals("Helpful", insertedComment.content());
-        assertEquals(ContentStatus.VISIBLE, insertedComment.status());
-        assertEquals(createdAt, insertedComment.createdAt());
-        assertEquals(5, insertedComment.upVotes());
-
-        CommentModel insertedReply = searchService.insertedComments.get(1);
-        assertEquals("reply-1", insertedReply.commentID());
-        assertEquals("reply-1", insertedReply.parentID());
+        assertTrue(searchService.insertedComments.isEmpty());
     }
 
     @Test
@@ -354,8 +347,18 @@ public class DatabaseSyncTest {
         }
 
         @Override
+        public void insertProfessors(List<Professor> professors) {
+            insertedProfessors.addAll(professors);
+        }
+
+        @Override
         public void insertLecture(Lecture lecture) {
             insertedLectures.add(lecture);
+        }
+
+        @Override
+        public void insertLectures(List<Lecture> lectures) {
+            insertedLectures.addAll(lectures);
         }
 
         @Override
@@ -409,7 +412,17 @@ public class DatabaseSyncTest {
         }
 
         @Override
+        public void insertComments(List<CommentModel> comments) {
+            insertedComments.addAll(comments);
+        }
+
+        @Override
         public void deleteComments() {
+            deleteCommentsCalls++;
+        }
+
+        @Override
+        public void deleteCommentsForLecture(String lectureId) {
             deleteCommentsCalls++;
         }
 
@@ -431,6 +444,11 @@ public class DatabaseSyncTest {
         @Override
         public void insertInstructor(Instructor instructor) {
             insertedInstructors.add(instructor);
+        }
+
+        @Override
+        public void insertInstructors(List<Instructor> instructors) {
+            insertedInstructors.addAll(instructors);
         }
 
         @Override

@@ -1,13 +1,13 @@
 package com.example.ratemyprofessor.Fragments;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -15,11 +15,14 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
+import com.example.ratemyprofessor.Activities.LoginActivity;
 import com.example.ratemyprofessor.RateMyProfessorApplication;
 import com.example.ratemyprofessor.R;
 import com.example.ratemyprofessor.ServerCommunication.APIService;
 import com.example.ratemyprofessor.ServerCommunication.AuthManager;
 import com.example.ratemyprofessor.ServerCommunication.LoginSession;
+import com.example.ratemyprofessor.ServerCommunication.NetworkUtils;
+import com.example.ratemyprofessor.ServerCommunication.Responses.AuthState;
 import com.example.ratemyprofessor.ServerCommunication.Responses.StudentProfileResponse;
 import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
 import com.example.ratemyprofessor.databinding.FragmentHomeScreenBinding;
@@ -44,6 +47,7 @@ public class HomeFragment extends Fragment {
     private static final String TAG = "HomeScreen";
 
     private static final String PROFILE_PICTURE_FILEPATH = "profile_picture.png";
+    private static final String PROFILE_PICTURE_KEY = "profilePicture";
     private FragmentHomeScreenBinding binding;
 
     @Nullable
@@ -55,7 +59,7 @@ public class HomeFragment extends Fragment {
     ) {
         binding = FragmentHomeScreenBinding.inflate(inflater, container, false);
 
-        setStatsAndUsername(binding);
+        setStatsAndUsername();
 
         binding.notifications.setOnClickListener(v -> openNotifications());
         binding.listOfMyRatingsButton.setOnClickListener(v -> openListOfMyRatings());
@@ -63,80 +67,166 @@ public class HomeFragment extends Fragment {
     }
 
     /**
-     * Display the username and stats for the user.
-     * @param binding
+     * Displays cached values immediately and then refreshes them in the background. A missing
+     * connection therefore never leaves the home screen empty.
      */
-    public void setStatsAndUsername(FragmentHomeScreenBinding binding) {
+    public void setStatsAndUsername() {
+        SharedPreferences statistics = requireActivity().getSharedPreferences(
+                RateMyProfessorApplication.STATISTICS_STORAGE,
+                Context.MODE_PRIVATE
+        );
+        showProfile(
+                statistics.getString("username", ""),
+                statistics.getFloat("averageRating", 0),
+                statistics.getInt("ratingCount", 0),
+                statistics.getInt("writtencomments", 0),
+                statistics.getInt("credibilityScore", 0)
+        );
+        showCachedProfilePicture();
+
+        if (!AuthManager.getInstance().isLoggedIn()
+                || !NetworkUtils.isInternetAvailable(requireContext())) {
+            return;
+        }
+
+        refreshProfile(statistics);
+    }
+
+    private void refreshProfile(SharedPreferences statistics) {
         LoginSession session = LoginSession.from(requireContext());
-
         APIService apiService = RetrofitClient.getClient().create(APIService.class);
-        Call<StudentProfileResponse> userInfoCall = apiService.getUserInformation(session.bearerToken());
 
-        if (!AuthManager.getInstance().isLoggedIn()) {
-            Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
-            SharedPreferences statistics = getActivity().getSharedPreferences(RateMyProfessorApplication.STATISTICS_STORAGE, Context.MODE_PRIVATE);
-
-            binding.userName.setText(statistics.getString("username", ""));
-            float rating = statistics.getFloat("averageRating", 0);
-            if (Math.abs(rating - 3.14f) < 0.01f) {
-                binding.averageRatingGivenNum.setText("π");
-            } else {
-                binding.averageRatingGivenNum.setText(String.format(Locale.ROOT, "%.2f", rating));
-            }
-            binding.professorsRatedNum.setText(String.valueOf(statistics.getInt("ratingCount", 0)));
-            binding.commentsWrittenNum.setText(String.valueOf(statistics.getInt("writtencomments", 0)));
-            binding.upDownvotesNum.setText(String.valueOf(statistics.getInt("credibilityScore", 0)));
-            File imageFile = new File(getContext().getFilesDir(), PROFILE_PICTURE_FILEPATH);
-            if (imageFile.exists()) {
-                Glide.with(getContext())
-                        .load(imageFile)
-                        .into(binding.profilePicture);
-            }
-        } else {
-            userInfoCall.enqueue(new Callback<>() {
-                @Override
-                public void onResponse(Call<StudentProfileResponse> userInfocall, Response<StudentProfileResponse> response) {
-                    if (response.isSuccessful()) {
-                        binding.userName.setText(response.body().username());
-                        double rating = response.body().averageRating();
-                        if (Math.abs(rating - 3.14f) < 0.01f) {
-                            binding.averageRatingGivenNum.setText("π");
-                        } else {
-                            binding.averageRatingGivenNum.setText(String.format(Locale.ROOT, "%.2f", rating));
-                        }
-                        binding.professorsRatedNum.setText(String.valueOf(response.body().ratingsCount()));
-                        binding.commentsWrittenNum.setText(String.valueOf(response.body().commentsWritten()));
-                        binding.upDownvotesNum.setText(String.valueOf(response.body().credibilityScore()));
-                        Call<ResponseBody> imageCall = apiService.downloadImage(response.body().profilePicture().replaceFirst("svg", "png"));
-                        imageCall.enqueue(new Callback<ResponseBody>() {
-                            @Override
-                            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                                if (response.isSuccessful() && response.body() != null) {
-                                    saveImageAndSetProfilePicture(response.body(), binding.profilePicture);
-                                }
-                            }
-
-                            @Override
-                            public void onFailure(Call<ResponseBody> call, Throwable throwable) {
-                                Log.e(TAG, "Error: " + throwable.getMessage());
-                            }
-                        });
-                    }
-
+        apiService.getUserInformation(session.bearerToken()).enqueue(new Callback<>() {
+            @Override
+            public void onResponse(
+                    Call<StudentProfileResponse> call,
+                    Response<StudentProfileResponse> response
+            ) {
+                if (response.code() == 401) {
+                    handleExpiredSession(session);
+                    return;
                 }
 
-                @Override
-                public void onFailure(Call<StudentProfileResponse> userInfocall, Throwable t) {
-                    Log.e(TAG, "Error: " + t.getMessage());
+                StudentProfileResponse profile = response.body();
+                if (!response.isSuccessful() || profile == null || binding == null) {
+                    Log.e(TAG, "Profile refresh failed with status " + response.code());
+                    return;
                 }
-            });
+
+                String previousPicture = statistics.getString(PROFILE_PICTURE_KEY, "");
+                String currentPicture = profile.profilePicture() == null
+                        ? ""
+                        : profile.profilePicture();
+
+                statistics.edit()
+                        .putString("username", profile.username())
+                        .putFloat("averageRating", (float) profile.averageRating())
+                        .putInt("ratingCount", profile.ratingsCount())
+                        .putInt("writtencomments", profile.commentsWritten())
+                        .putInt("credibilityScore", profile.credibilityScore())
+                        .apply();
+
+                showProfile(
+                        profile.username(),
+                        profile.averageRating(),
+                        profile.ratingsCount(),
+                        profile.commentsWritten(),
+                        profile.credibilityScore()
+                );
+                refreshProfilePictureIfNeeded(
+                        apiService,
+                        statistics,
+                        previousPicture,
+                        currentPicture
+                );
+            }
+
+            @Override
+            public void onFailure(Call<StudentProfileResponse> call, Throwable throwable) {
+                Log.e(TAG, "Profile refresh failed", throwable);
+            }
+        });
+    }
+
+    private void showProfile(
+            String username,
+            double rating,
+            int ratingCount,
+            int writtenComments,
+            int credibilityScore
+    ) {
+        if (binding == null) {
+            return;
+        }
+
+        binding.userName.setText(username);
+        binding.averageRatingGivenNum.setText(
+                Math.abs(rating - 3.14f) < 0.01f
+                        ? "π"
+                        : String.format(Locale.ROOT, "%.2f", rating)
+        );
+        binding.professorsRatedNum.setText(String.valueOf(ratingCount));
+        binding.commentsWrittenNum.setText(String.valueOf(writtenComments));
+        binding.upDownvotesNum.setText(String.valueOf(credibilityScore));
+    }
+
+    private void showCachedProfilePicture() {
+        File imageFile = new File(requireContext().getFilesDir(), PROFILE_PICTURE_FILEPATH);
+        if (imageFile.exists() && binding != null) {
+            Glide.with(this)
+                    .load(imageFile)
+                    .into(binding.profilePicture);
         }
     }
 
-    private void saveImageAndSetProfilePicture(ResponseBody body, ImageView image) {
+    private void refreshProfilePictureIfNeeded(
+            APIService apiService,
+            SharedPreferences statistics,
+            String previousPicture,
+            String currentPicture
+    ) {
+        File imageFile = new File(requireContext().getFilesDir(), PROFILE_PICTURE_FILEPATH);
+        if (currentPicture.isEmpty()
+                || (currentPicture.equals(previousPicture) && imageFile.exists())) {
+            return;
+        }
+
+        apiService.downloadImage(currentPicture.replaceFirst("svg", "png"))
+                .enqueue(new Callback<>() {
+                    @Override
+                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            if (saveImageAndSetProfilePicture(response.body())) {
+                                statistics.edit()
+                                        .putString(PROFILE_PICTURE_KEY, currentPicture)
+                                        .apply();
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<ResponseBody> call, Throwable throwable) {
+                        Log.e(TAG, "Profile picture refresh failed", throwable);
+                    }
+                });
+    }
+
+    private void handleExpiredSession(LoginSession session) {
+        if (!isAdded()) {
+            return;
+        }
+
+        session.clear();
+        AuthManager.getInstance().setAuthState(AuthState.LOGGED_OUT);
+        Toast.makeText(requireContext(), "Your session has expired.", Toast.LENGTH_SHORT).show();
+        startActivity(new Intent(requireContext(), LoginActivity.class));
+        requireActivity().finish();
+    }
+
+    private boolean saveImageAndSetProfilePicture(ResponseBody body) {
         if (getContext() == null || !isAdded()) {
             Log.d(TAG, "Fragment is no longer attached.");
-            return;
+            return false;
         }
         File imageFile = new File(getContext().getFilesDir(), PROFILE_PICTURE_FILEPATH);
         try (InputStream input = body.byteStream();
@@ -150,10 +240,14 @@ public class HomeFragment extends Fragment {
             }
         } catch (IOException e) {
             Log.println(Log.ERROR, "HomeFragment", e.getMessage());
+            return false;
         }
-        Glide.with(getContext())
-                .load(imageFile)
-                .into(image);
+        if (binding != null) {
+            Glide.with(this)
+                    .load(imageFile)
+                    .into(binding.profilePicture);
+        }
+        return true;
     }
 
     /**

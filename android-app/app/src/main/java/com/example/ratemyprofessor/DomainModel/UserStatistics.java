@@ -31,11 +31,4 @@ public class UserStatistics {
         this.upvoteDownvoteRatio = upvoteDownvoteRatio;
         this.averageGivenGrade = averageGivenGrade;
     }
-
-    /**
-     * Recalculates all values above from the user's reviews, comments and votes.
-     * Not implemented yet, the values are set through the constructor for now.
-     */
-    public void calculateStatistics() {}
-
 }

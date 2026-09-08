@@ -17,6 +17,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+/**
+ * tests if login flow for the application.
+ */
 @RunWith(AndroidJUnit4.class)
 public class UserStoryInstrumentedTest {
 

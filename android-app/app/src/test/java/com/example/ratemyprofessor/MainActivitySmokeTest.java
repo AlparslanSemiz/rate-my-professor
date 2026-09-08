@@ -1,27 +1,67 @@
 package com.example.ratemyprofessor;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
+import android.os.Looper;
+
+import androidx.fragment.app.Fragment;
+
+import com.example.liquidglass.LiquidGlassTabBar;
 import com.example.ratemyprofessor.Activities.MainActivity;
+import com.example.ratemyprofessor.DomainModel.Professor;
+import com.example.ratemyprofessor.Fragments.HomeFragment;
+import com.example.ratemyprofessor.Fragments.ProfileFragment;
+import com.example.ratemyprofessor.Fragments.SearchFragment;
+import com.example.ratemyprofessor.Fragments.SettingsFragment;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.Shadows;
+import org.robolectric.android.controller.ActivityController;
 
 /**
- * This test case checks whether the app crashes when we start the app on the HomeScreen.
+ * Verifies the initial state and navigation routing of the MainActivity.
  */
 @RunWith(RobolectricTestRunner.class)
 public class MainActivitySmokeTest {
 
     @Test
-    public void mainActivityStartsWithoutCrashing() {
-        MainActivity activity = Robolectric
-                .buildActivity(MainActivity.class)
-                .setup()
-                .get();
+    public void mainActivityStartsOnHomeScreen() {
+        MainActivity activity = Robolectric.buildActivity(MainActivity.class).setup().get();
+        
+        Fragment currentFragment = activity.getSupportFragmentManager()
+                .findFragmentById(R.id.fragment_container);
+        
+        assertTrue("MainActivity should start with HomeFragment", 
+                currentFragment instanceof HomeFragment);
+    }
 
-        assertNotNull(activity);
+    @Test
+    public void bottomNavigationSwitchesFragments() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.setup().get();
+        LiquidGlassTabBar tabBar = activity.findViewById(R.id.custom_bottom_nav);
+
+        // We can't easily click the custom tab bar tabs without knowing the internal structure,
+        // but we can verify the activity's response to the interface methods it implements.
+        
+        // Test Home Tab (default)
+        Fragment homeFragment = activity.getSupportFragmentManager()
+                .findFragmentById(R.id.fragment_container);
+        assertTrue(homeFragment instanceof HomeFragment);
+
+        // We use the public interface methods to test the fragment loading logic
+        activity.onProfessorSelected(new Professor("p1", "f", "l", 5.0f, 1));
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        Fragment profileFragment = activity.getSupportFragmentManager()
+                .findFragmentById(R.id.fragment_container);
+        assertTrue("Selecting a professor should show ProfileFragment", 
+                profileFragment instanceof ProfileFragment);
+
+        activity.openHome();
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertTrue(activity.getSupportFragmentManager().findFragmentById(R.id.fragment_container) instanceof HomeFragment);
     }
 }

@@ -2,7 +2,9 @@ package com.example.ratemyprofessor.Adapters;
 
 import androidx.room.Dao;
 import androidx.room.Insert;
+import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.Transaction;
 import androidx.room.Upsert;
 
 import com.example.ratemyprofessor.DomainModel.CommentModel;
@@ -62,11 +64,17 @@ public interface SearchService {
     @Insert
     void insertProfessor(Professor professor);
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertProfessors(List<Professor> professors);
+
     /**
      * Inserts a single lecture offering.
      */
     @Insert
     void insertLecture(Lecture lecture);
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertLectures(List<Lecture> lectures);
 
     /**
      * Empties the professors table before the fresh server data is written.
@@ -79,6 +87,20 @@ public interface SearchService {
      */
     @Query("DELETE FROM lectures")
     void deleteLectures();
+
+    @Transaction
+    default void replaceProfessors(List<Professor> professors) {
+        deleteProfessors();
+        insertProfessors(professors);
+    }
+
+    @Transaction
+    default void replaceLectures(List<Lecture> lectures, List<Instructor> instructors) {
+        deleteLectures();
+        deleteInstructors();
+        insertLectures(lectures);
+        insertInstructors(instructors);
+    }
 
     // --- Profile screen, narrowing down one lecture offering ------------------------------
 
@@ -143,13 +165,25 @@ public interface SearchService {
     @Insert
     void insertComment(CommentModel comment);
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertComments(List<CommentModel> comments);
+
     @Query("DELETE FROM comments")
     void deleteComments();
+
+    @Query("DELETE FROM comments WHERE lectureID = :lectureId")
+    void deleteCommentsForLecture(String lectureId);
+
+    @Transaction
+    default void replaceCommentsForLecture(String lectureId, List<CommentModel> comments) {
+        deleteCommentsForLecture(lectureId);
+        insertComments(comments);
+    }
 
 
     @Query("SELECT * FROM professors WHERE id = :id LIMIT 1")
     Professor getProfessorById(String id);
-    @Query("SELECT * FROM comments WHERE lectureID = :lectureId ORDER BY upVotes DESC")
+    @Query("SELECT * FROM comments WHERE lectureID = :lectureId AND parentID IS NULL ORDER BY upVotes DESC")
     List<CommentModel> getComments(String lectureId);
 
     @Query("SELECT * FROM comments WHERE parentID = :parentId ORDER BY upVotes DESC")
@@ -157,6 +191,9 @@ public interface SearchService {
 
     @Insert
     void insertInstructor(Instructor instructor);
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertInstructors(List<Instructor> instructors);
 
     @Query("DELETE FROM instructors")
     void deleteInstructors();

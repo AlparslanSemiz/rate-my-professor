@@ -36,6 +36,9 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
+/**
+ * tests the parsing of responses from the server by the retrofit and domain model.
+ */
 @RunWith(RobolectricTestRunner.class)
 public class APIServiceHttpIntegrationTest {
     private MockWebServer server;

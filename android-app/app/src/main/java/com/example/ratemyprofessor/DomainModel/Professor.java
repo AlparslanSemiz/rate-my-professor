@@ -44,19 +44,4 @@ public class Professor {
         this.averageRating = averageRating;
         this.ratingCount = ratingCount;
     }
-
-
-    /**
-     * The lectures held by this professor.
-     *
-     * <p>Not implemented yet, always returns an empty list. Screens that need this today query
-     * the database directly through
-     * {@link com.example.ratemyprofessor.Adapters.SearchService#getLecturesByProfessor(String)}.</p>
-     *
-     * @return an empty list until this is implemented
-     */
-    //TODO: Implement here
-    public List<Lecture> getLectures() {
-        return new ArrayList<>();
-    }
 }

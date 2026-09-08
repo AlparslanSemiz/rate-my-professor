@@ -90,13 +90,17 @@ public final class LoginSession {
     }
 
     /**
-     * A previous login only counts as complete when both the email address and the
-     * one time password are known, because the server validates them as a pair.
+     * A previous login only counts as complete when all credentials required for authenticated
+     * requests are available locally. The server still validates the bearer token on every
+     * authenticated request; this check merely lets the app open without a separate startup
+     * request.
      *
      * @return true when a previous login can be validated against the server
      */
     public boolean isLoggedIn() {
-        return !mailAddress().isEmpty() && !loginToken().isEmpty();
+        return !mailAddress().isEmpty()
+                && !loginToken().isEmpty()
+                && !authToken().isEmpty();
     }
 
     /**
