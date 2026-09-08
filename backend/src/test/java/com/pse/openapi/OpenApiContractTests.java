@@ -18,9 +18,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import java.util.Set;
 import java.util.TreeSet;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import com.pse.support.ApiIntegrationTest;
@@ -90,10 +88,9 @@ class OpenApiContractTests {
             }
         }
 
-        assertTrue(missing.isEmpty(),
-                "these routes are mapped by the application but absent from the generated "
+        assertThat(missing.isEmpty()).as("these routes are mapped by the application but absent from the generated "
                         + "schema, so a client generated from it would not know they exist: "
-                        + missing);
+                        + missing).isTrue();
     }
 
     /**
@@ -113,14 +110,15 @@ class OpenApiContractTests {
             }
         }
 
-        assertTrue(phantom.isEmpty(),
-                "the schema describes routes the application does not map: " + phantom);
+        assertThat(phantom.isEmpty())
+                .as("the schema describes routes the application does not map: " + phantom)
+                .isTrue();
     }
 
     /** The version matters to every tool that reads this, so it is asserted rather than assumed. */
     @Test
     void theSchemaDeclaresTheOpenApiVersionItIsGeneratedAs() throws Exception {
-        assertEquals("3.1.0", fetchSchema().getOpenapi());
+        assertThat(fetchSchema().getOpenapi()).isEqualTo("3.1.0");
     }
 
     /**
@@ -137,8 +135,9 @@ class OpenApiContractTests {
                 .andReturn().getResponse().getContentAsString();
 
         SwaggerParseResult parsed = new OpenAPIParser().readContents(body, null, null);
-        assertNotNull(parsed.getOpenAPI(),
-                "the served document did not parse as OpenAPI: " + parsed.getMessages());
+        assertThat(parsed.getOpenAPI())
+                .as("the served document did not parse as OpenAPI: " + parsed.getMessages())
+                .isNotNull();
         return parsed.getOpenAPI();
     }
 

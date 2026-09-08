@@ -45,8 +45,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -165,8 +164,9 @@ class ApiProtocolContractTests {
         String adminToken = adminSession();
         Map<String, Set<String>> verbsByShape = mappedVerbsByShape();
 
-        assertTrue(verbsByShape.size() >= 80,
-                "expected the whole API surface, found only " + verbsByShape.size() + " paths");
+        assertThat(verbsByShape.size() >= 80)
+                .as("expected the whole API surface, found only " + verbsByShape.size() + " paths")
+                .isTrue();
 
         List<String> wrong = new ArrayList<>();
 
@@ -188,10 +188,9 @@ class ApiProtocolContractTests {
             }
         }
 
-        assertTrue(wrong.isEmpty(),
-                "these paths did not answer an unmapped verb with " + WRONG_VERB_STATUS
+        assertThat(wrong.isEmpty()).as("these paths did not answer an unmapped verb with " + WRONG_VERB_STATUS
                         + ". If the wrong-verb contract has changed, change WRONG_VERB_STATUS "
-                        + "rather than this list: " + wrong);
+                        + "rather than this list: " + wrong).isTrue();
     }
 
     /**
@@ -253,9 +252,8 @@ class ApiProtocolContractTests {
             }
         }
 
-        assertTrue(missing.isEmpty(),
-                "these paths refused an unmapped verb without naming the verbs that map, "
-                        + "which is half of a 405: " + missing);
+        assertThat(missing.isEmpty()).as("these paths refused an unmapped verb without naming the verbs that map, "
+                        + "which is half of a 405: " + missing).isTrue();
     }
 
     /**
@@ -271,8 +269,9 @@ class ApiProtocolContractTests {
         String adminToken = adminSession();
         Map<String, String> bodyRoutes = bodyReadingRoutes();
 
-        assertTrue(bodyRoutes.size() >= 20,
-                "expected the write surface, found only " + bodyRoutes.size() + " routes");
+        assertThat(bodyRoutes.size() >= 20)
+                .as("expected the write surface, found only " + bodyRoutes.size() + " routes")
+                .isTrue();
 
         List<String> wrong = new ArrayList<>();
 
@@ -291,12 +290,11 @@ class ApiProtocolContractTests {
             }
         }
 
-        assertTrue(wrong.isEmpty(),
-                "these routes did not answer an unreadable media type with "
+        assertThat(wrong.isEmpty()).as("these routes did not answer an unreadable media type with "
                         + UNSUPPORTED_MEDIA_TYPE_STATUS + ". A route answering 500 here means "
                         + "GlobalExceptionHandler.handleUnsupportedMediaType no longer claims "
                         + "HttpMediaTypeNotSupportedException and the catch-all took it back "
-                        + "(F-17 regressed): " + wrong);
+                        + "(F-17 regressed): " + wrong).isTrue();
     }
 
     /**

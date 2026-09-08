@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,7 +44,7 @@ public class LectureControllerTests {
         LecturesResponse response = lectureController.getLectures();
 
 
-        assertSame(expectedResponse, response);
+        assertThat(response).isSameAs(expectedResponse);
 
         verify(lectureService).getLectures();
     }
@@ -64,7 +64,7 @@ public class LectureControllerTests {
         LectureDetailResponse response = lectureController.getLecture(lectureId);
 
 
-        assertSame(expectedResponse, response);
+        assertThat(response).isSameAs(expectedResponse);
         verify(lectureService).getLecture(lectureId);
     }
 
@@ -88,7 +88,7 @@ public class LectureControllerTests {
         BasicResponse response = lectureController.addLecture(principal, request);
 
 
-        assertSame(expectedResponse, response);
+        assertThat(response).isSameAs(expectedResponse);
 
         verify(lectureService).addLecture(principal, request);
     }

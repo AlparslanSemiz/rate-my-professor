@@ -30,12 +30,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.pse.support.ApiIntegrationTest;
 import com.pse.support.DatabaseReset;
 
@@ -102,7 +102,7 @@ class LazyLoadingRegressionTests {
         Student student = createStudent("lazy-professor@student.kit.edu");
         Lecture lecture = createLecture(student);
 
-        assertEquals(1, lecture.getProfessors().size());
+        assertThat(lecture.getProfessors().size()).isEqualTo(1);
 
         Professor professor = lecture.getProfessors().iterator().next();
         String lectureId = lecture.getId().toString();

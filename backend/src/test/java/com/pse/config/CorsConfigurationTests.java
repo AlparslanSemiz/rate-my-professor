@@ -10,8 +10,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -93,23 +93,20 @@ class CorsConfigurationTests {
 
     @Test
     void blankConfigurationFallsBackToLocalDevelopmentOrigins() {
-        assertEquals(
-                List.of("http://localhost:5173", "http://127.0.0.1:5173"),
-                allowedOrigins("   ,  ,")
-        );
+        assertThat(allowedOrigins("   ,  ,"))
+                .isEqualTo(List.of("http://localhost:5173", "http://127.0.0.1:5173"));
     }
 
     @Test
     void configuredOriginsAreTrimmed() {
-        assertEquals(
-                List.of("https://admin.example", "http://localhost:5173"),
-                allowedOrigins(" https://admin.example , http://localhost:5173 ")
-        );
+        assertThat(allowedOrigins(" https://admin.example , http://localhost:5173 "))
+                .isEqualTo(List.of("https://admin.example", "http://localhost:5173"));
     }
 
     @Test
     void wildcardOriginIsRejected() {
-        assertThrows(IllegalArgumentException.class, () -> new CorsConfig("https://*.example"));
+        assertThatThrownBy(() -> new CorsConfig("https://*.example"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static List<String> allowedOrigins(String configuredValue) {

@@ -16,6 +16,7 @@ import com.pse.social.repository.*;
 import com.pse.social.service.SocialService;
 import com.pse.shared.error.ApiException;
 import com.pse.user.model.Student;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
@@ -37,7 +38,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -95,21 +95,16 @@ class SocialServiceTests {
         )).thenReturn(null);
 
 
-        ApiException thrown = assertThrows(
-                ApiException.class,
-                () -> socialService.submitComment(
+        ApiException thrown = catchThrowableOfType(ApiException.class, () -> socialService.submitComment(
                         student,
                         request
-                )
-        );
+                ));
+        assertThat(thrown).as("nothing was thrown").isNotNull();
 
 
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
-        assertEquals(
-                "Lecture not found",
-                thrown.getMessage()
-        );
+        assertThat(thrown.getMessage()).isEqualTo("Lecture not found");
 
         verify(commentRepository, never()).save(any());
 
@@ -148,12 +143,9 @@ class SocialServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Comment submitted successfully",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Comment submitted successfully");
 
 
         ArgumentCaptor<Comment> captor = ArgumentCaptor.forClass(Comment.class);
@@ -162,12 +154,9 @@ class SocialServiceTests {
 
         Comment saved = captor.getValue();
 
-        assertSame(student, saved.getStudent());
-        assertSame(lecture, saved.getLecture());
-        assertEquals(
-                "Great lecture",
-                saved.getContent()
-        );
+        assertThat(saved.getStudent()).isSameAs(student);
+        assertThat(saved.getLecture()).isSameAs(lecture);
+        assertThat(saved.getContent()).isEqualTo("Great lecture");
 
 
         verify(auditWriter)
@@ -195,22 +184,17 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        ApiException thrown = assertThrows(
-                ApiException.class,
-                () -> socialService.voteComment(
+        ApiException thrown = catchThrowableOfType(ApiException.class, () -> socialService.voteComment(
                         commentId,
                         student,
                         request
-                )
-        );
+                ));
+        assertThat(thrown).as("nothing was thrown").isNotNull();
 
 
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
-        assertEquals(
-                "Comment not found",
-                thrown.getMessage()
-        );
+        assertThat(thrown.getMessage()).isEqualTo("Comment not found");
 
         verify(commentVoteRepository, never()).save(any());
     }
@@ -255,7 +239,7 @@ class SocialServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
 
         ArgumentCaptor<CommentVote> captor =
@@ -268,12 +252,9 @@ class SocialServiceTests {
 
         CommentVote vote = captor.getValue();
 
-        assertSame(student, vote.getStudent());
-        assertSame(comment, vote.getComment());
-        assertEquals(
-                VoteType.UP,
-                vote.getVote()
-        );
+        assertThat(vote.getStudent()).isSameAs(student);
+        assertThat(vote.getComment()).isSameAs(comment);
+        assertThat(vote.getVote()).isEqualTo(VoteType.UP);
     }
 
 
@@ -320,7 +301,7 @@ class SocialServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
         verify(existingVote).setVote(VoteType.DOWN);
 
@@ -348,21 +329,16 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        ApiException thrown = assertThrows(
-                ApiException.class,
-                () -> socialService.submitAnswer(
+        ApiException thrown = catchThrowableOfType(ApiException.class, () -> socialService.submitAnswer(
                         student,
                         request
-                )
-        );
+                ));
+        assertThat(thrown).as("nothing was thrown").isNotNull();
 
 
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
-        assertEquals(
-                "Comment not found",
-                thrown.getMessage()
-        );
+        assertThat(thrown.getMessage()).isEqualTo("Comment not found");
 
         verify(answerRepository, never()).save(any());
 
@@ -415,12 +391,9 @@ class SocialServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Answer submitted successfully",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Answer submitted successfully");
 
 
         ArgumentCaptor<Answer> answerCaptor =
@@ -432,20 +405,11 @@ class SocialServiceTests {
         Answer answer =
                 answerCaptor.getValue();
 
-        assertSame(
-                answerAuthor,
-                answer.getStudent()
-        );
+        assertThat(answer.getStudent()).isSameAs(answerAuthor);
 
-        assertSame(
-                comment,
-                answer.getComment()
-        );
+        assertThat(answer.getComment()).isSameAs(comment);
 
-        assertEquals(
-                "Helpful answer",
-                answer.getContent()
-        );
+        assertThat(answer.getContent()).isEqualTo("Helpful answer");
 
 
         ArgumentCaptor<Notification> notificationCaptor =
@@ -460,30 +424,15 @@ class SocialServiceTests {
         Notification notification =
                 notificationCaptor.getValue();
 
-        assertSame(
-                commentAuthor,
-                notification.getRecipient()
-        );
+        assertThat(notification.getRecipient()).isSameAs(commentAuthor);
 
-        assertSame(
-                lecture,
-                notification.getLecture()
-        );
+        assertThat(notification.getLecture()).isSameAs(lecture);
 
-        assertSame(
-                comment,
-                notification.getOwnComment()
-        );
+        assertThat(notification.getOwnComment()).isSameAs(comment);
 
-        assertSame(
-                answer,
-                notification.getAnswer()
-        );
+        assertThat(notification.getAnswer()).isSameAs(answer);
 
-        assertEquals(
-                NotificationType.ANSWER,
-                notification.getType()
-        );
+        assertThat(notification.getType()).isEqualTo(NotificationType.ANSWER);
 
 
         verify(auditWriter)
@@ -514,22 +463,17 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        ApiException thrown = assertThrows(
-                ApiException.class,
-                () -> socialService.voteAnswer(
+        ApiException thrown = catchThrowableOfType(ApiException.class, () -> socialService.voteAnswer(
                         answerId,
                         student,
                         request
-                )
-        );
+                ));
+        assertThat(thrown).as("nothing was thrown").isNotNull();
 
 
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
-        assertEquals(
-                "Answer not found",
-                thrown.getMessage()
-        );
+        assertThat(thrown.getMessage()).isEqualTo("Answer not found");
 
         verify(answerVoteRepository, never()).save(any());
     }
@@ -583,7 +527,7 @@ class SocialServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
         verify(existingVote).setVote(VoteType.DOWN);
 
@@ -613,16 +557,14 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        ApiException thrown = assertThrows(
-                ApiException.class,
-                () -> socialService.submitCommentReport(
+        ApiException thrown = catchThrowableOfType(ApiException.class, () -> socialService.submitCommentReport(
                         student,
                         request
-                )
-        );
+                ));
+        assertThat(thrown).as("nothing was thrown").isNotNull();
 
 
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
         verify(commentReportRepository, never()).save(any());
     }
@@ -676,7 +618,7 @@ class SocialServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
 
         ArgumentCaptor<CommentReport> captor =
@@ -690,18 +632,12 @@ class SocialServiceTests {
         CommentReport report =
                 captor.getValue();
 
-        assertSame(reporter, report.getReporter());
-        assertSame(comment, report.getComment());
+        assertThat(report.getReporter()).isSameAs(reporter);
+        assertThat(report.getComment()).isSameAs(comment);
 
-        assertEquals(
-                ReportReason.HARASSMENT,
-                report.getReason()
-        );
+        assertThat(report.getReason()).isEqualTo(ReportReason.HARASSMENT);
 
-        assertEquals(
-                "Rude",
-                report.getExplanation()
-        );
+        assertThat(report.getExplanation()).isEqualTo("Rude");
 
 
         verify(auditWriter)
@@ -741,16 +677,14 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        ApiException thrown = assertThrows(
-                ApiException.class,
-                () -> socialService.submitAnswerReport(
+        ApiException thrown = catchThrowableOfType(ApiException.class, () -> socialService.submitAnswerReport(
                         student,
                         request
-                )
-        );
+                ));
+        assertThat(thrown).as("nothing was thrown").isNotNull();
 
 
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
         verify(answerReportRepository, never()).save(any());
     }
@@ -790,31 +724,19 @@ class SocialServiceTests {
         NotificationsResponse response = socialService.getNotifications(student);
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Found: 1 Notifications",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Found: 1 Notifications");
 
-        assertEquals(
-                1,
-                response.notifications().size()
-        );
+        assertThat(response.notifications().size()).isEqualTo(1);
 
-        assertEquals(
-                NotificationType.WARNING,
-                response.notifications()
+        assertThat(response.notifications()
                         .get(0)
-                        .type()
-        );
+                        .type()).isEqualTo(NotificationType.WARNING);
 
-        assertEquals(
-                "Please behave",
-                response.notifications()
+        assertThat(response.notifications()
                         .get(0)
-                        .message()
-        );
+                        .message()).isEqualTo("Please behave");
     }
 
 
@@ -833,21 +755,16 @@ class SocialServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        ApiException thrown = assertThrows(
-                ApiException.class,
-                () -> socialService.markNotificationAsSeen(
+        ApiException thrown = catchThrowableOfType(ApiException.class, () -> socialService.markNotificationAsSeen(
                         student,
                         notificationId
-                )
-        );
+                ));
+        assertThat(thrown).as("nothing was thrown").isNotNull();
 
 
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
-        assertEquals(
-                "Notification not found",
-                thrown.getMessage()
-        );
+        assertThat(thrown.getMessage()).isEqualTo("Notification not found");
     }
 
 
@@ -877,12 +794,9 @@ class SocialServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Marked Notifications as seen",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Marked Notifications as seen");
 
         verify(notification).setSeen(true);
     }

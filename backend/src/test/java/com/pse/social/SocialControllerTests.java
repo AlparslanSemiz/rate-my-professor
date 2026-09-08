@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,7 +50,7 @@ class SocialControllerTests {
         NotificationsResponse response = socialController.getNotifications(principal);
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
         verify(socialService).getNotifications(student);
     }
 
@@ -73,7 +73,7 @@ class SocialControllerTests {
 
         BasicResponse response = socialController.markNotificationAsSeen(principal, notificationId);
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(socialService)
                 .markNotificationAsSeen(
@@ -101,7 +101,7 @@ class SocialControllerTests {
         BasicResponse response = socialController.submitComment(principal, request);
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(socialService)
                 .submitComment(student, request);
@@ -135,7 +135,7 @@ class SocialControllerTests {
                 );
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(socialService)
                 .voteComment(
@@ -161,7 +161,7 @@ class SocialControllerTests {
         CommentsResponse response = socialController.getComments(null, lectureId);
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(socialService).getComments(lectureId, null);
     }
@@ -189,7 +189,7 @@ class SocialControllerTests {
                 );
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(socialService)
                 .submitAnswer(student, request);
@@ -224,7 +224,7 @@ class SocialControllerTests {
                 );
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(socialService)
                 .voteAnswer(
@@ -257,7 +257,7 @@ class SocialControllerTests {
                 );
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(socialService)
                 .submitCommentReport(
@@ -289,7 +289,7 @@ class SocialControllerTests {
                 );
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(socialService)
                 .submitAnswerReport(
@@ -311,7 +311,7 @@ class SocialControllerTests {
         CommentsResponse response = socialController.getComments();
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(socialService).getAllComments();
     }

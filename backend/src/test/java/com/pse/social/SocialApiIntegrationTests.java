@@ -38,8 +38,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import com.pse.support.ApiIntegrationTest;
@@ -138,30 +138,18 @@ class SocialApiIntegrationTests {
                 );
 
 
-        assertEquals(
-                1,
-                commentRepository.count()
-        );
+        assertThat(commentRepository.count()).isEqualTo(1);
 
         Comment comment =
                 commentRepository
                         .findAll()
                         .getFirst();
 
-        assertEquals(
-                "Very helpful lecture",
-                comment.getContent()
-        );
+        assertThat(comment.getContent()).isEqualTo("Very helpful lecture");
 
-        assertEquals(
-                student.student().getId(),
-                comment.getStudent().getId()
-        );
+        assertThat(comment.getStudent().getId()).isEqualTo(student.student().getId());
 
-        assertEquals(
-                lecture.getId(),
-                comment.getLecture().getId()
-        );
+        assertThat(comment.getLecture().getId()).isEqualTo(lecture.getId());
 
 
         mockMvc.perform(
@@ -216,7 +204,7 @@ class SocialApiIntegrationTests {
                 )
                 .andExpect(status().isOk());
 
-        assertEquals(1, commentVoteRepository.count());
+        assertThat(commentVoteRepository.count()).isEqualTo(1);
 
         mockMvc.perform(
                         post("/social/comments/vote/comment/{commentId}", comment.getId())
@@ -231,14 +219,11 @@ class SocialApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
-        assertEquals(0, commentVoteRepository.count());
+        assertThat(commentVoteRepository.count()).isEqualTo(0);
 
-        assertEquals(
-                2,
-                auditLogRepository.findAll().stream()
+        assertThat(auditLogRepository.findAll().stream()
                         .filter(log -> log.getAction() == AuditAction.COMMENT_VOTED)
-                        .count()
-        );
+                        .count()).isEqualTo(2);
     }
 
 
@@ -293,20 +278,14 @@ class SocialApiIntegrationTests {
                 );
 
 
-        assertEquals(
-                1,
-                commentVoteRepository.count()
-        );
+        assertThat(commentVoteRepository.count()).isEqualTo(1);
 
         CommentVote vote =
                 commentVoteRepository
                         .findAll()
                         .getFirst();
 
-        assertEquals(
-                VoteType.UP,
-                vote.getVote()
-        );
+        assertThat(vote.getVote()).isEqualTo(VoteType.UP);
 
 
         mockMvc.perform(
@@ -332,10 +311,7 @@ class SocialApiIntegrationTests {
                 .andExpect(status().isOk());
 
 
-        assertEquals(
-                1,
-                commentVoteRepository.count()
-        );
+        assertThat(commentVoteRepository.count()).isEqualTo(1);
 
 
         vote =
@@ -343,10 +319,7 @@ class SocialApiIntegrationTests {
                         .findAll()
                         .getFirst();
 
-        assertEquals(
-                VoteType.DOWN,
-                vote.getVote()
-        );
+        assertThat(vote.getVote()).isEqualTo(VoteType.DOWN);
     }
 
 
@@ -402,15 +375,9 @@ class SocialApiIntegrationTests {
                 );
 
 
-        assertEquals(
-                1,
-                answerRepository.count()
-        );
+        assertThat(answerRepository.count()).isEqualTo(1);
 
-        assertEquals(
-                1,
-                notificationRepository.count()
-        );
+        assertThat(notificationRepository.count()).isEqualTo(1);
 
 
         Notification notification =
@@ -419,14 +386,11 @@ class SocialApiIntegrationTests {
                         .getFirst();
 
 
-        assertEquals(
-                commentAuthor.student().getId(),
-                notification
+        assertThat(notification
                         .getRecipient()
-                        .getId()
-        );
+                        .getId()).isEqualTo(commentAuthor.student().getId());
 
-        assertFalse(notification.isSeen());
+        assertThat(notification.isSeen()).isFalse();
 
 
         mockMvc.perform(
@@ -492,7 +456,7 @@ class SocialApiIntegrationTests {
                         )
                         .orElseThrow();
 
-        assertTrue(stored.isSeen());
+        assertThat(stored.isSeen()).isTrue();
 
 
         mockMvc.perform(
@@ -790,14 +754,12 @@ class SocialApiIntegrationTests {
                 );
 
 
-        assertFalse(
-                notificationRepository
+        assertThat(notificationRepository
                         .findById(
                                 notification.getId()
                         )
                         .orElseThrow()
-                        .isSeen()
-        );
+                        .isSeen()).isFalse();
 
 
         mockMvc.perform(
@@ -869,18 +831,12 @@ class SocialApiIntegrationTests {
                 );
 
 
-        assertEquals(
-                1,
-                commentReportRepository.count()
-        );
+        assertThat(commentReportRepository.count()).isEqualTo(1);
 
-        assertEquals(
-                ReportReason.HARASSMENT,
-                commentReportRepository
+        assertThat(commentReportRepository
                         .findAll()
                         .getFirst()
-                        .getReason()
-        );
+                        .getReason()).isEqualTo(ReportReason.HARASSMENT);
 
 
         Answer answer =
@@ -919,18 +875,12 @@ class SocialApiIntegrationTests {
                 );
 
 
-        assertEquals(
-                1,
-                answerReportRepository.count()
-        );
+        assertThat(answerReportRepository.count()).isEqualTo(1);
 
-        assertEquals(
-                ReportReason.HARASSMENT,
-                answerReportRepository
+        assertThat(answerReportRepository
                         .findAll()
                         .getFirst()
-                        .getReason()
-        );
+                        .getReason()).isEqualTo(ReportReason.HARASSMENT);
     }
 
 

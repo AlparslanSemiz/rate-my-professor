@@ -40,8 +40,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -160,8 +159,9 @@ class ApiAuthorizationMatrixTests {
         // A sweep that enumerated nothing would pass every assertion below it. 122 routes
         // are mapped today; the floor is here so this test cannot go quiet if the handler
         // mapping stops resolving.
-        assertTrue(routes.size() >= 100,
-                "expected the whole API surface, found only " + routes.size() + " routes");
+        assertThat(routes.size() >= 100)
+                .as("expected the whole API surface, found only " + routes.size() + " routes")
+                .isTrue();
 
         for (String route : new TreeSet<>(routes)) {
             if (PUBLIC_ROUTES.contains(route)) {
@@ -175,10 +175,11 @@ class ApiAuthorizationMatrixTests {
 
         // 403 is the authenticated-but-unauthorized answer; an anonymous caller should not
         // be able to provoke it, and if one can, the entry point is being bypassed.
-        assertTrue(unexpected.isEmpty(), "anonymous callers were answered 403, not 401: " + unexpected);
-        assertTrue(open.isEmpty(),
-                "these routes answered an anonymous caller without refusing it. Either give "
-                        + "SecurityConfig a matcher for them or add them to PUBLIC_ROUTES: " + open);
+        assertThat(unexpected.isEmpty())
+                .as("anonymous callers were answered 403, not 401: " + unexpected)
+                .isTrue();
+        assertThat(open.isEmpty()).as("these routes answered an anonymous caller without refusing it. Either give "
+                        + "SecurityConfig a matcher for them or add them to PUBLIC_ROUTES: " + open).isTrue();
     }
 
     /**
@@ -211,9 +212,8 @@ class ApiAuthorizationMatrixTests {
             }
         }
 
-        assertTrue(open.isEmpty(),
-                "a dependency is serving these to anonymous callers. Give SecurityConfig a "
-                        + "matcher for them, or add them to PUBLIC_THIRD_PARTY_ROUTES: " + open);
+        assertThat(open.isEmpty()).as("a dependency is serving these to anonymous callers. Give SecurityConfig a "
+                        + "matcher for them, or add them to PUBLIC_THIRD_PARTY_ROUTES: " + open).isTrue();
     }
 
     /** The other direction: the routes declared public have to stay reachable. */
@@ -222,20 +222,20 @@ class ApiAuthorizationMatrixTests {
         Set<String> routes = applicationRoutes();
 
         for (String route : new TreeSet<>(PUBLIC_ROUTES)) {
-            assertTrue(routes.contains(route),
-                    route + " is declared public but is not a route any more -- remove it from "
-                            + "PUBLIC_ROUTES, or fix the pattern");
+            assertThat(routes.contains(route)).as(route + " is declared public but is not a route any more -- remove it from "
+                            + "PUBLIC_ROUTES, or fix the pattern").isTrue();
 
             int status = anonymousStatusOf(route);
-            assertTrue(status != 401 && status != 403,
-                    route + " is declared public but answered " + status + " without a token");
+            assertThat(status != 401 && status != 403)
+                    .as(route + " is declared public but answered " + status + " without a token")
+                    .isTrue();
 
             // No exemptions left. This list held two entries until F-14 and F-15 were
             // fixed -- GET /data/professor/id with no query parameters, and
             // GET /ratings/{lectureId}/categories for an unknown lecture -- both reachable
             // by an anonymous caller with no fixture at all. A public route answering 5xx
             // is now a plain failure.
-            assertTrue(status < 500, route + " is public but answered " + status);
+            assertThat(status < 500).as(route + " is public but answered " + status).isTrue();
         }
     }
 
@@ -257,7 +257,7 @@ class ApiAuthorizationMatrixTests {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("Not logged in"));
 
-        assertEquals(0, bugReportRepository.count());
+        assertThat(bugReportRepository.count()).isEqualTo(0);
     }
 
     /**
@@ -279,7 +279,7 @@ class ApiAuthorizationMatrixTests {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("Could not authenticate Admin"));
 
-        assertEquals(0, professorRepository.count());
+        assertThat(professorRepository.count()).isEqualTo(0);
     }
 
     /** The authenticated tier from the other side: a student session is let through. */
@@ -298,8 +298,9 @@ class ApiAuthorizationMatrixTests {
 
         for (String route : routes) {
             int status = statusOf(route, token);
-            assertTrue(status != 401 && status != 403,
-                    route + " refused a student session with " + status);
+            assertThat(status != 401 && status != 403)
+                    .as(route + " refused a student session with " + status)
+                    .isTrue();
         }
     }
 
@@ -326,9 +327,8 @@ class ApiAuthorizationMatrixTests {
             }
         }
 
-        assertTrue(offenders.isEmpty(),
-                "method security is not enabled, so these annotations do nothing. Move the rule "
-                        + "into SecurityConfig, or enable method security deliberately: " + offenders);
+        assertThat(offenders.isEmpty()).as("method security is not enabled, so these annotations do nothing. Move the rule "
+                        + "into SecurityConfig, or enable method security deliberately: " + offenders).isTrue();
     }
 
     /** Every {@code "VERB /pattern"} this application publishes, from Spring's own mappings. */

@@ -1,6 +1,5 @@
 package com.pse;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 
@@ -8,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.support.ResourcePropertySource;
 import org.springframework.mock.env.MockEnvironment;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class DockerConfigurationTests {
 
@@ -15,11 +15,10 @@ class DockerConfigurationTests {
 	void applicationPropertiesProvideLocalDatasourceDefaults() throws IOException {
 		MockEnvironment environment = environmentWithApplicationProperties();
 
-		assertEquals(
-				"jdbc:postgresql://localhost:5432/postgres",
-				environment.getProperty("spring.datasource.url"));
-		assertEquals("postgres", environment.getProperty("spring.datasource.username"));
-		assertEquals("", environment.getProperty("spring.datasource.password"));
+		assertThat(environment.getProperty("spring.datasource.url"))
+		        .isEqualTo("jdbc:postgresql://localhost:5432/postgres");
+		assertThat(environment.getProperty("spring.datasource.username")).isEqualTo("postgres");
+		assertThat(environment.getProperty("spring.datasource.password")).isEqualTo("");
 	}
 
 	@Test
@@ -29,11 +28,10 @@ class DockerConfigurationTests {
 		environment.setProperty("SPRING_DATASOURCE_USERNAME", "docker_user");
 		environment.setProperty("SPRING_DATASOURCE_PASSWORD", "docker_password");
 
-		assertEquals(
-				"jdbc:postgresql://postgres:5432/postgres",
-				environment.getProperty("spring.datasource.url"));
-		assertEquals("docker_user", environment.getProperty("spring.datasource.username"));
-		assertEquals("docker_password", environment.getProperty("spring.datasource.password"));
+		assertThat(environment.getProperty("spring.datasource.url"))
+		        .isEqualTo("jdbc:postgresql://postgres:5432/postgres");
+		assertThat(environment.getProperty("spring.datasource.username")).isEqualTo("docker_user");
+		assertThat(environment.getProperty("spring.datasource.password")).isEqualTo("docker_password");
 	}
 
 	/**
@@ -44,8 +42,8 @@ class DockerConfigurationTests {
 	void sessionLifetimesDefaultToTheirApiSchedules() throws IOException {
 		MockEnvironment environment = environmentWithApplicationProperties();
 
-		assertEquals("P1D", environment.getProperty("app.auth.admin-session-ttl"));
-		assertEquals("P365D", environment.getProperty("app.auth.app-session-ttl"));
+		assertThat(environment.getProperty("app.auth.admin-session-ttl")).isEqualTo("P1D");
+		assertThat(environment.getProperty("app.auth.app-session-ttl")).isEqualTo("P365D");
 	}
 
 	@Test
@@ -54,7 +52,7 @@ class DockerConfigurationTests {
 		MockEnvironment environment = environmentWithApplicationProperties();
 		environment.setProperty("AUTH_STUDENT_SESSION_TTL", "P30D");
 
-		assertEquals("P30D", environment.getProperty("app.auth.app-session-ttl"));
+		assertThat(environment.getProperty("app.auth.app-session-ttl")).isEqualTo("P30D");
 	}
 
 	@Test
@@ -63,7 +61,7 @@ class DockerConfigurationTests {
 		environment.setProperty("AUTH_STUDENT_SESSION_TTL", "P30D");
 		environment.setProperty("AUTH_APP_SESSION_TTL", "P365D");
 
-		assertEquals("P365D", environment.getProperty("app.auth.app-session-ttl"));
+		assertThat(environment.getProperty("app.auth.app-session-ttl")).isEqualTo("P365D");
 	}
 
 	private MockEnvironment environmentWithApplicationProperties() throws IOException {

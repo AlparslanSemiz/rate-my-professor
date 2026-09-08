@@ -33,7 +33,7 @@ import java.util.UUID;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -95,9 +95,9 @@ class ProfessorServiceTests {
         ProfessorsResponse response = professorService.getProfessors();
 
 
-        assertTrue(response.success());
-        assertEquals("Found 2 professors", response.message());
-        assertEquals(2, response.professors().size());
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Found 2 professors");
+        assertThat(response.professors().size()).isEqualTo(2);
 
         verify(professorRepository)
                 .findByActiveTrueOrderByLastNameAscFirstNameAsc();
@@ -114,9 +114,9 @@ class ProfessorServiceTests {
         ProfessorsResponse response = professorService.getProfessors();
 
 
-        assertTrue(response.success());
-        assertEquals("Found 0 professors", response.message());
-        assertTrue(response.professors().isEmpty());
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Found 0 professors");
+        assertThat(response.professors().isEmpty()).isTrue();
     }
 
 
@@ -147,9 +147,9 @@ class ProfessorServiceTests {
         ProfessorsResponse response = professorService.getAllProfessors();
 
 
-        assertTrue(response.success());
-        assertEquals("Found 2 professors", response.message());
-        assertEquals(2, response.professors().size());
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Found 2 professors");
+        assertThat(response.professors().size()).isEqualTo(2);
 
         verify(professorRepository)
                 .findAllByOrderByLastNameAscFirstNameAsc();
@@ -179,16 +179,13 @@ class ProfessorServiceTests {
                 professorService.getProfessor(professorId);
 
 
-        assertTrue(response.success());
-        assertEquals(
-                "Found professor with uuid: " + professorId,
-                response.message()
-        );
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Found professor with uuid: " + professorId);
 
-        assertNotNull(response.professor());
-        assertEquals(professorId, response.professor().id());
-        assertEquals("Stefan", response.professor().firstName());
-        assertEquals("Kühnlein", response.professor().lastName());
+        assertThat(response.professor()).isNotNull();
+        assertThat(response.professor().id()).isEqualTo(professorId);
+        assertThat(response.professor().firstName()).isEqualTo("Stefan");
+        assertThat(response.professor().lastName()).isEqualTo("Kühnlein");
 
         verify(professorRepository)
                 .findWithLecturesById(professorId);
@@ -208,13 +205,10 @@ class ProfessorServiceTests {
                 professorService.getProfessor(professorId);
 
 
-        assertFalse(response.success());
-        assertEquals(
-                "Couldn't find prof with uuid: " + professorId,
-                response.message()
-        );
+        assertThat(response.success()).isFalse();
+        assertThat(response.message()).isEqualTo("Couldn't find prof with uuid: " + professorId);
 
-        assertNull(response.professor());
+        assertThat(response.professor()).isNull();
     }
 
 
@@ -247,11 +241,8 @@ class ProfessorServiceTests {
                 professorService.addProfessor(principal, request);
 
 
-        assertFalse(response.success());
-        assertEquals(
-                "Professor already exists: Stefan Kühnlein",
-                response.message()
-        );
+        assertThat(response.success()).isFalse();
+        assertThat(response.message()).isEqualTo("Professor already exists: Stefan Kühnlein");
 
         verify(professorRepository, never()).save(any());
         verifyNoInteractions(lectureRepository);
@@ -282,11 +273,9 @@ class ProfessorServiceTests {
                 professorService.addProfessor(principal, request);
 
 
-        assertFalse(response.success());
-        assertEquals(
-                "Couldn't find lecture with lectureID: " + lectureId,
-                response.message()
-        );
+        assertThat(response.success()).isFalse();
+        assertThat(response.message())
+                .isEqualTo("Couldn't find lecture with lectureID: " + lectureId);
 
         verify(lectureRepository).findById(lectureId);
 
@@ -313,11 +302,8 @@ class ProfessorServiceTests {
                 professorService.addProfessor(principal, request);
 
 
-        assertTrue(response.success());
-        assertEquals(
-                "Professor added successfully",
-                response.message()
-        );
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Professor added successfully");
 
         ArgumentCaptor<Professor> professorCaptor =
                 ArgumentCaptor.forClass(Professor.class);
@@ -327,9 +313,9 @@ class ProfessorServiceTests {
 
         Professor savedProfessor = professorCaptor.getValue();
 
-        assertEquals("Stefan", savedProfessor.getFirstName());
-        assertEquals("Kühnlein", savedProfessor.getLastName());
-        assertTrue(savedProfessor.getLectures().isEmpty());
+        assertThat(savedProfessor.getFirstName()).isEqualTo("Stefan");
+        assertThat(savedProfessor.getLastName()).isEqualTo("Kühnlein");
+        assertThat(savedProfessor.getLectures().isEmpty()).isTrue();
 
         verifyNoInteractions(lectureRepository);
     }
@@ -362,11 +348,8 @@ class ProfessorServiceTests {
                 professorService.addProfessor(principal, request);
 
 
-        assertTrue(response.success());
-        assertEquals(
-                "Professor added successfully",
-                response.message()
-        );
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Professor added successfully");
 
         ArgumentCaptor<Professor> professorCaptor =
                 ArgumentCaptor.forClass(Professor.class);
@@ -376,16 +359,12 @@ class ProfessorServiceTests {
 
         Professor savedProfessor = professorCaptor.getValue();
 
-        assertEquals("Stefan", savedProfessor.getFirstName());
-        assertEquals("Kühnlein", savedProfessor.getLastName());
+        assertThat(savedProfessor.getFirstName()).isEqualTo("Stefan");
+        assertThat(savedProfessor.getLastName()).isEqualTo("Kühnlein");
 
-        assertTrue(
-                savedProfessor.getLectures().contains(lecture)
-        );
+        assertThat(savedProfessor.getLectures().contains(lecture)).isTrue();
 
-        assertTrue(
-                lecture.getProfessors().contains(savedProfessor)
-        );
+        assertThat(lecture.getProfessors().contains(savedProfessor)).isTrue();
 
         verify(lectureRepository).findById(lectureId);
     }
@@ -425,7 +404,7 @@ class ProfessorServiceTests {
                 professorService.addProfessor(principal, request);
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
         ArgumentCaptor<Professor> professorCaptor =
                 ArgumentCaptor.forClass(Professor.class);
@@ -435,13 +414,13 @@ class ProfessorServiceTests {
 
         Professor savedProfessor = professorCaptor.getValue();
 
-        assertEquals(2, savedProfessor.getLectures().size());
+        assertThat(savedProfessor.getLectures().size()).isEqualTo(2);
 
-        assertTrue(savedProfessor.getLectures().contains(lecture1));
-        assertTrue(savedProfessor.getLectures().contains(lecture2));
+        assertThat(savedProfessor.getLectures().contains(lecture1)).isTrue();
+        assertThat(savedProfessor.getLectures().contains(lecture2)).isTrue();
 
-        assertTrue(lecture1.getProfessors().contains(savedProfessor));
-        assertTrue(lecture2.getProfessors().contains(savedProfessor));
+        assertThat(lecture1.getProfessors().contains(savedProfessor)).isTrue();
+        assertThat(lecture2.getProfessors().contains(savedProfessor)).isTrue();
     }
 
 
@@ -468,7 +447,7 @@ class ProfessorServiceTests {
                 professorService.getProfessorID("Stefan", "Kühnlein");
 
 
-        assertEquals(professorId, result);
+        assertThat(result).isEqualTo(professorId);
     }
 
 
@@ -484,7 +463,7 @@ class ProfessorServiceTests {
         UUID result = professorService.getProfessorID("Stefan", "Kühnlein");
 
 
-        assertNull(result);
+        assertThat(result).isNull();
     }
 
     @Test
@@ -496,7 +475,7 @@ class ProfessorServiceTests {
 
         double result = ProfessorService.calculateAverageRating(professor);
 
-        assertEquals(0.0, result);
+        assertThat(result).isEqualTo(0.0);
     }
 
     @Test
@@ -530,7 +509,7 @@ class ProfessorServiceTests {
 
         double result = ProfessorService.calculateAverageRating(professor);
 
-        assertEquals(3.0, result);
+        assertThat(result).isEqualTo(3.0);
     }
 
 
@@ -563,7 +542,7 @@ class ProfessorServiceTests {
         when(professorRepository.findByFirstNameAndLastName("Stefan", "Kühnlein"))
                 .thenReturn(Optional.empty());
 
-        assertTrue(professorService.addProfessor(principal, request).success());
+        assertThat(professorService.addProfessor(principal, request).success()).isTrue();
 
         ArgumentCaptor<Map<String, Object>> changes = ArgumentCaptor.forClass(Map.class);
         verify(auditWriter).write(
@@ -575,7 +554,8 @@ class ProfessorServiceTests {
                 changes.capture(),
                 any());
 
-        assertEquals(Map.of("before", false, "after", true), changes.getValue().get("exists"));
+        assertThat(changes.getValue().get("exists"))
+                .isEqualTo(Map.of("before", false, "after", true));
     }
 
     /** A refused creation must leave no trace: nothing was created, so nothing happened. */
@@ -591,7 +571,7 @@ class ProfessorServiceTests {
         when(professorRepository.findByFirstNameAndLastName("Stefan", "Kühnlein"))
                 .thenReturn(Optional.of(existing));
 
-        assertFalse(professorService.addProfessor(principal, request).success());
+        assertThat(professorService.addProfessor(principal, request).success()).isFalse();
 
         verifyNoInteractions(auditWriter);
     }

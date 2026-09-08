@@ -38,9 +38,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import com.pse.support.ApiIntegrationTest;
@@ -285,15 +284,9 @@ class ProfessorApiIntegrationTests {
                         )
                         .orElseThrow();
 
-        assertEquals(
-                "Stefan",
-                professor.getFirstName()
-        );
+        assertThat(professor.getFirstName()).isEqualTo("Stefan");
 
-        assertEquals(
-                "Kühnlein",
-                professor.getLastName()
-        );
+        assertThat(professor.getLastName()).isEqualTo("Kühnlein");
     }
 
 
@@ -382,11 +375,9 @@ class ProfessorApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
-        assertTrue(
-                professorRepository
+        assertThat(professorRepository
                         .findByFirstNameAndLastName("Petra", "Weber")
-                        .isPresent()
-        );
+                        .isPresent()).isTrue();
     }
 
     /**
@@ -415,11 +406,9 @@ class ProfessorApiIntegrationTests {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("Could not authenticate Admin"));
 
-        assertTrue(
-                professorRepository
+        assertThat(professorRepository
                         .findByFirstNameAndLastName("Petra", "Weber")
-                        .isEmpty()
-        );
+                        .isEmpty()).isTrue();
     }
 
     @Test
@@ -448,14 +437,12 @@ class ProfessorApiIntegrationTests {
                 .andExpect(jsonPath("$.message")
                         .value("Could not authenticate Admin"));
 
-        assertTrue(
-                professorRepository
+        assertThat(professorRepository
                         .findByFirstNameAndLastName(
                                 "Stefan",
                                 "Kühnlein"
                         )
-                        .isEmpty()
-        );
+                        .isEmpty()).isTrue();
     }
 
 
@@ -530,14 +517,12 @@ class ProfessorApiIntegrationTests {
                                         + lectureId
                         ));
 
-        assertTrue(
-                professorRepository
+        assertThat(professorRepository
                         .findByFirstNameAndLastName(
                                 "Müller",
                                 "Quade"
                         )
-                        .isEmpty()
-        );
+                        .isEmpty()).isTrue();
     }
 
 

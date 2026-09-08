@@ -10,8 +10,8 @@ import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -24,13 +24,13 @@ class HealthControllerTests {
         when(jdbcTemplate.queryForObject("SELECT 1", Integer.class))
                 .thenThrow(new DataAccessResourceFailureException("database unavailable"));
 
-        ApiException exception = assertThrows(
+        ApiException exception = catchThrowableOfType(
                 ApiException.class,
-                () -> new HealthController(jdbcTemplate, flyway).health()
-        );
+                () -> new HealthController(jdbcTemplate, flyway).health());
+        assertThat(exception).as("nothing was thrown").isNotNull();
 
-        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, exception.getStatus());
-        assertEquals("API unhealthy", exception.getMessage());
+        assertThat(exception.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(exception.getMessage()).isEqualTo("API unhealthy");
     }
 
     @Test
@@ -45,12 +45,12 @@ class HealthControllerTests {
         when(info.all()).thenReturn(new MigrationInfo[0]);
         when(info.pending()).thenReturn(new MigrationInfo[]{pending});
 
-        ApiException exception = assertThrows(
+        ApiException exception = catchThrowableOfType(
                 ApiException.class,
-                () -> new HealthController(jdbcTemplate, flyway).health()
-        );
+                () -> new HealthController(jdbcTemplate, flyway).health());
+        assertThat(exception).as("nothing was thrown").isNotNull();
 
-        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, exception.getStatus());
-        assertEquals("API unhealthy", exception.getMessage());
+        assertThat(exception.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(exception.getMessage()).isEqualTo("API unhealthy");
     }
 }

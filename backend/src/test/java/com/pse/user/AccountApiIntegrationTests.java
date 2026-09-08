@@ -31,8 +31,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -158,7 +158,7 @@ class AccountApiIntegrationTests {
         Session session =
                 createSession("logout@student.kit.edu");
 
-        assertEquals(1, tokenRepository.count());
+        assertThat(tokenRepository.count()).isEqualTo(1);
 
 
         mockMvc.perform(
@@ -174,7 +174,7 @@ class AccountApiIntegrationTests {
                         .value("Logged out successfully (1 sessions)"));
 
 
-        assertEquals(1, tokenRepository.count());
+        assertThat(tokenRepository.count()).isEqualTo(1);
 
 
         mockMvc.perform(
@@ -217,13 +217,10 @@ class AccountApiIntegrationTests {
                         .findById(session.student().getId())
                         .orElseThrow();
 
-        assertEquals(
-                UserStatus.DELETED,
-                deletedStudent.getStatus()
-        );
+        assertThat(deletedStudent.getStatus()).isEqualTo(UserStatus.DELETED);
 
 
-        assertEquals(1, tokenRepository.count());
+        assertThat(tokenRepository.count()).isEqualTo(1);
 
 
         mockMvc.perform(

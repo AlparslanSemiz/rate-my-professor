@@ -28,12 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.ArgumentMatchers.any;
@@ -93,8 +88,8 @@ class LectureServiceTests {
 
         LectureDetailResponse response = lectureService.getLecture(lectureId);
 
-        assertFalse(response.success());
-        assertNull(response.lecture());
+        assertThat(response.success()).isFalse();
+        assertThat(response.lecture()).isNull();
 
         verify(lectureRepository).findById(lectureId);
     }
@@ -116,12 +111,12 @@ class LectureServiceTests {
 
         LectureDetailResponse response = lectureService.getLecture(lectureId);
 
-        assertTrue(response.success());
-        assertNotNull(response.lecture());
+        assertThat(response.success()).isTrue();
+        assertThat(response.lecture()).isNotNull();
 
-        assertEquals(lectureId, response.lecture().id());
-        assertEquals("Lineare Algebra 1", response.lecture().name());
-        assertEquals("LA1", response.lecture().code());
+        assertThat(response.lecture().id()).isEqualTo(lectureId);
+        assertThat(response.lecture().name()).isEqualTo("Lineare Algebra 1");
+        assertThat(response.lecture().code()).isEqualTo("LA1");
 
         verify(lectureRepository).findById(lectureId);
     }
@@ -135,8 +130,8 @@ class LectureServiceTests {
 
         LecturesResponse response = lectureService.getLectures();
 
-        assertTrue(response.success());
-        assertEquals(1, response.lectures().size());
+        assertThat(response.success()).isTrue();
+        assertThat(response.lectures().size()).isEqualTo(1);
 
         verify(lectureRepository).findByActiveTrueOrderByNameAsc();
 
@@ -156,8 +151,8 @@ class LectureServiceTests {
 
         LecturesResponse response = lectureService.getAllLectures();
 
-        assertTrue(response.success());
-        assertEquals(2, response.lectures().size());
+        assertThat(response.success()).isTrue();
+        assertThat(response.lectures().size()).isEqualTo(2);
 
         verify(lectureRepository).findAllByOrderByNameAsc();
 
@@ -178,8 +173,8 @@ class LectureServiceTests {
         BasicResponse response = lectureService.addLecture(principalFor(student), request);
 
 
-        assertFalse(response.success());
-        assertEquals("User is not authorized to add lectures", response.message());
+        assertThat(response.success()).isFalse();
+        assertThat(response.message()).isEqualTo("User is not authorized to add lectures");
 
         verify(moderationUserService).verifyAdmin(student);
 
@@ -200,12 +195,9 @@ class LectureServiceTests {
         BasicResponse response = lectureService.addLecture(principalFor(student), request);
 
 
-        assertFalse(response.success());
+        assertThat(response.success()).isFalse();
 
-        assertEquals(
-                "Lecture already exists: Lineare Algebra 1",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Lecture already exists: Lineare Algebra 1");
 
         verify(lectureRepository).findByName("Lineare Algebra 1");
         verify(lectureRepository, never()).save(any());
@@ -234,12 +226,9 @@ class LectureServiceTests {
 
         BasicResponse response = lectureService.addLecture(principalFor(student), request);
 
-        assertFalse(response.success());
+        assertThat(response.success()).isFalse();
 
-        assertEquals(
-                "Professor not found: " + professorId,
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Professor not found: " + professorId);
 
         verify(professorRepository).findById(professorId);
 
@@ -268,12 +257,9 @@ class LectureServiceTests {
 
         BasicResponse response = lectureService.addLecture(principalFor(student), request);
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Successfully added Lectures",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Successfully added Lectures");
 
         verify(professorRepository).save(professor);
 
@@ -315,21 +301,21 @@ class LectureServiceTests {
 
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
         verify(lectureRepository).save(lectureCaptor.capture());
 
         Lecture savedLecture = lectureCaptor.getValue();
 
-        assertEquals("Lineare Algebra 1", savedLecture.getName());
+        assertThat(savedLecture.getName()).isEqualTo("Lineare Algebra 1");
 
-        assertEquals("LA1", savedLecture.getCode());
+        assertThat(savedLecture.getCode()).isEqualTo("LA1");
 
-        assertEquals(2026, savedLecture.getSemesterYear());
+        assertThat(savedLecture.getSemesterYear()).isEqualTo(2026);
 
-        assertTrue(savedLecture.isActive());
+        assertThat(savedLecture.isActive()).isTrue();
 
-        assertTrue(savedLecture.getProfessors().contains(professor));
+        assertThat(savedLecture.getProfessors().contains(professor)).isTrue();
     }
 
     @Test
@@ -342,7 +328,7 @@ class LectureServiceTests {
 
         Lecture result = lectureService.getById(id);
 
-        assertNull(result);
+        assertThat(result).isNull();
     }
 
     @Test
@@ -356,7 +342,7 @@ class LectureServiceTests {
 
         Lecture result = lectureService.getById(id);
 
-        assertSame(lecture, result);
+        assertThat(result).isSameAs(lecture);
 
         verify(lectureRepository).findById(id);
     }
@@ -386,7 +372,7 @@ class LectureServiceTests {
         when(moderationUserService.verifyAdmin(student)).thenReturn(true);
         when(lectureRepository.findByName("Lineare Algebra 1")).thenReturn(Optional.empty());
 
-        assertTrue(lectureService.addLecture(principal, request).success());
+        assertThat(lectureService.addLecture(principal, request).success()).isTrue();
 
         ArgumentCaptor<java.util.Map<String, Object>> changes =
                 ArgumentCaptor.forClass(java.util.Map.class);
@@ -399,9 +385,8 @@ class LectureServiceTests {
                 changes.capture(),
                 any());
 
-        assertEquals(
-                java.util.Map.of("before", false, "after", true),
-                changes.getValue().get("exists"));
+        assertThat(changes.getValue().get("exists"))
+                .isEqualTo(java.util.Map.of("before", false, "after", true));
     }
 
     /** A refused creation must leave no trace: nothing was created, so nothing happened. */
@@ -413,7 +398,7 @@ class LectureServiceTests {
 
         when(moderationUserService.verifyAdmin(student)).thenReturn(false);
 
-        assertFalse(lectureService.addLecture(principalFor(student), request).success());
+        assertThat(lectureService.addLecture(principalFor(student), request).success()).isFalse();
 
         verifyNoInteractions(auditWriter);
     }

@@ -34,7 +34,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -76,13 +78,10 @@ class RatingServiceTests {
                 );
 
 
-        assertFalse(response.success());
+        assertThat(response.success()).isFalse();
 
-        assertEquals(
-                "Error, cannot find lecture with id "
-                        + lectureId,
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Error, cannot find lecture with id "
+                        + lectureId);
 
         verify(ratingRepository, never()).save(any());
 
@@ -149,12 +148,9 @@ class RatingServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Rating submitted successfully",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Rating submitted successfully");
 
 
         ArgumentCaptor<Rating> captor =
@@ -166,13 +162,10 @@ class RatingServiceTests {
 
         Rating saved = captor.getValue();
 
-        assertSame(student, saved.getStudent());
-        assertSame(lecture, saved.getLecture());
+        assertThat(saved.getStudent()).isSameAs(student);
+        assertThat(saved.getLecture()).isSameAs(lecture);
 
-        assertEquals(
-                2,
-                saved.getTopics().size()
-        );
+        assertThat(saved.getTopics().size()).isEqualTo(2);
 
 
         RatingTopic normalTopic =
@@ -184,11 +177,7 @@ class RatingServiceTests {
                         .findFirst()
                         .orElseThrow();
 
-        assertEquals(
-                4.0,
-                normalTopic.getValue(),
-                0.001
-        );
+        assertThat(normalTopic.getValue()).isCloseTo(4.0, within(0.001));
 
 
         RatingTopic overall =
@@ -201,11 +190,7 @@ class RatingServiceTests {
                         .orElseThrow();
 
 
-        assertEquals(
-                4.0,
-                overall.getValue(),
-                0.001
-        );
+        assertThat(overall.getValue()).isCloseTo(4.0, within(0.001));
 
 
         verify(auditWriter)
@@ -298,7 +283,7 @@ class RatingServiceTests {
                         .count();
 
 
-        assertEquals(1, overallTopics);
+        assertThat(overallTopics).isEqualTo(1);
     }
 
 
@@ -374,11 +359,11 @@ class RatingServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(2, existingTopics.size());
+        assertThat(existingTopics.size()).isEqualTo(2);
 
-        assertFalse(existingTopics.contains(oldTopic));
+        assertThat(existingTopics.contains(oldTopic)).isFalse();
 
 
         verify(ratingRepository).flush();
@@ -429,32 +414,17 @@ class RatingServiceTests {
         RatingsAverageResponse response = ratingService.getRatings(lectureId);
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Success, found 1 ratings",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Success, found 1 ratings");
 
-        assertEquals(
-                1,
-                response.ratings().size()
-        );
+        assertThat(response.ratings().size()).isEqualTo(1);
 
-        assertEquals(
-                RatingCategory.ORGANIZATION,
-                response.ratings()
+        assertThat(response.ratings()
                         .getFirst()
-                        .category()
-        );
+                        .category()).isEqualTo(RatingCategory.ORGANIZATION);
 
-        assertEquals(
-                3.0,
-                response.ratings()
-                        .getFirst()
-                        .value(),
-                0.001
-        );
+        assertThat(response.ratings().getFirst().value()).isCloseTo(3.0, within(0.001));
     }
 
 
@@ -470,17 +440,11 @@ class RatingServiceTests {
         RatingsAverageResponse response = ratingService.getRatings(lectureId);
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                0,
-                response.ratings().size()
-        );
+        assertThat(response.ratings().size()).isEqualTo(0);
 
-        assertEquals(
-                "Success, found 0 ratings",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Success, found 0 ratings");
     }
 
 
@@ -496,21 +460,16 @@ class RatingServiceTests {
                 .thenReturn(null);
 
 
-        ApiException thrown = assertThrows(
-                ApiException.class,
-                () -> ratingService.getOwnRating(
+        ApiException thrown = catchThrowableOfType(ApiException.class, () -> ratingService.getOwnRating(
                         student,
                         lectureId
-                )
-        );
+                ));
+        assertThat(thrown).as("nothing was thrown").isNotNull();
 
 
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
 
-        assertEquals(
-                "Lecture not found",
-                thrown.getMessage()
-        );
+        assertThat(thrown.getMessage()).isEqualTo("Lecture not found");
     }
 
 
@@ -547,20 +506,17 @@ class RatingServiceTests {
                 );
 
 
-        assertFalse(response.success());
+        assertThat(response.success()).isFalse();
 
-        assertEquals(
-                "Error, couldn't find rating for Lecture: "
-                        + lectureId,
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Error, couldn't find rating for Lecture: "
+                        + lectureId);
 
         // Empty, never null. This assertion read assertNull until the crash report -- a
         // lecture nobody has rated is exactly the case that reaches here, so the null list
         // went out on the ordinary path rather than an exotic one.
-        assertNotNull(response.ratings());
+        assertThat(response.ratings()).isNotNull();
 
-        assertTrue(response.ratings().isEmpty());
+        assertThat(response.ratings().isEmpty()).isTrue();
     }
 
 
@@ -622,17 +578,11 @@ class RatingServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                2,
-                response.ratings().size()
-        );
+        assertThat(response.ratings().size()).isEqualTo(2);
 
-        assertEquals(
-                "Success, found 2 ratings",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Success, found 2 ratings");
     }
 
 
@@ -650,13 +600,13 @@ class RatingServiceTests {
         when(lectureService.getById(lectureId))
                 .thenReturn(null);
 
-        ApiException thrown = assertThrows(
+        ApiException thrown = catchThrowableOfType(
                 ApiException.class,
-                () -> ratingService.getRatingCategories(lectureId)
-        );
+                () -> ratingService.getRatingCategories(lectureId));
+        assertThat(thrown).as("nothing was thrown").isNotNull();
 
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatus());
-        assertEquals("Lecture not found", thrown.getMessage());
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(thrown.getMessage()).isEqualTo("Lecture not found");
     }
 
 
@@ -689,23 +639,17 @@ class RatingServiceTests {
         RatingCategoriesResponse response = ratingService.getRatingCategories(lectureId);
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                lectureType
+        assertThat(response.categories().size()).isEqualTo(lectureType
                         .getDefaultCategories()
-                        .size(),
-                response.categories().size()
-        );
+                        .size());
 
-        assertEquals(
-                "Found "
+        assertThat(response.message()).isEqualTo("Found "
                         + lectureType
                         .getDefaultCategories()
                         .size()
-                        + " categories",
-                response.message()
-        );
+                        + " categories");
     }
 
 
@@ -721,11 +665,7 @@ class RatingServiceTests {
         double average = RatingService.calculateAverageScore(rating);
 
 
-        assertEquals(
-                0.0,
-                average,
-                0.001
-        );
+        assertThat(average).isCloseTo(0.0, within(0.001));
     }
 
 
@@ -762,7 +702,7 @@ class RatingServiceTests {
         double average = RatingService.calculateAverageScore(rating);
 
 
-        assertEquals(3.0, average, 0.001);
+        assertThat(average).isCloseTo(3.0, within(0.001));
     }
 
 

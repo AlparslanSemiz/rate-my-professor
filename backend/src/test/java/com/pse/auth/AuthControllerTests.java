@@ -18,7 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,7 +60,7 @@ class AuthControllerTests {
                 );
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(authService)
                 .requestLogin(
@@ -89,7 +89,7 @@ class AuthControllerTests {
                 );
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(authService).login(
                         request,
@@ -115,7 +115,7 @@ class AuthControllerTests {
                 authController.logout(principal);
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(authService).logout(principal);
     }
@@ -133,7 +133,7 @@ class AuthControllerTests {
         BasicResponse response = authController.logoutAll(principal);
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(authService).logoutAll(principal);
     }
@@ -160,7 +160,7 @@ class AuthControllerTests {
                 );
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(authService).validate(
                         authHeader,

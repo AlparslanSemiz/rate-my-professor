@@ -40,9 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -125,9 +123,9 @@ class AdminApiPathSplitTests {
         String rawToken = JsonPath.read(response, "$.authToken");
 
         Token token = tokenOf(rawToken);
-        assertEquals(SessionType.ADMIN, token.getSessionType());
+        assertThat(token.getSessionType()).isEqualTo(SessionType.ADMIN);
         assertLifetimeIsAbout(token, Duration.ofDays(1));
-        assertNotNull(JsonPath.read(response, "$.expiresAt"));
+        assertThat((Object) JsonPath.read(response, "$.expiresAt")).isNotNull();
 
         mockMvc.perform(get("/admin/auth/me").header("Authorization", bearer(rawToken)))
                 .andExpect(status().isOk())
@@ -143,7 +141,7 @@ class AdminApiPathSplitTests {
                 .andExpect(jsonPath("$.user.id").isNotEmpty());
         mockMvc.perform(get("/admin/users").header("Authorization", bearer(rawToken)))
                 .andExpect(status().isOk());
-        assertEquals(1, countAudits(AuditAction.ADMIN_LOGIN));
+        assertThat(countAudits(AuditAction.ADMIN_LOGIN)).isEqualTo(1);
     }
 
     @Test
@@ -161,12 +159,14 @@ class AdminApiPathSplitTests {
                 .andExpect(jsonPath("$.message").value("Admin access required"))
                 .andExpect(jsonPath("$.success").value(false));
 
-        assertEquals(1, tokenRepository.findByEmail(STUDENT_EMAIL).size(), "no admin session was minted");
+        assertThat(tokenRepository.findByEmail(STUDENT_EMAIL).size())
+                .as("no admin session was minted")
+                .isEqualTo(1);
         AuditLog refusal = auditLogRepository.findAll().stream()
                 .filter(log -> log.getAction() == AuditAction.LOGIN_REFUSED)
                 .findFirst()
                 .orElseThrow();
-        assertEquals("NOT_AN_ADMIN", refusal.getMetadata().get("reason"));
+        assertThat(refusal.getMetadata().get("reason")).isEqualTo("NOT_AN_ADMIN");
     }
 
     @Test
@@ -174,7 +174,7 @@ class AdminApiPathSplitTests {
         String response = loginThrough("/admin/auth", ADMIN_EMAIL, ",\"sessionType\":\"APP\"");
 
         Token token = tokenOf(JsonPath.read(response, "$.authToken"));
-        assertEquals(SessionType.ADMIN, token.getSessionType());
+        assertThat(token.getSessionType()).isEqualTo(SessionType.ADMIN);
         assertLifetimeIsAbout(token, Duration.ofDays(1));
     }
 
@@ -200,7 +200,7 @@ class AdminApiPathSplitTests {
         // type. It has to keep getting an admin session out of it.
         String rawToken = JsonPath.read(loginThrough("/auth", ADMIN_EMAIL, ""), "$.authToken");
 
-        assertEquals(SessionType.ADMIN, tokenOf(rawToken).getSessionType());
+        assertThat(tokenOf(rawToken).getSessionType()).isEqualTo(SessionType.ADMIN);
         mockMvc.perform(get("/users").header("Authorization", bearer(rawToken)))
                 .andExpect(status().isOk());
     }
@@ -211,9 +211,13 @@ class AdminApiPathSplitTests {
         String studentToken = JsonPath.read(loginThrough("/auth", STUDENT_EMAIL, ""), "$.authToken");
 
         for (String path : ADMIN_PATHS) {
-            assertEquals(200, statusOf(path, adminToken), path + " with an admin session");
-            assertEquals(403, statusOf(path, studentToken), path + " with a student session");
-            assertEquals(401, statusOf(path, null), path + " without a token");
+            assertThat(statusOf(path, adminToken))
+                    .as(path + " with an admin session")
+                    .isEqualTo(200);
+            assertThat(statusOf(path, studentToken))
+                    .as(path + " with a student session")
+                    .isEqualTo(403);
+            assertThat(statusOf(path, null)).as(path + " without a token").isEqualTo(401);
         }
     }
 
@@ -238,12 +242,15 @@ class AdminApiPathSplitTests {
         for (Route route : writeRoutes()) {
             String label = route.method() + " " + route.path();
 
-            assertEquals(401, statusOf(route, null), label + " without a token");
-            assertEquals(403, statusOf(route, studentToken), label + " with a student session");
+            assertThat(statusOf(route, null)).as(label + " without a token").isEqualTo(401);
+            assertThat(statusOf(route, studentToken))
+                    .as(label + " with a student session")
+                    .isEqualTo(403);
 
             int admin = statusOf(route, adminToken);
-            assertTrue(admin != 401 && admin != 403,
-                    label + " refused an admin session with " + admin);
+            assertThat(admin != 401 && admin != 403)
+                    .as(label + " refused an admin session with " + admin)
+                    .isTrue();
         }
     }
 
@@ -359,7 +366,7 @@ class AdminApiPathSplitTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bugReports").isArray());
 
-        assertEquals(1, bugReportRepository.count());
+        assertThat(bugReportRepository.count()).isEqualTo(1);
     }
 
     @Test
@@ -370,7 +377,7 @@ class AdminApiPathSplitTests {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/admin/users").header("Authorization", bearer(rawToken)))
                 .andExpect(status().isUnauthorized());
-        assertEquals(1, countAudits(AuditAction.ADMIN_LOGOUT));
+        assertThat(countAudits(AuditAction.ADMIN_LOGOUT)).isEqualTo(1);
     }
 
     @Test
@@ -431,10 +438,7 @@ class AdminApiPathSplitTests {
         long remaining = Duration
                 .between(LocalDateTime.now(Clock.systemUTC()), token.getExpiresAt())
                 .toSeconds();
-        assertTrue(
-                remaining <= expected.toSeconds() && remaining >= expected.minusSeconds(30).toSeconds(),
-                "expected about " + expected + " of lifetime, " + remaining + " seconds remain"
-        );
+        assertThat(remaining <= expected.toSeconds() && remaining >= expected.minusSeconds(30).toSeconds()).as("expected about " + expected + " of lifetime, " + remaining + " seconds remain").isTrue();
     }
 
     private long countAudits(AuditAction action) {

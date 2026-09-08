@@ -8,9 +8,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import com.pse.support.ApiIntegrationTest;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Flyway owns production schema changes. This keeps the known production backfill guard in
@@ -30,12 +29,11 @@ class SchemaDefaultsTests {
     void issueStateCarriesADatabaseDefaultBecauseItIsNotNull() {
         Map<String, Object> column = columnOf("bug_reports", "issue_state");
 
-        assertEquals("NO", column.get("is_nullable"), "issue_state is expected to be NOT NULL");
-        assertNotNull(
-                column.get("column_default"),
-                "a NOT NULL column on an already populated table needs a database-level "
-                        + "default or a dedicated Flyway backfill"
-        );
+        assertThat(column.get("is_nullable"))
+                .as("issue_state is expected to be NOT NULL")
+                .isEqualTo("NO");
+        assertThat(column.get("column_default")).as("a NOT NULL column on an already populated table needs a database-level "
+                        + "default or a dedicated Flyway backfill").isNotNull();
     }
 
     private Map<String, Object> columnOf(String table, String column) {

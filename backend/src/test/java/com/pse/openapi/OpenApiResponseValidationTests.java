@@ -33,7 +33,7 @@ import java.util.UUID;
 import java.util.Set;
 import java.util.TreeSet;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -200,10 +200,9 @@ class OpenApiResponseValidationTests {
             }
         }
 
-        assertTrue(mismatches.isEmpty(),
-                "these response fields do not match the schema that describes them. Either "
+        assertThat(mismatches.isEmpty()).as("these response fields do not match the schema that describes them. Either "
                         + "the schema is wrong (annotate the field) or the response is: "
-                        + mismatches);
+                        + mismatches).isTrue();
     }
 
     /**

@@ -51,9 +51,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -258,8 +256,9 @@ class ApiOwnershipMatrixTests {
 
         Set<String> idTaking = idTakingRoutes();
 
-        assertTrue(idTaking.size() >= 40,
-                "expected the id-taking surface, found only " + idTaking.size() + " routes");
+        assertThat(idTaking.size() >= 40)
+                .as("expected the id-taking surface, found only " + idTaking.size() + " routes")
+                .isTrue();
 
         List<String> unclassified = new ArrayList<>();
         for (String route : idTaking) {
@@ -268,10 +267,9 @@ class ApiOwnershipMatrixTests {
             }
         }
 
-        assertTrue(unclassified.isEmpty(),
-                "these routes take an id and nobody has said whose row it names. Put each in "
+        assertThat(unclassified.isEmpty()).as("these routes take an id and nobody has said whose row it names. Put each in "
                         + "OWNER_SCOPED_ROUTES (and add a cross-user probe), CROSS_USER_BY_DESIGN, "
-                        + "ADMIN_TIER or NOT_OWNED_BY_A_USER: " + unclassified);
+                        + "ADMIN_TIER or NOT_OWNED_BY_A_USER: " + unclassified).isTrue();
 
         List<String> stale = new ArrayList<>();
         for (String route : classified) {
@@ -280,9 +278,8 @@ class ApiOwnershipMatrixTests {
             }
         }
 
-        assertTrue(stale.isEmpty(),
-                "these routes are classified but are not mapped any more -- drop them from the "
-                        + "sets so the classification cannot drift from the API: " + stale);
+        assertThat(stale.isEmpty()).as("these routes are classified but are not mapped any more -- drop them from the "
+                        + "sets so the classification cannot drift from the API: " + stale).isTrue();
     }
 
     /**
@@ -312,13 +309,15 @@ class ApiOwnershipMatrixTests {
                 .andReturn().getResponse().getStatus();
 
         Notification after = notificationRepository.findById(notification.getId()).orElseThrow();
-        assertFalse(after.isSeen(),
-                "another student's token marked this notification as seen -- this is an IDOR");
+        assertThat(after.isSeen())
+                .as("another student's token marked this notification as seen -- this is an IDOR")
+                .isFalse();
 
         // F-5, fixed: the refusal has a status of its own, so a client can tell it from a
         // success without reading the body.
-        assertEquals(404, status,
-                "the refusal lost its own status code -- it is a 200 with success:false again");
+        assertThat(status)
+                .as("the refusal lost its own status code -- it is a 200 with success:false again")
+                .isEqualTo(404);
     }
 
     /**
@@ -340,7 +339,9 @@ class ApiOwnershipMatrixTests {
                 .andExpect(status().isOk());
 
         Notification after = notificationRepository.findById(notification.getId()).orElseThrow();
-        assertTrue(after.isSeen(), "the owner's own call did not mark the notification as seen");
+        assertThat(after.isSeen())
+                .as("the owner's own call did not mark the notification as seen")
+                .isTrue();
     }
 
     /**
@@ -367,16 +368,16 @@ class ApiOwnershipMatrixTests {
                         .header("Authorization", "Bearer " + tokenA))
                 .andReturn().getResponse().getContentAsString();
 
-        assertFalse(Boolean.TRUE.equals(JsonPath.read(bodyForA, "$.success")),
-                "student A was given a rating for a lecture they never rated -- B's rating "
-                        + "leaked through /ratings/own: " + bodyForA);
+        assertThat(Boolean.TRUE.equals(JsonPath.read(bodyForA, "$.success"))).as("student A was given a rating for a lecture they never rated -- B's rating "
+                        + "leaked through /ratings/own: " + bodyForA).isFalse();
 
         String bodyForB = mockMvc.perform(get("/ratings/own/" + lecture.getId())
                         .header("Authorization", "Bearer " + tokenB))
                 .andReturn().getResponse().getContentAsString();
 
-        assertTrue(Boolean.TRUE.equals(JsonPath.read(bodyForB, "$.success")),
-                "the owner could not read their own rating back: " + bodyForB);
+        assertThat(Boolean.TRUE.equals(JsonPath.read(bodyForB, "$.success")))
+                .as("the owner could not read their own rating back: " + bodyForB)
+                .isTrue();
     }
 
     /**
@@ -399,8 +400,9 @@ class ApiOwnershipMatrixTests {
                 .andReturn().getResponse().getContentAsString();
 
         List<Object> notifications = JsonPath.read(body, "$.notifications");
-        assertTrue(notifications.isEmpty(),
-                "student A was shown notifications belonging to B: " + body);
+        assertThat(notifications.isEmpty())
+                .as("student A was shown notifications belonging to B: " + body)
+                .isTrue();
     }
 
     /**
@@ -443,12 +445,14 @@ class ApiOwnershipMatrixTests {
             }
         }
 
-        assertTrue(refused.isEmpty(),
-                "a student reached an administrative route carrying a real victim id: " + refused);
+        assertThat(refused.isEmpty())
+                .as("a student reached an administrative route carrying a real victim id: " + refused)
+                .isTrue();
 
         Student stillThere = studentRepository.findById(victim.getId()).orElseThrow();
-        assertEquals(UserStatus.ACTIVE, stillThere.getStatus(),
-                "the victim's account was modified by a student's request");
+        assertThat(stillThere.getStatus())
+                .as("the victim's account was modified by a student's request")
+                .isEqualTo(UserStatus.ACTIVE);
     }
 
     /**
@@ -492,9 +496,8 @@ class ApiOwnershipMatrixTests {
             }
         }
 
-        assertTrue(offenders.isEmpty(),
-                "these app-tier handlers let the caller name a user instead of taking it from the "
-                        + "principal, which is how an IDOR gets in: " + offenders);
+        assertThat(offenders.isEmpty()).as("these app-tier handlers let the caller name a user instead of taking it from the "
+                        + "principal, which is how an IDOR gets in: " + offenders).isTrue();
     }
 
     private boolean isAppTier(HandlerMethod handler) {

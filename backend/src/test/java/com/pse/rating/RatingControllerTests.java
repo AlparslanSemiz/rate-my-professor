@@ -18,7 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,7 +64,7 @@ class RatingControllerTests {
                 );
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(ratingService).submitRating(student, request);
     }
@@ -84,7 +84,7 @@ class RatingControllerTests {
         RatingsAverageResponse response = ratingController.getRatings(lectureId);
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(ratingService).getRatings(lectureId);
     }
@@ -105,7 +105,7 @@ class RatingControllerTests {
         RatingCategoriesResponse response = ratingController.getRatingCategories(lectureId);
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(ratingService).getRatingCategories(lectureId);
     }
@@ -133,7 +133,7 @@ class RatingControllerTests {
                 );
 
 
-        assertSame(expected, response);
+        assertThat(response).isSameAs(expected);
 
         verify(ratingService)
                 .getOwnRating(

@@ -12,9 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Guards {@code .gitlab-ci.yml} against the mistakes that make GitLab reject the file
@@ -39,19 +37,16 @@ class PipelineConfigurationTests {
     void pipelineConfigurationParsesAndDeclaresItsStages() throws IOException {
         Map<String, Object> pipeline = load();
 
-        assertInstanceOf(List.class, pipeline.get("stages"),
-                ".gitlab-ci.yml parsed, but has no stages list — check the file is intact");
+        assertThat(pipeline.get("stages"))
+                .as(".gitlab-ci.yml parsed, but has no stages list — check the file is intact")
+                .isInstanceOf(List.class);
     }
 
     @Test
     void everyScriptEntryIsAString() throws IOException {
-        assertEquals(
-                List.of(),
-                nonStringScriptEntries(load()),
-                "GitLab rejects the whole file, and runs no jobs at all, when a script entry "
+        assertThat(nonStringScriptEntries(load())).as("GitLab rejects the whole file, and runs no jobs at all, when a script entry "
                         + "is not a string. Wrap the line in a block scalar: \"- |\" on its own "
-                        + "line, the command indented under it."
-        );
+                        + "line, the command indented under it.").isEqualTo(List.of());
     }
 
     @Test
@@ -66,13 +61,16 @@ class PipelineConfigurationTests {
 
         List<String> offenders = nonStringScriptEntries(new Yaml().load(malformed));
 
-        assertEquals(1, offenders.size(), offenders.toString());
-        assertTrue(offenders.get(0).startsWith("backup:offsite.script[0]"), offenders.get(0));
+        assertThat(offenders.size()).as(offenders.toString()).isEqualTo(1);
+        assertThat(offenders.get(0).startsWith("backup:offsite.script[0]"))
+                .as(offenders.get(0))
+                .isTrue();
     }
 
     private static Map<String, Object> load() throws IOException {
-        assertTrue(Files.exists(PIPELINE),
-                PIPELINE.toAbsolutePath() + " not found — tests must run from the project root");
+        assertThat(Files.exists(PIPELINE))
+                .as(PIPELINE.toAbsolutePath() + " not found — tests must run from the project root")
+                .isTrue();
         try (Reader reader = Files.newBufferedReader(PIPELINE, StandardCharsets.UTF_8)) {
             return new Yaml().load(reader);
         }

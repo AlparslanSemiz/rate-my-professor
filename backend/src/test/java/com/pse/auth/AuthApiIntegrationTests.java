@@ -23,7 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import com.pse.support.ApiIntegrationTest;
@@ -139,7 +139,7 @@ class AuthApiIntegrationTests {
 
 
         String code = codeDelivery.codeFor("student@student.kit.edu");
-        assertNotNull(code);
+        assertThat(code).isNotNull();
 
 
         mockMvc.perform(
@@ -171,9 +171,9 @@ class AuthApiIntegrationTests {
                 );
 
 
-        assertEquals(1, studentRepository.count());
+        assertThat(studentRepository.count()).isEqualTo(1);
 
-        assertEquals(1, tokenRepository.count());
+        assertThat(tokenRepository.count()).isEqualTo(1);
     }
 
 
@@ -211,7 +211,7 @@ class AuthApiIntegrationTests {
                 );
 
 
-        assertEquals(0, tokenRepository.count());
+        assertThat(tokenRepository.count()).isEqualTo(0);
     }
 
 
@@ -259,7 +259,7 @@ class AuthApiIntegrationTests {
 
         Token stored = tokenRepository.findAll().getFirst();
 
-        assertFalse(stored.isRevoked());
+        assertThat(stored.isRevoked()).isFalse();
 
         mockMvc.perform(
                         post("/auth/logout")
@@ -284,10 +284,10 @@ class AuthApiIntegrationTests {
         Token afterLogout = tokenRepository.findById(stored.getId()).orElseThrow();
 
 
-        assertTrue(afterLogout.isRevoked());
+        assertThat(afterLogout.isRevoked()).isTrue();
 
 
-        assertEquals(1, tokenRepository.count());
+        assertThat(tokenRepository.count()).isEqualTo(1);
 
 
         mockMvc.perform(post("/auth/validate")
@@ -315,7 +315,7 @@ class AuthApiIntegrationTests {
 
         String secondToken = login("multi@student.kit.edu");
 
-        assertEquals(2, tokenRepository.count());
+        assertThat(tokenRepository.count()).isEqualTo(2);
 
         mockMvc.perform(post("/auth/logout-all")
                                 .header(
@@ -336,13 +336,12 @@ class AuthApiIntegrationTests {
                 );
 
 
-        assertEquals(2, tokenRepository.count());
+        assertThat(tokenRepository.count()).isEqualTo(2);
 
-        assertTrue(tokenRepository
+        assertThat(tokenRepository
                         .findAll()
                         .stream()
-                        .allMatch(Token::isRevoked)
-        );
+                        .allMatch(Token::isRevoked)).isTrue();
 
 
         validateUnauthorized(firstToken, "multi@student.kit.edu");
@@ -370,7 +369,7 @@ class AuthApiIntegrationTests {
                 );
 
 
-        assertEquals(0, otpRepository.count());
+        assertThat(otpRepository.count()).isEqualTo(0);
     }
 
 

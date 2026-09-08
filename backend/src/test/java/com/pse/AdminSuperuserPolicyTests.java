@@ -2,9 +2,8 @@ package com.pse;
 
 import com.pse.auth.service.AdminSuperuserPolicy;
 import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The addresses have to be matched the way the admin panel normalizes them — trimmed and
@@ -17,10 +16,10 @@ class AdminSuperuserPolicyTests {
         AdminSuperuserPolicy policy =
                 new AdminSuperuserPolicy("  u-kisi4@Student.KIT.edu , second@student.kit.edu ");
 
-        assertTrue(policy.isSuperuser("u-kisi4@student.kit.edu"));
-        assertTrue(policy.isSuperuser("  u-kisi4@student.kit.edu  "));
-        assertTrue(policy.isSuperuser("second@student.kit.edu"));
-        assertFalse(policy.isSuperuser("someone-else@student.kit.edu"));
+        assertThat(policy.isSuperuser("u-kisi4@student.kit.edu")).isTrue();
+        assertThat(policy.isSuperuser("  u-kisi4@student.kit.edu  ")).isTrue();
+        assertThat(policy.isSuperuser("second@student.kit.edu")).isTrue();
+        assertThat(policy.isSuperuser("someone-else@student.kit.edu")).isFalse();
     }
 
     @Test
@@ -28,8 +27,8 @@ class AdminSuperuserPolicyTests {
         AdminSuperuserPolicy policy = new AdminSuperuserPolicy("a@student.kit.edu,, ,");
 
         assertEqualsSize(policy, 1);
-        assertFalse(policy.isSuperuser(""));
-        assertFalse(policy.isSuperuser("   "));
+        assertThat(policy.isSuperuser("")).isFalse();
+        assertThat(policy.isSuperuser("   ")).isFalse();
     }
 
     /**
@@ -41,11 +40,11 @@ class AdminSuperuserPolicyTests {
         AdminSuperuserPolicy policy = new AdminSuperuserPolicy("");
 
         assertEqualsSize(policy, 0);
-        assertFalse(policy.isSuperuser("u-kisi4@student.kit.edu"));
-        assertFalse(policy.isSuperuser(null));
+        assertThat(policy.isSuperuser("u-kisi4@student.kit.edu")).isFalse();
+        assertThat(policy.isSuperuser(null)).isFalse();
     }
 
     private void assertEqualsSize(AdminSuperuserPolicy policy, int expected) {
-        org.junit.jupiter.api.Assertions.assertEquals(expected, policy.superuserEmails().size());
+        assertThat(policy.superuserEmails().size()).isEqualTo(expected);
     }
 }

@@ -41,10 +41,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.h2.engine.Engine.createSession;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -254,9 +253,9 @@ class LectureApiIntegrationTests {
                 .findByName("Lineare Algebra 1")
                 .orElseThrow();
 
-        assertEquals("LA1", lecture.getCode());
-        assertEquals(2026, lecture.getSemesterYear());
-        assertTrue(lecture.isActive());
+        assertThat(lecture.getCode()).isEqualTo("LA1");
+        assertThat(lecture.getSemesterYear()).isEqualTo(2026);
+        assertThat(lecture.isActive()).isTrue();
 
         mockMvc.perform(
                         get("/data/lectures/{id}", lecture.getId())
@@ -302,7 +301,7 @@ class LectureApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
-        assertTrue(lectureRepository.findByName("Analysis 1").isPresent());
+        assertThat(lectureRepository.findByName("Analysis 1").isPresent()).isTrue();
     }
 
     /**
@@ -333,7 +332,7 @@ class LectureApiIntegrationTests {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("Could not authenticate Admin"));
 
-        assertTrue(lectureRepository.findByName("Analysis 1").isEmpty());
+        assertThat(lectureRepository.findByName("Analysis 1").isEmpty()).isTrue();
     }
 
     @Test
@@ -372,11 +371,9 @@ class LectureApiIntegrationTests {
                 .andExpect(jsonPath("$.message")
                         .value("Could not authenticate Admin"));
 
-        assertTrue(
-                lectureRepository
+        assertThat(lectureRepository
                         .findByName("Lineare Algebra 1")
-                        .isEmpty()
-        );
+                        .isEmpty()).isTrue();
     }
 
 
@@ -466,11 +463,9 @@ class LectureApiIntegrationTests {
                                         + unknownProfessorId
                         ));
 
-        assertTrue(
-                lectureRepository
+        assertThat(lectureRepository
                         .findByName("Lineare Algebra 1")
-                        .isEmpty()
-        );
+                        .isEmpty()).isTrue();
     }
 
 

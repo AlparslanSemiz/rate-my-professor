@@ -15,7 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,7 +52,7 @@ class AccountControllerTests {
         StudentProfileResponse response = accountController.getUserInformation(principal);
 
 
-        assertSame(expectedResponse, response);
+        assertThat(response).isSameAs(expectedResponse);
 
         verify(accountService).getUserInformation(student);
     }
@@ -69,7 +69,7 @@ class AccountControllerTests {
 
         UserRatingResponse response = accountController.getUserRatings(principal);
 
-        assertSame(expectedResponse, response);
+        assertThat(response).isSameAs(expectedResponse);
 
         verify(accountService).getUserRatings(student);
     }
@@ -88,7 +88,7 @@ class AccountControllerTests {
         BasicResponse response = accountController.requestLogout(principal);
 
 
-        assertSame(expectedResponse, response);
+        assertThat(response).isSameAs(expectedResponse);
 
         verify(accountService).requestLogout(student);
     }
@@ -106,7 +106,7 @@ class AccountControllerTests {
         BasicResponse response = accountController.deleteAccount(principal);
 
 
-        assertSame(expectedResponse, response);
+        assertThat(response).isSameAs(expectedResponse);
 
         verify(accountService).deleteAccount(student);
     }

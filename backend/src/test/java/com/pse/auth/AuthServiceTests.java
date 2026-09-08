@@ -49,7 +49,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -152,9 +151,9 @@ class AuthServiceTests {
         BasicResponse response = authService.requestLogin(request, httpRequest);
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals("Login code sent", response.message());
+        assertThat(response.message()).isEqualTo("Login code sent");
 
 
         verify(rateLimitService).consume(
@@ -210,12 +209,9 @@ class AuthServiceTests {
 
         BasicResponse response = authService.requestLogin(request, httpRequest);
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Login code sent",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Login code sent");
 
 
         verify(otpService, never()).issue(anyString());
@@ -257,11 +253,10 @@ class AuthServiceTests {
                 );
 
 
-        assertThrows(ApiException.class, () -> authService.requestLogin(
+        assertThatThrownBy(() -> authService.requestLogin(
                         request,
                         httpRequest
-                )
-        );
+                )).isInstanceOf(ApiException.class);
 
 
         verify(otpService).invalidate("student@student.kit.edu");
@@ -296,13 +291,10 @@ class AuthServiceTests {
                 .thenReturn(false);
 
 
-        assertThrows(
-                ApiException.class,
-                () -> authService.login(
+        assertThatThrownBy(() -> authService.login(
                         request,
                         httpRequest
-                )
-        );
+                )).isInstanceOf(ApiException.class);
 
 
         verify(rateLimitService).consume(
@@ -355,13 +347,10 @@ class AuthServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        assertThrows(
-                ApiException.class,
-                () -> authService.login(
+        assertThatThrownBy(() -> authService.login(
                         request,
                         httpRequest
-                )
-        );
+                )).isInstanceOf(ApiException.class);
 
 
         verify(otpService, never()).consume(anyString(), anyString());
@@ -447,14 +436,11 @@ class AuthServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Login successful",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Login successful");
 
-        assertNotNull(response.authToken());
+        assertThat(response.authToken()).isNotNull();
 
 
         verify(studentRepository).save(student);
@@ -520,12 +506,9 @@ class AuthServiceTests {
                 authService.logout(principal);
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Logged out successfully",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Logged out successfully");
 
 
         verify(token).setRevoked(true);
@@ -560,7 +543,7 @@ class AuthServiceTests {
         BasicResponse response = authService.logout(principal);
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
         verify(token, never()).setRevoked(anyBoolean());
 
@@ -625,12 +608,9 @@ class AuthServiceTests {
         BasicResponse response = authService.logoutAll(principal);
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Logged out from all devices (2 sessions)",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Logged out from all devices (2 sessions)");
 
 
         verify(currentToken).setRevoked(true);
@@ -675,13 +655,10 @@ class AuthServiceTests {
                 );
 
 
-        assertTrue(response.success());
+        assertThat(response.success()).isTrue();
 
-        assertEquals(
-                "Correct auth-Token for email: "
-                        + "student@student.kit.edu",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Correct auth-Token for email: "
+                        + "student@student.kit.edu");
     }
 
 
@@ -717,24 +694,18 @@ class AuthServiceTests {
         BasicResponse response = authService.validate("Bearer secret-token", request);
 
 
-        assertFalse(response.success());
+        assertThat(response.success()).isFalse();
 
-        assertEquals(
-                "Error, wrong email for auth Token",
-                response.message()
-        );
+        assertThat(response.message()).isEqualTo("Error, wrong email for auth Token");
     }
 
 
     @Test
     void verifyUserRejectsMissingBearerHeader() {
 
-        assertThrows(
-                InvalidAuthTokenException.class,
-                () -> authService.verifyUser(
+        assertThatThrownBy(() -> authService.verifyUser(
                         "secret-token"
-                )
-        );
+                )).isInstanceOf(InvalidAuthTokenException.class);
     }
 
 
@@ -755,7 +726,7 @@ class AuthServiceTests {
         int result = authService.invalidateAllAuthTokensForEmail("student@student.kit.edu");
 
 
-        assertEquals(2, result);
+        assertThat(result).isEqualTo(2);
 
         verify(first).setRevoked(true);
 

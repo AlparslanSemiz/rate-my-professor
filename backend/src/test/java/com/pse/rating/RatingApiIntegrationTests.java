@@ -31,8 +31,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import com.pse.support.ApiIntegrationTest;
@@ -168,10 +168,7 @@ class RatingApiIntegrationTests {
                 );
 
 
-        assertEquals(
-                1,
-                ratingRepository.count()
-        );
+        assertThat(ratingRepository.count()).isEqualTo(1);
 
 
         mockMvc.perform(
@@ -242,10 +239,7 @@ class RatingApiIntegrationTests {
                 .andExpect(status().isOk());
 
 
-        assertEquals(
-                1,
-                ratingRepository.count()
-        );
+        assertThat(ratingRepository.count()).isEqualTo(1);
 
 
         // Same student + same lecture again
@@ -278,10 +272,7 @@ class RatingApiIntegrationTests {
 
 
         // Still only ONE Rating row
-        assertEquals(
-                1,
-                ratingRepository.count()
-        );
+        assertThat(ratingRepository.count()).isEqualTo(1);
 
 
         mockMvc.perform(
@@ -435,10 +426,7 @@ class RatingApiIntegrationTests {
         );
 
 
-        assertEquals(
-                2,
-                ratingRepository.count()
-        );
+        assertThat(ratingRepository.count()).isEqualTo(2);
 
 
         mockMvc.perform(
