@@ -72,6 +72,7 @@ starting points, and [docs/deployment.md](docs/deployment.md) is the description
 | [docs/adminweb-tasks.md](docs/adminweb-tasks.md) | The work list handed to the admin panel repo |
 | [docs/deployment.md](docs/deployment.md) | Pipeline, CI/CD variables, deployment |
 | [docs/TODO.md](docs/TODO.md) | Team working notes |
+| [Wiki.md](Wiki.md) | The wiki source: domain vocabulary, and how the three repositories fit together |
 | [CHANGELOG](CHANGELOG) | Hand-maintained interface changes, newest at the bottom |
 
 The OpenAPI schema is generated from the controllers rather than written by hand, and is served

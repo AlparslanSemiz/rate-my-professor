@@ -411,7 +411,7 @@ match on the corrected spelling.
 
 
 Not in this file, because no interface changed: the four test layers (unit, API/role,
-contract, integration, end-to-end -- 869 tests), the CI/CD repairs, and the audit and revert
+contract, integration, end-to-end -- 867 tests), the CI/CD repairs, and the audit and revert
 fixes that are internal. docs/test-plan.md and docs/test-findings.md hold those.
 
 

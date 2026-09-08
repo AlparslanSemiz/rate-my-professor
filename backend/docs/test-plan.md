@@ -9,9 +9,9 @@ Testcontainers question — turned out not to be a blocker at all; see
 
 ### Where it stands
 
-**856 tests, 0 failures**, 27 skipped locally (the `@Disabled` `DemoApplicationTests`, the
+**867 tests, 0 failures**, 27 skipped locally (the `@Disabled` `DemoApplicationTests`, the
 twenty PostgreSQL integration tests and the six end-to-end journeys, all of which run in CI).
-Bundle **95.92% LINE** (3311/3452), **90.61% BRANCH** (1061/1171). Line coverage is gated in two
+Bundle **95.94% LINE** (3331/3472), **90.62% BRANCH** (1063/1173). Line coverage is gated in two
 tiers — **90% mandatory, 95% target** — and BRANCH has a single floor, ratcheted to 0.88 now
 that batch 7 has cleared it.
 
