@@ -4,7 +4,16 @@ import com.atlassian.oai.validator.OpenApiInteractionValidator;
 import com.atlassian.oai.validator.mockmvc.MockMvcResponse;
 import com.atlassian.oai.validator.model.Request;
 import com.atlassian.oai.validator.report.ValidationReport;
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditActorType;
+import com.pse.audit.model.AuditLog;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.repository.AuditLogRepository;
 import com.pse.auth.repository.TokenRepository;
+import com.pse.lecture.model.Lecture;
+import com.pse.lecture.repository.LectureRepository;
+import com.pse.shared.enums.SemesterSeason;
+import com.pse.support.DatabaseReset;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.support.AdminSessions;
 import com.pse.support.TestDeliveryConfig;
@@ -13,20 +22,22 @@ import com.pse.user.repository.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.Set;
 import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.pse.support.ApiIntegrationTest;
 
 /**
  * The other half of the contract: {@link OpenApiContractTests} proves the schema covers every
@@ -35,13 +46,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>The schema is fetched from the running context rather than read from a checked-in file,
  * so there is no generation step to forget and no copy to go stale.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-@AutoConfigureMockMvc
-@Import({TestDeliveryConfig.class, TestGitLabConfig.class})
+@ApiIntegrationTest
 class OpenApiResponseValidationTests {
 
     private static final String ADMIN_EMAIL = "openapi-validate@student.kit.edu";
+    private static final String STUDENT_EMAIL = "openapi-student@student.kit.edu";
 
     /**
      * Every readable GET worth sweeping, in the shape the validator wants them.
@@ -88,17 +97,27 @@ class OpenApiResponseValidationTests {
     );
 
     @Autowired MockMvc mockMvc;
+    @Autowired TestDeliveryConfig.CapturingLoginCodeDelivery codeDelivery;
+    @Autowired DatabaseReset databaseReset;
     @Autowired StudentRepository studentRepository;
     @Autowired AdminRepository adminRepository;
     @Autowired TokenRepository tokenRepository;
+    @Autowired LectureRepository lectureRepository;
+    @Autowired AuditLogRepository auditLogRepository;
 
     private String adminToken;
     private OpenApiInteractionValidator validator;
 
     @BeforeEach
     void createAdminSessionAndLoadSchema() throws Exception {
+        // Deterministic, and that is the whole point: this class used to validate whatever rows
+        // the previously-run class happened to leave behind. Surefire orders classes by
+        // filesystem, so which rows those were changed with the checkout -- and the two schema
+        // gaps below went unseen for as long as the audit log happened to be empty here. F-19.
+        databaseReset.all();
         adminToken = AdminSessions.createAdmin(
                 ADMIN_EMAIL, studentRepository, adminRepository, tokenRepository);
+        seedTheAuditLogWithItsNullableShapes();
 
         String schema = mockMvc.perform(get("/v3/api-docs")
                         .header("Authorization", "Bearer " + adminToken))
@@ -106,6 +125,67 @@ class OpenApiResponseValidationTests {
                 .andReturn().getResponse().getContentAsString();
 
         validator = OpenApiInteractionValidator.createForInlineApiSpecification(schema).build();
+    }
+
+    /**
+     * Three response fields are null by design, and each needs a row that makes it so -- an
+     * unannotated nullable field is only a defect once something returns null in it.
+     *
+     * <ul>
+     *   <li>A <b>refused request from a signed-in student</b> is audited against
+     *       {@code AuditTargetType.ENDPOINT}, which is not a row and so carries no
+     *       {@code target.id}. It has to be signed in: {@code AccessRefusalAuditor.record}
+     *       returns early when there is no authenticated principal, so an anonymous 401 writes
+     *       nothing at all and would leave this shape unexercised.</li>
+     *   <li>A <b>revertible entry</b> reports {@code revertible: true}, and
+     *       {@code Revertability.YES} leaves both {@code revertBlockedReason} and
+     *       {@code revertedByAuditId} null.</li>
+     * </ul>
+     */
+    private void seedTheAuditLogWithItsNullableShapes() throws Exception {
+        mockMvc.perform(get("/admin/users")
+                        .header("Authorization", "Bearer " + studentSession()))
+                .andExpect(status().isForbidden());
+
+        Lecture lecture = new Lecture();
+        lecture.setName("Algorithmen 1");
+        lecture.setCode("IN0001");
+        lecture.setSemesterYear(2026);
+        lecture.setSemesterSeason(SemesterSeason.SS);
+        lecture.setActive(true);
+        UUID lectureId = lectureRepository.saveAndFlush(lecture).getId();
+
+        AuditLog log = new AuditLog();
+        log.setActorType(AuditActorType.ADMIN);
+        log.setActorId(UUID.randomUUID());
+        log.setActorName("admin");
+        log.setActorEmail(ADMIN_EMAIL);
+        log.setActorRole("ADMIN");
+        log.setAction(AuditAction.LECTURE_UPDATED);
+        log.setTargetType(AuditTargetType.LECTURE);
+        log.setTargetId(lectureId);
+        log.setTargetLabel("IN0001 Algorithmen 1");
+        log.setChanges(Map.of("name", Map.of("before", "Algorithmen 0", "after", "Algorithmen 1")));
+        log.setMetadata(Map.of());
+        log.setCreatedAt(Instant.now());
+        auditLogRepository.saveAndFlush(log);
+    }
+
+    /** A real app session, through the real login endpoints. */
+    private String studentSession() throws Exception {
+        mockMvc.perform(post("/auth/request-login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"%s\"}".formatted(STUDENT_EMAIL)))
+                .andExpect(status().isOk());
+
+        String body = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"%s\",\"loginToken\":\"%s\"}"
+                                .formatted(STUDENT_EMAIL, codeDelivery.codeFor(STUDENT_EMAIL))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        return body.replaceAll(".*\"authToken\"\\s*:\\s*\"([^\"]+)\".*", "$1");
     }
 
     @Test
