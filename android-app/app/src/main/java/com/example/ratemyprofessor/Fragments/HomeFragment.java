@@ -77,6 +77,9 @@ public class HomeFragment extends Fragment {
 
             binding.userName.setText(statistics.getString("username", ""));
             binding.averageRatingGivenNum.setText(String.format("%.2f", statistics.getFloat("averageRating", 0)));
+            if (statistics.getFloat("averageRating", 0) == 3.1415) {
+                binding.averageRatingGivenNum.setText("π");
+            }
             binding.professorsRatedNum.setText(String.valueOf(statistics.getInt("ratingCount", 0)));
             binding.commentsWrittenNum.setText(String.valueOf(statistics.getInt("writtencomments", 0)));
             binding.upDownvotesNum.setText(String.valueOf(statistics.getInt("credibilityScore", 0)));

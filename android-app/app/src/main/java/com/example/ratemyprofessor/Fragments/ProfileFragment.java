@@ -89,17 +89,36 @@ public class ProfileFragment extends Fragment {
         // Inflate the layout for this fragment
         binding = FragmentProfileBinding.inflate(inflater, container, false);
 
-
-        binding.averageRatingBackground.setText(String.format(Locale.ROOT, RATING_FORMAT,
-                professor.averageRating));
-        binding.averageRatingBackground.setTextColor(RatingColorCalculator.calculateColour(requireContext(),
-                professor.averageRating));
         binding.lectureList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         binding.semesterList.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.backButton.setOnClickListener(v -> requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
         service = Database.getInstance(requireContext()).searchService();
         executor = Executors.newSingleThreadExecutor();
+
+        // Displaying average rating in the header
+        if (selectionType == SelectionType.PROFESSORS) {
+            binding.averageRatingBackground.setText(String.format(Locale.ROOT, RATING_FORMAT,
+                    professor.averageRating));
+            binding.averageRatingBackground.setTextColor(RatingColorCalculator.calculateColour(requireContext(),
+                    professor.averageRating));
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    List<Lecture> lectures = service.getLecturesByTitle(lectureTitle);
+                    double sum = 0;
+                    for (Lecture lecture : lectures) {
+                        sum += lecture.averageRating;
+                    }
+                    double averageRating = sum / lectures.size();
+                    binding.averageRatingBackground.setText(String.format(Locale.ROOT, RATING_FORMAT,
+                            averageRating));
+                    binding.averageRatingBackground.setTextColor(RatingColorCalculator.calculateColour(requireContext(),
+                            averageRating));
+                }
+            });
+        }
 
         bindHeader();
         loadUpperList();

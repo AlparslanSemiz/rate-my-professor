@@ -166,4 +166,7 @@ public interface SearchService {
 
     @Upsert
     void upsertRating(Rating rating);
+
+    @Query("SELECT * FROM lectures WHERE name = :lectureTitle")
+    List<Lecture> getLecturesByTitle(String lectureTitle);
 }
