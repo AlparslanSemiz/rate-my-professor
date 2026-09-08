@@ -361,6 +361,40 @@ refusal now has a status of its own -- update this assertion and F-5"*. It still
 untouched row first and the status second: a status is evidence about the answer, not about
 the table.
 
+**Closed out on 8 September: the last four sites.** The fix above left `LectureService` and
+`ProfessorService` alone, because four characterization tests pinned the old answers there and
+the change was parked in the backlog behind a heavier refactoring that had not been scheduled.
+Parking it had a cost that was not obvious when the decision was made: `admin-api.md:572`
+described the duplicate-name failure as *"`409`-shaped as `{"success":false}`, not an HTTP
+`409`"* — so the panel team was being handed the old contract in writing, in the document that
+is meant to be authoritative, for as long as the item stayed open.
+
+The four sites now throw like the other nine:
+
+```
+POST /data/lectures    duplicate name          200 -> 409
+POST /data/lectures    unknown professorId     200 -> 404
+POST /data/professor   duplicate first+last    200 -> 409
+POST /data/professor   unknown lectureID       200 -> 404
+```
+
+Bodies unchanged in all four, message text included — the same property that made the first
+nine a small change. `CHANGELOG ///// 8.09 (5)` carries it, in the same commit as the code.
+
+The four characterization tests were **inverted, not deleted**: they now state the intended
+contract instead of the accident, in the `assertThatThrownBy(...).extracting(getStatus)` shape
+`ModerationCatalogServiceTests` already used. Each was watched fail against a deliberately
+wrong status before being left green — a test that asserts a status code but reads the body is
+green either way, and there is no way to tell those apart without breaking it once.
+
+Two audit-silence tests were caught by the same change and are worth naming, because the
+handling differed. `addLectureRecordsNothingWhenItRefuses` and its professor twin both proved
+"a refused creation writes no audit entry" *through* one of these failures, so both had to
+move; neither was deleted, because the property they prove is unrelated to the status code.
+A third test, `addLectureFailsWhenStudentIsNotAdmin`, **was** deleted — it pinned the
+unreachable role check that came out in the same pass, which is dead code rather than
+behaviour, and the security chain's `403` is already covered by `ApiAuthorizationMatrixTests`.
+
 ---
 
 ### F-6 — `StudentService`'s second moderation path

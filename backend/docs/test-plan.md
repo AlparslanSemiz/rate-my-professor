@@ -9,9 +9,9 @@ Testcontainers question — turned out not to be a blocker at all; see
 
 ### Where it stands
 
-**867 tests, 0 failures**, 27 skipped locally (the `@Disabled` `DemoApplicationTests`, the
+**872 tests, 0 failures**, 27 skipped locally (the `@Disabled` `DemoApplicationTests`, the
 twenty PostgreSQL integration tests and the six end-to-end journeys, all of which run in CI).
-Bundle **95.94% LINE** (3331/3472), **90.62% BRANCH** (1063/1173). Line coverage is gated in two
+Bundle **95.91% LINE** (3328/3470), **90.61% BRANCH** (1061/1171). Line coverage is gated in two
 tiers — **90% mandatory, 95% target** — and BRANCH has a single floor, ratcheted to 0.88 now
 that batch 7 has cleared it.
 
@@ -32,6 +32,13 @@ findings document: **F-5** (app-tier failures answer 4xx instead of 200), **F-16
 called with a verb it does not map answers 405 with an `Allow` header instead of 404), and
 **F-3** (`VoteType.NONE` withdraws a vote). This is what the batches were for; closing them is
 not a batch of its own and gets no section below, only updated statuses.
+
+F-5 was finished on 8 September rather than that day: the fix had left `LectureService` and
+`ProfessorService` alone, parked behind an unscheduled refactor, and the four create failures
+there answered `200 {"success": false}` until they were changed to `409` and `404`. The four
+tests pinning the old answers were inverted, not deleted. What made parking it the wrong call
+was not the code — it was that `admin-api.md` had gone on documenting the old status in the
+document the panel team treats as authoritative.
 
 | Layer | State |
 |---|---|
@@ -549,6 +556,37 @@ takes the caller's identity only from `@AuthenticationPrincipal`, which
 `noAppTierHandlerTakesACallerIdentityFromTheRequest` now pins by reflection over every app-tier
 handler and its `@RequestBody` type. That invariant, not the individual probes, is what keeps
 the owner-scoped column one line long.
+
+### The app-facing routes, which the sweeps do not answer for
+
+The three sweeps ask questions *about* a route — who may call it, what status it answers,
+whose rows it touches. None of them asks what it returns. That distinction went unnoticed on
+`GET /social/sync/comments`, the route the Android client syncs from: it appeared in
+`ApiAuthorizationMatrixTests` (deliberately anonymous), in `OpenApiResponseValidationTests`
+(body matches the schema) and in `LazyLoadingRegressionTests` (does not throw on a detached
+collection) — three classes touching it, and **no test of what it answers**. Three green
+mentions read, at a glance, like coverage.
+
+Six tests were added to `SocialApiIntegrationTests`, taking it from 10 to 16:
+
+| Test | What it pins |
+|---|---|
+| `syncReturnsAnEmptyListRatherThanNullWhenThereAreNoComments` | `comments: []`, not `null` — the shape of defect F-9 was (`ratings: null` for an unrated lecture), on the route with the most callers |
+| `syncNestsTheAnswersInsideTheirComment` | the handler's own comment says it returns "both Comments *AND* answers"; the answers are **nested**, which is the part a client has to know. Also that `userVote` is absent, because the route passes `student = null` |
+| `syncCrossesLectures` | what separates it from `GET /social/comments/{lecture_id}` — the whole catalogue in one answer |
+| `syncLeavesOutAHiddenComment` | the `findAllByStatus(VISIBLE)` filter, stated so that a later rewrite that pages or joins the query has to keep it |
+| `syncLeavesOutAHiddenAnswerUnderAVisibleComment` | the half a SQL filter cannot cover: visible comment, hidden answer, skipped in Java by `getAnswerResponses` |
+| `anAnswerVoteCanBeCastAndWithdrawn` | the answer-vote route had only its bad-request case, so it was known to *reject* a bad vote and not to *accept* a good one — a separate implementation from comment voting, with its own repository, entity and audit action |
+
+Both hidden-content tests were run against a deliberately broken filter first — `findAll()`
+in place of `findAllByStatus(VISIBLE)`, and `if (false)` in place of the answer's status
+check — and both failed, which is the only thing that distinguishes them from two tests that
+would pass on an API leaking moderated content.
+
+What is left on this side is breadth rather than absence. `/account` has five tests and they
+cover the properties that matter (logout invalidates *every* session, delete is a soft delete
+that invalidates the session); `/ratings` has eight. Neither is a hole of the kind
+`sync/comments` was.
 
 ## The contract layer
 
