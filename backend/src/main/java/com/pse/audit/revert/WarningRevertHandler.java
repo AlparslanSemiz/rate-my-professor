@@ -4,7 +4,7 @@ import com.pse.audit.model.AuditTargetType;
 import com.pse.moderation.dto.request.WarningRequest;
 import com.pse.moderation.model.Warning;
 import com.pse.moderation.repository.WarningRepository;
-import com.pse.moderation.service.ModerationUserService;
+import com.pse.moderation.service.user.WarningService;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.error.ApiException;
 import org.springframework.http.HttpStatus;
@@ -24,14 +24,14 @@ import java.util.UUID;
 public class WarningRevertHandler implements AuditRevertHandler {
 
     private final WarningRepository warningRepository;
-    private final ModerationUserService userService;
+    private final WarningService warnings;
 
     public WarningRevertHandler(
             WarningRepository warningRepository,
-            ModerationUserService userService
+            WarningService warnings
     ) {
         this.warningRepository = warningRepository;
-        this.userService = userService;
+        this.warnings = warnings;
     }
 
     @Override
@@ -66,7 +66,7 @@ public class WarningRevertHandler implements AuditRevertHandler {
                         HttpStatus.NOT_FOUND,
                         "The record this entry is about no longer exists",
                         AuditRevertRefusal.TARGET_MISSING.name()));
-        userService.updateWarning(
+        warnings.updateWarning(
                 principal,
                 warning.getStudent().getId(),
                 targetId,

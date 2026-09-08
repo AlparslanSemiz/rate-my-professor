@@ -1,30 +1,38 @@
 package com.pse.moderation.service;
 
-
-import com.pse.shared.dto.BasicResponse;
+import com.pse.auth.service.IdentityService;
 import com.pse.moderation.repository.AdminRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.pse.shared.dto.BasicResponse;
+import com.pse.user.model.Student;
 import org.springframework.stereotype.Service;
 
+/**
+ * Answers {@code GET /admins/validate}: is the bearer of this header an administrator?
+ *
+ * <p>The check itself used to live in {@code ModerationUserService}, which is what gave that
+ * class its one method taking a raw {@code Authorization} header and its dependency on the
+ * auth module. It is two lines and this was its only caller, so it moved here rather than
+ * being wrapped from a distance.
+ */
 @Service
 public class AdminService {
 
-    private final ModerationUserService moderationUserService;
+    private final IdentityService identityService;
+    private final AdminRepository adminRepository;
 
-
-
-    public AdminService(ModerationUserService moderationUserService) {
-        this.moderationUserService = moderationUserService;
+    public AdminService(IdentityService identityService, AdminRepository adminRepository) {
+        this.identityService = identityService;
+        this.adminRepository = adminRepository;
     }
 
     public BasicResponse validateAdmin(String authHeader) {
-
-        if(moderationUserService.validateAdminToken(authHeader)){
-            return new BasicResponse("Is Admin", true);
-        }
-
-        return new BasicResponse("Is Not Admin", false);
-
+        return isAdmin(authHeader)
+                ? new BasicResponse("Is Admin", true)
+                : new BasicResponse("Is Not Admin", false);
     }
 
+    private boolean isAdmin(String authHeader) {
+        Student student = identityService.verifyUser(authHeader);
+        return student != null && adminRepository.existsByStudent(student);
+    }
 }

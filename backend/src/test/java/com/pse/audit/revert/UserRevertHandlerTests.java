@@ -3,7 +3,7 @@ package com.pse.audit.revert;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.moderation.dto.request.UserUpdateRequest;
 import com.pse.moderation.repository.AdminRepository;
-import com.pse.moderation.service.ModerationUserService;
+import com.pse.moderation.service.user.StudentProfileService;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.enums.UserRole;
 import com.pse.shared.enums.UserStatus;
@@ -46,10 +46,10 @@ class UserRevertHandlerTests {
     private AdminRepository adminRepository;
 
     @Mock
-    private ModerationUserService userService;
+    private StudentProfileService profiles;
 
     private UserRevertHandler handler() {
-        return new UserRevertHandler(studentRepository, adminRepository, userService);
+        return new UserRevertHandler(studentRepository, adminRepository, profiles);
     }
 
     private static Student student(UUID id) {
@@ -67,7 +67,7 @@ class UserRevertHandlerTests {
         handler().applyInverse(PRINCIPAL, targetId, before);
         ArgumentCaptor<UserUpdateRequest> request =
                 ArgumentCaptor.forClass(UserUpdateRequest.class);
-        verify(userService).updateStudent(eq(PRINCIPAL), eq(targetId), request.capture());
+        verify(profiles).updateStudent(eq(PRINCIPAL), eq(targetId), request.capture());
         return request.getValue();
     }
 
@@ -190,7 +190,7 @@ class UserRevertHandlerTests {
         // When / Then
         assertThat(handler().currentValues(List.of())).isEmpty();
         verifyNoInteractions(adminRepository);
-        verifyNoInteractions(userService);
+        verifyNoInteractions(profiles);
     }
 
     // ---------- applyInverse ----------

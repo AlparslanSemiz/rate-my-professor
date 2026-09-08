@@ -3,7 +3,7 @@ package com.pse.audit.revert;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.moderation.dto.request.UserUpdateRequest;
 import com.pse.moderation.repository.AdminRepository;
-import com.pse.moderation.service.ModerationUserService;
+import com.pse.moderation.service.user.StudentProfileService;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.enums.UserRole;
 import com.pse.shared.enums.UserStatus;
@@ -28,16 +28,16 @@ public class UserRevertHandler implements AuditRevertHandler {
 
     private final StudentRepository studentRepository;
     private final AdminRepository adminRepository;
-    private final ModerationUserService userService;
+    private final StudentProfileService profiles;
 
     public UserRevertHandler(
             StudentRepository studentRepository,
             AdminRepository adminRepository,
-            ModerationUserService userService
+            StudentProfileService profiles
     ) {
         this.studentRepository = studentRepository;
         this.adminRepository = adminRepository;
-        this.userService = userService;
+        this.profiles = profiles;
     }
 
     @Override
@@ -80,7 +80,7 @@ public class UserRevertHandler implements AuditRevertHandler {
 
     @Override
     public void applyInverse(AuthenticatedUser principal, UUID targetId, Map<String, Object> before) {
-        userService.updateStudent(principal, targetId, new UserUpdateRequest(
+        profiles.updateStudent(principal, targetId, new UserUpdateRequest(
                 RevertValues.asString(before, "username"),
                 RevertValues.asString(before, "kitEmail"),
                 RevertValues.asString(before, "biography"),

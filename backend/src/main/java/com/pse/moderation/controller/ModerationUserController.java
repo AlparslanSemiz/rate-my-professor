@@ -6,7 +6,10 @@ import com.pse.moderation.dto.request.WarningRequest;
 import com.pse.moderation.dto.response.UserListResponse;
 import com.pse.moderation.dto.response.UserResponse;
 import com.pse.moderation.dto.response.WarningHistoryResponse;
-import com.pse.moderation.service.ModerationUserService;
+import com.pse.moderation.service.user.StudentLifecycleService;
+import com.pse.moderation.service.user.StudentProfileService;
+import com.pse.moderation.service.user.UserDirectoryService;
+import com.pse.moderation.service.user.WarningService;
 import com.pse.security.AuthenticatedUser;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,10 +28,21 @@ import java.util.UUID;
 @RequestMapping({"/admin/users", "/users"})
 public class ModerationUserController {
 
-    private final ModerationUserService service;
+    private final UserDirectoryService directory;
+    private final StudentProfileService profiles;
+    private final StudentLifecycleService lifecycle;
+    private final WarningService warnings;
 
-    public ModerationUserController(ModerationUserService service) {
-        this.service = service;
+    public ModerationUserController(
+            UserDirectoryService directory,
+            StudentProfileService profiles,
+            StudentLifecycleService lifecycle,
+            WarningService warnings
+    ) {
+        this.directory = directory;
+        this.profiles = profiles;
+        this.lifecycle = lifecycle;
+        this.warnings = warnings;
     }
 
     /**
@@ -45,12 +59,12 @@ public class ModerationUserController {
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String sort
     ) {
-        return service.getStudents(limit, cursor, q, status, role, sort);
+        return directory.getStudents(limit, cursor, q, status, role, sort);
     }
 
     @GetMapping("/{id}")
     public UserResponse getStudent(@PathVariable UUID id) {
-        return service.getStudent(id);
+        return directory.getStudent(id);
     }
 
     @PatchMapping("/{id}")
@@ -59,7 +73,7 @@ public class ModerationUserController {
             @PathVariable UUID id,
             @RequestBody UserUpdateRequest request
     ) {
-        return service.updateStudent(principal, id, request);
+        return profiles.updateStudent(principal, id, request);
     }
 
     @DeleteMapping("/{id}")
@@ -67,7 +81,7 @@ public class ModerationUserController {
             @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID id
     ) {
-        return service.deleteStudent(principal, id);
+        return lifecycle.deleteStudent(principal, id);
     }
 
     @PatchMapping("/{id}/block")
@@ -75,7 +89,7 @@ public class ModerationUserController {
             @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID id
     ) {
-        return service.blockStudent(principal, id);
+        return lifecycle.blockStudent(principal, id);
     }
 
     @PatchMapping("/{id}/unblock")
@@ -83,7 +97,7 @@ public class ModerationUserController {
             @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID id
     ) {
-        return service.unblockStudent(principal, id);
+        return lifecycle.unblockStudent(principal, id);
     }
 
     @PostMapping("/{id}/warnings")
@@ -92,12 +106,12 @@ public class ModerationUserController {
             @PathVariable UUID id,
             @RequestBody WarningRequest request
     ) {
-        return service.warnStudent(principal, id, request);
+        return warnings.warnStudent(principal, id, request);
     }
 
     @GetMapping("/{id}/warnings")
     public WarningHistoryResponse getWarningsForStudent(@PathVariable UUID id) {
-        return service.getWarningsForStudent(id);
+        return warnings.getWarningsForStudent(id);
     }
 
     @PatchMapping("/{id}/warnings/{warningId}")
@@ -107,7 +121,7 @@ public class ModerationUserController {
             @PathVariable UUID warningId,
             @RequestBody WarningRequest request
     ) {
-        return service.updateWarning(principal, id, warningId, request);
+        return warnings.updateWarning(principal, id, warningId, request);
     }
 
     @DeleteMapping("/{id}/warnings/{warningId}")
@@ -116,6 +130,6 @@ public class ModerationUserController {
             @PathVariable UUID id,
             @PathVariable UUID warningId
     ) {
-        return service.deleteWarning(principal, id, warningId);
+        return warnings.deleteWarning(principal, id, warningId);
     }
 }

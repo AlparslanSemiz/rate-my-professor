@@ -4,7 +4,7 @@ import com.pse.audit.model.AuditTargetType;
 import com.pse.moderation.dto.request.WarningRequest;
 import com.pse.moderation.model.Warning;
 import com.pse.moderation.repository.WarningRepository;
-import com.pse.moderation.service.ModerationUserService;
+import com.pse.moderation.service.user.WarningService;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.error.ApiException;
 import com.pse.user.model.Student;
@@ -47,10 +47,10 @@ class WarningRevertHandlerTests {
     private WarningRepository warningRepository;
 
     @Mock
-    private ModerationUserService userService;
+    private WarningService warnings;
 
     private WarningRevertHandler handler() {
-        return new WarningRevertHandler(warningRepository, userService);
+        return new WarningRevertHandler(warningRepository, warnings);
     }
 
     private static Warning warning(UUID id) {
@@ -106,7 +106,7 @@ class WarningRevertHandlerTests {
 
         // When / Then
         assertThat(handler().currentValues(List.of())).isEmpty();
-        verifyNoInteractions(userService);
+        verifyNoInteractions(warnings);
     }
 
     // ---------- applyInverse ----------
@@ -127,7 +127,7 @@ class WarningRevertHandlerTests {
 
         // Then
         ArgumentCaptor<WarningRequest> request = ArgumentCaptor.forClass(WarningRequest.class);
-        verify(userService).updateWarning(
+        verify(warnings).updateWarning(
                 eq(PRINCIPAL), eq(STUDENT), eq(FIRST), request.capture());
         assertThat(request.getValue().message()).isEqualTo("Original wording.");
     }
@@ -158,6 +158,6 @@ class WarningRevertHandlerTests {
                     assertThat(((ApiException) exception).getCode())
                             .isEqualTo(AuditRevertRefusal.TARGET_MISSING.name());
                 });
-        verifyNoInteractions(userService);
+        verifyNoInteractions(warnings);
     }
 }
