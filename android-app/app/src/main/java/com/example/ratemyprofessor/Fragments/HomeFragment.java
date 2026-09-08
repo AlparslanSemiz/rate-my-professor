@@ -29,6 +29,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Locale;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -76,9 +77,11 @@ public class HomeFragment extends Fragment {
             SharedPreferences statistics = getActivity().getSharedPreferences(RateMyProfessorApplication.STATISTICS_STORAGE, Context.MODE_PRIVATE);
 
             binding.userName.setText(statistics.getString("username", ""));
-            binding.averageRatingGivenNum.setText(String.format("%.2f", statistics.getFloat("averageRating", 0)));
-            if (statistics.getFloat("averageRating", 0) == 3.1415) {
+            float rating = statistics.getFloat("averageRating", 0);
+            if (Math.abs(rating - 3.14f) < 0.01f) {
                 binding.averageRatingGivenNum.setText("π");
+            } else {
+                binding.averageRatingGivenNum.setText(String.format(Locale.ROOT, "%.2f", rating));
             }
             binding.professorsRatedNum.setText(String.valueOf(statistics.getInt("ratingCount", 0)));
             binding.commentsWrittenNum.setText(String.valueOf(statistics.getInt("writtencomments", 0)));
@@ -95,7 +98,12 @@ public class HomeFragment extends Fragment {
                 public void onResponse(Call<StudentProfileResponse> userInfocall, Response<StudentProfileResponse> response) {
                     if (response.isSuccessful()) {
                         binding.userName.setText(response.body().username());
-                        binding.averageRatingGivenNum.setText(String.format("%.2f", response.body().averageRating()));
+                        double rating = response.body().averageRating();
+                        if (Math.abs(rating - 3.14f) < 0.01f) {
+                            binding.averageRatingGivenNum.setText("π");
+                        } else {
+                            binding.averageRatingGivenNum.setText(String.format(Locale.ROOT, "%.2f", rating));
+                        }
                         binding.professorsRatedNum.setText(String.valueOf(response.body().ratingsCount()));
                         binding.commentsWrittenNum.setText(String.valueOf(response.body().commentsWritten()));
                         binding.upDownvotesNum.setText(String.valueOf(response.body().credibilityScore()));

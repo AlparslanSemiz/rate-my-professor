@@ -308,15 +308,16 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                         return;
                     }
 
+                    List<TopicAverageResponse> ratings = body.ratings();
+                    // Dont know why we even get "null" categories but it happens
+                    System.out.println(ratings.size());
+                    ratings.removeIf(rating -> rating.category() == null);
+                    ratings.removeIf(rating -> rating.category().equals(RatingCategory.OVERALL));
+                    System.out.println(ratings.size());
                     if (body.ratings().isEmpty()) {
                         setEmptyRating();
                         return;
                     }
-                    List<TopicAverageResponse> ratings = body.ratings();
-                    // Dont know why we even get "null" categories but it happens
-                    ratings.removeIf(rating -> rating.category() == null);
-                    ratings.removeIf(rating -> rating.category().equals(RatingCategory.OVERALL));
-                    Log.d("HEREHEREHERE", "BITTEEEEE");
                     updateLocalRatingsFromResponse(ratings);
                     for (TopicAverageResponse rating : ratings) {
                         System.out.println(rating.category() + "->" + rating.value());
@@ -398,28 +399,37 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         RecyclerView recyclerView = binding.ratingView;
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
 
-        if (ratings == null || userRatings == null) {
+        if (ratings == null || ratings.isEmpty()) {
+            System.out.println(ratings == null);
+            System.out.println(ratings.isEmpty());
             System.out.println(":(");
             return;
         }
-
         // Sorting the categories alphabetically, so they always come out in the same order
         ArrayList<TopicAverageResponse> ratingsSorted = new ArrayList<>(ratings);
-        ArrayList<TopicAverageResponse> userRatingsSorted = new ArrayList<>(userRatings);
-
         ratingsSorted.sort(Comparator.comparing(
                 r -> r.category().getDisplayName(),
                 String.CASE_INSENSITIVE_ORDER
         ));
+        System.out.println("1");
 
-        userRatingsSorted.sort(Comparator.comparing(
-                r -> r.category().getDisplayName(),
-                String.CASE_INSENSITIVE_ORDER
-        ));
+        if (userRatings == null || userRatings.isEmpty()) {
+            System.out.println("2");
+            ratingAdapter = new RatingAdapter(ratingsSorted, (ArrayList<TopicAverageResponse>) userRatings);
+            recyclerView.setAdapter(ratingAdapter);
+        } else {
+            System.out.println("3");
+            ArrayList<TopicAverageResponse> userRatingsSorted = new ArrayList<>(userRatings);
 
 
-        ratingAdapter = new RatingAdapter(ratingsSorted, userRatingsSorted);
-        recyclerView.setAdapter(ratingAdapter);
+            userRatingsSorted.sort(Comparator.comparing(
+                    r -> r.category().getDisplayName(),
+                    String.CASE_INSENSITIVE_ORDER
+            ));
+
+            ratingAdapter = new RatingAdapter(ratingsSorted, userRatingsSorted);
+            recyclerView.setAdapter(ratingAdapter);
+        }
 
         // Nothing was rated yet, so there is no average to show either. Without this the
         // division below would produce NaN.

@@ -84,6 +84,7 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
 
 
         if (userRatings != null) {
+            System.out.println("userRatingSize: " + userRatings.size());
             userRating = userRatings.get(position);
             holder.setCategory(userRating.category(), this);
             holder.name.setText(userRating.category().getDisplayName());
@@ -93,6 +94,7 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
             holder.userRatingBar.setRating((float) userRating.value());
         }
         if (ratings != null) {
+            System.out.println("ratingSize: " + ratings.size());
             rating = ratings.get(position);
             holder.setCategory(rating.category(), this);
             holder.name.setText(rating.category().getDisplayName());
