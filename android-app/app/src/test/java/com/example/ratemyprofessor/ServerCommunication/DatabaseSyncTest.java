@@ -447,6 +447,11 @@ public class DatabaseSyncTest {
         public void upsertRating(Rating rating) {
 
         }
+
+        @Override
+        public List<Lecture> getLecturesByTitle(String lectureTitle) {
+            return Collections.emptyList();
+        }
     }
 
 
