@@ -414,7 +414,7 @@ class LectureApiIntegrationTests {
         }
         """.formatted(professor.getId()))
                 )
-                .andExpect(status().isOk())
+                .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message")
                         .value(
@@ -453,7 +453,7 @@ class LectureApiIntegrationTests {
         }
         """.formatted(unknownProfessorId))
                 )
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message")
                         .value(

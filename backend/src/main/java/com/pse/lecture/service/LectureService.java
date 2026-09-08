@@ -15,6 +15,7 @@ import com.pse.rating.model.Rating;
 import com.pse.rating.model.RatingCategory;
 import com.pse.rating.model.RatingTopic;
 import com.pse.rating.service.RatingService;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,7 @@ import com.pse.lecture.dto.response.LectureResponse;
 import com.pse.lecture.dto.response.LecturesResponse;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
+import com.pse.shared.error.ApiException;
 import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
 import com.pse.professor.dto.response.ProfessorShortResponse;
@@ -118,7 +120,9 @@ public class LectureService {
     public BasicResponse addLecture(AuthenticatedUser principal, AddLectureRequest request) {
 
         if (lectureRepository.findByName(request.name()).isPresent()) {
-            return new BasicResponse("Lecture already exists: " + request.name(),false);
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "Lecture already exists: " + request.name());
         }
 
 
@@ -131,10 +135,9 @@ public class LectureService {
             Professor professor = professorRepository.findById(professorID).orElse(null);
 
             if (professor == null) {
-                return new BasicResponse(
-                        "Professor not found: " + professorID,
-                        false
-                );
+                throw new ApiException(
+                        HttpStatus.NOT_FOUND,
+                        "Professor not found: " + professorID);
             }
 
             professors.add(professor);

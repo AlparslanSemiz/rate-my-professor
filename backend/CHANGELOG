@@ -491,3 +491,36 @@ The admin route returns exactly what the old one did:
 Panel teams: this was the fifth line of task 1 in docs/adminweb-tasks.md. It is not a
 migration any more, it is a deletion -- if anything still calls "/auth/me" it is already
 getting a 404.
+
+
+///// 8.09 (5)
+
+
+The four create failures carry a status code now. F-5, finished.
+
+"POST /data/lectures" and its "/admin" twin:
+
+Was: 200 {"message": "Lecture already exists: <name>", "success": false}
+Now: 409 {"message": "Lecture already exists: <name>", "success": false}
+
+Was: 200 {"message": "Professor not found: <uuid>", "success": false}
+Now: 404 {"message": "Professor not found: <uuid>", "success": false}
+
+"POST /data/professor" and its "/admin" twin:
+
+Was: 200 {"message": "Professor already exists: <first> <last>", "success": false}
+Now: 409 {"message": "Professor already exists: <first> <last>", "success": false}
+
+Was: 200 {"message": "Couldn't find lecture with lectureID: <uuid>", "success": false}
+Now: 404 {"message": "Couldn't find lecture with lectureID: <uuid>", "success": false}
+
+The BODY IS UNCHANGED in all four, message text included. A client that reads "success" has
+nothing to do. A client that reads the status -- or that treats a non-2xx as a transport
+error and never opens the body -- now has to handle 409 and 404 on these two routes.
+
+These were the last two services answering a create failure with 200. The rest moved under
+F-5 in the backfill above; these two were left behind because four tests pinned the old
+answers. Those tests were inverted rather than deleted, so they state the new contract now.
+
+Nothing else on either route changed. A successful create still answers 200 with
+"success": true, and an invalid body is still 400 {"message": "Invalid request"}.

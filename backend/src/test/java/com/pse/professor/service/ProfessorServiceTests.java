@@ -15,6 +15,7 @@ import com.pse.user.model.Student;
 import com.pse.moderation.model.Admin;
 import com.pse.professor.repository.ProfessorRepository;
 import com.pse.security.AuthenticatedUser;
+import com.pse.shared.error.ApiException;
 
 import com.pse.rating.model.Rating;
 import com.pse.rating.model.RatingCategory;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,6 +37,7 @@ import java.util.UUID;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -238,12 +241,11 @@ class ProfessorServiceTests {
         )).thenReturn(Optional.of(existingProfessor));
 
 
-        BasicResponse response =
-                professorService.addProfessor(principal, request);
-
-
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Professor already exists: Stefan Kühnlein");
+        assertThatThrownBy(() -> professorService.addProfessor(principal, request))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Professor already exists: Stefan Kühnlein")
+                .extracting(e -> ((ApiException) e).getStatus())
+                .isEqualTo(HttpStatus.CONFLICT);
 
         verify(professorRepository, never()).save(any());
         verifyNoInteractions(lectureRepository);
@@ -270,13 +272,11 @@ class ProfessorServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        BasicResponse response =
-                professorService.addProfessor(principal, request);
-
-
-        assertThat(response.success()).isFalse();
-        assertThat(response.message())
-                .isEqualTo("Couldn't find lecture with lectureID: " + lectureId);
+        assertThatThrownBy(() -> professorService.addProfessor(principal, request))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Couldn't find lecture with lectureID: " + lectureId)
+                .extracting(e -> ((ApiException) e).getStatus())
+                .isEqualTo(HttpStatus.NOT_FOUND);
 
         verify(lectureRepository).findById(lectureId);
 
@@ -572,7 +572,8 @@ class ProfessorServiceTests {
         when(professorRepository.findByFirstNameAndLastName("Stefan", "Kühnlein"))
                 .thenReturn(Optional.of(existing));
 
-        assertThat(professorService.addProfessor(principal, request).success()).isFalse();
+        assertThatThrownBy(() -> professorService.addProfessor(principal, request))
+                .isInstanceOf(ApiException.class);
 
         verifyNoInteractions(auditWriter);
     }

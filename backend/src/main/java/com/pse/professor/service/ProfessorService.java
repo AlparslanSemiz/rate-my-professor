@@ -15,6 +15,7 @@ import com.pse.rating.model.Rating;
 import com.pse.rating.model.RatingCategory;
 import com.pse.rating.model.RatingTopic;
 import com.pse.user.model.Student;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,7 @@ import com.pse.professor.dto.response.ProfessorsResponse;
 import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
 import com.pse.security.AuthenticatedUser;
+import com.pse.shared.error.ApiException;
 
 @Service
 public class ProfessorService {
@@ -107,13 +109,12 @@ public class ProfessorService {
     public BasicResponse addProfessor(AuthenticatedUser principal, ProfessorAddRequest request) {
 
     if (getProfessorID(request.firstName(), request.lastName()) != null) {
-        return new BasicResponse(
+        throw new ApiException(
+                HttpStatus.CONFLICT,
                 "Professor already exists: "
                         + request.firstName()
                         + " "
-                        + request.lastName(),
-                false
-        );
+                        + request.lastName());
     }
 
     List<Lecture> lectures = new ArrayList<>();
@@ -123,10 +124,9 @@ public class ProfessorService {
                 Lecture lecture = lectureRepository.findById(lectureId).orElse(null);
 
                 if (lecture == null) {
-                    return new BasicResponse(
-                            "Couldn't find lecture with lectureID: " + lectureId,
-                            false
-                    );
+                    throw new ApiException(
+                            HttpStatus.NOT_FOUND,
+                            "Couldn't find lecture with lectureID: " + lectureId);
                 }
 
                 lectures.add(lecture);

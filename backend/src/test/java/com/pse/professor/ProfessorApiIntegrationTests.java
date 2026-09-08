@@ -474,7 +474,7 @@ class ProfessorApiIntegrationTests {
                                         }
                                         """)
                 )
-                .andExpect(status().isOk())
+                .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message")
                         .value(
@@ -509,7 +509,7 @@ class ProfessorApiIntegrationTests {
                                         }
                                         """.formatted(lectureId))
                 )
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message")
                         .value(

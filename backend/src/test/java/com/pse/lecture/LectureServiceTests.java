@@ -13,6 +13,7 @@ import com.pse.audit.service.AuditWriter;
 import com.pse.moderation.model.Admin;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.security.AuthenticatedUser;
+import com.pse.shared.error.ApiException;
 import com.pse.lecture.service.LectureService;
 import com.pse.professor.model.Professor;
 import com.pse.shared.enums.SemesterSeason;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import java.util.LinkedHashSet;
 import java.util.Optional;
@@ -31,6 +33,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.ArgumentMatchers.any;
@@ -164,12 +167,11 @@ class LectureServiceTests {
         when(request.name()).thenReturn("Lineare Algebra 1");
         when(lectureRepository.findByName("Lineare Algebra 1")).thenReturn(Optional.of(mock(Lecture.class)));
 
-        BasicResponse response = lectureService.addLecture(principalFor(student), request);
-
-
-        assertThat(response.success()).isFalse();
-
-        assertThat(response.message()).isEqualTo("Lecture already exists: Lineare Algebra 1");
+        assertThatThrownBy(() -> lectureService.addLecture(principalFor(student), request))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Lecture already exists: Lineare Algebra 1")
+                .extracting(e -> ((ApiException) e).getStatus())
+                .isEqualTo(HttpStatus.CONFLICT);
 
         verify(lectureRepository).findByName("Lineare Algebra 1");
         verify(lectureRepository, never()).save(any());
@@ -194,11 +196,11 @@ class LectureServiceTests {
 
         when(professorRepository.findById(professorId)).thenReturn(Optional.empty());
 
-        BasicResponse response = lectureService.addLecture(principalFor(student), request);
-
-        assertThat(response.success()).isFalse();
-
-        assertThat(response.message()).isEqualTo("Professor not found: " + professorId);
+        assertThatThrownBy(() -> lectureService.addLecture(principalFor(student), request))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Professor not found: " + professorId)
+                .extracting(e -> ((ApiException) e).getStatus())
+                .isEqualTo(HttpStatus.NOT_FOUND);
 
         verify(professorRepository).findById(professorId);
 
@@ -370,7 +372,8 @@ class LectureServiceTests {
         when(lectureRepository.findByName("Lineare Algebra 1"))
                 .thenReturn(Optional.of(mock(Lecture.class)));
 
-        assertThat(lectureService.addLecture(principalFor(student), request).success()).isFalse();
+        assertThatThrownBy(() -> lectureService.addLecture(principalFor(student), request))
+                .isInstanceOf(ApiException.class);
 
         verifyNoInteractions(auditWriter);
     }
