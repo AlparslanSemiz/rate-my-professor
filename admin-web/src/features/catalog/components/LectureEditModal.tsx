@@ -19,11 +19,13 @@ import {
   SEMESTER_SEASONS,
   isLectureType,
   isSemesterSeason,
-  type LectureType,
-  type SemesterSeason,
 } from '../../../domain/catalog'
-import { sameIdSet } from '../../../utils/collection'
 import { enumLabel } from '../../../utils/enumLabel'
+import {
+  buildLectureUpdate,
+  canSaveLectureEdit,
+  createLectureEditDraft,
+} from '../catalogEditModel'
 import { professorName } from '../catalogModel'
 import { useCatalogEditSubmit } from '../hooks/useCatalogEditSubmit'
 import InactiveVisibilityNotice from './InactiveVisibilityNotice'
@@ -79,32 +81,9 @@ interface LectureEditFormProps {
 }
 
 function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEditFormProps) {
-  const [name, setName] = useState(lecture.name)
-  const [code, setCode] = useState(lecture.code)
-  const [year, setYear] = useState(lecture.semesterYear)
-  const [season, setSeason] = useState<SemesterSeason>(lecture.semesterSeason)
-  const [active, setActive] = useState(lecture.active)
-  const [lectureType, setLectureType] = useState<LectureType>(lecture.lectureType)
-  const [professorIds, setProfessorIds] = useState<string[]>(
-    lecture.professors.map((professor) => professor.id),
-  )
-
-  const trimmedName = name.trim()
-  const trimmedCode = code.trim()
-
-  const update: LectureUpdate = {}
-  if (trimmedName !== lecture.name) update.name = trimmedName
-  if (trimmedCode !== lecture.code) update.code = trimmedCode
-  if (year !== lecture.semesterYear) update.semesterYear = year
-  if (season !== lecture.semesterSeason) update.semesterSeason = season
-  if (active !== lecture.active) update.active = active
-  if (lectureType !== lecture.lectureType) update.lectureType = lectureType
-  if (!sameIdSet(professorIds, lecture.professors.map((professor) => professor.id))) {
-    update.professorIds = professorIds
-  }
-
-  const canSave =
-    trimmedName.length > 0 && trimmedCode.length > 0 && year > 0 && Object.keys(update).length > 0
+  const [draft, setDraft] = useState(() => createLectureEditDraft(lecture))
+  const update = buildLectureUpdate(lecture, draft)
+  const canSave = canSaveLectureEdit(lecture, draft)
 
   const { saving, error, handleSubmit } = useCatalogEditSubmit({
     id: lecture.id,
@@ -120,21 +99,32 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
       <Stack gap={14}>
         <TextInput
           label="Name"
-          value={name}
-          onChange={(event) => setName(event.currentTarget.value)}
+          value={draft.name}
+          onChange={(event) => {
+            const name = event.currentTarget.value
+            setDraft((current) => ({ ...current, name }))
+          }}
           styles={darkInputStyles}
         />
         <TextInput
           label="Code"
-          value={code}
-          onChange={(event) => setCode(event.currentTarget.value)}
+          value={draft.code}
+          onChange={(event) => {
+            const code = event.currentTarget.value
+            setDraft((current) => ({ ...current, code }))
+          }}
           styles={darkInputStyles}
         />
         <Group grow align="flex-start">
           <NumberInput
             label="Semester year"
-            value={year}
-            onChange={(value) => setYear(typeof value === 'number' ? value : 0)}
+            value={draft.semesterYear}
+            onChange={(value) =>
+              setDraft((current) => ({
+                ...current,
+                semesterYear: typeof value === 'number' ? value : 0,
+              }))
+            }
             min={1900}
             max={2999}
             clampBehavior="strict"
@@ -144,9 +134,11 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
           <Select
             label="Semester season"
             data={seasonOptions}
-            value={season}
+            value={draft.semesterSeason}
             onChange={(value) => {
-              if (isSemesterSeason(value)) setSeason(value)
+              if (isSemesterSeason(value)) {
+                setDraft((current) => ({ ...current, semesterSeason: value }))
+              }
             }}
             clearable={false}
             styles={darkInputStyles}
@@ -159,8 +151,8 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
             value: professor.id,
             label: professorName(professor),
           }))}
-          value={professorIds}
-          onChange={setProfessorIds}
+          value={draft.professorIds}
+          onChange={(professorIds) => setDraft((current) => ({ ...current, professorIds }))}
           searchable
           clearable
           styles={darkInputStyles}
@@ -169,20 +161,25 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
           label="Lecture type"
           description="Decides which categories future ratings can score. Ratings already submitted keep the categories they were given."
           data={lectureTypeOptions}
-          value={lectureType}
+          value={draft.lectureType}
           onChange={(value) => {
-            if (isLectureType(value)) setLectureType(value)
+            if (isLectureType(value)) {
+              setDraft((current) => ({ ...current, lectureType: value }))
+            }
           }}
           clearable={false}
           styles={darkInputStyles}
         />
         <Switch
           label="Active"
-          checked={active}
-          onChange={(event) => setActive(event.currentTarget.checked)}
+          checked={draft.active}
+          onChange={(event) => {
+            const active = event.currentTarget.checked
+            setDraft((current) => ({ ...current, active }))
+          }}
           color="green"
         />
-        {!active && <InactiveVisibilityNotice noun="lecture" />}
+        {!draft.active && <InactiveVisibilityNotice noun="lecture" />}
         <ErrorAlert message={error} mb={0} />
         <Group justify="flex-end" gap={10}>
           <Button variant="subtle" color="gray" onClick={onClose} disabled={saving}>

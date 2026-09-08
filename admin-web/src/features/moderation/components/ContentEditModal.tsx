@@ -4,24 +4,20 @@ import type { ContentUpdate } from '../../../api/CommentsService'
 import ErrorAlert from '../../../components/ErrorAlert'
 import { darkInputStyles } from '../../../constants/inputStyles'
 import { darkModalStyles } from '../../../constants/modalStyles'
-import {
-  EDITABLE_CONTENT_STATUSES,
-  isEditableContentStatus,
-  type EditableContentStatus,
-} from '../../../domain/moderation'
+import { EDITABLE_CONTENT_STATUSES, isEditableContentStatus } from '../../../domain/moderation'
 import { enumLabel } from '../../../utils/enumLabel'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
-import type { ModeratedItem } from '../moderationModel'
+import {
+  buildContentUpdate,
+  canSaveContentEdit,
+  createContentEditDraft,
+  type ModeratedItem,
+} from '../moderationModel'
 
 const statusOptions = EDITABLE_CONTENT_STATUSES.map((status) => ({
   value: status,
   label: enumLabel(status),
 }))
-
-/** A `DELETED` item cannot be put back to a visibility, so editing starts from `HIDDEN`. */
-function toEditableStatus(item: ModeratedItem): EditableContentStatus {
-  return item.status === 'VISIBLE' ? 'VISIBLE' : 'HIDDEN'
-}
 
 interface ContentEditModalProps {
   item: ModeratedItem | null
@@ -57,23 +53,15 @@ interface ContentEditFormProps {
  * changed are sent — the backend rejects an empty body and treats an unchanged one as a no-op.
  */
 function ContentEditForm({ item, onClose, onSubmit }: ContentEditFormProps) {
-  const [content, setContent] = useState(item.content)
-  const [status, setStatus] = useState<EditableContentStatus>(toEditableStatus(item))
+  const [draft, setDraft] = useState(() => createContentEditDraft(item))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-
-  const trimmedContent = content.trim()
-  const contentChanged = trimmedContent !== item.content
-  const statusChanged = status !== toEditableStatus(item)
-  const canSave = trimmedContent.length > 0 && (contentChanged || statusChanged)
+  const update = buildContentUpdate(item, draft)
+  const canSave = canSaveContentEdit(item, draft)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!canSave) return
-
-    const update: ContentUpdate = {}
-    if (contentChanged) update.content = trimmedContent
-    if (statusChanged) update.status = status
 
     setSaving(true)
     setError('')
@@ -95,8 +83,11 @@ function ContentEditForm({ item, onClose, onSubmit }: ContentEditFormProps) {
         </Text>
         <Textarea
           label="Text"
-          value={content}
-          onChange={(event) => setContent(event.currentTarget.value)}
+          value={draft.content}
+          onChange={(event) => {
+            const content = event.currentTarget.value
+            setDraft((current) => ({ ...current, content }))
+          }}
           minRows={5}
           styles={darkInputStyles}
         />
@@ -104,9 +95,11 @@ function ContentEditForm({ item, onClose, onSubmit }: ContentEditFormProps) {
           label="Visibility"
           description="Hidden content is filtered out of the student app but kept in the database."
           data={statusOptions}
-          value={status}
+          value={draft.status}
           onChange={(value) => {
-            if (isEditableContentStatus(value)) setStatus(value)
+            if (isEditableContentStatus(value)) {
+              setDraft((current) => ({ ...current, status: value }))
+            }
           }}
           clearable={false}
           styles={darkInputStyles}

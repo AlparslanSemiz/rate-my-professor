@@ -19,7 +19,7 @@ describe('Help page', () => {
 
     expect(screen.getByRole('button', { name: 'Users' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Comments' })).toBeInTheDocument()
-    expect(screen.getByText(/Access blocked by moderation/)).not.toBeVisible()
+    expect(screen.queryByText(/Access blocked by moderation/)).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Users' }))
 

@@ -4,9 +4,13 @@ import type { ManagedComment, ReportedComment } from '../../api/CommentsService'
 import type { UserReference } from '../../domain/user'
 import {
   attachReplies,
+  buildContentUpdate,
+  canSaveContentEdit,
+  createContentEditDraft,
   findContent,
   matchesReportFilters,
   narrowContent,
+  toEditableStatus,
   toAnswerReport,
   toCommentReport,
 } from './moderationModel'
@@ -136,5 +140,37 @@ describe('moderation model', () => {
     })
     expect(matchesReportFilters(toCommentReport(commentReport), 'OPEN', 'INSULT')).toBe(true)
     expect(matchesReportFilters(toCommentReport(commentReport), 'REVIEWED', 'INSULT')).toBe(false)
+  })
+
+  it('builds a content edit update from only changed fields', () => {
+    const item = attachReplies([comment], [answer])[0]
+
+    expect(
+      buildContentUpdate(item, {
+        ...createContentEditDraft(item),
+        content: '  Updated comment  ',
+      }),
+    ).toEqual({ content: 'Updated comment' })
+  })
+
+  it('starts deleted content edits from hidden visibility', () => {
+    const deleted = { ...attachReplies([comment], [answer])[0], status: 'DELETED' as const }
+
+    expect(toEditableStatus(deleted)).toBe('HIDDEN')
+    expect(
+      buildContentUpdate(deleted, { ...createContentEditDraft(deleted), status: 'VISIBLE' }),
+    ).toEqual({ status: 'VISIBLE' })
+  })
+
+  it('requires non-empty changed content before saving an edit', () => {
+    const item = attachReplies([comment], [answer])[0]
+
+    expect(canSaveContentEdit(item, createContentEditDraft(item))).toBe(false)
+    expect(canSaveContentEdit(item, { ...createContentEditDraft(item), content: '   ' })).toBe(
+      false,
+    )
+    expect(canSaveContentEdit(item, { ...createContentEditDraft(item), status: 'HIDDEN' })).toBe(
+      true,
+    )
   })
 })

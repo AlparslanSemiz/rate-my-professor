@@ -4,7 +4,11 @@ import type { Lecture, Professor, ProfessorUpdate } from '../../../api/CatalogSe
 import ErrorAlert from '../../../components/ErrorAlert'
 import { darkInputStyles } from '../../../constants/inputStyles'
 import { darkModalStyles } from '../../../constants/modalStyles'
-import { sameIdSet } from '../../../utils/collection'
+import {
+  buildProfessorUpdate,
+  canSaveProfessorEdit,
+  createProfessorEditDraft,
+} from '../catalogEditModel'
 import { lectureLabel } from '../catalogModel'
 import { useCatalogEditSubmit } from '../hooks/useCatalogEditSubmit'
 import InactiveVisibilityNotice from './InactiveVisibilityNotice'
@@ -65,22 +69,9 @@ function ProfessorEditForm({
   onClose,
   onSubmit,
 }: ProfessorEditFormProps) {
-  const [firstName, setFirstName] = useState(professor.firstName)
-  const [lastName, setLastName] = useState(professor.lastName)
-  const [active, setActive] = useState(professor.active)
-  const [lectureIds, setLectureIds] = useState<string[]>(assignedLectureIds)
-
-  const trimmedFirstName = firstName.trim()
-  const trimmedLastName = lastName.trim()
-
-  const update: ProfessorUpdate = {}
-  if (trimmedFirstName !== professor.firstName) update.firstName = trimmedFirstName
-  if (trimmedLastName !== professor.lastName) update.lastName = trimmedLastName
-  if (active !== professor.active) update.active = active
-  if (!sameIdSet(lectureIds, assignedLectureIds)) update.lectureIds = lectureIds
-
-  const canSave =
-    trimmedFirstName.length > 0 && trimmedLastName.length > 0 && Object.keys(update).length > 0
+  const [draft, setDraft] = useState(() => createProfessorEditDraft(professor, assignedLectureIds))
+  const update = buildProfessorUpdate(professor, assignedLectureIds, draft)
+  const canSave = canSaveProfessorEdit(professor, assignedLectureIds, draft)
 
   const { saving, error, handleSubmit } = useCatalogEditSubmit({
     id: professor.id,
@@ -97,14 +88,20 @@ function ProfessorEditForm({
         <Group grow align="flex-start">
           <TextInput
             label="First name"
-            value={firstName}
-            onChange={(event) => setFirstName(event.currentTarget.value)}
+            value={draft.firstName}
+            onChange={(event) => {
+              const firstName = event.currentTarget.value
+              setDraft((current) => ({ ...current, firstName }))
+            }}
             styles={darkInputStyles}
           />
           <TextInput
             label="Last name"
-            value={lastName}
-            onChange={(event) => setLastName(event.currentTarget.value)}
+            value={draft.lastName}
+            onChange={(event) => {
+              const lastName = event.currentTarget.value
+              setDraft((current) => ({ ...current, lastName }))
+            }}
             styles={darkInputStyles}
           />
         </Group>
@@ -115,19 +112,22 @@ function ProfessorEditForm({
             value: lecture.id,
             label: lectureLabel(lecture),
           }))}
-          value={lectureIds}
-          onChange={setLectureIds}
+          value={draft.lectureIds}
+          onChange={(lectureIds) => setDraft((current) => ({ ...current, lectureIds }))}
           searchable
           clearable
           styles={darkInputStyles}
         />
         <Switch
           label="Active"
-          checked={active}
-          onChange={(event) => setActive(event.currentTarget.checked)}
+          checked={draft.active}
+          onChange={(event) => {
+            const active = event.currentTarget.checked
+            setDraft((current) => ({ ...current, active }))
+          }}
           color="green"
         />
-        {!active && <InactiveVisibilityNotice noun="professor" />}
+        {!draft.active && <InactiveVisibilityNotice noun="professor" />}
         <ErrorAlert message={error} mb={0} />
         <Group justify="flex-end" gap={10}>
           <Button variant="subtle" color="gray" onClick={onClose} disabled={saving}>

@@ -24,6 +24,13 @@ export {
   type ModeratedItem,
 } from './model/content'
 export {
+  buildContentUpdate,
+  canSaveContentEdit,
+  createContentEditDraft,
+  toEditableStatus,
+  type ContentEditDraft,
+} from './model/contentEdit'
+export {
   matchesReportFilters,
   matchesReportQuery,
   toAnswerReport,
