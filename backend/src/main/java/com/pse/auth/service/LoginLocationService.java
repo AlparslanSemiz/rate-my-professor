@@ -13,8 +13,8 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-import com.pse.shared.enums.IpInfoResponse;
-import com.pse.shared.enums.LoginLocation;
+import com.pse.auth.location.IpInfoResponse;
+import com.pse.auth.location.LoginLocation;
 import org.springframework.web.util.HtmlUtils;
 
 

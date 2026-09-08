@@ -1,6 +1,6 @@
 package com.pse.rating;
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.rating.controller.RatingController;
 import com.pse.rating.dto.request.RatingRequest;
 import com.pse.rating.dto.response.RatingCategoriesResponse;

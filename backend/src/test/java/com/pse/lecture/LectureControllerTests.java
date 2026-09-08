@@ -1,6 +1,6 @@
 package com.pse.lecture;
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.lecture.controller.LectureController;
 import com.pse.lecture.dto.request.AddLectureRequest;
 import com.pse.lecture.dto.response.LectureDetailResponse;

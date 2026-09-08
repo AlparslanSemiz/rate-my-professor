@@ -3,7 +3,7 @@ package com.pse.moderation.service;
 import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.moderation.dto.request.LectureUpdateRequest;

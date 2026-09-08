@@ -1,4 +1,4 @@
-package com.pse.auth.dto.response;
+package com.pse.user.dto;
 
 import java.util.List;
 

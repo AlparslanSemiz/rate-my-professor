@@ -1,4 +1,4 @@
-package com.pse.shared.enums;
+package com.pse.auth.location;
 
 
 

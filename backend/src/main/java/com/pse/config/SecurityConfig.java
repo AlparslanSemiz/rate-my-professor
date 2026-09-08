@@ -1,7 +1,7 @@
 package com.pse.config;
 
 import tools.jackson.databind.ObjectMapper;
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.security.AccessRefusalAuditor;
 import com.pse.security.BearerTokenAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;

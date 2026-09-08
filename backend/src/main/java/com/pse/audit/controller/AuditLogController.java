@@ -5,7 +5,7 @@ import com.pse.audit.dto.AuditMetaResponse;
 import com.pse.audit.model.AuditActionScope;
 import com.pse.audit.revert.AuditRevertService;
 import com.pse.audit.service.AuditLogService;
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.security.AuthenticatedUser;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;

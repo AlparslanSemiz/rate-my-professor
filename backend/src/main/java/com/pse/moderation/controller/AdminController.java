@@ -1,7 +1,7 @@
 package com.pse.moderation.controller;
 
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.moderation.service.AdminService;
 
 import org.springframework.beans.factory.annotation.Autowired;

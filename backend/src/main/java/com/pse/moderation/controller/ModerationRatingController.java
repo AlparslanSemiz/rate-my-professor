@@ -1,6 +1,6 @@
 package com.pse.moderation.controller;
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.moderation.dto.response.ManagedRatingsResponse;
 import com.pse.moderation.service.ModerationContentService;
 import com.pse.security.AuthenticatedUser;

@@ -1,4 +1,4 @@
-package com.pse.auth.dto.response;
+package com.pse.shared.dto;
 
 public record BasicResponse(
         String message,

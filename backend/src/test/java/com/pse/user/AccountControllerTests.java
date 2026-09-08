@@ -1,7 +1,7 @@
 package com.pse.user;
 
-import com.pse.auth.dto.response.BasicResponse;
-import com.pse.auth.dto.response.UserRatingResponse;
+import com.pse.shared.dto.BasicResponse;
+import com.pse.user.dto.UserRatingResponse;
 import com.pse.security.AuthenticatedUser;
 import com.pse.user.controller.AccountController;
 import com.pse.user.dto.StudentProfileResponse;

@@ -1,6 +1,6 @@
 package com.pse.professor;
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.security.AuthenticatedUser;
 import com.pse.professor.controller.ProfessorController;
 import com.pse.professor.dto.request.ProfessorAddRequest;

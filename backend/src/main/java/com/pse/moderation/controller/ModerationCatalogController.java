@@ -1,6 +1,6 @@
 package com.pse.moderation.controller;
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.lecture.dto.request.AddLectureRequest;
 import com.pse.lecture.dto.response.LecturesResponse;
 import com.pse.lecture.service.LectureService;

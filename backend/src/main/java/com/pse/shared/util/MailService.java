@@ -18,7 +18,7 @@ import org.springframework.web.util.HtmlUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 
-import com.pse.shared.enums.LoginLocation;
+import com.pse.auth.location.LoginLocation;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;

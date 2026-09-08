@@ -4,7 +4,7 @@ import com.pse.auth.controller.AuthController;
 import com.pse.auth.dto.request.LoginRequest;
 import com.pse.auth.dto.request.OTPRequest;
 import com.pse.auth.dto.request.ValidateCredentialsRequest;
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.auth.dto.response.LoginResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.security.AuthenticatedUser;

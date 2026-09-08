@@ -340,7 +340,7 @@
 									adding: it is a decision already written down, restated as
 									dozens of findings that would bury the real ones.
 								-->
-								<param>com.pse.auth.service.MailService</param>
+								<param>com.pse.shared.util.MailService</param>
 								<param>com.pse.auth.service.MailTemplateService</param>
 							</excludedClasses>
 							<outputFormats>

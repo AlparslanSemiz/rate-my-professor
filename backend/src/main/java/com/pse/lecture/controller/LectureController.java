@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.lecture.dto.request.AddLectureRequest;
 import com.pse.lecture.dto.response.LectureDetailResponse;
 import com.pse.lecture.dto.response.LecturesResponse;

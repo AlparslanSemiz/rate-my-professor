@@ -1,6 +1,6 @@
 package com.pse.professor.service;
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.professor.dto.request.ProfessorAddRequest;

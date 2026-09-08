@@ -19,9 +19,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pse.auth.dto.response.BasicResponse;
-import com.pse.auth.dto.response.UserRatingDto;
-import com.pse.auth.dto.response.UserRatingResponse;
+import com.pse.shared.dto.BasicResponse;
+import com.pse.user.dto.UserRatingDto;
+import com.pse.user.dto.UserRatingResponse;
 import com.pse.rating.model.Rating;
 import com.pse.shared.enums.UserStatus;
 import com.pse.shared.error.ApiException;

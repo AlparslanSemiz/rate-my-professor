@@ -5,7 +5,7 @@ import com.pse.audit.model.AuditLog;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.repository.AuditLogRepository;
 import com.pse.audit.service.AuditRevertContext;
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.error.ApiException;
 import org.springframework.beans.factory.annotation.Value;

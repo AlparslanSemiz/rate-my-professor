@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pse.auth.dto.response.BasicResponse;
-import com.pse.auth.dto.response.UserRatingResponse;
+import com.pse.shared.dto.BasicResponse;
+import com.pse.user.dto.UserRatingResponse;
 import com.pse.user.dto.StudentProfileResponse;
 
 

@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.service.LectureService;

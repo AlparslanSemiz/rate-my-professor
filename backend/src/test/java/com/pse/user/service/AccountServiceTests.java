@@ -1,7 +1,7 @@
 package com.pse.user.service;
 
-import com.pse.auth.dto.response.BasicResponse;
-import com.pse.auth.dto.response.UserRatingResponse;
+import com.pse.shared.dto.BasicResponse;
+import com.pse.user.dto.UserRatingResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.user.dto.StudentProfileResponse;
 import com.pse.shared.error.ApiException;

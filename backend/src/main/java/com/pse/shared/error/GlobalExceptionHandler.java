@@ -1,6 +1,6 @@
 package com.pse.shared.error;
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.auth.exception.InvalidAuthTokenException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;

@@ -1,6 +1,6 @@
 package com.pse.moderation.controller;
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.moderation.dto.request.ContentUpdateRequest;
 import com.pse.moderation.dto.request.UpdateStatusRequest;
 import com.pse.moderation.dto.response.ManagedCommentsResponse;

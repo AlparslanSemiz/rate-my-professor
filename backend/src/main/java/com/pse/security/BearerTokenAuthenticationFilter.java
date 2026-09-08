@@ -1,7 +1,7 @@
 package com.pse.security;
 
 import tools.jackson.databind.ObjectMapper;
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

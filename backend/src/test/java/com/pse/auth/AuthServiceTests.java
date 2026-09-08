@@ -7,7 +7,7 @@ import com.pse.auth.dto.request.LoginRequest;
 import com.pse.auth.dto.request.OTPRequest;
 import com.pse.auth.dto.request.ValidateCredentialsRequest;
 import com.pse.auth.dto.response.AuthMeResponse;
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.auth.dto.response.LoginResponse;
 import com.pse.auth.exception.InvalidAuthTokenException;
 import com.pse.auth.model.SessionType;

@@ -1,6 +1,6 @@
 package com.pse.health;
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.shared.error.ApiException;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.FlywayException;

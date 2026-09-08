@@ -1,6 +1,6 @@
 package com.pse.social.controller;
 
-import com.pse.auth.dto.response.BasicResponse;
+import com.pse.shared.dto.BasicResponse;
 import com.pse.security.AuthenticatedUser;
 import com.pse.social.dto.request.AnswerReportRequest;
 import com.pse.social.dto.request.AnswerSubmitRequest;
