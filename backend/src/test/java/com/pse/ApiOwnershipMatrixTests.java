@@ -2,6 +2,7 @@ package com.pse;
 
 import com.jayway.jsonpath.JsonPath;
 import com.pse.audit.repository.AuditLogRepository;
+import com.pse.support.MappedRoutes;
 import com.pse.auth.repository.AuthRateLimitBucketRepository;
 import com.pse.auth.repository.OneTimePasswordRepository;
 import com.pse.auth.repository.TokenRepository;
@@ -482,11 +483,14 @@ class ApiOwnershipMatrixTests {
      */
     @Test
     void noAppTierHandlerTakesACallerIdentityFromTheRequest() {
-        List<String> offenders = new ArrayList<>();
+        // A set, because a handler mapped at several patterns reaches this loop once each and
+        // repeating its name would not make the failure clearer.
+        Set<String> offenders = new TreeSet<>();
 
-        handlerMapping.getHandlerMethods().forEach((info, handler) -> {
+        for (MappedRoutes.Route route : MappedRoutes.application(handlerMapping)) {
+            HandlerMethod handler = route.handler();
             if (!isAppTier(handler)) {
-                return;
+                continue;
             }
             for (Parameter parameter : handler.getMethod().getParameters()) {
                 if (parameter.isAnnotationPresent(PathVariable.class)
@@ -506,7 +510,7 @@ class ApiOwnershipMatrixTests {
                     }
                 }
             }
-        });
+        }
 
         assertTrue(offenders.isEmpty(),
                 "these app-tier handlers let the caller name a user instead of taking it from the "
@@ -531,19 +535,13 @@ class ApiOwnershipMatrixTests {
     private Set<String> idTakingRoutes() {
         Set<String> routes = new TreeSet<>();
 
-        handlerMapping.getHandlerMethods().forEach((info, handler) -> {
-            if (!handler.getBeanType().getPackageName().startsWith("com.pse")) {
-                return;
+        for (MappedRoutes.Route route : MappedRoutes.application(handlerMapping)) {
+            // A mapping declaring no verb has no single verb to name here, and none of the
+            // id-taking routes is written that way.
+            if (route.verb() != null && route.hasPathVariable()) {
+                routes.add(route.verbAndPattern());
             }
-            for (String pattern : info.getPatternValues()) {
-                if (!pattern.contains("{")) {
-                    continue;
-                }
-                for (var method : info.getMethodsCondition().getMethods()) {
-                    routes.add(method.name() + " " + pattern);
-                }
-            }
-        });
+        }
 
         return routes;
     }

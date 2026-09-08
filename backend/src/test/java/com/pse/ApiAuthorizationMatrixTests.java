@@ -2,6 +2,7 @@ package com.pse;
 
 import com.jayway.jsonpath.JsonPath;
 import com.pse.audit.repository.AuditLogRepository;
+import com.pse.support.MappedRoutes;
 import com.pse.auth.repository.AuthRateLimitBucketRepository;
 import com.pse.auth.repository.OneTimePasswordRepository;
 import com.pse.auth.repository.TokenRepository;
@@ -330,21 +331,19 @@ class ApiAuthorizationMatrixTests {
     void noHandlerReliesOnInertMethodLevelSecurityAnnotations() {
         List<Class<? extends Annotation>> annotations =
                 List.of(PreAuthorize.class, PostAuthorize.class, Secured.class);
-        List<String> offenders = new ArrayList<>();
+        // A set, because one handler method reaches this loop once per pattern and verb it is
+        // mapped at, and naming it four times would not make the failure any clearer.
+        Set<String> offenders = new TreeSet<>();
 
-        handlerMapping.getHandlerMethods().forEach((info, handler) -> {
-            if (!handler.getBeanType().getPackageName().startsWith("com.pse")) {
-                return;
-            }
+        for (MappedRoutes.Route route : MappedRoutes.application(handlerMapping)) {
+            HandlerMethod handler = route.handler();
             for (Class<? extends Annotation> annotation : annotations) {
                 if (handler.getMethod().isAnnotationPresent(annotation)
                         || handler.getBeanType().isAnnotationPresent(annotation)) {
-                    offenders.add(handler.getBeanType().getSimpleName() + "."
-                            + handler.getMethod().getName() + " carries @"
-                            + annotation.getSimpleName());
+                    offenders.add(route.describe() + " carries @" + annotation.getSimpleName());
                 }
             }
-        });
+        }
 
         assertTrue(offenders.isEmpty(),
                 "method security is not enabled, so these annotations do nothing. Move the rule "
@@ -366,23 +365,15 @@ class ApiAuthorizationMatrixTests {
     private Set<String> routesFrom(java.util.function.Predicate<HandlerMethod> include) {
         Set<String> routes = new TreeSet<>();
 
-        handlerMapping.getHandlerMethods().forEach((info, handler) -> {
-            if (!include.test(handler)) {
-                return;
+        for (MappedRoutes.Route route : MappedRoutes.of(handlerMapping)) {
+            if (!include.test(route.handler())) {
+                continue;
             }
-            for (String pattern : info.getPatternValues()) {
-                var methods = info.getMethodsCondition().getMethods();
-                if (methods.isEmpty()) {
-                    // A mapping that names no verb answers all of them. Probing GET is
-                    // enough to decide whether it is anonymous.
-                    routes.add("GET " + pattern);
-                    continue;
-                }
-                for (var method : methods) {
-                    routes.add(method.name() + " " + pattern);
-                }
-            }
-        });
+            // A mapping that names no verb answers all of them, and MappedRoutes reports that
+            // as a null verb rather than choosing. Probing GET is enough to decide whether it
+            // is anonymous, which is all this sweep asks.
+            routes.add(route.verb() == null ? "GET " + route.pattern() : route.verbAndPattern());
+        }
 
         return routes;
     }

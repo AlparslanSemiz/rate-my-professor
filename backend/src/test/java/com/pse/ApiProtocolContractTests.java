@@ -2,6 +2,7 @@ package com.pse;
 
 import com.jayway.jsonpath.JsonPath;
 import com.pse.audit.repository.AuditLogRepository;
+import com.pse.support.MappedRoutes;
 import com.pse.auth.repository.AuthRateLimitBucketRepository;
 import com.pse.auth.repository.OneTimePasswordRepository;
 import com.pse.auth.repository.TokenRepository;
@@ -393,17 +394,14 @@ class ApiProtocolContractTests {
     private Map<String, Set<String>> mappedVerbsByShape() {
         Map<String, Set<String>> verbs = new TreeMap<>();
 
-        handlerMapping.getHandlerMethods().forEach((info, handler) -> {
-            if (!isApplicationHandler(handler)) {
-                return;
+        for (MappedRoutes.Route route : MappedRoutes.application(handlerMapping)) {
+            // A mapping that declares no verb answers every one of them, so there is no
+            // wrong verb to refuse and nothing here to assert about it.
+            if (route.verb() == null) {
+                continue;
             }
-            for (String pattern : info.getPatternValues()) {
-                String shape = shapeOf(pattern);
-                for (var method : info.getMethodsCondition().getMethods()) {
-                    verbs.computeIfAbsent(shape, key -> new TreeSet<>()).add(method.name());
-                }
-            }
-        });
+            verbs.computeIfAbsent(route.shape(), key -> new TreeSet<>()).add(route.verb());
+        }
 
         return verbs;
     }
@@ -412,37 +410,23 @@ class ApiProtocolContractTests {
     private Map<String, String> bodyReadingRoutes() {
         Map<String, String> routes = new LinkedHashMap<>();
 
-        handlerMapping.getHandlerMethods().forEach((info, handler) -> {
-            if (!isApplicationHandler(handler)) {
-                return;
+        for (MappedRoutes.Route route : MappedRoutes.application(handlerMapping)) {
+            if (route.verb() == null || !readsBody(route.handler())) {
+                continue;
             }
-            boolean readsBody = false;
-            for (var parameter : handler.getMethodParameters()) {
-                if (parameter.hasParameterAnnotation(RequestBody.class)) {
-                    readsBody = true;
-                    break;
-                }
-            }
-            if (!readsBody) {
-                return;
-            }
-            for (String pattern : info.getPatternValues()) {
-                for (var method : info.getMethodsCondition().getMethods()) {
-                    routes.put(pattern, method.name());
-                }
-            }
-        });
+            routes.put(route.pattern(), route.verb());
+        }
 
         return routes;
     }
 
-    private boolean isApplicationHandler(HandlerMethod handler) {
-        return handler.getBeanType().getPackageName().startsWith("com.pse");
-    }
-
-    /** {@code /users/{id}/warnings/{warningId}} and its twin spelling collapse to one key. */
-    private String shapeOf(String pattern) {
-        return pattern.replaceAll("\\{[^}]+}", "{}");
+    private static boolean readsBody(HandlerMethod handler) {
+        for (var parameter : handler.getMethodParameters()) {
+            if (parameter.hasParameterAnnotation(RequestBody.class)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** A shape or pattern with every placeholder filled by an id that resolves to nothing. */
