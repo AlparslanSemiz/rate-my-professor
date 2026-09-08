@@ -55,6 +55,7 @@ import com.example.ratemyprofessor.logic.CommentHelper;
 import com.example.ratemyprofessor.logic.RatingColorCalculator;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -396,7 +397,28 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
     private void showRatings(List<TopicAverageResponse> ratings, List<TopicAverageResponse> userRatings) {
         RecyclerView recyclerView = binding.ratingView;
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        ratingAdapter = new RatingAdapter(ratings, userRatings);
+
+        if (ratings == null || userRatings == null) {
+            System.out.println(":(");
+            return;
+        }
+
+        // Sorting the categories alphabetically, so they always come out in the same order
+        ArrayList<TopicAverageResponse> ratingsSorted = new ArrayList<>(ratings);
+        ArrayList<TopicAverageResponse> userRatingsSorted = new ArrayList<>(userRatings);
+
+        ratingsSorted.sort(Comparator.comparing(
+                r -> r.category().getDisplayName(),
+                String.CASE_INSENSITIVE_ORDER
+        ));
+
+        userRatingsSorted.sort(Comparator.comparing(
+                r -> r.category().getDisplayName(),
+                String.CASE_INSENSITIVE_ORDER
+        ));
+
+
+        ratingAdapter = new RatingAdapter(ratingsSorted, userRatingsSorted);
         recyclerView.setAdapter(ratingAdapter);
 
         // Nothing was rated yet, so there is no average to show either. Without this the

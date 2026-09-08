@@ -13,6 +13,7 @@ import com.example.ratemyprofessor.ServerCommunication.Responses.TopicAverageRes
 import com.example.ratemyprofessor.databinding.ItemRatingBinding;
 import com.example.ratemyprofessor.logic.RatingColorCalculator;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -31,8 +32,8 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
      */
     private static final String RATING_FORMAT = "%.1f";
 
-    private List<TopicAverageResponse> ratings;
-    private List<TopicAverageResponse> userRatings;
+    private ArrayList<TopicAverageResponse> ratings;
+    private ArrayList<TopicAverageResponse> userRatings;
 
     /**
      * Used to keep track of changes the User made to his ratings, so they can be submitted later
@@ -42,20 +43,9 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
     /**
      * Constructor for the rating adapter. Removes "overall" rating from each list
      */
-    public RatingAdapter(List<TopicAverageResponse> ratings, List<TopicAverageResponse> userRatings) {
+    public RatingAdapter(ArrayList<TopicAverageResponse> ratings, ArrayList<TopicAverageResponse> userRatings) {
         this.ratings = ratings;
         this.userRatings = userRatings;
-        // Removes "overall" rating from each list
-//        for (TopicAverageResponse rating : ratings) {
-//            if (rating.category().equals(RatingCategory.OVERALL)) {
-//                this.ratings.remove(rating);
-//            }
-//        }
-//        for (TopicAverageResponse rating : userRatings) {
-//            if (rating.category().equals(RatingCategory.OVERALL)) {
-//                this.userRatings.remove(rating);
-//            }
-//        }
         changedRatings = new HashMap<>();
         if (userRatings != null) {
             for (TopicAverageResponse rating : this.userRatings) {
@@ -77,11 +67,6 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
         if (category != null) {
             changedRatings.put(category, rating);
         }
-    }
-
-    public void updateRatings(List<TopicAverageResponse> newRatings) {
-        this.ratings = newRatings;
-        notifyDataSetChanged();
     }
 
     @NonNull

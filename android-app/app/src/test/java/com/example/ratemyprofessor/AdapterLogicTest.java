@@ -65,7 +65,7 @@ public class AdapterLogicTest {
 
     @Test
     public void ratingAdapterReturnsCorrectItemCount() {
-        List<TopicAverageResponse> list = new ArrayList<>();
+        ArrayList<TopicAverageResponse> list = new ArrayList<>();
         RatingAdapter adapter = new RatingAdapter(list, null);
         assertEquals(0, adapter.getItemCount());
 
