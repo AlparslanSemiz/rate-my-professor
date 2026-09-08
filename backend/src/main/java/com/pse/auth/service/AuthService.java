@@ -23,7 +23,7 @@ import com.pse.security.TokenAuthenticationService;
 import com.pse.shared.enums.UserRole;
 import com.pse.shared.enums.UserStatus;
 import com.pse.shared.error.ApiException;
-import com.pse.shared.util.HashGenerator;
+import com.pse.security.TokenHasher;
 import com.pse.shared.util.NameGenerator;
 import com.pse.shared.util.UtcDates;
 import com.pse.user.model.Student;
@@ -199,7 +199,7 @@ public class AuthService {
         Token token = new Token();
         token.setEmail(email);
         token.setStudent(student);
-        token.setHash(HashGenerator.hashToken(rawToken));
+        token.setHash(TokenHasher.hash(rawToken));
         token.setSessionType(sessionType);
         token.setExpiresAt(LocalDateTime.now(clock).plus(
                 api == LoginApi.ADMIN ? lifetimes.adminSessionTtl() : lifetimes.appSessionTtl()

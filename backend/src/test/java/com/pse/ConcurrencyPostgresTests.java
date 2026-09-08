@@ -16,7 +16,7 @@ import com.pse.shared.enums.ContentStatus;
 import com.pse.shared.enums.SemesterSeason;
 import com.pse.shared.enums.UserStatus;
 import com.pse.shared.enums.VoteType;
-import com.pse.shared.util.HashGenerator;
+import com.pse.security.TokenHasher;
 import com.pse.social.dto.request.VoteCommentRequest;
 import com.pse.social.model.Comment;
 import com.pse.social.repository.CommentRepository;
@@ -334,7 +334,7 @@ class ConcurrencyPostgresTests {
         Token token = new Token();
         token.setEmail(email);
         token.setStudent(student);
-        token.setHash(HashGenerator.hashToken(UUID.randomUUID().toString()));
+        token.setHash(TokenHasher.hash(UUID.randomUUID().toString()));
         token.setExpiresAt(LocalDateTime.now().plusHours(12));
         tokenRepository.saveAndFlush(token);
 

@@ -13,11 +13,18 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import com.pse.auth.location.Coordinates;
 import com.pse.auth.location.IpInfoResponse;
 import com.pse.auth.location.LoginLocation;
-import com.pse.shared.util.Html;
 
 
+/**
+ * Resolves the approximate place a login came from, by asking IPinfo about the address.
+ *
+ * <p>It used to render the HTML map for the login mail as well. That half is
+ * {@code LoginMapFragment} now: looking up where an address is and drawing a picture of it
+ * are different jobs, and the second one was the only reason the mail code reached in here.
+ */
 @Service
 public class LoginLocationService {
 
@@ -25,16 +32,13 @@ public class LoginLocationService {
 
     private final RestClient ipInfoClient;
     private final String ipInfoToken;
-    private final String geoapifyApiKey;
 
     public LoginLocationService(
             RestClient ipInfoRestClient,
-            @Value("${ipinfo.token:}") String ipInfoToken,
-            @Value("${geoapify.api.key:}") String geoapifyApiKey
+            @Value("${ipinfo.token:}") String ipInfoToken
     ) {
         this.ipInfoClient = ipInfoRestClient;
         this.ipInfoToken = ipInfoToken;
-        this.geoapifyApiKey = geoapifyApiKey;
     }
 
     /**
@@ -117,60 +121,6 @@ public class LoginLocationService {
     }
 
     /**
-     * Creates HTML containing either a static map or a Maps button.
-     */
-    public String createStaticMap(String mapsUrl, String coordinates) {
-
-
-        String imageUrl = createStaticMapUrl(coordinates);
-
-        if (imageUrl == null) {
-            return createMapsButton(mapsUrl);
-        }
-
-        String safeMapsUrl = Html.escape(mapsUrl, "");
-        String safeImageUrl = Html.escape(imageUrl, "");
-
-        return """
-                <div style="
-                    margin-top: 15px;
-                    margin-bottom: 15px;
-                    text-align: center;
-                ">
-                    <a
-                        href="%s"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        <img
-                            src="%s"
-                            alt="Approximate login location"
-                            width="520"
-                            style="
-                                width: 100%%;
-                                max-width: 520px;
-                                border-radius: 8px;
-                                border: 1px solid #dddddd;
-                                display: block;
-                            "
-                        >
-                    </a>
-
-                    <p style="
-                        margin-top: 6px;
-                        font-size: 11px;
-                        color: #888888;
-                    ">
-                        © OpenStreetMap contributors
-                    </p>
-                </div>
-                """.formatted(
-                safeMapsUrl,
-                safeImageUrl
-        );
-    }
-
-    /**
      * Creates a readable location such as:
      * Karlsruhe, Baden-Württemberg, DE
      */
@@ -210,7 +160,7 @@ public class LoginLocationService {
      */
     private String createMapsUrl(String coordinates) {
 
-        if (!isValidCoordinates(coordinates)) {
+        if (!Coordinates.isValid(coordinates)) {
             return null;
         }
 
@@ -222,76 +172,6 @@ public class LoginLocationService {
         return "https://www.google.com/maps/search/"
                 + "?api=1&query="
                 + encodedCoordinates;
-    }
-
-    /**
-     * Creates a Geoapify static map URL.
-     */
-    private String createStaticMapUrl(String coordinates) {
-
-        if (!isValidCoordinates(coordinates) || geoapifyApiKey == null || geoapifyApiKey.isBlank()) {
-            return null;
-        }
-
-        String[] parts = coordinates.split(",");
-
-        String latitude = parts[0].trim();
-        String longitude = parts[1].trim();
-
-        return "https://maps.geoapify.com/v1/staticmap"
-                + "?style=osm-bright"
-                + "&width=520"
-                + "&height=280"
-                + "&center=lonlat:"
-                + longitude
-                + ","
-                + latitude
-                + "&zoom=9"
-                + "&marker=lonlat:"
-                + longitude
-                + ","
-                + latitude
-                + ";type:awesome;color:%23d32f2f"
-                + "&apiKey="
-                + URLEncoder.encode(
-                geoapifyApiKey,
-                StandardCharsets.UTF_8
-        );
-    }
-
-    /**
-     * Creates a Google Maps button when no static map is available.
-     */
-    private String createMapsButton(String mapsUrl) {
-
-        if (mapsUrl == null || mapsUrl.isBlank()) {
-            return "";
-        }
-
-        return """
-                <div style="
-                    margin-top: 5px;
-                    margin-bottom: 10px;
-                ">
-                    <a
-                        href="%s"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style="
-                            display: inline-block;
-                            padding: 10px 16px;
-                            background-color: #1a73e8;
-                            color: #ffffff;
-                            text-decoration: none;
-                            font-size: 14px;
-                            font-weight: bold;
-                            border-radius: 6px;
-                        "
-                    >
-                        View on Google Maps
-                    </a>
-                </div>
-                """.formatted(Html.escape(mapsUrl, ""));
     }
 
     /**
@@ -312,18 +192,6 @@ public class LoginLocationService {
         }
 
         return ip;
-    }
-
-    /**
-     * Validates coordinates in latitude,longitude format.
-     */
-    private boolean isValidCoordinates(String coordinates) {
-
-        if (coordinates == null || coordinates.isBlank()) {
-            return false;
-        }
-
-        return coordinates.matches("-?\\d{1,3}(\\.\\d+)?,-?\\d{1,3}(\\.\\d+)?");
     }
 
 }

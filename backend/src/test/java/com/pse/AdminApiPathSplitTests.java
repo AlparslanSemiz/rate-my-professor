@@ -15,7 +15,7 @@ import com.pse.moderation.repository.BugReportRepository;
 import com.pse.moderation.repository.WarningRepository;
 import com.pse.professor.repository.ProfessorRepository;
 import com.pse.rating.repository.RatingRepository;
-import com.pse.shared.util.HashGenerator;
+import com.pse.security.TokenHasher;
 import com.pse.social.repository.AnswerReportRepository;
 import com.pse.social.repository.AnswerRepository;
 import com.pse.social.repository.AnswerVoteRepository;
@@ -428,7 +428,7 @@ class AdminApiPathSplitTests {
     private Token tokenOf(String rawToken) {
         return tokenRepository
                 .findByHashAndRevokedFalseAndExpiresAtAfter(
-                        HashGenerator.hashToken(rawToken),
+                        TokenHasher.hash(rawToken),
                         LocalDateTime.now(Clock.systemUTC())
                 )
                 .orElseThrow();

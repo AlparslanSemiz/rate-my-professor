@@ -12,7 +12,7 @@ import com.pse.moderation.repository.WarningRepository;
 import com.pse.professor.repository.ProfessorRepository;
 import com.pse.rating.repository.RatingRepository;
 import com.pse.shared.enums.UserStatus;
-import com.pse.shared.util.HashGenerator;
+import com.pse.security.TokenHasher;
 import com.pse.social.repository.AnswerReportRepository;
 import com.pse.social.repository.AnswerRepository;
 import com.pse.social.repository.AnswerVoteRepository;
@@ -276,7 +276,7 @@ class AccountApiIntegrationTests {
         token.setEmail(email);
         token.setStudent(student);
         token.setHash(
-                HashGenerator.hashToken(rawToken)
+                TokenHasher.hash(rawToken)
         );
         token.setExpiresAt(
                 LocalDateTime.now().plusHours(12)

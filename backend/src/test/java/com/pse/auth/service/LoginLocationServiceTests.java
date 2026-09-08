@@ -57,7 +57,6 @@ import static org.mockito.Mockito.when;
 class LoginLocationServiceTests {
 
     private static final String TOKEN = "ipinfo-token";
-    private static final String GEOAPIFY_KEY = "geoapify-key";
     private static final String IP = "203.0.113.42";
     private static final LoginLocation UNKNOWN = new LoginLocation("Unknown", null, null);
 
@@ -90,8 +89,8 @@ class LoginLocationServiceTests {
         serviceLogger.detachAppender(logs);
     }
 
-    private LoginLocationService serviceWith(String token, String geoapifyKey) {
-        return new LoginLocationService(restClient, token, geoapifyKey);
+    private LoginLocationService serviceWith(String token) {
+        return new LoginLocationService(restClient, token);
     }
 
     @SuppressWarnings("unchecked")
@@ -137,7 +136,7 @@ class LoginLocationServiceTests {
         ipInfoReturns(karlsruhe());
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(IP);
 
         // Then
         assertThat(location.description()).isEqualTo("Karlsruhe, Baden-Wurttemberg, DE");
@@ -154,7 +153,7 @@ class LoginLocationServiceTests {
         ipInfoReturns(karlsruhe());
 
         // When
-        serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation("203.0.113.42, 10.0.0.5");
+        serviceWith(TOKEN).getLoginLocation("203.0.113.42, 10.0.0.5");
 
         // Then -- resolve the captured builder to see the URI that would actually be requested
         ArgumentCaptor<Function<UriBuilder, URI>> uriFunction = ArgumentCaptor.captor();
@@ -171,7 +170,7 @@ class LoginLocationServiceTests {
         ipInfoReturns(new IpInfoResponse(IP, "Karlsruhe", null, null, null));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(IP);
 
         // Then
         assertThat(location.description()).isEqualTo("Karlsruhe");
@@ -183,7 +182,7 @@ class LoginLocationServiceTests {
         ipInfoReturns(new IpInfoResponse(IP, "Karlsruhe", "   ", "DE", null));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(IP);
 
         // Then
         assertThat(location.description()).isEqualTo("Karlsruhe, DE");
@@ -196,7 +195,7 @@ class LoginLocationServiceTests {
     void getLoginLocation_addressThatNormalizesToNothing_returnsUnknownWithoutCallingIpInfo(
             String rawIp) {
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(rawIp);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(rawIp);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
@@ -216,7 +215,7 @@ class LoginLocationServiceTests {
     @CsvSource({"','", "',,'", "',,,'"})
     void getLoginLocation_addressOfOnlyCommas_returnsUnknownWithoutCallingIpInfo(String rawIp) {
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(rawIp);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(rawIp);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
@@ -226,7 +225,7 @@ class LoginLocationServiceTests {
     @Test
     void getLoginLocation_nullAddress_returnsUnknownWithoutCallingIpInfo() {
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(null);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(null);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
@@ -241,7 +240,7 @@ class LoginLocationServiceTests {
     @Test
     void getLoginLocation_blankToken_returnsUnknownWithoutCallingIpInfo() {
         // When
-        LoginLocation location = serviceWith("", GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith("").getLoginLocation(IP);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
@@ -255,7 +254,7 @@ class LoginLocationServiceTests {
     @Test
     void getLoginLocation_nullToken_throwsNullPointerException() {
         // Given -- @Value defaults to "", so null only happens if the wiring is wrong
-        LoginLocationService service = serviceWith(null, GEOAPIFY_KEY);
+        LoginLocationService service = serviceWith(null);
 
         // When / Then
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.getLoginLocation(IP))
@@ -272,7 +271,7 @@ class LoginLocationServiceTests {
     @CsvSource({"''", "'   '"})
     void warnIfTokenMissing_blankToken_logsAWarningNamingTheVariable(String token) {
         // When
-        serviceWith(token, GEOAPIFY_KEY).warnIfTokenMissing();
+        serviceWith(token).warnIfTokenMissing();
 
         // Then
         assertThat(logs.list)
@@ -286,7 +285,7 @@ class LoginLocationServiceTests {
     @Test
     void warnIfTokenMissing_tokenPresent_logsNothing() {
         // When
-        serviceWith(TOKEN, GEOAPIFY_KEY).warnIfTokenMissing();
+        serviceWith(TOKEN).warnIfTokenMissing();
 
         // Then
         assertThat(logs.list).isEmpty();
@@ -306,13 +305,13 @@ class LoginLocationServiceTests {
     @CsvSource({"''", "'   '"})
     void isConfigured_blankToken_isFalse(String token) {
         // When / Then
-        assertThat(serviceWith(token, GEOAPIFY_KEY).isConfigured()).isFalse();
+        assertThat(serviceWith(token).isConfigured()).isFalse();
     }
 
     @Test
     void isConfigured_tokenPresent_isTrue() {
         // When / Then
-        assertThat(serviceWith(TOKEN, GEOAPIFY_KEY).isConfigured()).isTrue();
+        assertThat(serviceWith(TOKEN).isConfigured()).isTrue();
     }
 
     // ---------- getLoginLocation: every way the lookup fails ----------
@@ -324,7 +323,7 @@ class LoginLocationServiceTests {
                 HttpStatus.UNAUTHORIZED, "Unauthorized", null, null, null));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(IP);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
@@ -338,7 +337,7 @@ class LoginLocationServiceTests {
                 HttpStatus.FORBIDDEN, "Forbidden", null, null, null));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(IP);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
@@ -352,7 +351,7 @@ class LoginLocationServiceTests {
                 HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", null, null, null));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(IP);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
@@ -366,7 +365,7 @@ class LoginLocationServiceTests {
                 HttpStatus.INTERNAL_SERVER_ERROR, "Server Error", null, null, null));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(IP);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
@@ -380,7 +379,7 @@ class LoginLocationServiceTests {
                 "I/O error", new SocketTimeoutException("Read timed out")));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(IP);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
@@ -394,7 +393,7 @@ class LoginLocationServiceTests {
                 "I/O error", (IOException) new UnknownHostException("ipinfo.io")));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(IP);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
@@ -407,7 +406,7 @@ class LoginLocationServiceTests {
         ipInfoFailsWith(new RestClientException("Could not read JSON"));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(IP);
 
         // Then
         assertThat(location).isEqualTo(UNKNOWN);
@@ -421,7 +420,7 @@ class LoginLocationServiceTests {
         ipInfoReturns(null);
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY)
+        LoginLocation location = serviceWith(TOKEN)
                 .getLoginLocation(IP);
 
         // Then
@@ -440,7 +439,7 @@ class LoginLocationServiceTests {
         ipInfoReturns(new IpInfoResponse(null, null, null, null, null));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY)
+        LoginLocation location = serviceWith(TOKEN)
                 .getLoginLocation("10.0.0.5");
 
         // Then
@@ -455,81 +454,13 @@ class LoginLocationServiceTests {
         ipInfoReturns(new IpInfoResponse(IP, "Karlsruhe", null, "DE", "not-coordinates"));
 
         // When
-        LoginLocation location = serviceWith(TOKEN, GEOAPIFY_KEY).getLoginLocation(IP);
+        LoginLocation location = serviceWith(TOKEN).getLoginLocation(IP);
 
         // Then
         assertThat(location.description()).isEqualTo("Karlsruhe, DE");
         assertThat(location.mapsUrl()).isNull();
         assertThat(location.coordinates()).isEqualTo("not-coordinates");
     }
-
-    // ---------- createStaticMap ----------
-
-    @Test
-    void createStaticMap_validCoordinatesAndAKey_rendersTheStaticImage() {
-        // When
-        String html = serviceWith(TOKEN, GEOAPIFY_KEY)
-                .createStaticMap("https://maps.example/x", "49.0069,8.4037");
-
-        // Then -- Geoapify takes lonlat, so the pair is emitted the other way round
-        assertThat(html).contains("<img");
-        assertThat(html).contains("center=lonlat:8.4037,49.0069");
-        assertThat(html).contains("marker=lonlat:8.4037,49.0069");
-        assertThat(html).contains("apiKey=" + GEOAPIFY_KEY);
-    }
-
-    @Test
-    void createStaticMap_blankGeoapifyKey_fallsBackToTheMapsButton() {
-        // When
-        String html = serviceWith(TOKEN, "")
-                .createStaticMap("https://maps.example/x", "49.0069,8.4037");
-
-        // Then
-        assertThat(html).doesNotContain("<img").contains("View on Google Maps");
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "'49.0069,8.4037',true",
-            "'-33.8,151.2',true",
-            "'0,0',true",
-            "'49.0, 8.4',false",
-            "'not-coordinates',false",
-            "'1000.0,1.0',false",
-            "'49.0',false",
-            "'',false"
-    })
-    void createStaticMap_coordinateFormat_decidesBetweenImageAndButton(
-            String coordinates, boolean rendersImage) {
-        // When
-        String html = serviceWith(TOKEN, GEOAPIFY_KEY)
-                .createStaticMap("https://maps.example/x", coordinates);
-
-        // Then -- the regex rejects whitespace around the comma, which a real client may send
-        assertThat(html.contains("<img")).isEqualTo(rendersImage);
-    }
-
-    @Test
-    void createStaticMap_noCoordinatesAndNoMapsUrl_rendersNothing() {
-        // When
-        String html = serviceWith(TOKEN, GEOAPIFY_KEY).createStaticMap(null, null);
-
-        // Then -- the mail template must not gain an empty box
-        assertThat(html).isEmpty();
-    }
-
-    @Test
-    void createStaticMap_mapsUrlContainingMarkup_escapesItIntoTheHtml() {
-        // Given -- the value is interpolated straight into an href
-        String hostile = "https://maps.example/?a=1&b=\"><script>alert(1)</script>";
-
-        // When
-        String html = serviceWith(TOKEN, GEOAPIFY_KEY).createStaticMap(hostile, null);
-
-        // Then
-        assertThat(html).doesNotContain("<script>").contains("&lt;script&gt;").contains("&amp;");
-    }
-
 
     private void assertLookupAttemptLogged(String rawIp) {
         assertThat(logs.list)

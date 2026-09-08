@@ -323,6 +323,7 @@
 							<targetClasses>
 								<param>com.pse.*.service.*</param>
 								<param>com.pse.*.mapper.*</param>
+								<param>com.pse.*.mail.*</param>
 								<param>com.pse.shared.page.*</param>
 								<param>com.pse.audit.revert.*</param>
 								<param>com.pse.security.*</param>
@@ -341,20 +342,28 @@
 								-->
 								<param>com.pse.*.service.*Tests</param>
 								<param>com.pse.*.mapper.*Tests</param>
+								<param>com.pse.*.mail.*Tests</param>
 								<param>com.pse.shared.page.*Tests</param>
 								<param>com.pse.audit.revert.*Tests</param>
 								<param>com.pse.security.*Tests</param>
 							</targetTests>
 							<excludedClasses>
 								<!--
-									Both are recorded under "Deliberately uncovered" in
-									docs/test-plan.md and have no unit tests at all. A class with no
-									test has every mutant survive, which is not information PIT is
-									adding: it is a decision already written down, restated as
-									dozens of findings that would bury the real ones.
+									Recorded under "Deliberately uncovered" in docs/test-plan.md and
+									having no unit tests at all. A class with no test has every
+									mutant survive, which is not information PIT is adding: it is a
+									decision already written down, restated as dozens of findings
+									that would bury the real ones.
+
+									These four are what the old MailService and MailTemplateService
+									became. LoginMapFragment came out of the same split and is
+									deliberately absent from this list: it does have tests, in
+									LoginMapFragmentTests.
 								-->
-								<param>com.pse.shared.util.MailService</param>
-								<param>com.pse.auth.service.MailTemplateService</param>
+								<param>com.pse.auth.mail.HtmlMailSender</param>
+								<param>com.pse.auth.mail.LoginCodeMail</param>
+								<param>com.pse.auth.mail.LoginNotificationMail</param>
+								<param>com.pse.auth.mail.MailTemplateService</param>
 							</excludedClasses>
 							<outputFormats>
 								<param>HTML</param>

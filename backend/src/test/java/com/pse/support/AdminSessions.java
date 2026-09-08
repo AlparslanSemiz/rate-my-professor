@@ -6,7 +6,7 @@ import com.pse.auth.repository.TokenRepository;
 import com.pse.moderation.model.Admin;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.shared.enums.UserStatus;
-import com.pse.shared.util.HashGenerator;
+import com.pse.security.TokenHasher;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
 
@@ -62,7 +62,7 @@ public final class AdminSessions {
         Token token = new Token();
         token.setEmail(email);
         token.setStudent(student);
-        token.setHash(HashGenerator.hashToken(rawToken));
+        token.setHash(TokenHasher.hash(rawToken));
         token.setSessionType(SessionType.ADMIN);
         token.setExpiresAt(LocalDateTime.now().plusDays(1));
         tokenRepository.saveAndFlush(token);

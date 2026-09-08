@@ -15,7 +15,7 @@ import com.pse.professor.repository.ProfessorRepository;
 import com.pse.rating.repository.RatingRepository;
 import com.pse.shared.enums.SemesterSeason;
 import com.pse.shared.enums.UserStatus;
-import com.pse.shared.util.HashGenerator;
+import com.pse.security.TokenHasher;
 import com.pse.social.repository.*;
 import com.pse.support.TestDeliveryConfig;
 import com.pse.user.model.Student;
@@ -568,7 +568,7 @@ class RatingApiIntegrationTests {
         token.setEmail(email);
         token.setStudent(student);
 
-        token.setHash(HashGenerator.hashToken(rawToken));
+        token.setHash(TokenHasher.hash(rawToken));
 
         token.setExpiresAt(LocalDateTime.now().plusHours(12));
 

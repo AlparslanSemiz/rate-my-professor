@@ -1,4 +1,4 @@
-package com.pse.auth.service;
+package com.pse.auth.mail;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

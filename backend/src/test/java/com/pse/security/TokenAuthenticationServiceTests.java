@@ -6,7 +6,6 @@ import com.pse.auth.repository.TokenRepository;
 import com.pse.moderation.model.Admin;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.shared.enums.UserStatus;
-import com.pse.shared.util.HashGenerator;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
 import org.junit.jupiter.api.Test;
@@ -48,7 +47,7 @@ import static org.mockito.Mockito.when;
 class TokenAuthenticationServiceTests {
 
     private static final String RAW_TOKEN = "raw-token-value";
-    private static final String HASH = HashGenerator.hashToken(RAW_TOKEN);
+    private static final String HASH = TokenHasher.hash(RAW_TOKEN);
     private static final Instant FIXED = Instant.parse("2026-09-07T12:00:00Z");
     private static final LocalDateTime NOW = LocalDateTime.ofInstant(FIXED, ZoneOffset.UTC);
 
@@ -105,7 +104,7 @@ class TokenAuthenticationServiceTests {
     void authenticate_tokenOfExactlyTheLimit_isLookedUpRatherThanRefused() {
         String atTheLimit = "t".repeat(512);
         when(tokenRepository.findByHashAndRevokedFalseAndExpiresAtAfter(
-                HashGenerator.hashToken(atTheLimit), NOW))
+                TokenHasher.hash(atTheLimit), NOW))
                 .thenReturn(Optional.empty());
         when(tokenRepository.findByLegacyValueAndRevokedFalseAndExpiresAtAfter(atTheLimit, NOW))
                 .thenReturn(Optional.empty());
@@ -113,7 +112,7 @@ class TokenAuthenticationServiceTests {
         assertThat(service().authenticate(atTheLimit)).isEmpty();
 
         verify(tokenRepository).findByHashAndRevokedFalseAndExpiresAtAfter(
-                HashGenerator.hashToken(atTheLimit), NOW);
+                TokenHasher.hash(atTheLimit), NOW);
     }
 
     @Test

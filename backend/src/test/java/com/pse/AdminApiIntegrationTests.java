@@ -30,7 +30,7 @@ import com.pse.shared.enums.ReportReason;
 import com.pse.shared.enums.ReportStatus;
 import com.pse.shared.enums.SemesterSeason;
 import com.pse.shared.enums.UserStatus;
-import com.pse.shared.util.HashGenerator;
+import com.pse.security.TokenHasher;
 import com.pse.shared.enums.ContentStatus;
 import com.pse.social.model.Comment;
 import com.pse.social.model.CommentReport;
@@ -153,7 +153,7 @@ class AdminApiIntegrationTests {
 
         Token issuedToken = tokenRepository
                 .findByHashAndRevokedFalseAndExpiresAtAfter(
-                        HashGenerator.hashToken(token),
+                        TokenHasher.hash(token),
                         LocalDateTime.now(java.time.Clock.systemUTC())
                 )
                 .orElseThrow();
@@ -216,7 +216,7 @@ class AdminApiIntegrationTests {
 
         Token issuedToken = tokenRepository
                 .findByHashAndRevokedFalseAndExpiresAtAfter(
-                        HashGenerator.hashToken(rawToken),
+                        TokenHasher.hash(rawToken),
                         LocalDateTime.now(java.time.Clock.systemUTC())
                 )
                 .orElseThrow();
@@ -267,7 +267,7 @@ class AdminApiIntegrationTests {
 
         Token issuedToken = tokenRepository
                 .findByHashAndRevokedFalseAndExpiresAtAfter(
-                        HashGenerator.hashToken(rawToken),
+                        TokenHasher.hash(rawToken),
                         LocalDateTime.now(java.time.Clock.systemUTC())
                 )
                 .orElseThrow();
@@ -2809,7 +2809,7 @@ class AdminApiIntegrationTests {
         Token token = new Token();
         token.setEmail(email);
         token.setStudent(student);
-        token.setHash(HashGenerator.hashToken(raw));
+        token.setHash(TokenHasher.hash(raw));
         token.setExpiresAt(LocalDateTime.now().plusHours(12));
         token = tokenRepository.saveAndFlush(token);
         return new Session(student, admin, token, raw);
@@ -2820,7 +2820,7 @@ class AdminApiIntegrationTests {
         Token token = new Token();
         token.setEmail(student.getKitEmail());
         token.setStudent(student);
-        token.setHash(HashGenerator.hashToken(raw));
+        token.setHash(TokenHasher.hash(raw));
         token.setExpiresAt(LocalDateTime.now().plusHours(12));
         tokenRepository.saveAndFlush(token);
         return raw;

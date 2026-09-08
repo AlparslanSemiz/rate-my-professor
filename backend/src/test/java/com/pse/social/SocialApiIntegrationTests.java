@@ -19,7 +19,7 @@ import com.pse.shared.enums.ReportReason;
 import com.pse.shared.enums.SemesterSeason;
 import com.pse.shared.enums.UserStatus;
 import com.pse.shared.enums.VoteType;
-import com.pse.shared.util.HashGenerator;
+import com.pse.security.TokenHasher;
 import com.pse.social.model.Answer;
 import com.pse.social.model.Comment;
 import com.pse.social.model.CommentVote;
@@ -1115,7 +1115,7 @@ class SocialApiIntegrationTests {
         token.setEmail(email);
         token.setStudent(student);
 
-        token.setHash(HashGenerator.hashToken(raw));
+        token.setHash(TokenHasher.hash(raw));
 
         token.setExpiresAt(LocalDateTime.now().plusHours(12));
 

@@ -6,7 +6,6 @@ import com.pse.auth.repository.TokenRepository;
 import com.pse.moderation.model.Admin;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.shared.enums.UserStatus;
-import com.pse.shared.util.HashGenerator;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
 import org.springframework.stereotype.Service;
@@ -52,7 +51,7 @@ public class TokenAuthenticationService {
         }
 
         LocalDateTime now = LocalDateTime.now(clock);
-        String hash = HashGenerator.hashToken(rawToken);
+        String hash = TokenHasher.hash(rawToken);
         Token token = tokenRepository
                 .findByHashAndRevokedFalseAndExpiresAtAfter(hash, now)
                 .orElseGet(() -> upgradeLegacyToken(rawToken, hash, now).orElse(null));

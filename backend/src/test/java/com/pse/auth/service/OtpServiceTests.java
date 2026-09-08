@@ -3,7 +3,6 @@ package com.pse.auth.service;
 import com.pse.config.properties.AuthProperties;
 import com.pse.auth.model.OneTimePassword;
 import com.pse.auth.repository.OneTimePasswordRepository;
-import com.pse.shared.util.HashGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -44,7 +43,7 @@ class OtpServiceTests {
 
     /** Argon2 is deliberately expensive, so the one real hash is computed once for the class. */
     private static final String KNOWN_CODE = "a1b2c3";
-    private static final String KNOWN_HASH = HashGenerator.hashPassword(KNOWN_CODE);
+    private static final String KNOWN_HASH = OtpHasher.hash(KNOWN_CODE);
 
     @Mock
     private OneTimePasswordRepository repository;
@@ -122,7 +121,7 @@ class OtpServiceTests {
         assertThat(code).hasSize(6);
         assertThat(saved.getValue().getHash()).isNotNull().isNotEqualTo(code);
         assertThat(saved.getValue().getLegacyValue()).isNull();
-        assertThat(HashGenerator.passwordMatchesHash(code, saved.getValue().getHash())).isTrue();
+        assertThat(OtpHasher.matches(code, saved.getValue().getHash())).isTrue();
     }
 
     // ---------- consume ----------

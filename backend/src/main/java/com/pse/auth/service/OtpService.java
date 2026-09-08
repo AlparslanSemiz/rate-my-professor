@@ -3,7 +3,6 @@ package com.pse.auth.service;
 import com.pse.config.properties.AuthProperties;
 import com.pse.auth.model.OneTimePassword;
 import com.pse.auth.repository.OneTimePasswordRepository;
-import com.pse.shared.util.HashGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +37,7 @@ public class OtpService {
         String code = TokenGenerator.generateOneTimePassword();
         OneTimePassword otp = new OneTimePassword();
         otp.setEmail(normalizedEmail);
-        otp.setHash(HashGenerator.hashPassword(code));
+        otp.setHash(OtpHasher.hash(code));
         otp.setExpiresAt(LocalDateTime.now(clock).plus(ttl));
         repository.save(otp);
         return code;
@@ -68,7 +67,7 @@ public class OtpService {
 
     private boolean matches(String submittedCode, OneTimePassword candidate) {
         if (candidate.getHash() != null
-                && HashGenerator.passwordMatchesHash(submittedCode, candidate.getHash())) {
+                && OtpHasher.matches(submittedCode, candidate.getHash())) {
             return true;
         }
         if (candidate.getLegacyValue() == null) {

@@ -1,5 +1,7 @@
 package com.pse.shared.util;
 
+import java.security.SecureRandom;
+
 public final class NameGenerator {
 
     private static final String[] ADJECTIVES = {
@@ -60,16 +62,27 @@ public final class NameGenerator {
             "Lobster", "Oyster", "Clam", "Mussel", "Gibbon"
     };
 
+    private static final SecureRandom RANDOM = new SecureRandom();
+
     private NameGenerator() {
     }
 
+    /**
+     * A generated display name, drawn from {@link SecureRandom} rather than
+     * {@code Math.random}.
+     *
+     * <p>The name is a user-visible identifier and is assigned to every account this
+     * application creates, so its predictability is not a cosmetic question:
+     * {@code Math.random} is seeded per JVM from a value an observer could narrow down, and
+     * the pair drawn is only one of {@code 130 x 130} to begin with. {@code SecureRandom}
+     * costs nothing here and removes the question -- {@code TokenGenerator} in this same
+     * codebase already had one.
+     */
     public static String generateUsername() {
 
-        String adjective =
-                ADJECTIVES[(int) (Math.random() * ADJECTIVES.length)];
+        String adjective = ADJECTIVES[RANDOM.nextInt(ADJECTIVES.length)];
 
-        String animal =
-                ANIMALS[(int) (Math.random() * ANIMALS.length)];
+        String animal = ANIMALS[RANDOM.nextInt(ANIMALS.length)];
 
         return adjective + animal;
     }

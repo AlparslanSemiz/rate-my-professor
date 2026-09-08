@@ -14,7 +14,7 @@ import com.pse.rating.model.RatingTopic;
 import com.pse.rating.repository.RatingRepository;
 import com.pse.shared.enums.SemesterSeason;
 import com.pse.shared.enums.UserStatus;
-import com.pse.shared.util.HashGenerator;
+import com.pse.security.TokenHasher;
 import com.pse.social.model.Answer;
 import com.pse.social.model.Comment;
 import com.pse.social.repository.AnswerRepository;
@@ -169,7 +169,7 @@ class LazyLoadingRegressionTests {
         Token token = new Token();
         token.setEmail(student.getKitEmail());
         token.setStudent(student);
-        token.setHash(HashGenerator.hashToken(raw));
+        token.setHash(TokenHasher.hash(raw));
         token.setExpiresAt(LocalDateTime.now().plusHours(12));
         tokenRepository.saveAndFlush(token);
         return raw;
