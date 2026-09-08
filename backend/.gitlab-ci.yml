@@ -155,8 +155,27 @@ server:postgres-integration:
   script:
     # Named rather than pattern-matched: this job's cost is one Spring context per distinct
     # configuration, and adding a class here is the moment to check it shares the existing
-    # one. See com.pse.support.PostgresTestDatabase.
-    - ./mvnw -B -ntp -Dtest=PostgreSqlMigrationSmokeTests,AuditTimestampPrecisionPostgresTests test
+    # one. Carrying @PostgresIntegrationTest is what makes it share; the log line below is how
+    # you know it did. See com.pse.support.PostgresIntegrationTest.
+    - |
+      # Written to a file rather than piped through tee: a pipe hands the job tee's exit
+      # status, so a failing test suite would pass. The log is printed either way.
+      if ./mvnw -B -ntp -Dtest=PostgreSqlMigrationSmokeTests,AuditTimestampPrecisionPostgresTests,CursorPaginationPostgresTests,AuditJsonbRoundTripPostgresTests,ReadOnlyTransactionSweepPostgresTests test > postgres-integration.log 2>&1; then
+        cat postgres-integration.log
+      else
+        cat postgres-integration.log
+        exit 1
+      fi
+    - |
+      # One context, or the classes wiped each other's schema mid-run and everything above
+      # proved nothing. PostgresTestDatabase prints this line once per context it initialises.
+      resets=$(grep -c "PostgresTestDatabase: resetting the public schema" postgres-integration.log || true)
+      echo "Spring contexts started against PostgreSQL: $resets"
+      if [ "$resets" != "1" ]; then
+        echo "Expected exactly one. More than one means two test classes carry different context"
+        echo "configuration and reset the schema under each other -- see PostgresIntegrationTest."
+        exit 1
+      fi
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: never
