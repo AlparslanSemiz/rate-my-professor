@@ -62,6 +62,31 @@ already set in `docker-compose.yml`. `GET /health` answers once Flyway has migra
 For a deployment rather than a local run, `docker-compose.prod.yml` and `.env.example` are the
 starting points, and [docs/deployment.md](docs/deployment.md) is the description.
 
+## Changing the API
+
+**Every change a client can observe gets a `CHANGELOG` entry, in the same commit that makes
+it.** Not at the end of the work, and not in a tidy-up pass afterwards: the `CHANGELOG` is not
+a record for us, it is the only thing the app and panel teams read. A change they discover from
+a failing request has already cost them a debugging session.
+
+What counts as client-visible:
+
+- a new or removed route, or a changed path
+- a field added to or removed from a response
+- a changed status code
+- a changed message a client matches on
+- a new enum value that can appear in a response
+
+Internal refactoring, tests and CI do not count, and **a change that alters no interface gets
+no entry** — padding the file with internals is how it stops being read, and then a real entry
+is missed. When unsure, ask what a client would have to change, and write that.
+
+Write what they must do, not what we did. Give `Was:` and `Now:` on the record, the status code
+both before and after, and one line saying whether they have anything to change. Entries go
+under a dated header (`///// 8.09`, with `(2)` and `(3)` when a day has more than one), newest
+at the bottom. Record shapes are pasted whole with `+++`, `++` and `--` marking the changed
+lines. The file has been written this way since July — match it rather than inventing a shape.
+
 ## Documentation
 
 | File | Holds |
