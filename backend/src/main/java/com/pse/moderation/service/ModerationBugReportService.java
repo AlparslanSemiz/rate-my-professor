@@ -79,11 +79,11 @@ public class ModerationBugReportService {
         Map<String, Object> changes = new LinkedHashMap<>();
 
         if (request.status() != null && report.getStatus() != request.status()) {
-            changes.put("status", change(report.getStatus().name(), request.status().name()));
+            changes.put("status", AuditWriter.value(report.getStatus().name(), request.status().name()));
             report.setStatus(request.status());
         }
         if (request.severity() != null && report.getSeverity() != request.severity()) {
-            changes.put("severity", change(report.getSeverity().name(), request.severity().name()));
+            changes.put("severity", AuditWriter.value(report.getSeverity().name(), request.severity().name()));
             report.setSeverity(request.severity());
         }
         if (request.title() != null) {
@@ -92,7 +92,7 @@ public class ModerationBugReportService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid title");
             }
             if (!title.equals(report.getTitle())) {
-                changes.put("title", change(report.getTitle(), title));
+                changes.put("title", AuditWriter.value(report.getTitle(), title));
                 report.setTitle(title);
             }
         }
@@ -102,7 +102,7 @@ public class ModerationBugReportService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid description");
             }
             if (!description.equals(report.getDescription())) {
-                changes.put("description", change(report.getDescription(), description));
+                changes.put("description", AuditWriter.value(report.getDescription(), description));
                 report.setDescription(description);
             }
         }
@@ -133,8 +133,7 @@ public class ModerationBugReportService {
 
         repository.delete(report);
 
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put("exists", Map.of("before", true, "after", false));
+        Map<String, Object> changes = AuditWriter.lifecycle(true, false);
         auditWriter.write(
                 principal.admin(),
                 AuditAction.BUG_REPORT_DELETED,
@@ -232,12 +231,5 @@ public class ModerationBugReportService {
                 attempt.iid(),
                 IssueState.CREATED
         );
-    }
-
-    private Map<String, Object> change(Object before, Object after) {
-        Map<String, Object> value = new LinkedHashMap<>();
-        value.put("before", before);
-        value.put("after", after);
-        return value;
     }
 }

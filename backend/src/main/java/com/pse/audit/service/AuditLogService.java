@@ -18,6 +18,7 @@ import com.pse.shared.util.KeysetCursorCodec;
 import com.pse.shared.util.SqlLike;
 import com.pse.shared.util.UtcDates;
 import jakarta.persistence.criteria.Predicate;
+import com.pse.shared.page.KeysetPage;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -38,6 +39,9 @@ import java.util.UUID;
 
 @Service
 public class AuditLogService {
+
+    /** What {@code GET /audit-logs} returns when the caller does not ask for a size. */
+    private static final int DEFAULT_LIMIT = 50;
 
     /**
      * Upper bound on the actor filter list. It feeds a dropdown, and every account that
@@ -73,7 +77,7 @@ public class AuditLogService {
             String rawFrom,
             String rawTo
     ) {
-        int limit = parseLimit(rawLimit);
+        int limit = KeysetPage.limitOr(rawLimit, DEFAULT_LIMIT);
         UUID actorId = parseUuid(rawActorId, "Invalid actor id");
         AuditActorType actorType =
                 parseEnum(rawActorType, AuditActorType.class, "Invalid audit actor type");
@@ -128,30 +132,20 @@ public class AuditLogService {
                 ));
             }
             if (cursor != null) {
-                predicates.add(builder.or(
-                        builder.lessThan(root.get("createdAt"), cursor.createdAt()),
-                        builder.and(
-                                builder.equal(root.get("createdAt"), cursor.createdAt()),
-                                builder.lessThan(root.get("id"), cursor.id())
-                        )
-                ));
+                predicates.add(KeysetPage.after(
+                        builder, root, cursor.createdAt(), cursor.id(), Sort.Direction.DESC));
             }
             return builder.and(predicates.toArray(Predicate[]::new));
         };
 
         List<AuditLog> fetched = repository.findAll(
                 specification,
-                PageRequest.of(
-                        0,
-                        limit + 1,
-                        Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
-                )
+                PageRequest.of(0, limit + 1, KeysetPage.byCreatedAtThenId(Sort.Direction.DESC))
         ).getContent();
-        boolean hasNext = fetched.size() > limit;
-        List<AuditLog> page = hasNext ? fetched.subList(0, limit) : fetched;
-        String nextCursor = hasNext && !page.isEmpty()
-                ? cursorCodec.encode(page.getLast().getCreatedAt(), page.getLast().getId())
-                : null;
+        KeysetPage.Slice<AuditLog> slice = KeysetPage.of(fetched, limit,
+                last -> cursorCodec.encode(last.getCreatedAt(), last.getId()));
+        List<AuditLog> page = slice.items();
+        String nextCursor = slice.nextCursor();
 
         // One pass for the whole page rather than a check per row: the staleness rule has to
         // read each entry's target, and that is only affordable batched.
@@ -219,23 +213,6 @@ public class AuditLogService {
         );
     }
 
-    private int parseLimit(String rawLimit) {
-        if (rawLimit == null || rawLimit.isBlank()) {
-            return 50;
-        }
-        try {
-            int limit = Integer.parseInt(rawLimit);
-            if (limit < 1 || limit > 100) {
-                throw new NumberFormatException();
-            }
-            return limit;
-        } catch (NumberFormatException exception) {
-            throw new ApiException(
-                    HttpStatus.BAD_REQUEST,
-                    "Limit must be an integer between 1 and 100"
-            );
-        }
-    }
 
     private UUID parseUuid(String value, String message) {
         if (value == null || value.isBlank()) {

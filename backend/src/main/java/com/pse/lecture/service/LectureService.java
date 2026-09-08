@@ -3,7 +3,6 @@ package com.pse.lecture.service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -164,8 +163,7 @@ public class LectureService {
 
         lectureRepository.save(lecture);
 
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put("exists", Map.of("before", false, "after", true));
+        Map<String, Object> changes = AuditWriter.lifecycle(false, true);
         auditWriter.write(
                 principal.admin(),
                 AuditAction.LECTURE_CREATED,

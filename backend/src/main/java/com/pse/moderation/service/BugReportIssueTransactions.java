@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -74,7 +73,7 @@ public class BugReportIssueTransactions {
                 AuditTargetType.BUG_REPORT,
                 report.getId(),
                 report.getTitle(),
-                change("issueUrl", null, issue.url()),
+                AuditWriter.nullableChange("issueUrl", null, issue.url()),
                 Map.of("issueIid", issue.iid() == null ? "" : issue.iid())
         );
         return new Attempt(issue.url(), issue.iid(), false);
@@ -110,15 +109,6 @@ public class BugReportIssueTransactions {
                 + System.lineSeparator()
                 + "Reported at: " + UtcDates.format(report.getCreatedAt()) + System.lineSeparator()
                 + "Bug report id: " + report.getId();
-    }
-
-    private static Map<String, Object> change(String field, Object before, Object after) {
-        Map<String, Object> value = new LinkedHashMap<>();
-        value.put("before", before);
-        value.put("after", after);
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put(field, value);
-        return changes;
     }
 
     /** @param existing whether the issue was already there, rather than opened just now */

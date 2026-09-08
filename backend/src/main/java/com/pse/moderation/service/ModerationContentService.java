@@ -1,6 +1,8 @@
 package com.pse.moderation.service;
 
 import com.pse.audit.model.AuditAction;
+import com.pse.shared.repository.IdCount;
+import com.pse.lecture.dto.LectureLabels;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
@@ -30,9 +32,9 @@ import com.pse.social.repository.AnswerRepository;
 import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.CommentRepository;
 import com.pse.social.service.AnswerCleanup;
-import com.pse.lecture.model.Lecture;
 import com.pse.user.model.Student;
 import jakarta.persistence.criteria.Predicate;
+import com.pse.shared.page.KeysetPage;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -40,7 +42,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -100,9 +101,9 @@ public class ModerationContentService {
         // Batch queries rather than one per row: the counts and the role lookup would
         // otherwise be three extra queries per comment.
         Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
-        Map<UUID, Integer> warningCounts = toCountMap(warningRepository.countGroupedByStudent());
-        Map<UUID, Integer> answerCounts = toCountMap(answerRepository.countGroupedByComment());
-        Map<UUID, Integer> reportCounts = toCountMap(commentReportRepository.countGroupedByComment());
+        Map<UUID, Integer> warningCounts = IdCount.asMap(warningRepository.countGroupedByStudent());
+        Map<UUID, Integer> answerCounts = IdCount.asMap(answerRepository.countGroupedByComment());
+        Map<UUID, Integer> reportCounts = IdCount.asMap(commentReportRepository.countGroupedByComment());
 
         List<ManagedCommentResponse> comments = commentRepository
                 .findAllByOrderByCreatedAtDesc()
@@ -112,7 +113,7 @@ public class ModerationContentService {
                         comment.getContent(),
                         comment.getStatus(),
                         toUserReference(comment.getStudent(), adminIds, warningCounts),
-                        lectureLabel(comment.getLecture()),
+                        LectureLabels.of(comment.getLecture()),
                         comment.getLecture().getId(),
                         answerCounts.getOrDefault(comment.getId(), 0),
                         reportCounts.getOrDefault(comment.getId(), 0),
@@ -148,7 +149,7 @@ public class ModerationContentService {
                 AuditTargetType.COMMENT,
                 comment.getId(),
                 "Comment by " + comment.getStudent().getUsername()
-                        + " in " + lectureLabel(comment.getLecture()),
+                        + " in " + LectureLabels.of(comment.getLecture()),
                 changes,
                 Map.of()
         );
@@ -164,7 +165,7 @@ public class ModerationContentService {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Comment not found"));
         String label = "Comment by " + comment.getStudent().getUsername()
-                + " in " + lectureLabel(comment.getLecture());
+                + " in " + LectureLabels.of(comment.getLecture());
 
         List<Answer> answers = answerRepository.findAllByComment(comment);
         int answerCount = answers.size();
@@ -174,8 +175,7 @@ public class ModerationContentService {
         // cleared above are the ones that are not.
         commentRepository.delete(comment);
 
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put("exists", Map.of("before", true, "after", false));
+        Map<String, Object> changes = AuditWriter.lifecycle(true, false);
         auditWriter.write(
                 principal.admin(),
                 AuditAction.COMMENT_DELETED,
@@ -191,8 +191,8 @@ public class ModerationContentService {
     @Transactional(readOnly = true)
     public ManagedAnswersResponse getAnswers() {
         Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
-        Map<UUID, Integer> warningCounts = toCountMap(warningRepository.countGroupedByStudent());
-        Map<UUID, Integer> reportCounts = toCountMap(answerReportRepository.countGroupedByAnswer());
+        Map<UUID, Integer> warningCounts = IdCount.asMap(warningRepository.countGroupedByStudent());
+        Map<UUID, Integer> reportCounts = IdCount.asMap(answerReportRepository.countGroupedByAnswer());
 
         List<ManagedAnswerResponse> answers = answerRepository
                 .findAllByOrderByCreatedAtDesc()
@@ -204,7 +204,7 @@ public class ModerationContentService {
                         toUserReference(answer.getStudent(), adminIds, warningCounts),
                         answer.getComment().getId(),
                         preview(answer.getComment().getContent()),
-                        lectureLabel(answer.getComment().getLecture()),
+                        LectureLabels.of(answer.getComment().getLecture()),
                         reportCounts.getOrDefault(answer.getId(), 0),
                         UtcDates.format(answer.getCreatedAt())
                 ))
@@ -238,7 +238,7 @@ public class ModerationContentService {
                 AuditTargetType.ANSWER,
                 answer.getId(),
                 "Answer by " + answer.getStudent().getUsername()
-                        + " in " + lectureLabel(answer.getComment().getLecture()),
+                        + " in " + LectureLabels.of(answer.getComment().getLecture()),
                 changes,
                 Map.of()
         );
@@ -250,13 +250,12 @@ public class ModerationContentService {
         Answer answer = answerRepository.findById(answerId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Answer not found"));
         String label = "Answer by " + answer.getStudent().getUsername()
-                + " in " + lectureLabel(answer.getComment().getLecture());
+                + " in " + LectureLabels.of(answer.getComment().getLecture());
 
         answerCleanup.clear(List.of(answerId));
         answerRepository.delete(answer);
 
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put("exists", Map.of("before", true, "after", false));
+        Map<String, Object> changes = AuditWriter.lifecycle(true, false);
         auditWriter.write(
                 principal.admin(),
                 AuditAction.ANSWER_DELETED,
@@ -280,18 +279,16 @@ public class ModerationContentService {
      */
     @Transactional(readOnly = true)
     public ManagedRatingsResponse getRatings(String rawLimit, String rawCursor, String rawLectureId) {
-        Integer limit = parseRatingLimit(rawLimit);
+        Integer limit = KeysetPage.optionalLimit(rawLimit);
         UUID lectureId = parseLectureId(rawLectureId);
         boolean hasCursor = rawCursor != null && !rawCursor.isBlank();
-        if (hasCursor && limit == null) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "A cursor requires a limit");
-        }
+        KeysetPage.requireLimitWithCursor(hasCursor, limit);
         KeysetCursorCodec.Cursor cursor = hasCursor
                 ? cursorCodec.decode(rawCursor, "Invalid rating cursor")
                 : null;
 
         Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
-        Map<UUID, Integer> warningCounts = toCountMap(warningRepository.countGroupedByStudent());
+        Map<UUID, Integer> warningCounts = IdCount.asMap(warningRepository.countGroupedByStudent());
 
         Specification<Rating> specification = (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -299,14 +296,8 @@ public class ModerationContentService {
                 predicates.add(builder.equal(root.get("lecture").get("id"), lectureId));
             }
             if (cursor != null) {
-                LocalDateTime at = cursor.createdAtLocal();
-                predicates.add(builder.or(
-                        builder.lessThan(root.get("createdAt"), at),
-                        builder.and(
-                                builder.equal(root.get("createdAt"), at),
-                                builder.lessThan(root.get("id"), cursor.id())
-                        )
-                ));
+                predicates.add(KeysetPage.after(
+                        builder, root, cursor.createdAtLocal(), cursor.id(), Sort.Direction.DESC));
             }
             return builder.and(predicates.toArray(Predicate[]::new));
         };
@@ -316,30 +307,24 @@ public class ModerationContentService {
         if (limit == null) {
             page = ratingRepository.findAll(
                     specification,
-                    Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
+                    KeysetPage.byCreatedAtThenId(Sort.Direction.DESC)
             );
         } else {
-            // One row more than asked for: its presence is what says there is a next page.
             List<Rating> fetched = ratingRepository.findAll(
                     specification,
-                    PageRequest.of(
-                            0,
-                            limit + 1,
-                            Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
-                    )
+                    PageRequest.of(0, limit + 1, KeysetPage.byCreatedAtThenId(Sort.Direction.DESC))
             ).getContent();
-            boolean hasNext = fetched.size() > limit;
-            page = hasNext ? fetched.subList(0, limit) : fetched;
-            nextCursor = hasNext && !page.isEmpty()
-                    ? cursorCodec.encode(page.getLast().getCreatedAt(), page.getLast().getId())
-                    : null;
+            KeysetPage.Slice<Rating> slice = KeysetPage.of(fetched, limit,
+                    last -> cursorCodec.encode(last.getCreatedAt(), last.getId()));
+            page = slice.items();
+            nextCursor = slice.nextCursor();
         }
 
         List<ManagedRatingResponse> ratings = page.stream()
                 .map(rating -> new ManagedRatingResponse(
                         rating.getId(),
                         toUserReference(rating.getStudent(), adminIds, warningCounts),
-                        lectureLabel(rating.getLecture()),
+                        LectureLabels.of(rating.getLecture()),
                         rating.getLecture().getId(),
                         rating.getTopics().stream()
                                 .map(topic -> new ManagedRatingTopicResponse(
@@ -354,23 +339,6 @@ public class ModerationContentService {
                 "Successfully found all ratings", true, ratings, nextCursor);
     }
 
-    private static Integer parseRatingLimit(String rawLimit) {
-        if (rawLimit == null || rawLimit.isBlank()) {
-            return null;
-        }
-        int limit;
-        try {
-            limit = Integer.parseInt(rawLimit.trim());
-        } catch (NumberFormatException exception) {
-            throw new ApiException(
-                    HttpStatus.BAD_REQUEST, "Limit must be an integer between 1 and 100");
-        }
-        if (limit < 1 || limit > 100) {
-            throw new ApiException(
-                    HttpStatus.BAD_REQUEST, "Limit must be an integer between 1 and 100");
-        }
-        return limit;
-    }
 
     private static UUID parseLectureId(String rawLectureId) {
         if (rawLectureId == null || rawLectureId.isBlank()) {
@@ -393,14 +361,13 @@ public class ModerationContentService {
         Rating rating = ratingRepository.findById(ratingId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Rating not found"));
         String label = "Rating by " + rating.getStudent().getUsername()
-                + " for " + lectureLabel(rating.getLecture());
+                + " for " + LectureLabels.of(rating.getLecture());
         int topics = rating.getTopics().size();
 
         // The topic rows are cascaded from the rating.
         ratingRepository.delete(rating);
 
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put("exists", Map.of("before", true, "after", false));
+        Map<String, Object> changes = AuditWriter.lifecycle(true, false);
         auditWriter.write(
                 principal.admin(),
                 AuditAction.RATING_DELETED,
@@ -431,12 +398,12 @@ public class ModerationContentService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid content");
             }
             if (!content.equals(currentContent)) {
-                changes.put("content", change(preview(currentContent), preview(content)));
+                changes.put("content", AuditWriter.value(preview(currentContent), preview(content)));
                 applyContent.accept(content);
             }
         }
         if (request.status() != null && request.status() != currentStatus) {
-            changes.put("status", change(currentStatus.name(), request.status().name()));
+            changes.put("status", AuditWriter.value(currentStatus.name(), request.status().name()));
             applyStatus.accept(request.status());
         }
         return changes;
@@ -456,29 +423,8 @@ public class ModerationContentService {
         );
     }
 
-    private static String lectureLabel(Lecture lecture) {
-        String code = lecture.getCode();
-        String name = lecture.getName();
-        return code == null || code.isBlank() ? name : code + " — " + name;
-    }
-
     private static String preview(String content) {
         String text = content == null ? "" : content;
         return text.length() <= PREVIEW_LENGTH ? text : text.substring(0, PREVIEW_LENGTH) + "…";
-    }
-
-    private static Map<UUID, Integer> toCountMap(List<Object[]> rows) {
-        Map<UUID, Integer> counts = new HashMap<>();
-        for (Object[] row : rows) {
-            counts.put((UUID) row[0], ((Number) row[1]).intValue());
-        }
-        return counts;
-    }
-
-    private static Map<String, Object> change(Object before, Object after) {
-        Map<String, Object> value = new LinkedHashMap<>();
-        value.put("before", before);
-        value.put("after", after);
-        return value;
     }
 }

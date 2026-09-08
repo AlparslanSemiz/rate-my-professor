@@ -1,6 +1,7 @@
 package com.pse.moderation.service;
 
 import com.pse.audit.model.AuditAction;
+import com.pse.shared.repository.IdCount;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
@@ -35,6 +36,7 @@ import com.pse.user.repository.StudentRepository;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import com.pse.shared.page.KeysetPage;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -131,18 +133,12 @@ public class ModerationUserService {
             String rawRole,
             String rawSort
     ) {
-        Integer limit = parseUserLimit(rawLimit);
+        Integer limit = KeysetPage.optionalLimit(rawLimit);
         UserStatus status = parseStatusFilter(rawStatus);
         UserRole role = parseUserRole(rawRole);
-        boolean newestFirst = parseNewestFirst(rawSort);
+        Sort.Direction direction = parseSortDirection(rawSort);
         boolean hasCursor = rawCursor != null && !rawCursor.isBlank();
-        // A cursor with no limit has no page size to resume with. Answering it by returning
-        // everything from that point would quietly ignore half of what was asked. Checked
-        // before the cursor is decoded, because how the request is formed is the more
-        // fundamental complaint than what the cursor happens to contain.
-        if (hasCursor && limit == null) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "A cursor requires a limit");
-        }
+        KeysetPage.requireLimitWithCursor(hasCursor, limit);
         KeysetCursorCodec.Cursor cursor = hasCursor
                 ? cursorCodec.decode(rawCursor, "Invalid user cursor")
                 : null;
@@ -153,9 +149,9 @@ public class ModerationUserService {
 
         // Three batch queries instead of three per student.
         Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
-        Map<UUID, Integer> warningCounts = toCountMap(warningRepository.countGroupedByStudent());
+        Map<UUID, Integer> warningCounts = IdCount.asMap(warningRepository.countGroupedByStudent());
         Map<UUID, Integer> reportCounts =
-                toCountMap(commentReportRepository.countGroupedByCommentStudent());
+                IdCount.asMap(commentReportRepository.countGroupedByCommentStudent());
 
         Specification<Student> specification = (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -176,7 +172,8 @@ public class ModerationUserService {
                 ));
             }
             if (cursor != null) {
-                predicates.add(cursorPredicate(builder, root, cursor, newestFirst));
+                predicates.add(KeysetPage.after(
+                        builder, root, cursor.createdAtLocal(), cursor.id(), direction));
             }
             return builder.and(predicates.toArray(Predicate[]::new));
         };
@@ -200,25 +197,14 @@ public class ModerationUserService {
             return new UserListResponse("Success", true, users, null);
         }
 
-        Sort.Direction direction = newestFirst ? Sort.Direction.DESC : Sort.Direction.ASC;
-        // One row more than asked for: its presence is what says there is a next page,
-        // without a second count query that could disagree with this one.
         List<Student> fetched = studentRepository.findAll(
                 specification,
-                PageRequest.of(
-                        0,
-                        limit + 1,
-                        Sort.by(
-                                new Sort.Order(direction, "createdAt"),
-                                new Sort.Order(direction, "id")
-                        )
-                )
+                PageRequest.of(0, limit + 1, KeysetPage.byCreatedAtThenId(direction))
         ).getContent();
-        boolean hasNext = fetched.size() > limit;
-        List<Student> page = hasNext ? fetched.subList(0, limit) : fetched;
-        String nextCursor = hasNext && !page.isEmpty()
-                ? cursorCodec.encode(page.getLast().getCreatedAt(), page.getLast().getId())
-                : null;
+        KeysetPage.Slice<Student> slice = KeysetPage.of(fetched, limit,
+                last -> cursorCodec.encode(last.getCreatedAt(), last.getId()));
+        List<Student> page = slice.items();
+        String nextCursor = slice.nextCursor();
 
         List<UserResponse> users = page.stream()
                 .map(student -> toUserResponse(
@@ -249,50 +235,7 @@ public class ModerationUserService {
         return role == UserRole.ADMIN ? isAdmin : builder.not(isAdmin);
     }
 
-    /** Resumes the {@code (createdAt, id)} ordering strictly after the cursor's row. */
-    private static Predicate cursorPredicate(
-            CriteriaBuilder builder,
-            Root<Student> root,
-            KeysetCursorCodec.Cursor cursor,
-            boolean newestFirst
-    ) {
-        LocalDateTime at = cursor.createdAtLocal();
-        if (newestFirst) {
-            return builder.or(
-                    builder.lessThan(root.get("createdAt"), at),
-                    builder.and(
-                            builder.equal(root.get("createdAt"), at),
-                            builder.lessThan(root.get("id"), cursor.id())
-                    )
-            );
-        }
-        return builder.or(
-                builder.greaterThan(root.get("createdAt"), at),
-                builder.and(
-                        builder.equal(root.get("createdAt"), at),
-                        builder.greaterThan(root.get("id"), cursor.id())
-                )
-        );
-    }
 
-    /** Absent means "do not paginate", which is not the same as a default page size. */
-    private static Integer parseUserLimit(String rawLimit) {
-        if (rawLimit == null || rawLimit.isBlank()) {
-            return null;
-        }
-        int limit;
-        try {
-            limit = Integer.parseInt(rawLimit.trim());
-        } catch (NumberFormatException exception) {
-            throw new ApiException(
-                    HttpStatus.BAD_REQUEST, "Limit must be an integer between 1 and 100");
-        }
-        if (limit < 1 || limit > 100) {
-            throw new ApiException(
-                    HttpStatus.BAD_REQUEST, "Limit must be an integer between 1 and 100");
-        }
-        return limit;
-    }
 
     private static UserStatus parseStatusFilter(String rawStatus) {
         if (rawStatus == null || rawStatus.isBlank()) {
@@ -323,12 +266,18 @@ public class ModerationUserService {
         }
     }
 
-    private static boolean parseNewestFirst(String rawSort) {
+    /**
+     * {@code sort=newest} (the default) or {@code sort=oldest}, as the direction the keyset
+     * ordering runs in. Resolved to a {@code Sort.Direction} here rather than carried as a
+     * {@code newestFirst} boolean: the flag had to be read the same way at the cursor
+     * predicate and at the {@code Sort}, and nothing tied the two together.
+     */
+    private static Sort.Direction parseSortDirection(String rawSort) {
         if (rawSort == null || rawSort.isBlank() || rawSort.trim().equalsIgnoreCase("newest")) {
-            return true;
+            return Sort.Direction.DESC;
         }
         if (rawSort.trim().equalsIgnoreCase("oldest")) {
-            return false;
+            return Sort.Direction.ASC;
         }
         throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid user sort");
     }
@@ -339,14 +288,6 @@ public class ModerationUserService {
                 .findByIdAndStatusNot(studentId, UserStatus.DELETED)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         return toUserResponse(student);
-    }
-
-    private static Map<UUID, Integer> toCountMap(List<Object[]> rows) {
-        Map<UUID, Integer> counts = new HashMap<>();
-        for (Object[] row : rows) {
-            counts.put((UUID) row[0], ((Number) row[1]).intValue());
-        }
-        return counts;
     }
 
     /**
@@ -392,7 +333,7 @@ public class ModerationUserService {
                 if (studentRepository.existsByUsername(username)) {
                     throw new ApiException(HttpStatus.CONFLICT, "Username is already taken");
                 }
-                changes.put("username", change(target.getUsername(), username));
+                changes.put("username", AuditWriter.value(target.getUsername(), username));
                 target.setUsername(username);
             }
         }
@@ -419,7 +360,7 @@ public class ModerationUserService {
                 if (studentRepository.findByKitEmail(email).isPresent()) {
                     throw new ApiException(HttpStatus.CONFLICT, "Email is already taken");
                 }
-                changes.put("kitEmail", change(target.getKitEmail(), email));
+                changes.put("kitEmail", AuditWriter.value(target.getKitEmail(), email));
                 target.setKitEmail(email);
                 addressChanged = true;
             }
@@ -432,7 +373,7 @@ public class ModerationUserService {
             }
             String before = target.getBiography() == null ? "" : target.getBiography();
             if (!biography.equals(before)) {
-                changes.put("biography", change(before, biography));
+                changes.put("biography", AuditWriter.value(before, biography));
                 target.setBiography(biography);
             }
         }
@@ -440,7 +381,7 @@ public class ModerationUserService {
         if (request.credibilityScore() != null
                 && request.credibilityScore() != target.getCredibilityScore()) {
             changes.put("credibilityScore",
-                    change(target.getCredibilityScore(), request.credibilityScore()));
+                    AuditWriter.value(target.getCredibilityScore(), request.credibilityScore()));
             target.setCredibilityScore(request.credibilityScore());
         }
 
@@ -461,7 +402,7 @@ public class ModerationUserService {
                         "Administrator accounts cannot be modified"
                 );
             }
-            changes.put("status", change(target.getStatus().name(), request.status().name()));
+            changes.put("status", AuditWriter.value(target.getStatus().name(), request.status().name()));
             if (request.status() == UserStatus.BLOCKED) {
                 target.setBlockedAt(LocalDateTime.now(clock));
                 sessionsRevoked = true;
@@ -487,7 +428,7 @@ public class ModerationUserService {
                         "Administrator accounts cannot be modified"
                 );
             }
-            changes.put("role", change(roleBefore.name(), request.role().name()));
+            changes.put("role", AuditWriter.value(roleBefore.name(), request.role().name()));
             if (request.role() == UserRole.ADMIN) {
                 Admin admin = new Admin();
                 admin.setStudent(target);
@@ -570,8 +511,7 @@ public class ModerationUserService {
         studentRepository.save(target);
         revokeTokens(target);
 
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put("exists", Map.of("before", true, "after", false));
+        Map<String, Object> changes = AuditWriter.lifecycle(true, false);
         changes.put("status", Map.of("before", before.name(), "after", UserStatus.DELETED.name()));
         changes.put("anonymized", Map.of("before", false, "after", true));
 
@@ -732,7 +672,7 @@ public class ModerationUserService {
                 AuditTargetType.WARNING,
                 warning.getId(),
                 "Warning for " + userLabel(warning.getStudent()),
-                change("message", before, message),
+                AuditWriter.nullableChange("message", before, message),
                 Map.of()
         );
         return new BasicResponse("Updated warning successfully", true);
@@ -757,7 +697,7 @@ public class ModerationUserService {
                 AuditTargetType.WARNING,
                 warningId,
                 "Warning for " + userLabel(target),
-                change("warnings", before, before - 1),
+                AuditWriter.nullableChange("warnings", before, before - 1),
                 Map.of("reason", message)
         );
         return new BasicResponse("Deleted warning successfully", true);
@@ -780,19 +720,6 @@ public class ModerationUserService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid KIT email");
         }
         return email;
-    }
-
-    private static Map<String, Object> change(String field, Object before, Object after) {
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put(field, change(before, after));
-        return changes;
-    }
-
-    private static Map<String, Object> change(Object before, Object after) {
-        Map<String, Object> value = new LinkedHashMap<>();
-        value.put("before", before);
-        value.put("after", after);
-        return value;
     }
 
     private Student findMutableStudent(UUID id) {

@@ -1,6 +1,7 @@
 package com.pse.moderation.service;
 
 import com.pse.audit.model.AuditAction;
+import com.pse.lecture.dto.LectureLabels;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
@@ -78,7 +79,7 @@ public class ModerationCatalogService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid lecture name");
             }
             if (!name.equals(lecture.getName())) {
-                changes.put("name", change(lecture.getName(), name));
+                changes.put("name", AuditWriter.value(lecture.getName(), name));
                 lecture.setName(name);
             }
         }
@@ -89,7 +90,7 @@ public class ModerationCatalogService {
             }
             String before = lecture.getCode() == null ? "" : lecture.getCode();
             if (!code.equals(before)) {
-                changes.put("code", change(before, code));
+                changes.put("code", AuditWriter.value(before, code));
                 lecture.setCode(code);
             }
         }
@@ -98,22 +99,22 @@ public class ModerationCatalogService {
             if (year < 1900 || year > 2200) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid semester year");
             }
-            changes.put("semesterYear", change(lecture.getSemesterYear(), year));
+            changes.put("semesterYear", AuditWriter.value(lecture.getSemesterYear(), year));
             lecture.setSemesterYear(year);
         }
         if (request.semesterSeason() != null
                 && request.semesterSeason() != lecture.getSemesterSeason()) {
             changes.put("semesterSeason",
-                    change(lecture.getSemesterSeason().name(), request.semesterSeason().name()));
+                    AuditWriter.value(lecture.getSemesterSeason().name(), request.semesterSeason().name()));
             lecture.setSemesterSeason(request.semesterSeason());
         }
         if (request.active() != null && request.active() != lecture.isActive()) {
-            changes.put("active", change(lecture.isActive(), request.active()));
+            changes.put("active", AuditWriter.value(lecture.isActive(), request.active()));
             lecture.setActive(request.active());
         }
         if (request.lectureType() != null && request.lectureType() != lecture.getLectureType()) {
             changes.put("lectureType",
-                    change(lecture.getLectureType().name(), request.lectureType().name()));
+                    AuditWriter.value(lecture.getLectureType().name(), request.lectureType().name()));
             lecture.setLectureType(request.lectureType());
         }
         if (request.professorIds() != null) {
@@ -124,7 +125,7 @@ public class ModerationCatalogService {
             // resolved list carries the order of the request, so comparing by position made
             // an unchanged assignment look edited and wrote a bogus audit event for it.
             if (!sameAssignment(before, after)) {
-                changes.put("professors", change(labels(before), labels(after)));
+                changes.put("professors", AuditWriter.value(labels(before), labels(after)));
                 lecture.getProfessors().clear();
                 lecture.getProfessors().addAll(professors);
             }
@@ -140,7 +141,7 @@ public class ModerationCatalogService {
                 AuditAction.LECTURE_UPDATED,
                 AuditTargetType.LECTURE,
                 lecture.getId(),
-                lectureLabel(lecture),
+                LectureLabels.of(lecture),
                 changes,
                 Map.of()
         );
@@ -158,7 +159,7 @@ public class ModerationCatalogService {
     public BasicResponse deleteLecture(AuthenticatedUser principal, UUID lectureId) {
         Lecture lecture = lectureRepository.findById(lectureId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Lecture not found"));
-        String label = lectureLabel(lecture);
+        String label = LectureLabels.of(lecture);
         int comments = lecture.getComments().size();
         int ratings = lecture.getRatings().size();
 
@@ -171,8 +172,7 @@ public class ModerationCatalogService {
         lecture.getProfessors().clear();
         lectureRepository.delete(lecture);
 
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put("exists", Map.of("before", true, "after", false));
+        Map<String, Object> changes = AuditWriter.lifecycle(true, false);
         auditWriter.write(
                 principal.admin(),
                 AuditAction.LECTURE_DELETED,
@@ -206,19 +206,19 @@ public class ModerationCatalogService {
         if (request.firstName() != null) {
             String firstName = requireName(request.firstName(), "Invalid first name");
             if (!firstName.equals(professor.getFirstName())) {
-                changes.put("firstName", change(professor.getFirstName(), firstName));
+                changes.put("firstName", AuditWriter.value(professor.getFirstName(), firstName));
                 professor.setFirstName(firstName);
             }
         }
         if (request.lastName() != null) {
             String lastName = requireName(request.lastName(), "Invalid last name");
             if (!lastName.equals(professor.getLastName())) {
-                changes.put("lastName", change(professor.getLastName(), lastName));
+                changes.put("lastName", AuditWriter.value(professor.getLastName(), lastName));
                 professor.setLastName(lastName);
             }
         }
         if (request.active() != null && request.active() != professor.isActive()) {
-            changes.put("active", change(professor.isActive(), request.active()));
+            changes.put("active", AuditWriter.value(professor.isActive(), request.active()));
             professor.setActive(request.active());
         }
         if (request.lectureIds() != null) {
@@ -258,8 +258,7 @@ public class ModerationCatalogService {
         reassignLectures(professor, List.of());
         professorRepository.delete(professor);
 
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put("exists", Map.of("before", true, "after", false));
+        Map<String, Object> changes = AuditWriter.lifecycle(true, false);
         auditWriter.write(
                 principal.admin(),
                 AuditAction.PROFESSOR_DELETED,
@@ -300,7 +299,7 @@ public class ModerationCatalogService {
         professor.getLectures().addAll(after);
 
         Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put("lectures", change(labels(beforeIds), labels(afterIds)));
+        changes.put("lectures", AuditWriter.value(labels(beforeIds), labels(afterIds)));
         return changes;
     }
 
@@ -332,12 +331,6 @@ public class ModerationCatalogService {
         return ids.stream().map(UUID::toString).toList();
     }
 
-    private static String lectureLabel(Lecture lecture) {
-        String code = lecture.getCode();
-        String name = lecture.getName();
-        return code == null || code.isBlank() ? name : code + " — " + name;
-    }
-
     private static String professorLabel(Professor professor) {
         return professor.getFirstName() + " " + professor.getLastName();
     }
@@ -353,12 +346,5 @@ public class ModerationCatalogService {
 
     private static List<String> sorted(List<UUID> ids) {
         return ids.stream().map(UUID::toString).sorted().toList();
-    }
-
-    private static Map<String, Object> change(Object before, Object after) {
-        Map<String, Object> value = new LinkedHashMap<>();
-        value.put("before", before);
-        value.put("after", after);
-        return value;
     }
 }

@@ -15,7 +15,7 @@ import org.springframework.web.client.RestClientResponseException;
 
 import com.pse.auth.location.IpInfoResponse;
 import com.pse.auth.location.LoginLocation;
-import org.springframework.web.util.HtmlUtils;
+import com.pse.shared.util.Html;
 
 
 @Service
@@ -128,8 +128,8 @@ public class LoginLocationService {
             return createMapsButton(mapsUrl);
         }
 
-        String safeMapsUrl = escapeHtml(mapsUrl);
-        String safeImageUrl = escapeHtml(imageUrl);
+        String safeMapsUrl = Html.escape(mapsUrl, "");
+        String safeImageUrl = Html.escape(imageUrl, "");
 
         return """
                 <div style="
@@ -291,7 +291,7 @@ public class LoginLocationService {
                         View on Google Maps
                     </a>
                 </div>
-                """.formatted(escapeHtml(mapsUrl));
+                """.formatted(Html.escape(mapsUrl, ""));
     }
 
     /**
@@ -324,20 +324,6 @@ public class LoginLocationService {
         }
 
         return coordinates.matches("-?\\d{1,3}(\\.\\d+)?,-?\\d{1,3}(\\.\\d+)?");
-    }
-
-
-
-    /**
-     * Escapes values inserted into generated HTML.
-     */
-    private String escapeHtml(String value) {
-
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-
-        return HtmlUtils.htmlEscape(value);
     }
 
 }

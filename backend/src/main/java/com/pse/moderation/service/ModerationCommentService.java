@@ -1,6 +1,7 @@
 package com.pse.moderation.service;
 
 import com.pse.audit.model.AuditAction;
+import com.pse.lecture.dto.LectureLabels;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
@@ -140,8 +141,7 @@ public class ModerationCommentService {
 
         reportRepository.delete(report);
 
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put("exists", Map.of("before", true, "after", false));
+        Map<String, Object> changes = AuditWriter.lifecycle(true, false);
         auditWriter.write(
                 principal.admin(),
                 AuditAction.COMMENT_REPORT_DELETED,
@@ -180,8 +180,6 @@ public class ModerationCommentService {
     }
 
     private String postContext(CommentReport report) {
-        String code = report.getComment().getLecture().getCode();
-        String name = report.getComment().getLecture().getName();
-        return code == null || code.isBlank() ? name : code + " — " + name;
+        return LectureLabels.of(report.getComment().getLecture());
     }
 }

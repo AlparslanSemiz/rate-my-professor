@@ -14,7 +14,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.HtmlUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 
@@ -72,7 +71,7 @@ public class MailService implements LoginCodeDelivery, LoginSuccessDelivery {
 
         String body = mailTemplateService.create(
                 "OTPMailTemplate.html",
-                Map.of("otp", escapeHtml(otp))
+                Map.of("otp", Html.escape(otp, "Unknown"))
         );
 
         sendMail(
@@ -102,16 +101,16 @@ public class MailService implements LoginCodeDelivery, LoginSuccessDelivery {
                 "SuccessfulLoginMailTemplate.html",
                 Map.of(
                         "location",
-                        escapeHtml(loginLocation.description()),
+                        Html.escape(loginLocation.description(), "Unknown"),
 
                         "staticMap",
                         staticMap,
 
                         "ip",
-                        escapeHtml(ip),
+                        Html.escape(ip, "Unknown"),
 
                         "userAgent",
-                        escapeHtml(userAgent)
+                        Html.escape(userAgent, "Unknown")
                 )
         );
 
@@ -179,16 +178,5 @@ public class MailService implements LoginCodeDelivery, LoginSuccessDelivery {
         }
 
         helper.addInline(LOGO_CONTENT_ID, logo, "image/png");
-    }
-
-    /**
-     * Escapes values before inserting them into HTML templates.
-     */
-    private String escapeHtml(String value) {
-        if (value == null || value.isBlank()) {
-            return "Unknown";
-        }
-
-        return HtmlUtils.htmlEscape(value);
     }
 }

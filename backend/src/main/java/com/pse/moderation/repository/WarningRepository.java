@@ -3,6 +3,7 @@ package com.pse.moderation.repository;
 
 
 import java.util.List;
+import com.pse.shared.repository.IdCount;
 import java.util.UUID;
 
 import com.pse.moderation.model.Warning;
@@ -33,10 +34,10 @@ public interface WarningRepository extends JpaRepository<Warning, UUID> {
      * one query instead of one per row.
      */
     @Query("""
-        SELECT warning.student.id, COUNT(warning)
+        SELECT warning.student.id AS id, COUNT(warning) AS count
         FROM Warning warning
         GROUP BY warning.student.id
     """)
-    List<Object[]> countGroupedByStudent();
+    List<IdCount> countGroupedByStudent();
 
 }

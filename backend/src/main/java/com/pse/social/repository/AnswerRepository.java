@@ -3,6 +3,7 @@ package com.pse.social.repository;
 
 
 import com.pse.social.model.Answer;
+import com.pse.shared.repository.IdCount;
 import com.pse.social.model.Comment;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,9 +27,9 @@ public interface AnswerRepository extends JpaRepository<Answer, UUID> {
 
     /** Answers per comment, as {@code [commentId, count]} rows. */
     @Query("""
-        SELECT answer.comment.id, COUNT(answer)
+        SELECT answer.comment.id AS id, COUNT(answer) AS count
         FROM Answer answer
         GROUP BY answer.comment.id
     """)
-    List<Object[]> countGroupedByComment();
+    List<IdCount> countGroupedByComment();
 }

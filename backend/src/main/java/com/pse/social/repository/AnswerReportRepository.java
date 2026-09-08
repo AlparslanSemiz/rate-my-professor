@@ -2,6 +2,7 @@ package com.pse.social.repository;
 
 
 import com.pse.shared.enums.ReportStatus;
+import com.pse.shared.repository.IdCount;
 import com.pse.social.model.AnswerReport;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -33,9 +34,9 @@ public interface AnswerReportRepository extends JpaRepository<AnswerReport, UUID
 
     /** Reports per answer, as {@code [answerId, count]} rows. */
     @Query("""
-        SELECT report.answer.id, COUNT(report)
+        SELECT report.answer.id AS id, COUNT(report) AS count
         FROM AnswerReport report
         GROUP BY report.answer.id
     """)
-    List<Object[]> countGroupedByAnswer();
+    List<IdCount> countGroupedByAnswer();
 }

@@ -4,7 +4,6 @@ package com.pse.professor.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -144,8 +143,7 @@ public class ProfessorService {
 
         professorRepository.save(professor);
 
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put("exists", Map.of("before", false, "after", true));
+        Map<String, Object> changes = AuditWriter.lifecycle(false, true);
         auditWriter.write(
                 principal.admin(),
                 AuditAction.PROFESSOR_CREATED,

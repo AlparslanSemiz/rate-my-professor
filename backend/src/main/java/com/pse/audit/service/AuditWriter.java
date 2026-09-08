@@ -142,11 +142,35 @@ public class AuditWriter {
     }
 
     public static Map<String, Object> nullableChange(String field, Object before, Object after) {
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put(field, value(before, after));
+        return changes;
+    }
+
+    /**
+     * One field's {@code {before, after}} pair, for the callers that record several fields in
+     * a single entry and so cannot use {@link #change} -- it returns the whole changes map.
+     *
+     * <p>Null-tolerant, unlike {@link #change}: {@code Map.of} rejects a null value and a
+     * cleared biography or a removed display name is a legitimate {@code after}.
+     */
+    public static Map<String, Object> value(Object before, Object after) {
         Map<String, Object> value = new LinkedHashMap<>();
         value.put("before", before);
         value.put("after", after);
-        Map<String, Object> changes = new LinkedHashMap<>();
-        changes.put(field, value);
-        return changes;
+        return value;
+    }
+
+    /**
+     * A creation or a removal, rather than a field edit.
+     *
+     * <p>The key is {@code exists} and that is the whole point: {@code AuditRevertService}
+     * keeps it in {@code LIFECYCLE_KEYS} and refuses to revert any entry carrying one, however
+     * the action is classified. The inverse of a creation is a deletion, which is its own
+     * action with its own guards. Spelling the key by hand at eleven call sites made that
+     * contract a string literal; a typo would have quietly made the entry revertible.
+     */
+    public static Map<String, Object> lifecycle(boolean before, boolean after) {
+        return change("exists", before, after);
     }
 }

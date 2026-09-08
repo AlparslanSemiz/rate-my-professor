@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.pse.shared.util.ProfilePictureGenerator;
+import com.pse.lecture.dto.LectureLabels;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -128,7 +129,7 @@ public class SocialService {
                 AuditAction.COMMENT_CREATED,
                 AuditTargetType.COMMENT,
                 comment.getId(),
-                lectureLabel(lecture),
+                LectureLabels.of(lecture),
                 contentMetadata(content)
         );
 
@@ -240,7 +241,7 @@ public class SocialService {
                 AuditTargetType.ANSWER,
                 answer.getId(),
                 "Answer to " + comment.getStudent().getUsername()
-                        + " in " + lectureLabel(comment.getLecture()),
+                        + " in " + LectureLabels.of(comment.getLecture()),
                 contentMetadata(content)
         );
 
@@ -323,7 +324,7 @@ public class SocialService {
                 AuditTargetType.COMMENT_REPORT,
                 report.getId(),
                 "Report about " + comment.getStudent().getUsername()
-                        + " in " + lectureLabel(comment.getLecture()),
+                        + " in " + LectureLabels.of(comment.getLecture()),
                 Map.of("reason", reportReason == null ? "UNSPECIFIED" : reportReason.name())
         );
 
@@ -364,7 +365,7 @@ public class SocialService {
                 AuditTargetType.ANSWER_REPORT,
                 report.getId(),
                 "Report about " + answer.getStudent().getUsername()
-                        + " in " + lectureLabel(answer.getComment().getLecture()),
+                        + " in " + LectureLabels.of(answer.getComment().getLecture()),
                 Map.of("reason", reportReason == null ? "UNSPECIFIED" : reportReason.name())
         );
 
@@ -573,13 +574,7 @@ public class SocialService {
     }
 
     private String voteLabel(Student author, Lecture lecture) {
-        return "Vote on " + author.getUsername() + " in " + lectureLabel(lecture);
-    }
-
-    private String lectureLabel(Lecture lecture) {
-        String code = lecture.getCode();
-        String name = lecture.getName();
-        return code == null || code.isBlank() ? name : code + " — " + name;
+        return "Vote on " + author.getUsername() + " in " + LectureLabels.of(lecture);
     }
 
     /**
