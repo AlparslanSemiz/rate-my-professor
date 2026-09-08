@@ -557,7 +557,6 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
     @Override
     public void reportComment(String commentID) {
-        //showCommentReportDialog(commentID, CommentType.COMMENT);
         CommentHelper.showCommentReportDialog(getLayoutInflater(), apiService, getContext(), commentID, CommentType.COMMENT);
     }
 
