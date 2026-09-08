@@ -1,6 +1,9 @@
 package com.example.ratemyprofessor.logic;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -218,7 +221,7 @@ public class CommentHelperTest {
     }
 
     @Test
-    public void submitCommentReport_loggedIn_success() {
+    public void submitCommentReport_loggedIn_success_comment() {
         Context context = RuntimeEnvironment.getApplication();
         context.setTheme(R.style.Theme_RateMyProfessor);
         APIService apiService = mock(APIService.class);
@@ -243,8 +246,43 @@ public class CommentHelperTest {
             CommentHelper.submitCommentReport(context, apiService, binding, dialog, "c1", CommentType.COMMENT);
 
             verify(apiService).reportComment(eq("token"), any(CommentReportRequest.class));
-            verify(call).enqueue(any());
+            
+            ArgumentCaptor<Callback<BasicResponse>> captor = ArgumentCaptor.forClass(Callback.class);
+            verify(call).enqueue(captor.capture());
+            
+            // Trigger callbacks
+            captor.getValue().onResponse(call, Response.success(new BasicResponse("ok", true)));
+            captor.getValue().onFailure(call, new RuntimeException("error"));
+
             verify(dialog).dismiss();
+        }
+    }
+
+    @Test
+    public void submitCommentReport_loggedIn_success_reply() {
+        Context context = RuntimeEnvironment.getApplication();
+        context.setTheme(R.style.Theme_RateMyProfessor);
+        APIService apiService = mock(APIService.class);
+        Call<BasicResponse> call = mock(Call.class);
+        Dialog dialog = mock(Dialog.class);
+        AuthManager authManager = mock(AuthManager.class);
+        LoginSession session = mock(LoginSession.class);
+
+        when(authManager.isLoggedIn()).thenReturn(true);
+        when(session.bearerToken()).thenReturn("token");
+        when(apiService.reportReply(anyString(), any())).thenReturn(call);
+
+        DialogCommentReportBinding binding = DialogCommentReportBinding.inflate(LayoutInflater.from(context));
+
+        try (MockedStatic<AuthManager> authMock = mockStatic(AuthManager.class);
+             MockedStatic<LoginSession> sessionMock = mockStatic(LoginSession.class)) {
+            authMock.when(AuthManager::getInstance).thenReturn(authManager);
+            sessionMock.when(() -> LoginSession.from(any())).thenReturn(session);
+
+            CommentHelper.submitCommentReport(context, apiService, binding, dialog, "c1", CommentType.REPLY);
+
+            verify(apiService).reportReply(eq("token"), any(CommentReportRequest.class));
+            verify(call).enqueue(any());
         }
     }
 
@@ -281,6 +319,17 @@ public class CommentHelperTest {
 
         // Verifies that a dialog was actually created and shown in the Robolectric environment
         Dialog lastDialog = org.robolectric.shadows.ShadowAlertDialog.getLatestDialog();
-        assertEquals(true, lastDialog != null && lastDialog.isShowing());
+        assertNotNull(lastDialog);
+        assertTrue(lastDialog.isShowing());
+
+        // Trigger listeners
+        android.app.Dialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestDialog();
+        assertNotNull(dialog);
+        android.widget.EditText input = dialog.findViewById(R.id.comment_report_input);
+        android.widget.Button cancel = dialog.findViewById(R.id.bug_report_cancel);
+
+        input.setText("Some text"); // Trigger afterTextChanged
+        cancel.performClick(); // Trigger cancel listener
+        assertFalse(lastDialog.isShowing());
     }
 }

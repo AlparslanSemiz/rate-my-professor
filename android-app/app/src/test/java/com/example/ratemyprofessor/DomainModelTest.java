@@ -2,25 +2,51 @@ package com.example.ratemyprofessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.example.ratemyprofessor.DomainModel.Comment;
+import com.example.ratemyprofessor.DomainModel.LectureOffering;
 import com.example.ratemyprofessor.DomainModel.Notification;
+import com.example.ratemyprofessor.DomainModel.Professor;
+import com.example.ratemyprofessor.DomainModel.Rater;
+import com.example.ratemyprofessor.DomainModel.Rating;
 import com.example.ratemyprofessor.DomainModel.RatingCategory;
 import com.example.ratemyprofessor.DomainModel.Semester;
 import com.example.ratemyprofessor.DomainModel.SemesterSeason;
+import com.example.ratemyprofessor.DomainModel.UserStatistics;
 import com.example.ratemyprofessor.DomainModel.Vote;
 import com.example.ratemyprofessor.DomainModel.VoteType;
 import com.example.ratemyprofessor.ServerCommunication.APIService;
 import com.example.ratemyprofessor.ServerCommunication.ContentStatus;
 import com.example.ratemyprofessor.ServerCommunication.ImageRetriever;
 import com.example.ratemyprofessor.ServerCommunication.ReportReason;
+import com.example.ratemyprofessor.ServerCommunication.Requests.BugReportRequest;
+import com.example.ratemyprofessor.ServerCommunication.Requests.CommentReportRequest;
+import com.example.ratemyprofessor.ServerCommunication.Requests.PostCommentRequest;
+import com.example.ratemyprofessor.ServerCommunication.Requests.RatingRequest;
+import com.example.ratemyprofessor.ServerCommunication.Requests.RatingTopicRequest;
+import com.example.ratemyprofessor.ServerCommunication.Requests.SubmitAnswerRequest;
+import com.example.ratemyprofessor.ServerCommunication.Responses.AnswerResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.LectureResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationType;
+import com.example.ratemyprofessor.ServerCommunication.Responses.PersonalStatisticsResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorDetailResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoriesResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoryResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.StudentProfileResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.TopicAverageResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.UserRatingDto;
+import com.example.ratemyprofessor.ServerCommunication.Responses.UserRatingResponse;
 
 import org.junit.Test;
 
 import java.lang.reflect.Proxy;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 
 /**
@@ -114,5 +140,36 @@ public class DomainModelTest {
         retriever.getPicture();
 
         assertEquals("https://example.com/icon.png", requestedUrl[0]);
+    }
+
+    @Test
+    public void verifyEssentialConstructors() {
+        // Domain Models
+        assertNotNull(new Rating("l1", RatingCategory.ROOM, 4.0, Rater.USER));
+        assertNotNull(new UserStatistics(10, 5, 1.0, 4.0));
+        assertNotNull(new Professor("p1", "Ada", "Lovelace", 5.0f, 1));
+        assertNotNull(new LectureOffering("lo1", null, null, null));
+
+        // Requests
+        assertNotNull(new BugReportRequest("title", "desc", null));
+        assertNotNull(new CommentReportRequest("c1", ReportReason.OTHER, "msg"));
+        assertNotNull(new PostCommentRequest("l1", "msg"));
+        assertNotNull(new RatingRequest("l1", Collections.emptyList()));
+        assertNotNull(new RatingTopicRequest(RatingCategory.ROOM, 4.0));
+        assertNotNull(new SubmitAnswerRequest("c1", "msg"));
+
+        // Responses
+        assertNotNull(new AnswerResponse("a1", "msg", ContentStatus.VISIBLE, "u1", LocalDateTime.now()));
+        assertNotNull(new LectureResponse("l1", "name", "code", 2024, SemesterSeason.SS, true, Collections.emptyList(), 0, 0));
+        assertNotNull(new NotificationResponse("n1", NotificationType.ANSWER, null, "u", "msg", "c", "p", LocalDateTime.now()));
+        assertNotNull(new PersonalStatisticsResponse("msg", true, "u", "p", 4.5f, 10, 5, 100));
+        assertNotNull(new ProfessorDetailResponse("msg", true, null));
+        assertNotNull(new ProfessorResponse("p1", "f", "l", true, 4.5, 10, Collections.emptyList()));
+        assertNotNull(new RatingCategoriesResponse("msg", true, Collections.emptyList()));
+        assertNotNull(new RatingCategoryResponse(RatingCategory.ROOM, "Raum", 4.5));
+        assertNotNull(new StudentProfileResponse("msg", true, "u", "p", 4.5, 10, 5, 100));
+        assertNotNull(new TopicAverageResponse(RatingCategory.ROOM, 4.5));
+        assertNotNull(new UserRatingDto(null, 4.5));
+        assertNotNull(new UserRatingResponse("msg", true, Collections.emptyList()));
     }
 }
