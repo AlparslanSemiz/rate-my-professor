@@ -34,21 +34,26 @@ really recorded if it lives in a test.
 | [P-2](#p-2--integration-tests-hide-unit-targets) | Integration tests hide unit targets | Process | **Fixed** (method changed) |
 | [P-3](#p-3--lombok-is-not-filtered-in-jacoco) | Lombok is not filtered in JaCoCo | Process | **Closed — decided against** |
 | [P-4](#p-4--a-moved-test-file-was-copied-not-moved) | A "moved" test file was copied, not moved | Process | **Fixed** (duplicates deleted) |
+| [P-5](#p-5--coverage-measured-without-clean-is-not-the-coverage-ci-measures) | Coverage measured without `clean` is inflated by the previous run | Process | **Fixed** (figures re-measured) |
 
-**Nothing in this document is open.** The last twelve were closed in one pass; what each
-one's **Status** now records is either the fix or, for P-3 alone, the decision not to make
-one. The three that changed a client-visible contract — F-3, F-5 and F-16 — were closed
+**Nothing in this document is open.** Twelve were closed in one pass and P-5 was raised and
+fixed later, by the integration layer; what each one's **Status** now records is either the fix
+or, for P-3 alone, the decision not to make one. The three that changed a client-visible contract — F-3, F-5 and F-16 — were closed
 deliberately rather than quietly, and each says below what a client sees differently.
 
 BUG-1 and BUG-2 (the cursor and approximate-location bug reports) are in
 [test-plan.md](test-plan.md#findings); neither was reproducible on the backend and they stay
-there.
+there. BUG-1 has since been driven through all four cursor endpoints against a real PostgreSQL
+and did not reproduce there either — see [Negative results](#negative-results).
 
-The ownership / IDOR sweep ran and raised nothing — what it covered and how is under
+Three sweeps have now run and raised nothing — ownership/IDOR, the cursor endpoints, and the
+read-only transaction sweep. What each covered is written down under
 [Negative results](#negative-results), because a sweep that finds nothing is only worth
-something if its coverage is written down. F-18 comes from batch 5 instead: the first defect
-found by a *unit* test in several batches, and the only one so far that would have taken a
-feature down completely rather than answering with the wrong status code.
+something if its coverage is recorded; two of the three also say how they were checked against
+a defect they were meant to catch, since a green sweep and a sweep that cannot fail look alike
+from outside. F-18 comes from batch 5 instead: the first defect found by a *unit* test in
+several batches, and the only one so far that would have taken a feature down completely rather
+than answering with the wrong status code.
 
 ---
 
@@ -858,6 +863,64 @@ What the batch did produce is two pieces of characterization, recorded in
 Both are pinned. If session types are ever made mandatory, the first test is the one that has
 to change, and it names the decision instead of leaving it to be rediscovered.
 
+### The cursor endpoints page correctly against PostgreSQL
+
+BUG-1 asked whether the cursor works on the backend. The unit layer had settled the format and
+every rejection, and `AuditTimestampPrecisionPostgresTests` had ruled out the timestamp
+explanation. What none of that reached was the predicate itself: producing a cursor and
+*applying* it are separate things, and the application half is a Criteria predicate that needs
+a database.
+
+`CursorPaginationPostgresTests` now drives all four cursor-paginated endpoints against a real
+PostgreSQL 16, ten tests:
+
+| Route | Cursor column | Covered |
+|---|---|---|
+| `GET /admin/activity-logs` | `Instant` | distinct timestamps, and all rows sharing one microsecond |
+| `GET /admin/audit-logs` | `Instant` | same two |
+| `GET /admin/ratings` | `LocalDateTime` via `createdAtLocal()` | same two |
+| `GET /admin/users` | `LocalDateTime` | same two, **in both sort directions** |
+
+Each pages the whole list with `limit=1` and compares the ids served to the ordering the
+database itself produces, element for element — so a repeat, a skip and a wrong boundary are one
+assertion rather than three. The shared-microsecond half is the important one: the tiebreaker
+branch `createdAt = cursor AND id < cursor.id` is unreachable while timestamps differ, and it is
+the branch BUG-1's description is about.
+
+**Nothing reproduced.** Every endpoint served every row exactly once, in the right order, in
+both directions.
+
+**The sweep was checked against the defect it exists to find**, because a green pagination test
+is worth nothing until you know it can go red. Changing `lessThan` to `lessThanOrEqualTo` in
+`AuditLogService`'s cursor predicate — the off-by-one that re-serves the boundary row — turned
+exactly the four audit tests red with `served 16 rows in 15 pages without reaching the end`, and
+left the six moderation tests green, which is the right blast radius for a change in that one
+service. The mutation was reverted.
+
+BUG-1 therefore still has no explanation on the backend, and now has one fewer place to hide.
+
+### No route writes inside a read-only transaction
+
+[F-9](#f-9--a-write-inside-a-readonly-transaction) was a write inside a
+`@Transactional(readOnly = true)` method. It was fixed by removing the write, but the general
+question stayed open: there are **27** such methods in `src/main/java` and only that one had
+been looked at, and the finding itself records why a unit test cannot answer it — dirty checking
+is Hibernate's business, not a mock's.
+
+PostgreSQL makes it answerable. It marks the transaction read-only on the server, so a write
+reaching one fails with `cannot execute UPDATE in a read-only transaction`, which arrives as a
+500. `ReadOnlyTransactionSweepPostgresTests` reads every GET from
+`RequestMappingHandlerMapping`, fills path variables from a fixture, and drives all of them with
+an administrator session.
+
+**47 readable routes, no 5xx.** There is no second F-9.
+
+The sweep records its own coverage rather than implying it: exactly one route answers something
+other than 2xx (`GET /data/professor/id`, which needs two query parameters the sweep does not
+send, and which is not transactional anyway), and that exclusion is asserted rather than
+tolerated. Without it, every route could be answering 400 and "no route returned 500" would
+still be green.
+
 ### The ownership / IDOR sweep found no defect
 
 `ApiOwnershipMatrixTests` asks the question `ApiAuthorizationMatrixTests` does not: once a
@@ -993,6 +1056,32 @@ the same question and both are green.
 is that the bundle did not move — `StudentService` and `AccountService` stayed at 0 missed lines
 and the same branch counts, before and after, to the line.
 
+
+### P-5 — Coverage measured without `clean` is not the coverage CI measures
+
+**What happened.** This document and [test-plan.md](test-plan.md) recorded the bundle at
+**95.78% LINE / 89.50% BRANCH**. A `./mvnw clean verify` on the same commit reports **95.52% /
+89.33%**. Both numbers came from the same command on the same code; only the state of
+`target/` differed.
+
+**Why.** `jacoco:prepare-agent` appends by default, and `pom.xml` does not override it, so
+`target/jacoco.exec` accumulates every run until something deletes it. A `verify` that follows a
+targeted `-Dtest=` run therefore reports the union of both runs. That is exactly how the higher
+number arose: the PostgreSQL tests skip themselves during a normal `verify`, but they had been
+run explicitly beforehand, and their coverage was still sitting in the exec file.
+
+Measured both ways in one session, on this commit: with the accumulated file, 96.13% / 90.26%;
+after `clean`, 95.52% / 89.33%.
+
+**Why it matters more than a rounding difference.** CI runs in a fresh container and therefore
+always measures the clean number. A developer measuring locally gets the inflated one, and the
+gap points the wrong way — it says the target is met when it may not be. This is
+[P-1](#p-1--the-coverage-baseline-number-was-wrong) again in a different disguise: a coverage
+number is only worth what the conditions it was measured under are.
+
+**Status. Fixed** — every figure in both documents is now a `clean verify` figure, and the
+sentence saying so sits next to them in test-plan.md. Quote no coverage number that did not
+come from `./mvnw clean verify`.
 
 ---
 

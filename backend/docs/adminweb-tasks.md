@@ -135,10 +135,6 @@ the handler and answer `200 {"success": false}` instead; that is fixed, so the l
 
 Admin sessions are **one day** by default, not a year.
 
-> **While the current experiment runs they are two minutes.** This is deliberate and
-> temporary — it is how we watch that a short admin lifetime can no longer reach the app.
-> Do not tune the panel around two minutes; build for the one-day value.
-
 - [ ] Read `expiresAt` from the login response. It is a UTC ISO 8601 timestamp naming the
       moment the token stops authenticating.
 - [ ] Warn before it expires, rather than letting an operator discover it as a `401` in the

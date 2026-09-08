@@ -2,16 +2,23 @@
 
 Layers: **unit → API/role → integration → E2E**. Every batch adds its own section. The unit
 layer is covered by batches 1–6, the API/role layer by the authorization, protocol and
-ownership sweeps below. The integration and E2E layers have not been started; what blocks the
-first of them was recorded as the Testcontainers question; it turned out not to be a
-blocker at all — see [Settled questions](#settled-questions).
+ownership sweeps below, and the integration layer by the PostgreSQL section further down. Only
+E2E has not been started. What was recorded as blocking the integration layer — the
+Testcontainers question — turned out not to be a blocker at all; see
+[Settled questions](#settled-questions).
 
 ### Where it stands
 
-**786 tests, 0 failures**, 5 skipped locally (the `@Disabled` `DemoApplicationTests`
-and the four PostgreSQL tests, which run in CI). Bundle **95.78% LINE** (3289/3434),
-**89.50% BRANCH** (1048/1171). Line coverage is gated in two tiers — **90% mandatory,
+**802 tests, 0 failures**, 21 skipped locally (the `@Disabled` `DemoApplicationTests` and the
+twenty PostgreSQL tests, which run in CI). Bundle **95.52% LINE** (3280/3434),
+**89.33% BRANCH** (1046/1171). Line coverage is gated in two tiers — **90% mandatory,
 95% target** — and BRANCH has a single floor at 0.87.
+
+> Those are `./mvnw clean verify` numbers, and the `clean` is not decoration. JaCoCo's
+> `prepare-agent` appends by default, so `target/jacoco.exec` accumulates across runs and a
+> `verify` following a targeted `-Dtest=` run reports coverage the suite did not earn on its
+> own. The figures previously recorded here — 95.78% / 89.50% — were measured that way. See
+> [P-5](test-findings.md#p-5--coverage-measured-without-clean-is-not-the-coverage-ci-measures).
 
 Line coverage has been above its target since batch 5, so `coverage:line-target` is green
 rather than yellow; batch 6 raised the target itself from 94 to 95 rather than banking the
@@ -30,14 +37,15 @@ not a batch of its own and gets no section below, only updated statuses.
 | Unit | Batches 1–6 done. |
 | API / role | The three sweeps below. |
 | Findings | **All closed.** |
-| Integration | **Started.** Runs against a real PostgreSQL in CI, no Testcontainers. |
+| Integration | **Done for the three questions H2 cannot answer.** Five classes, 20 tests, one shared context against a real PostgreSQL in CI. |
 | E2E | **Not started.** |
 
 The integration layer runs in `server:postgres-integration`, against a `postgres:16` GitLab CI
 service with the production Flyway migrations. Its tests skip themselves when
 `POSTGRES_SMOKE_JDBC_URL` is unset, so `./mvnw verify` on a developer machine is unchanged and
 still needs no Docker. Its first result was ruling out the BUG-1 timestamp hypothesis — see
-[Settled questions](#settled-questions).
+[Settled questions](#settled-questions); what it covers now is
+[The integration layer](#the-integration-layer).
 
 The spread between LINE and BRANCH was 15 points before batch 4, 9.7 after it, 8.9 after batch
 5, and is **6.2** after batch 6. 125 branches and 154 lines are left in the whole module. The
@@ -545,6 +553,120 @@ enough to show that `KNOWN_SCHEMA_GAPS` was over-declared, naming a mismatch tha
 occurred. An exemption list that names more than it observes passes for the same reason a
 hand-maintained route list does — by looking at less than it thinks.
 
+## The integration layer
+
+Five classes, twenty tests, against a real PostgreSQL 16 with the production Flyway migrations.
+They exist for the questions H2 cannot answer, and for nothing else: an assertion that H2 can
+settle belongs in a faster job.
+
+**One context, and it is load-bearing.** `PostgresTestDatabase` drops and recreates the
+`public` schema when it initialises, so two Spring contexts using it would wipe each other
+mid-run. Every class therefore carries `@PostgresIntegrationTest` — a composed annotation
+holding the four annotations that used to be copied by hand — and Spring's context cache hands
+them one context between them. That is also what keeps the job cheap: twenty tests cost about
+seven seconds on top of one application start, not five starts. The `server:postgres-integration`
+job greps its own log afterwards and **fails unless exactly one context started**, because a
+fork is otherwise invisible: it looks like unrelated flakiness in whichever class ran second.
+
+### What each class is for
+
+| Class | The question only a real server answers |
+|---|---|
+| `PostgreSqlMigrationSmokeTests` | Do the production migrations produce a schema the application starts against? |
+| `AuditTimestampPrecisionPostgresTests` | What does `timestamp(6)` do with the nanoseconds `Instant.now()` carries — truncate or round? |
+| `CursorPaginationPostgresTests` | Do the four keyset predicates page correctly against that column? |
+| `AuditJsonbRoundTripPostgresTests` | Does `jsonb` — the one place the two schemas differ — hand back what the revert feature put in it? |
+| `ReadOnlyTransactionSweepPostgresTests` | Does any readable route write inside a transaction the server has marked read-only? |
+
+### The cursor, applied
+
+`KeysetCursorCodec` was tested to 100% at the unit layer, and its entry under
+[Classes](#keysetcursorcodec) recorded what that could not reach: "producing a cursor correctly
+and *applying* it correctly are separate things; the predicate and the page boundary belong to
+the integration layer." Four endpoints paginate by keyset, over two different column types:
+
+| Route | Cursor column | Shapes |
+|---|---|---|
+| `GET /admin/activity-logs` | `Instant` | one |
+| `GET /admin/audit-logs` | `Instant` | one |
+| `GET /admin/ratings` | `LocalDateTime` via `Cursor.createdAtLocal()` | one |
+| `GET /admin/users` | `LocalDateTime` | **two** — `sort=newest` and `sort=oldest` mirror every comparison |
+
+Each is paged from end to end with `limit=1`, and the sequence of ids served is compared to the
+ordering the database itself produces, **element for element**. That is deliberate, and it is
+the part worth copying: "no row is served twice" is also satisfied by a walk that silently
+drops rows, and a dropped row is the same defect wearing the other face. One assertion covers a
+repeat, a skip and a wrong boundary.
+
+Every route is tested twice: once with distinct timestamps, and once with **every row forced
+into the same microsecond**. The second is the point. The tiebreaker branch — `createdAt =
+cursor AND id < cursor.id` — is unreachable while timestamps differ, and it is the branch that
+decides whether a page boundary repeats or skips. It is also the exact shape BUG-1 describes.
+`@CreationTimestamp` overwrites whatever an entity carries, so students and ratings are stamped
+afterwards through `JdbcTemplate`; `AuditLog.@PrePersist` only fills a null, so those rows are
+stamped before the insert.
+
+**The sweep was checked against a defect it was meant to find**, rather than trusted because it
+was green: changing `lessThan` to `lessThanOrEqualTo` in `AuditLogService`'s cursor predicate —
+the classic off-by-one that serves the boundary row again — turned exactly the four audit tests
+red, with `the cursor is not advancing past a row`. Without that check a green pagination sweep
+says very little, because the same green comes from a sweep that never paged.
+
+Result: **BUG-1 does not reproduce on any of the four endpoints**, in either direction, with or
+without a shared microsecond. Recorded as a negative result in
+[test-findings.md](test-findings.md#the-cursor-endpoints-page-correctly-against-postgresql).
+
+### The `jsonb` round trip
+
+The H2 baseline and the PostgreSQL baseline are the same file except for two lines:
+`audit_logs.changes` and `audit_logs.metadata` are `json` on H2 and `jsonb` on PostgreSQL.
+`json` stores the document as text and returns it byte for byte; `jsonb` parses it into a binary
+form that reorders keys, collapses duplicates and normalises numbers. Every revert handler reads
+its `before` values back out of `changes`, so the whole revert feature rests on that round trip
+— and the H2 suite, on the other column type, cannot vouch for it.
+
+Three tests. The first asserts the column really is `jsonb` in this database, because without it
+the other two would still pass while quietly testing the H2 shape. The second round-trips nested
+objects, arrays, nulls, an empty object, non-ASCII text and a quote inside a key — and then
+re-reads two of the values through PostgreSQL's own `->>` operator, so the assertion cannot be
+satisfied by a value that never left the JVM. The third reverts a lecture rename end to end and
+asserts the *name is restored*, not merely that the JSON survived.
+
+Nothing was lost in the round trip, including the integer and boolean values `RevertValues`
+already treats as representation-insensitive.
+
+### The read-only sweep
+
+F-9 was a write inside a `@Transactional(readOnly = true)` method, and the findings record why a
+unit test could not settle it: dirty checking is Hibernate's business, not a mock's. It was
+fixed by removing the write, which left the general question open — there are 27 such methods
+and one of them had ever been looked at.
+
+PostgreSQL is what makes it answerable: it marks the transaction read-only on the server, so a
+write that reaches one fails with `cannot execute UPDATE in a read-only transaction`, arriving
+here as a 500. The sweep reads every GET from `RequestMappingHandlerMapping` — never a
+hand-kept list — fills path variables from a fixture by placeholder name, and drives all of
+them with an administrator session.
+
+It asserts three things, and the second two are what stop it being decoration:
+
+1. No route answers 5xx.
+2. The routes that answer something other than 2xx are **exactly** one documented entry
+   (`GET /data/professor/id`, which needs two query parameters this sweep does not send).
+   Without this, every route could be answering 400 and rule 1 would still be green.
+3. At least 47 routes actually entered a read transaction and answered from it.
+
+Result: **no second F-9.** All 47 readable routes came back clean.
+
+### Reused rather than rewritten
+
+`ApiAuthorizationMatrixTests`, `ApiOwnershipMatrixTests` and `ApiProtocolContractTests` each held
+a private copy of the same `handlerMapping.getHandlerMethods()` walk, and the read-only sweep
+would have been the fourth. It is now `com.pse.support.MappedRoutes`, and all four use it. The
+one thing the three copies disagreed about — what a mapping that declares no verb means — is
+reported rather than decided: such a route arrives with a `null` verb and every call site states
+its own reading. The three sweeps ran 7/7/6 before the extraction and 7/7/6 after.
+
 ## Deliberately uncovered
 
 Two classes are visibly low and neither is an oversight. Saying so here is the point: an
@@ -788,12 +910,14 @@ itself is real and visible in the test profile; only the citation was.)
   - The seven rejection paths: null, empty, the 512-character limit, non-base64, wrong
     version, wrong number of parts, undecodable `Instant`/`UUID` — all 400
   - That the error message is the text the caller supplied
-- **Deliberately not tested:** the cursor's effect on the database query — that is a Criteria
-  predicate and belongs to the integration layer. Nanosecond/microsecond truncation (the open
-  question above).
+- **Deliberately not tested here:** the cursor's effect on the database query — a Criteria
+  predicate, which needs a database. Nanosecond/microsecond precision, likewise.
 - **Mocks used:** none; the class has no dependencies.
-- **Residual risk:** producing a cursor correctly and *applying* it correctly are separate
-  things; the predicate and the page boundary belong to the integration layer.
+- **Residual risk: closed.** Producing a cursor correctly and *applying* it correctly are
+  separate things, and both are now covered: the precision question by
+  `AuditTimestampPrecisionPostgresTests`, and the predicate and page boundary of all four
+  cursor endpoints by `CursorPaginationPostgresTests`. See
+  [The integration layer](#the-integration-layer).
 - **Test count:** 23 (good: 6, bad: 17)
 
 ### AuditCursorCodec

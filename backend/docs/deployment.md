@@ -362,7 +362,7 @@ Jobs:
 | --- | --- | --- |
 | `server:test` | Push and merge request pipelines, never scheduled | Runs `./mvnw -B -ntp verify`, then `java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"`, then `java scripts/CheckLineCoverage.java` against the two line-coverage tiers. Publishes JUnit and JaCoCo artifacts. The changed-code gate needs a comparison ref; when it cannot resolve one it says so and passes, rather than failing a build over a missing base commit. |
 | `coverage:line-target` | Push and merge request pipelines, never scheduled | Reuses `server:test`'s JaCoCo artifact and re-checks bundle line coverage against `COVERAGE_LINE_TARGET`. Marked `allow_failure: true`, so missing the target is a **yellow warning that does not block the pipeline**. Costs a container start, not a rebuild. |
-| `server:postgres-integration` | Push and merge request pipelines | Everything that needs a real PostgreSQL rather than H2. Starts the Spring Boot app test context against a `postgres:16` CI service, checks `/health`, exercises the PostgreSQL Flyway migrations from `src/main/resources/db/migration/postgresql`, and runs the integration tests that depend on server behaviour H2 does not model. A CI service is a plain TCP server, so this needs no Docker socket, no privileged runner and no Testcontainers dependency. |
+| `server:postgres-integration` | Push and merge request pipelines | Everything that needs a real PostgreSQL rather than H2. Starts **one** Spring Boot test context against a `postgres:16` CI service, checks `/health`, exercises the PostgreSQL Flyway migrations from `src/main/resources/db/migration/postgresql`, and runs the integration tests that depend on server behaviour H2 does not model: keyset pagination against a real `timestamp(6)`, the `jsonb` round trip the revert feature reads its values back out of, and the read-only transaction sweep. A CI service is a plain TCP server, so this needs no Docker socket, no privileged runner and no Testcontainers dependency. The classes are **named** in `-Dtest=` rather than pattern-matched, because the job's cost is one Spring context per distinct configuration; a second step then greps the log and **fails unless exactly one context started**, since two would have reset the schema under each other and proved nothing. |
 | `server:package` | `main` branch, non-scheduled pipelines | Uses Kaniko to build `src/Dockerfile` and push `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`. |
 | `server:deploy:staging` | Manual job on `main`, non-scheduled pipelines | SSHes to the deployment host and replaces the Compose-managed `backend` service. |
 | `health:check` | Scheduled pipelines only | Curls the configured BW Cloud/staging `/health` URL and expects HTTP 200. |
@@ -374,9 +374,9 @@ Coverage is configured in three variables, and they answer different questions:
 | --- | --- | --- |
 | `COVERAGE_THRESHOLD` | `30` | Minimum coverage of the lines a merge request *changed*. |
 | `COVERAGE_LINE_MIN` | `90` | Mandatory bundle line coverage. Below it the pipeline is **red**. Kept in step with the `LINE` minimum in the pom's `jacoco:check`, which enforces the same floor on a local `mvnw verify` — move one, move the other. |
-| `COVERAGE_LINE_TARGET` | `94` | The bundle line coverage the suite aims for. Below it `coverage:line-target` goes **yellow** and the pipeline still passes. |
+| `COVERAGE_LINE_TARGET` | `95` | The bundle line coverage the suite aims for. Below it `coverage:line-target` goes **yellow** and the pipeline still passes. |
 
-Branch coverage has a single floor of `0.82`, in the pom only.
+Branch coverage has a single floor of `0.87`, in the pom only.
 
 Scheduled `backup:offsite` is expected to fail when `BACKUP_PASSPHRASE` is not
 configured. This prevents CI from uploading a readable dump that contains real

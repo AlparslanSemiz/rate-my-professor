@@ -247,3 +247,19 @@ public record LoginResponse(
         String authToken,
 +++     String expiresAt
 ) {}
+
+
+///// 8.09
+
+
+Admin sessions are one day again.
+
+The two-minute admin session was a temporary experiment, to watch that a short admin
+lifetime could no longer log an administrator out of the app. It could not, and the
+experiment is over: "POST /admin/auth/login" issues a one-day session from the next
+deployment on.
+
+Nothing about the app API changed. "POST /auth/login" still returns 365 days, for
+administrators too. The lifetime is decided by the endpoint you called, not by the account.
+
+Read "expiresAt" from the login response rather than assuming either number.
