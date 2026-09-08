@@ -6,7 +6,10 @@ import com.pse.auth.dto.request.OTPRequest;
 import com.pse.auth.dto.request.ValidateCredentialsRequest;
 import com.pse.shared.dto.BasicResponse;
 import com.pse.auth.dto.response.LoginResponse;
-import com.pse.auth.service.AuthService;
+import com.pse.auth.service.IdentityService;
+import com.pse.auth.service.LoginCodeService;
+import com.pse.auth.service.SessionIssuer;
+import com.pse.auth.service.SessionRevoker;
 import com.pse.security.AuthenticatedUser;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,7 +28,16 @@ import static org.mockito.Mockito.*;
 class AuthControllerTests {
 
     @Mock
-    private AuthService authService;
+    private LoginCodeService loginCodeService;
+
+    @Mock
+    private SessionIssuer sessionIssuer;
+
+    @Mock
+    private SessionRevoker sessionRevoker;
+
+    @Mock
+    private IdentityService identityService;
 
     @Mock
     private HttpServletRequest httpRequest;
@@ -48,7 +60,7 @@ class AuthControllerTests {
                         true
                 );
 
-        when(authService.requestLogin(
+        when(loginCodeService.requestLogin(
                 request,
                 httpRequest
         )).thenReturn(expected);
@@ -62,7 +74,7 @@ class AuthControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(authService)
+        verify(loginCodeService)
                 .requestLogin(
                         request,
                         httpRequest
@@ -77,7 +89,7 @@ class AuthControllerTests {
 
         LoginResponse expected = mock(LoginResponse.class);
 
-        when(authService.login(
+        when(sessionIssuer.login(
                 request,
                 httpRequest
         )).thenReturn(expected);
@@ -91,7 +103,7 @@ class AuthControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(authService).login(
+        verify(sessionIssuer).login(
                         request,
                         httpRequest
                 );
@@ -107,7 +119,7 @@ class AuthControllerTests {
                         true
                 );
 
-        when(authService.logout(principal))
+        when(sessionRevoker.logout(principal))
                 .thenReturn(expected);
 
 
@@ -117,7 +129,7 @@ class AuthControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(authService).logout(principal);
+        verify(sessionRevoker).logout(principal);
     }
 
 
@@ -126,7 +138,7 @@ class AuthControllerTests {
 
         BasicResponse expected = new BasicResponse("Logged out from all devices", true);
 
-        when(authService.logoutAll(principal))
+        when(sessionRevoker.logoutAll(principal))
                 .thenReturn(expected);
 
 
@@ -135,7 +147,7 @@ class AuthControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(authService).logoutAll(principal);
+        verify(sessionRevoker).logoutAll(principal);
     }
 
 
@@ -148,7 +160,7 @@ class AuthControllerTests {
 
         BasicResponse expected = new BasicResponse("Correct", true);
 
-        when(authService.validate(
+        when(identityService.validate(
                 authHeader,
                 request
         )).thenReturn(expected);
@@ -162,7 +174,7 @@ class AuthControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(authService).validate(
+        verify(identityService).validate(
                         authHeader,
                         request
                 );

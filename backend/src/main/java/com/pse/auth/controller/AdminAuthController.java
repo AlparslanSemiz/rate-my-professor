@@ -1,11 +1,14 @@
 package com.pse.auth.controller;
 
+import com.pse.auth.service.IdentityService;
+import com.pse.auth.service.LoginCodeService;
+import com.pse.auth.service.SessionIssuer;
+import com.pse.auth.service.SessionRevoker;
 import com.pse.auth.dto.request.LoginRequest;
 import com.pse.auth.dto.request.OTPRequest;
 import com.pse.auth.dto.response.AuthMeResponse;
 import com.pse.shared.dto.BasicResponse;
 import com.pse.auth.dto.response.LoginResponse;
-import com.pse.auth.service.AuthService;
 import com.pse.security.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -27,34 +30,45 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/admin/auth")
 public class AdminAuthController {
 
-    private final AuthService authService;
+    private final LoginCodeService loginCodeService;
+    private final SessionIssuer sessionIssuer;
+    private final SessionRevoker sessionRevoker;
+    private final IdentityService identityService;
 
-    public AdminAuthController(AuthService authService) {
-        this.authService = authService;
+    public AdminAuthController(
+            LoginCodeService loginCodeService,
+            SessionIssuer sessionIssuer,
+            SessionRevoker sessionRevoker,
+            IdentityService identityService
+    ) {
+        this.loginCodeService = loginCodeService;
+        this.sessionIssuer = sessionIssuer;
+        this.sessionRevoker = sessionRevoker;
+        this.identityService = identityService;
     }
 
     @PostMapping("/request-login")
     public BasicResponse requestLogin(@Valid @RequestBody OTPRequest request, HttpServletRequest httpRequest) {
-        return authService.requestLogin(request, httpRequest);
+        return loginCodeService.requestLogin(request, httpRequest);
     }
 
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
-        return authService.adminLogin(request, httpRequest);
+        return sessionIssuer.adminLogin(request, httpRequest);
     }
 
     @PostMapping("/logout")
     public BasicResponse logout(@AuthenticationPrincipal AuthenticatedUser principal) {
-        return authService.logout(principal);
+        return sessionRevoker.logout(principal);
     }
 
     @PostMapping("/logout-all")
     public BasicResponse logoutAll(@AuthenticationPrincipal AuthenticatedUser principal) {
-        return authService.logoutAll(principal);
+        return sessionRevoker.logoutAll(principal);
     }
 
     @GetMapping("/me")
     public AuthMeResponse me(@AuthenticationPrincipal AuthenticatedUser principal) {
-        return authService.me(principal);
+        return identityService.me(principal);
     }
 }

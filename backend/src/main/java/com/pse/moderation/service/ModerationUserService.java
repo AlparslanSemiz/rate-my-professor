@@ -1,5 +1,6 @@
 package com.pse.moderation.service;
 
+import com.pse.shared.util.KitEmail;
 import com.pse.audit.model.AuditAction;
 import com.pse.shared.repository.IdCount;
 import com.pse.audit.model.AuditTargetType;
@@ -8,7 +9,7 @@ import com.pse.shared.dto.BasicResponse;
 import com.pse.auth.model.Token;
 import com.pse.auth.repository.TokenRepository;
 import com.pse.auth.service.AdminSuperuserPolicy;
-import com.pse.auth.service.AuthService;
+import com.pse.auth.service.IdentityService;
 import com.pse.moderation.dto.request.UserUpdateRequest;
 import com.pse.moderation.dto.request.WarningRequest;
 import com.pse.moderation.dto.response.UserListResponse;
@@ -48,20 +49,15 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 @Service
 public class ModerationUserService {
-
-    private static final Pattern KIT_EMAIL =
-            Pattern.compile("^[A-Z0-9._%+-]+@student\\.kit\\.edu$", Pattern.CASE_INSENSITIVE);
 
     private final StudentRepository studentRepository;
     private final AdminRepository adminRepository;
@@ -70,7 +66,7 @@ public class ModerationUserService {
     private final NotificationRepository notificationRepository;
     private final TokenRepository tokenRepository;
     private final AuditWriter auditWriter;
-    private final AuthService authService;
+    private final IdentityService identityService;
     private final AdminSuperuserPolicy superuserPolicy;
     private final KeysetCursorCodec cursorCodec;
     private final Clock clock;
@@ -83,7 +79,7 @@ public class ModerationUserService {
             NotificationRepository notificationRepository,
             TokenRepository tokenRepository,
             AuditWriter auditWriter,
-            AuthService authService,
+            IdentityService identityService,
             AdminSuperuserPolicy superuserPolicy,
             KeysetCursorCodec cursorCodec,
             Clock clock
@@ -95,14 +91,14 @@ public class ModerationUserService {
         this.notificationRepository = notificationRepository;
         this.tokenRepository = tokenRepository;
         this.auditWriter = auditWriter;
-        this.authService = authService;
+        this.identityService = identityService;
         this.superuserPolicy = superuserPolicy;
         this.cursorCodec = cursorCodec;
         this.clock = clock;
     }
 
     public boolean validateAdminToken(String authHeader) {
-        Student student = authService.verifyUser(authHeader);
+        Student student = identityService.verifyUser(authHeader);
         return student != null && adminRepository.existsByStudent(student);
     }
 
@@ -340,7 +336,7 @@ public class ModerationUserService {
 
         boolean addressChanged = false;
         if (request.kitEmail() != null) {
-            String email = normalizeKitEmail(request.kitEmail());
+            String email = KitEmail.requireKitAddress(request.kitEmail());
             if (!email.equals(target.getKitEmail())) {
                 // Elevation is keyed on the address, so moving one is how an elevated
                 // account would be taken over: free the address with one edit, claim it
@@ -712,14 +708,6 @@ public class ModerationUserService {
             throw new ApiException(HttpStatus.NOT_FOUND, "Warning not found");
         }
         return warning;
-    }
-
-    private String normalizeKitEmail(String rawEmail) {
-        String email = rawEmail == null ? "" : rawEmail.trim().toLowerCase(Locale.ROOT);
-        if (!KIT_EMAIL.matcher(email).matches()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid KIT email");
-        }
-        return email;
     }
 
     private Student findMutableStudent(UUID id) {

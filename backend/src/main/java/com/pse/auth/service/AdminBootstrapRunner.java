@@ -2,8 +2,6 @@ package com.pse.auth.service;
 
 import com.pse.moderation.model.Admin;
 import com.pse.moderation.repository.AdminRepository;
-import com.pse.shared.enums.UserStatus;
-import com.pse.shared.util.NameGenerator;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
 import org.slf4j.Logger;
@@ -13,8 +11,6 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Clock;
-import java.time.LocalDateTime;
 
 /**
  * Ensures every configured administrator exists as soon as the application starts.
@@ -37,18 +33,18 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     private final AdminBootstrapPolicy policy;
     private final StudentRepository studentRepository;
     private final AdminRepository adminRepository;
-    private final Clock clock;
+    private final StudentProvisioning studentProvisioning;
 
     public AdminBootstrapRunner(
             AdminBootstrapPolicy policy,
             StudentRepository studentRepository,
             AdminRepository adminRepository,
-            Clock clock
+            StudentProvisioning studentProvisioning
     ) {
         this.policy = policy;
         this.studentRepository = studentRepository;
         this.adminRepository = adminRepository;
-        this.clock = clock;
+        this.studentProvisioning = studentProvisioning;
     }
 
     @Override
@@ -64,7 +60,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
         for (String email : policy.bootstrapEmails()) {
             Student student = studentRepository.findByKitEmail(email).orElse(null);
             if (student == null) {
-                student = createStudent(email);
+                student = studentProvisioning.create(email, policy.displayName(email));
                 created++;
             }
             if (!adminRepository.existsByStudent(student)) {
@@ -82,34 +78,4 @@ public class AdminBootstrapRunner implements ApplicationRunner {
         );
     }
 
-    private Student createStudent(String email) {
-        String name = policy.displayName(email);
-        Student student = new Student();
-        student.setKitEmail(email);
-        student.setUsername(resolveUsername(name));
-        student.setEmailVerifiedAt(LocalDateTime.now(clock));
-        student.setCredibilityScore(0);
-        student.setStatus(UserStatus.ACTIVE);
-        return studentRepository.save(student);
-    }
-
-    /**
-     * Uses the configured display name when it is free, so the panel shows real
-     * names. Falls back to a generated one rather than failing startup, because
-     * {@code username} is unique and a collision must not take the service down.
-     */
-    private String resolveUsername(String configuredName) {
-
-        if (!configuredName.isBlank() && !studentRepository.existsByUsername(configuredName)) {
-            return configuredName;
-        }
-
-        String username;
-
-        do {
-            username = NameGenerator.generateUsername();
-        } while (studentRepository.existsByUsername(username));
-
-        return username;
-    }
 }

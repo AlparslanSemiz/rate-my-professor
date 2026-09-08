@@ -2,7 +2,7 @@ package com.pse.user.service;
 
 import com.pse.shared.dto.BasicResponse;
 import com.pse.user.dto.UserRatingResponse;
-import com.pse.auth.service.AuthService;
+import com.pse.auth.service.SessionRevoker;
 import com.pse.user.dto.StudentProfileResponse;
 import com.pse.shared.error.ApiException;
 import com.pse.user.model.Student;
@@ -34,13 +34,13 @@ class AccountServiceTests {
     private static final UUID STUDENT_ID = UUID.fromString("3f2504e0-4f89-11d3-9a0c-0305e82c3301");
 
     @Mock
-    private AuthService authService;
+    private SessionRevoker sessionRevoker;
 
     @Mock
     private StudentService studentService;
 
     private AccountService service() {
-        return new AccountService(authService, studentService);
+        return new AccountService(sessionRevoker, studentService);
     }
 
     private static Student student() {
@@ -64,7 +64,7 @@ class AccountServiceTests {
 
         // Then -- returned unchanged; the facade adds nothing on this path
         assertThat(response).isSameAs(expected);
-        verifyNoInteractions(authService);
+        verifyNoInteractions(sessionRevoker);
     }
 
     @Test
@@ -78,7 +78,7 @@ class AccountServiceTests {
 
         // Then
         assertThat(response).isSameAs(expected);
-        verifyNoInteractions(authService);
+        verifyNoInteractions(sessionRevoker);
     }
 
     // ---------- deleteAccount ----------
@@ -95,7 +95,7 @@ class AccountServiceTests {
 
         // Then
         assertThat(response.success()).isTrue();
-        verify(authService).invalidateAllAuthTokensForEmail("ada@kit.edu");
+        verify(sessionRevoker).invalidateAllAuthTokensForEmail("ada@kit.edu");
     }
 
     /**
@@ -119,7 +119,7 @@ class AccountServiceTests {
                 .isInstanceOf(ApiException.class)
                 .hasMessage("Student not found");
 
-        verifyNoInteractions(authService);
+        verifyNoInteractions(sessionRevoker);
     }
 
     /**
@@ -140,7 +140,7 @@ class AccountServiceTests {
 
         // Then
         assertThat(response.success()).isFalse();
-        verifyNoInteractions(authService);
+        verifyNoInteractions(sessionRevoker);
     }
 
     // ---------- requestLogout ----------
@@ -152,7 +152,7 @@ class AccountServiceTests {
     @Test
     void requestLogout_embedsTheNumberOfInvalidatedSessionsInTheMessage() {
         // Given
-        when(authService.invalidateAllAuthTokensForEmail("ada@kit.edu")).thenReturn(3);
+        when(sessionRevoker.invalidateAllAuthTokensForEmail("ada@kit.edu")).thenReturn(3);
 
         // When
         BasicResponse response = service().requestLogout(student());
@@ -166,7 +166,7 @@ class AccountServiceTests {
     @Test
     void requestLogout_noActiveSessions_stillReportsSuccess() {
         // Given
-        when(authService.invalidateAllAuthTokensForEmail("ada@kit.edu")).thenReturn(0);
+        when(sessionRevoker.invalidateAllAuthTokensForEmail("ada@kit.edu")).thenReturn(0);
 
         // When
         BasicResponse response = service().requestLogout(student());

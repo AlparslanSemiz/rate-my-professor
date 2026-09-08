@@ -5,7 +5,7 @@ import com.pse.shared.dto.BasicResponse;
 import com.pse.auth.model.Token;
 import com.pse.auth.repository.TokenRepository;
 import com.pse.auth.service.AdminSuperuserPolicy;
-import com.pse.auth.service.AuthService;
+import com.pse.auth.service.IdentityService;
 import com.pse.moderation.dto.request.UserUpdateRequest;
 import com.pse.moderation.model.Admin;
 import com.pse.moderation.dto.response.WarningHistoryResponse;
@@ -72,7 +72,7 @@ class ModerationUserServiceTests {
     @Mock private NotificationRepository notificationRepository;
     @Mock private TokenRepository tokenRepository;
     @Mock private AuditWriter auditWriter;
-    @Mock private AuthService authService;
+    @Mock private IdentityService identityService;
     @Mock private AdminSuperuserPolicy superuserPolicy;
     @Mock private KeysetCursorCodec cursorCodec;
 
@@ -85,7 +85,7 @@ class ModerationUserServiceTests {
     private ModerationUserService service() {
         return new ModerationUserService(
                 studentRepository, adminRepository, warningRepository, commentReportRepository,
-                notificationRepository, tokenRepository, auditWriter, authService,
+                notificationRepository, tokenRepository, auditWriter, identityService,
                 superuserPolicy, cursorCodec, CLOCK);
     }
 

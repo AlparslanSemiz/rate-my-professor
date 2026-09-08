@@ -4,7 +4,7 @@ import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
-import com.pse.auth.service.AuthService;
+import com.pse.auth.service.IdentityService;
 import com.pse.moderation.dto.request.BugReportRequest;
 import com.pse.moderation.dto.request.BugReportUpdateRequest;
 import com.pse.moderation.dto.response.BugReportResponse;
@@ -31,20 +31,20 @@ import java.util.UUID;
 public class ModerationBugReportService {
 
     private final BugReportRepository repository;
-    private final AuthService authService;
+    private final IdentityService identityService;
     private final AuditWriter auditWriter;
     private final GitLabClient gitLabClient;
     private final BugReportIssueTransactions issueTransactions;
 
     public ModerationBugReportService(
             BugReportRepository repository,
-            AuthService authService,
+            IdentityService identityService,
             AuditWriter auditWriter,
             GitLabClient gitLabClient,
             BugReportIssueTransactions issueTransactions
     ) {
         this.repository = repository;
-        this.authService = authService;
+        this.identityService = identityService;
         this.auditWriter = auditWriter;
         this.gitLabClient = gitLabClient;
         this.issueTransactions = issueTransactions;
@@ -148,7 +148,7 @@ public class ModerationBugReportService {
 
     @Transactional
     public BasicResponse sendBugReport(String authHeader, BugReportRequest request) {
-        Student student = authService.verifyUser(authHeader);
+        Student student = identityService.verifyUser(authHeader);
         if (student == null) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Not logged in");
         }

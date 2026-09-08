@@ -2,23 +2,21 @@ package com.pse.user.service;
 
 import com.pse.shared.dto.BasicResponse;
 import com.pse.user.dto.UserRatingResponse;
-import com.pse.auth.service.AuthService;
-import com.pse.shared.util.ProfilePictureGenerator;
+import com.pse.auth.service.SessionRevoker;
 import com.pse.user.dto.StudentProfileResponse;
 import com.pse.user.model.Student;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AccountService {
 
-    private final AuthService authService;
+    private final SessionRevoker sessionRevoker;
 
     private final StudentService studentService;
 
 
-    public AccountService(AuthService authService, StudentService studentService) {
-        this.authService = authService;
+    public AccountService(SessionRevoker sessionRevoker, StudentService studentService) {
+        this.sessionRevoker = sessionRevoker;
         this.studentService = studentService;
     }
 
@@ -43,7 +41,7 @@ public class AccountService {
         if (response.success()) {
             // Without this the account is DELETED but every issued token stays
             // valid until it expires, which for a student is a full year.
-            authService.invalidateAllAuthTokensForEmail(student.getKitEmail());
+            sessionRevoker.invalidateAllAuthTokensForEmail(student.getKitEmail());
         }
 
         return response;
@@ -53,7 +51,7 @@ public class AccountService {
 
 
         //Iterate through every entry in AuthToken and delete every match where: AuthToken.email == email
-        int sessions = authService.invalidateAllAuthTokensForEmail(student.getKitEmail());
+        int sessions = sessionRevoker.invalidateAllAuthTokensForEmail(student.getKitEmail());
 
         return new BasicResponse("Logged out successfully (" + sessions + " sessions)", true);
     }

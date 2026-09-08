@@ -4,7 +4,7 @@ import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
-import com.pse.auth.service.AuthService;
+import com.pse.auth.service.IdentityService;
 import com.pse.moderation.dto.request.BugReportRequest;
 import com.pse.moderation.dto.request.BugReportUpdateRequest;
 import com.pse.moderation.dto.response.GitLabIssueResponse;
@@ -60,14 +60,14 @@ class ModerationBugReportServiceTests {
     private static final String AUTH_HEADER = "Bearer token";
 
     @Mock private BugReportRepository repository;
-    @Mock private AuthService authService;
+    @Mock private IdentityService identityService;
     @Mock private AuditWriter auditWriter;
     @Mock private GitLabClient gitLabClient;
     @Mock private BugReportIssueTransactions issueTransactions;
 
     private ModerationBugReportService service() {
         return new ModerationBugReportService(
-                repository, authService, auditWriter, gitLabClient, issueTransactions);
+                repository, identityService, auditWriter, gitLabClient, issueTransactions);
     }
 
     private static AuthenticatedUser principal() {
@@ -92,7 +92,7 @@ class ModerationBugReportServiceTests {
 
     @Test
     void sendBugReport_withoutAValidToken_isRefusedBeforeAnythingIsRead() {
-        when(authService.verifyUser(AUTH_HEADER)).thenReturn(null);
+        when(identityService.verifyUser(AUTH_HEADER)).thenReturn(null);
 
         assertThatThrownBy(() -> service().sendBugReport(AUTH_HEADER, validRequest()))
                 .isInstanceOf(ApiException.class)
@@ -125,7 +125,7 @@ class ModerationBugReportServiceTests {
         // One condition with six arms in production; six separate cases here, because each arm
         // is a different way a student's report disappears and a single valid submission in an
         // integration test exercises none of them.
-        when(authService.verifyUser(AUTH_HEADER)).thenReturn(new Student());
+        when(identityService.verifyUser(AUTH_HEADER)).thenReturn(new Student());
 
         assertThatThrownBy(() -> service().sendBugReport(AUTH_HEADER, request))
                 .isInstanceOf(ApiException.class)
@@ -139,7 +139,7 @@ class ModerationBugReportServiceTests {
     @Test
     void sendBugReport_validReport_storesItTrimmedAndAttributedToTheReporter() {
         Student reporter = new Student();
-        when(authService.verifyUser(AUTH_HEADER)).thenReturn(reporter);
+        when(identityService.verifyUser(AUTH_HEADER)).thenReturn(reporter);
 
         BasicResponse response = service().sendBugReport(
                 AUTH_HEADER,
@@ -157,7 +157,7 @@ class ModerationBugReportServiceTests {
     @Test
     void sendBugReport_validReport_isRecordedAsAStudentActionCarryingTheSeverity() {
         Student reporter = new Student();
-        when(authService.verifyUser(AUTH_HEADER)).thenReturn(reporter);
+        when(identityService.verifyUser(AUTH_HEADER)).thenReturn(reporter);
 
         service().sendBugReport(AUTH_HEADER, validRequest());
 
