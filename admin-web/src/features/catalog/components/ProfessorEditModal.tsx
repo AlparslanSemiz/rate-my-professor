@@ -1,12 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { Button, Group, Modal, MultiSelect, Stack, Switch, TextInput } from '@mantine/core'
 import type { Lecture, Professor, ProfessorUpdate } from '../../../api/CatalogService'
 import ErrorAlert from '../../../components/ErrorAlert'
 import { darkInputStyles } from '../../../constants/inputStyles'
 import { darkModalStyles } from '../../../constants/modalStyles'
 import { sameIdSet } from '../../../utils/collection'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
 import { lectureLabel } from '../catalogModel'
+import { useCatalogEditSubmit } from '../hooks/useCatalogEditSubmit'
 import InactiveVisibilityNotice from './InactiveVisibilityNotice'
 
 interface ProfessorEditModalProps {
@@ -69,8 +69,6 @@ function ProfessorEditForm({
   const [lastName, setLastName] = useState(professor.lastName)
   const [active, setActive] = useState(professor.active)
   const [lectureIds, setLectureIds] = useState<string[]>(assignedLectureIds)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
 
   const trimmedFirstName = firstName.trim()
   const trimmedLastName = lastName.trim()
@@ -84,21 +82,14 @@ function ProfessorEditForm({
   const canSave =
     trimmedFirstName.length > 0 && trimmedLastName.length > 0 && Object.keys(update).length > 0
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!canSave) return
-
-    setSaving(true)
-    setError('')
-    try {
-      await onSubmit(professor.id, update)
-      onClose()
-    } catch (submitError: unknown) {
-      setError(getErrorMessage(submitError, 'The professor could not be saved.'))
-    } finally {
-      setSaving(false)
-    }
-  }
+  const { saving, error, handleSubmit } = useCatalogEditSubmit({
+    id: professor.id,
+    update,
+    canSave,
+    onClose,
+    onSubmit,
+    errorMessage: 'The professor could not be saved.',
+  })
 
   return (
     <form onSubmit={handleSubmit}>

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import {
   Button,
   Group,
@@ -24,8 +24,8 @@ import {
 } from '../../../domain/catalog'
 import { sameIdSet } from '../../../utils/collection'
 import { enumLabel } from '../../../utils/enumLabel'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
 import { professorName } from '../catalogModel'
+import { useCatalogEditSubmit } from '../hooks/useCatalogEditSubmit'
 import InactiveVisibilityNotice from './InactiveVisibilityNotice'
 
 const seasonOptions = SEMESTER_SEASONS.map((season) => ({
@@ -88,8 +88,6 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
   const [professorIds, setProfessorIds] = useState<string[]>(
     lecture.professors.map((professor) => professor.id),
   )
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
 
   const trimmedName = name.trim()
   const trimmedCode = code.trim()
@@ -108,21 +106,14 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
   const canSave =
     trimmedName.length > 0 && trimmedCode.length > 0 && year > 0 && Object.keys(update).length > 0
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!canSave) return
-
-    setSaving(true)
-    setError('')
-    try {
-      await onSubmit(lecture.id, update)
-      onClose()
-    } catch (submitError: unknown) {
-      setError(getErrorMessage(submitError, 'The lecture could not be saved.'))
-    } finally {
-      setSaving(false)
-    }
-  }
+  const { saving, error, handleSubmit } = useCatalogEditSubmit({
+    id: lecture.id,
+    update,
+    canSave,
+    onClose,
+    onSubmit,
+    errorMessage: 'The lecture could not be saved.',
+  })
 
   return (
     <form onSubmit={handleSubmit}>

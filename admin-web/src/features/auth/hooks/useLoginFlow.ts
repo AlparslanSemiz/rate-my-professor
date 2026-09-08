@@ -11,21 +11,13 @@ import {
   getRequestCodeErrorMessage,
   NOT_AN_ADMIN_ERROR,
 } from '../authenticateAdmin'
-import { isCompleteLoginCode } from '../loginModel'
+import { attemptedPath, isCompleteLoginCode } from '../loginModel'
 
 export type LoginStep = 'email' | 'code'
 
 const REQUEST_CODE_ERROR_FALLBACK = 'Could not send login code'
 export const SESSION_EXPIRED_MESSAGE =
   'Your session ended because the server no longer accepts it. Sign in again to continue.'
-
-/** The path the admin was denied, carried here by ProtectedRoute's redirect. */
-function attemptedPath(state: unknown): string | null {
-  if (!state || typeof state !== 'object' || !('from' in state)) return null
-  const from = (state as { from: unknown }).from
-  if (typeof from !== 'string' || !from.startsWith('/') || from === routes.login) return null
-  return from
-}
 
 export function useLoginFlow() {
   const [step, setStep] = useState<LoginStep>('email')

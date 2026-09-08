@@ -1,6 +1,6 @@
 import { Box, Group, Progress, Text, type CSSProperties } from '@mantine/core'
 import Panel from '../../../components/Panel'
-import type { DashboardStats } from '../hooks/useDashboardData'
+import type { DashboardStats } from '../dashboardModel'
 import { KIT } from '../../../constants/colors'
 
 const panelStyle: CSSProperties = { padding: '20px 24px' }
