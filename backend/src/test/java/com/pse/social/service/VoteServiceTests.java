@@ -31,15 +31,17 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Voting used to be the one write path in {@link SocialService} that was neither
+ * Voting used to be the one write path in {@code SocialService} that was neither
  * transactional nor audited. It is both now -- F-1 -- and these tests pin what it does,
  * including what it deliberately still does not do. The vote type is validated at the
  * boundary rather than here (F-2), which the two null-vote tests below spell out.
@@ -48,7 +50,7 @@ import static org.mockito.Mockito.when;
  * are a separate batch.
  */
 @ExtendWith(MockitoExtension.class)
-class SocialServiceVoteTests {
+class VoteServiceTests {
 
     private static final UUID COMMENT_ID = UUID.fromString("3f2504e0-4f89-11d3-9a0c-0305e82c3301");
     private static final UUID ANSWER_ID = UUID.fromString("7c9e6679-7425-40de-944b-e07fc1f90ae7");
@@ -92,21 +94,21 @@ class SocialServiceVoteTests {
     }
 
     /**
-     * The four collaborators the vote methods never touch are passed as null rather than
-     * mocked. A mock would let a later edit start using one of them without any test
-     * noticing; a null turns that into an immediate failure in the tests that own these
-     * methods. The audit writer was on that list until F-1 was closed -- it was the finding.
+     * There are no nulls here any more, and that is the point rather than a loss.
+     *
+     * <p>This used to construct a nine-argument {@code SocialService} with four of the
+     * collaborators passed as {@code null} rather than mocked, so that a later edit reaching
+     * for one of them failed immediately instead of passing against a lenient mock. The class
+     * under test now has exactly the five collaborators the vote methods use, so the
+     * structure says what the nulls were saying, and it says it to production code as well as
+     * to this test.
      */
-    private SocialService service() {
-        return new SocialService(
-                null,
+    private VoteService service() {
+        return new VoteService(
                 commentRepository,
                 answerRepository,
-                null,
-                null,
                 commentVoteRepository,
                 answerVoteRepository,
-                null,
                 auditWriter
         );
     }
@@ -273,7 +275,7 @@ class SocialServiceVoteTests {
     }
 
     /**
-     * F-1. Every other write in {@link SocialService} recorded itself and the two vote
+     * F-1. Every other write in {@code SocialService} recorded itself and the two vote
      * methods did not, so an account flipping hundreds of votes left nothing in the
      * moderation trail. The direction travels as metadata rather than as a change set,
      * because a vote has no "before": a first vote and an overwrite are the same action
@@ -463,5 +465,239 @@ class SocialServiceVoteTests {
         ArgumentCaptor<AnswerVote> saved = ArgumentCaptor.forClass(AnswerVote.class);
         verify(answerVoteRepository).save(saved.capture());
         assertThat(saved.getValue().getVote()).isNull();
+    }
+
+    // ------------------------------------------------------------------------------
+    // Moved here from SocialServiceTests, which covered voting before this class
+    // existed. Kept rather than folded into the cases above: they mock the entities
+    // instead of building them, so they fail differently and are worth both.
+    // ------------------------------------------------------------------------------
+
+
+
+    @Test
+    void voteCommentUnknownCommentIsNotFound() {
+
+        UUID commentId = UUID.randomUUID();
+
+        Student student = mock(Student.class);
+
+        VoteCommentRequest request = mock(VoteCommentRequest.class);
+
+        when(commentRepository.findById(commentId))
+                .thenReturn(Optional.empty());
+
+
+        ApiException thrown = catchThrowableOfType(ApiException.class, () -> service().voteComment(
+                        commentId,
+                        student,
+                        request
+                ));
+        assertThat(thrown).as("nothing was thrown").isNotNull();
+
+
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        assertThat(thrown.getMessage()).isEqualTo("Comment not found");
+
+        verify(commentVoteRepository, never()).save(any());
+    }
+
+
+
+    @Test
+    void voteCommentCreatesVoteWhenStudentHasNotVotedBefore() {
+
+        UUID commentId = UUID.randomUUID();
+
+        Student student = mock(Student.class);
+        Comment comment = mock(Comment.class);
+
+        VoteCommentRequest request = mock(VoteCommentRequest.class);
+
+        when(request.voteType())
+                .thenReturn(VoteType.UP);
+
+        when(commentRepository.findById(commentId))
+                .thenReturn(Optional.of(comment));
+
+        when(commentVoteRepository
+                .findByStudentAndComment(
+                        student,
+                        comment
+                ))
+                .thenReturn(Optional.empty());
+
+        when(comment.getStudent())
+                .thenReturn(mock(Student.class));
+
+        when(comment.getLecture())
+                .thenReturn(mock(Lecture.class));
+
+
+
+        BasicResponse response =
+                service().voteComment(
+                        commentId,
+                        student,
+                        request
+                );
+
+
+        assertThat(response.success()).isTrue();
+
+
+        ArgumentCaptor<CommentVote> captor =
+                ArgumentCaptor.forClass(
+                        CommentVote.class
+                );
+
+        verify(commentVoteRepository).save(captor.capture());
+
+
+        CommentVote vote = captor.getValue();
+
+        assertThat(vote.getStudent()).isSameAs(student);
+        assertThat(vote.getComment()).isSameAs(comment);
+        assertThat(vote.getVote()).isEqualTo(VoteType.UP);
+    }
+
+
+
+    @Test
+    void voteCommentUpdatesExistingVote() {
+
+        UUID commentId = UUID.randomUUID();
+
+        Student student = mock(Student.class);
+        Comment comment = mock(Comment.class);
+
+        CommentVote existingVote = mock(CommentVote.class);
+
+        VoteCommentRequest request = mock(VoteCommentRequest.class);
+
+        when(request.voteType())
+                .thenReturn(VoteType.DOWN);
+
+        when(commentRepository.findById(commentId))
+                .thenReturn(Optional.of(comment));
+
+        when(commentVoteRepository
+                .findByStudentAndComment(
+                        student,
+                        comment
+                ))
+                .thenReturn(
+                        Optional.of(existingVote)
+                );
+
+        when(comment.getStudent())
+                .thenReturn(mock(Student.class));
+
+        when(comment.getLecture())
+                .thenReturn(mock(Lecture.class));
+
+
+
+        BasicResponse response =
+                service().voteComment(
+                        commentId,
+                        student,
+                        request
+                );
+
+
+        assertThat(response.success()).isTrue();
+
+        verify(existingVote).setVote(VoteType.DOWN);
+
+        verify(commentVoteRepository).save(existingVote);
+    }
+
+
+
+    @Test
+    void voteAnswerUnknownAnswerIsNotFound() {
+
+        UUID answerId = UUID.randomUUID();
+
+        Student student = mock(Student.class);
+
+        VoteAnswerRequest request = mock(VoteAnswerRequest.class);
+
+        when(answerRepository.findById(answerId))
+                .thenReturn(Optional.empty());
+
+
+        ApiException thrown = catchThrowableOfType(ApiException.class, () -> service().voteAnswer(
+                        answerId,
+                        student,
+                        request
+                ));
+        assertThat(thrown).as("nothing was thrown").isNotNull();
+
+
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        assertThat(thrown.getMessage()).isEqualTo("Answer not found");
+
+        verify(answerVoteRepository, never()).save(any());
+    }
+
+
+
+    @Test
+    void voteAnswerUpdatesExistingVote() {
+
+        UUID answerId = UUID.randomUUID();
+
+        Student student = mock(Student.class);
+        Answer answer = mock(Answer.class);
+
+        AnswerVote existingVote = mock(AnswerVote.class);
+
+        VoteAnswerRequest request = mock(VoteAnswerRequest.class);
+
+        when(request.voteType())
+                .thenReturn(VoteType.DOWN);
+
+        when(answerRepository.findById(answerId))
+                .thenReturn(Optional.of(answer));
+
+        when(answerVoteRepository
+                .findByStudentAndAnswer(
+                        student,
+                        answer
+                ))
+                .thenReturn(
+                        Optional.of(existingVote)
+                );
+
+        Comment votedComment = mock(Comment.class);
+
+        when(votedComment.getLecture())
+                .thenReturn(mock(Lecture.class));
+
+        when(answer.getStudent())
+                .thenReturn(mock(Student.class));
+
+        when(answer.getComment())
+                .thenReturn(votedComment);
+
+
+
+        BasicResponse response =
+                service().voteAnswer(
+                        answerId,
+                        student,
+                        request
+                );
+
+
+        assertThat(response.success()).isTrue();
+
+        verify(existingVote).setVote(VoteType.DOWN);
+
+        verify(answerVoteRepository).save(existingVote);
     }
 }

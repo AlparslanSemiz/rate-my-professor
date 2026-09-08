@@ -21,7 +21,7 @@ import com.pse.social.dto.request.VoteCommentRequest;
 import com.pse.social.model.Comment;
 import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.CommentVoteRepository;
-import com.pse.social.service.SocialService;
+import com.pse.social.service.VoteService;
 import com.pse.support.DatabaseReset;
 import com.pse.support.PostgresIntegrationTest;
 import com.pse.user.model.Student;
@@ -92,7 +92,7 @@ class ConcurrencyPostgresTests {
     @Autowired RateLimitService rateLimitService;
     @Autowired AuthRateLimitBucketRepository rateLimitBucketRepository;
 
-    @Autowired SocialService socialService;
+    @Autowired VoteService voteService;
     @Autowired RatingService ratingService;
 
     @Autowired StudentRepository studentRepository;
@@ -208,8 +208,8 @@ class ConcurrencyPostgresTests {
         VoteCommentRequest request = new VoteCommentRequest(VoteType.UP);
 
         List<Throwable> failures = runTogether(
-                () -> socialService.voteComment(comment.getId(), student, request),
-                () -> socialService.voteComment(comment.getId(), student, request));
+                () -> voteService.voteComment(comment.getId(), student, request),
+                () -> voteService.voteComment(comment.getId(), student, request));
 
         assertThat(commentVoteRepository.findAll())
                 .as("the unique constraint is the whole protection on this path")

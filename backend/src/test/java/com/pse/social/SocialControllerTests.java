@@ -6,7 +6,11 @@ import com.pse.social.controller.SocialController;
 import com.pse.social.dto.request.*;
 import com.pse.social.dto.response.CommentsResponse;
 import com.pse.social.dto.response.NotificationsResponse;
-import com.pse.social.service.SocialService;
+import com.pse.social.service.AnswerService;
+import com.pse.social.service.CommentService;
+import com.pse.social.service.ContentReportService;
+import com.pse.social.service.NotificationService;
+import com.pse.social.service.VoteService;
 import com.pse.user.model.Student;
 
 import org.junit.jupiter.api.Test;
@@ -24,7 +28,19 @@ import static org.mockito.Mockito.*;
 class SocialControllerTests {
 
     @Mock
-    private SocialService socialService;
+    private CommentService commentService;
+
+    @Mock
+    private AnswerService answerService;
+
+    @Mock
+    private VoteService voteService;
+
+    @Mock
+    private ContentReportService contentReportService;
+
+    @Mock
+    private NotificationService notificationService;
 
     @Mock
     private AuthenticatedUser principal;
@@ -43,7 +59,7 @@ class SocialControllerTests {
                 mock(NotificationsResponse.class);
 
         when(principal.student()).thenReturn(student);
-        when(socialService.getNotifications(student))
+        when(notificationService.getNotifications(student))
                 .thenReturn(expected);
 
 
@@ -51,7 +67,7 @@ class SocialControllerTests {
 
 
         assertThat(response).isSameAs(expected);
-        verify(socialService).getNotifications(student);
+        verify(notificationService).getNotifications(student);
     }
 
 
@@ -65,7 +81,7 @@ class SocialControllerTests {
 
         when(principal.student()).thenReturn(student);
 
-        when(socialService.markNotificationAsSeen(
+        when(notificationService.markNotificationAsSeen(
                 student,
                 notificationId
         )).thenReturn(expected);
@@ -75,7 +91,7 @@ class SocialControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(socialService)
+        verify(notificationService)
                 .markNotificationAsSeen(
                         student,
                         notificationId
@@ -94,7 +110,7 @@ class SocialControllerTests {
 
         when(principal.student()).thenReturn(student);
 
-        when(socialService.submitComment(student, request))
+        when(commentService.submitComment(student, request))
                 .thenReturn(expected);
 
 
@@ -103,7 +119,7 @@ class SocialControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(socialService)
+        verify(commentService)
                 .submitComment(student, request);
     }
 
@@ -120,7 +136,7 @@ class SocialControllerTests {
 
         when(principal.student()).thenReturn(student);
 
-        when(socialService.voteComment(
+        when(voteService.voteComment(
                 commentId,
                 student,
                 request
@@ -137,7 +153,7 @@ class SocialControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(socialService)
+        verify(voteService)
                 .voteComment(
                         commentId,
                         student,
@@ -154,7 +170,7 @@ class SocialControllerTests {
         CommentsResponse expected =
                 mock(CommentsResponse.class);
 
-        when(socialService.getComments(lectureId, null))
+        when(commentService.getComments(lectureId, null))
                 .thenReturn(expected);
 
 
@@ -163,7 +179,7 @@ class SocialControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(socialService).getComments(lectureId, null);
+        verify(commentService).getComments(lectureId, null);
     }
 
 
@@ -178,7 +194,7 @@ class SocialControllerTests {
 
         when(principal.student()).thenReturn(student);
 
-        when(socialService.submitAnswer(student, request))
+        when(answerService.submitAnswer(student, request))
                 .thenReturn(expected);
 
 
@@ -191,7 +207,7 @@ class SocialControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(socialService)
+        verify(answerService)
                 .submitAnswer(student, request);
     }
 
@@ -209,7 +225,7 @@ class SocialControllerTests {
 
         when(principal.student()).thenReturn(student);
 
-        when(socialService.voteAnswer(
+        when(voteService.voteAnswer(
                 answerId,
                 student,
                 request
@@ -226,7 +242,7 @@ class SocialControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(socialService)
+        verify(voteService)
                 .voteAnswer(
                         answerId,
                         student,
@@ -244,7 +260,7 @@ class SocialControllerTests {
 
         when(principal.student()).thenReturn(student);
 
-        when(socialService.submitCommentReport(
+        when(contentReportService.submitCommentReport(
                 student,
                 request
         )).thenReturn(expected);
@@ -259,7 +275,7 @@ class SocialControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(socialService)
+        verify(contentReportService)
                 .submitCommentReport(
                         student,
                         request
@@ -276,7 +292,7 @@ class SocialControllerTests {
 
         when(principal.student()).thenReturn(student);
 
-        when(socialService.submitAnswerReport(
+        when(contentReportService.submitAnswerReport(
                 student,
                 request
         )).thenReturn(expected);
@@ -291,7 +307,7 @@ class SocialControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(socialService)
+        verify(contentReportService)
                 .submitAnswerReport(
                         student,
                         request
@@ -304,7 +320,7 @@ class SocialControllerTests {
 
         CommentsResponse expected = mock(CommentsResponse.class);
 
-        when(socialService.getAllComments())
+        when(commentService.getAllComments())
                 .thenReturn(expected);
 
 
@@ -313,6 +329,6 @@ class SocialControllerTests {
 
         assertThat(response).isSameAs(expected);
 
-        verify(socialService).getAllComments();
+        verify(commentService).getAllComments();
     }
 }

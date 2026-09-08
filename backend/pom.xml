@@ -331,7 +331,6 @@
 							<targetTests>
 								<param>com.pse.*.*ServiceTests</param>
 								<param>com.pse.*.*.*ServiceTests</param>
-								<param>com.pse.*.*.*ServiceVoteTests</param>
 								<!--
 									Every test in a service or mapper package, not only the ones
 									whose name ends in ServiceTests. The narrower globs above

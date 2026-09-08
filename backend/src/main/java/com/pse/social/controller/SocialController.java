@@ -10,7 +10,11 @@ import com.pse.social.dto.request.VoteAnswerRequest;
 import com.pse.social.dto.request.VoteCommentRequest;
 import com.pse.social.dto.response.CommentsResponse;
 import com.pse.social.dto.response.NotificationsResponse;
-import com.pse.social.service.SocialService;
+import com.pse.social.service.AnswerService;
+import com.pse.social.service.CommentService;
+import com.pse.social.service.ContentReportService;
+import com.pse.social.service.NotificationService;
+import com.pse.social.service.VoteService;
 import com.pse.user.model.Student;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,10 +37,24 @@ import java.util.UUID;
 public class SocialController {
 
 
-    private final SocialService socialService;
+    private final CommentService commentService;
+    private final AnswerService answerService;
+    private final VoteService voteService;
+    private final ContentReportService contentReportService;
+    private final NotificationService notificationService;
 
-    public SocialController(SocialService socialService) {
-        this.socialService = socialService;
+    public SocialController(
+            CommentService commentService,
+            AnswerService answerService,
+            VoteService voteService,
+            ContentReportService contentReportService,
+            NotificationService notificationService
+    ) {
+        this.commentService = commentService;
+        this.answerService = answerService;
+        this.voteService = voteService;
+        this.contentReportService = contentReportService;
+        this.notificationService = notificationService;
     }
 
 
@@ -44,13 +62,13 @@ public class SocialController {
     @GetMapping("/notifications")
     public NotificationsResponse getNotifications(@AuthenticationPrincipal AuthenticatedUser principal){
 
-        return socialService.getNotifications(principal.student());
+        return notificationService.getNotifications(principal.student());
     }
 
     @PatchMapping("/notifications/{notification_id}")
     public BasicResponse markNotificationAsSeen(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID notification_id){
 
-        return socialService.markNotificationAsSeen(principal.student(), notification_id);
+        return notificationService.markNotificationAsSeen(principal.student(), notification_id);
     }
 
 
@@ -59,7 +77,7 @@ public class SocialController {
     @PostMapping("/comments")
     public BasicResponse submitComment(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody CommentSubmitRequest request) {
 
-        return socialService.submitComment(principal.student(), request);
+        return commentService.submitComment(principal.student(), request);
 
     }
 
@@ -67,7 +85,7 @@ public class SocialController {
     @PostMapping("/comments/vote/comment/{comment_id}")
     public BasicResponse voteComment(@PathVariable UUID comment_id, @AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody VoteCommentRequest request) {
 
-        return socialService.voteComment(comment_id, principal.student(), request);
+        return voteService.voteComment(comment_id, principal.student(), request);
 
     }
 
@@ -78,21 +96,21 @@ public class SocialController {
 
         Student student = principal != null ? principal.student() : null;
 
-        return socialService.getComments(lecture_id, student);
+        return commentService.getComments(lecture_id, student);
     }
 
 
     @PostMapping("/answers")
     public BasicResponse submitAnswer(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody AnswerSubmitRequest request) {
 
-        return socialService.submitAnswer(principal.student(), request);
+        return answerService.submitAnswer(principal.student(), request);
 
     }
 
     @PostMapping("/comments/vote/answer/{answer_id}")
     public BasicResponse voteAnswer(@PathVariable UUID answer_id, @AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody VoteAnswerRequest request) {
 
-        return socialService.voteAnswer(answer_id, principal.student(), request);
+        return voteService.voteAnswer(answer_id, principal.student(), request);
 
     }
 
@@ -101,14 +119,14 @@ public class SocialController {
     @PostMapping("/comments/report")
     public BasicResponse submitCommentReport(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody CommentReportRequest request) {
 
-        return socialService.submitCommentReport(principal.student(), request);
+        return contentReportService.submitCommentReport(principal.student(), request);
 
     }
 
     @PostMapping("/answers/report")
     public BasicResponse submitAnswerReport(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody AnswerReportRequest request) {
 
-        return socialService.submitAnswerReport(principal.student(), request);
+        return contentReportService.submitAnswerReport(principal.student(), request);
 
     }
 
@@ -116,7 +134,7 @@ public class SocialController {
     @GetMapping("/sync/comments")
     public CommentsResponse getComments(){
 
-        return socialService.getAllComments();
+        return commentService.getAllComments();
     }
 
 
