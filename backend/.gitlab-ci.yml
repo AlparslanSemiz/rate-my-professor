@@ -419,6 +419,13 @@ secrets:new:
 # Deliberately no --baseline-path. A baseline would make this green while the credentials are
 # still live, which is the opposite of what it is for: the point is that it keeps saying so
 # until somebody rotates them.
+#
+# `.gitleaksignore` in the repository root is the other half of that argument, and the reason
+# this job has an end rather than being permanently red. gitleaks reads that file on its own;
+# one line in it retires one finding, and a line is uncommented only once the credential
+# behind it has been rotated at its provider. So: red today, one finding less red per
+# rotation, green when the last one lands -- and no single commit that jumps from one to the
+# other.
 secrets:history:
   stage: test
   image:

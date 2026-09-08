@@ -1,0 +1,36 @@
+# Findings that have been dealt with. One line retires exactly one finding of
+# secrets:history, the scheduled full-history scan.
+#
+# This is not a baseline. --baseline-path silences every current finding at once, including
+# credentials that are still live on their provider, which is the opposite of what that job
+# is for. A line here is the other thing: a record that one specific value is now worthless.
+#
+# Uncomment a line only once the credential behind it has been ROTATED AT ITS PROVIDER, and
+# put the date on it. Editing a secret out of a file does not unpublish it -- every value
+# below is still in the history and in every clone that has ever been made, so nothing except
+# the provider can retire it. This file is what gives the job an end: it is red today, one
+# line less red per rotation, and green when the last one is done.
+#
+# The rotation list lives in docs/TODO.md and is longer than this file. Three of the
+# credentials in commit 245174c are invisible to gitleaks' rule set -- the reasons are written
+# down next to the list -- so five quiet fingerprints here would mean the scanner has nothing
+# left to say, not that the list is finished.
+
+# --- 245174c, src/main/resources/application.properties -----------------------------------
+# ipinfo.io account password (line 24). Change it at ipinfo.io. It is an account password,
+# not an API token, so the account itself is what has to change -- rotating IPINFO_TOKEN
+# leaves it valid.
+#245174c45af709dd4007199fdec2a3e7aa750797:src/main/resources/application.properties:generic-api-key:24
+
+# Geoapify API key (line 28). Revoke it in the Geoapify dashboard, issue a new one, and put
+# that one in the GEOAPIFY_API_KEY CI/CD variable -- the deploy job is where it reaches the
+# server, so a rotation that stops at the dashboard takes the API down with it.
+#245174c45af709dd4007199fdec2a3e7aa750797:src/main/resources/application.properties:generic-api-key:28
+
+# --- testclient/TestClient.java, one bearer token in three commits -------------------------
+# The same value each time, so all three retire together or not at all. It is a session token
+# the server issued: invalidating that session on the server is the rotation. TestClient reads
+# TEST_CLIENT_TOKEN from the environment since e120103 and no longer carries one.
+#bf4a4764f0e19c01d73c35117f31f074fb58718c:testclient/TestClient.java:generic-api-key:24
+#c592ae5eac7a588e43540787c6f9ce07f485a8e6:testclient/TestClient.java:generic-api-key:24
+#8bc81ef83a4eb7e1d2d91fcbc3fdacf972fcd919:testclient/TestClient.java:generic-api-key:24

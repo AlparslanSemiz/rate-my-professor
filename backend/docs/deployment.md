@@ -344,11 +344,60 @@ host gateway PostgreSQL address listed above.
 
 The GitLab pipeline is defined in `.gitlab-ci.yml`.
 
-Pipeline sources:
+### Which pipeline runs, and when
 
-- Push pipelines
-- Merge request pipelines
-- Scheduled pipelines
+Two decisions happen in order, and conflating them is where "why did this commit run
+different jobs than the last one?" comes from.
+
+**First, `workflow:rules` decides whether a pipeline is created at all** and which
+`CI_PIPELINE_SOURCE` it carries:
+
+| What happened | Pipeline | `CI_PIPELINE_SOURCE` |
+| --- | --- | --- |
+| Push to a branch with **no** open merge request | one | `push` |
+| Push to a branch that **has** an open merge request | one, belonging to the merge request | `merge_request_event`. The push pipeline is suppressed by `when: never` on purpose: without that rule every such push ran two full Maven builds and reported two statuses |
+| Opening or updating a merge request | one | `merge_request_event` |
+| A pipeline schedule fires | one | `schedule` |
+
+The same commit therefore produces a differently-shaped pipeline depending on something that
+is not in the commit — whether a merge request was open for its branch at the time.
+
+**Then each job's own `rules` decide whether that job is in the pipeline.** Nothing here runs
+everywhere, which is the whole design: the scheduled pipeline exists for the jobs that watch
+the deployed server, and the push pipeline exists for the jobs that check the change.
+
+| Job | `push` | `merge_request_event` | `schedule` |
+| --- | --- | --- | --- |
+| `server:test` | yes | yes | no |
+| `coverage:line-target` | yes | yes | no |
+| `sonarcloud` | only if `SONAR_TOKEN` is set | only if `SONAR_TOKEN` is set | no |
+| `server:postgres-integration` | yes | yes | no |
+| `secrets:new` | yes | yes | no |
+| `server:package` | `main` only | no | no |
+| `server:deploy:staging` | `main` only, manual | no | no |
+| `secrets:history` | no | no | yes |
+| `mutation:nightly` | no | no | yes |
+| `health:check` | no | no | yes |
+| `backup:offsite` | no | no | yes |
+
+`server:package` and `server:deploy:staging` test `$CI_COMMIT_BRANCH == "main"`, and that
+variable is not set in a merge request pipeline at all — which is why a merge request never
+builds an image, however green it is. The image is built when the merge lands on `main`.
+
+Three further reasons two pipelines can differ without `.gitlab-ci.yml` changing:
+
+- **A CI/CD variable can add or remove a job.** `sonarcloud` exists only while `SONAR_TOKEN`
+  is set, and `backup:offsite` is `allow_failure` or not depending on whether
+  `BACKUP_PASSPHRASE` is set. Both are deliberate, and both mean the settings page is part of
+  the pipeline definition.
+- **`needs:` makes the pipeline a DAG, not a queue.** `coverage:line-target` and `sonarcloud`
+  start as soon as `server:test` finishes rather than when the whole `test` stage does, so the
+  running order on screen differs between two pipelines that ran identical jobs.
+- **A schedule carries its own ref and its own variables**, so a scheduled pipeline is not the
+  nightly twin of the last push pipeline — it is a different set of jobs against whatever
+  branch the schedule names.
+
+### Stages and jobs
 
 Stages:
 
@@ -362,11 +411,12 @@ Jobs:
 | --- | --- | --- |
 | `server:test` | Push and merge request pipelines, never scheduled | Runs `./mvnw -B -ntp verify`, then `java scripts/CheckChangedCoverage.java --threshold "$COVERAGE_THRESHOLD"`, then `java scripts/CheckLineCoverage.java` against the two line-coverage tiers. Publishes JUnit and JaCoCo artifacts. The changed-code gate needs a comparison ref; when it cannot resolve one it says so and passes, rather than failing a build over a missing base commit. |
 | `coverage:line-target` | Push and merge request pipelines, never scheduled | Reuses `server:test`'s JaCoCo artifact and re-checks bundle line coverage against `COVERAGE_LINE_TARGET`. Marked `allow_failure: true`, so missing the target is a **yellow warning that does not block the pipeline**. Costs a container start, not a rebuild. |
+| `sonarcloud` | Push and merge request pipelines, **only while `SONAR_TOKEN` is set**, `allow_failure: true` | Reuses `server:test`'s JaCoCo XML through `needs: artifacts` rather than re-running the suite, so Sonar and `jacoco:check` report the same number by construction. Allowed to fail for now on purpose: the first scan of a codebase this size raises hundreds of issues, none of them regressions, and a red pipeline nobody can act on only teaches people to ignore it. Turn that off once a baseline has been read and a quality gate agreed. |
 | `server:postgres-integration` | Push and merge request pipelines | Everything that needs a real PostgreSQL rather than H2, in **two Maven invocations** against one `postgres:16` CI service. The first runs the integration layer: the production Flyway migrations from `src/main/resources/db/migration/postgresql`, `/health` against them, keyset pagination on a real `timestamp(6)`, the `jsonb` round trip the revert feature reads its values back out of, and the read-only transaction sweep. The second runs the six end-to-end journeys, over real HTTP on a random port. They are separate invocations because they need different Spring contexts and two contexts against one database would reset the schema under each other; separate JVMs cannot interleave. Each invocation is checked on its own: the job greps its log and **fails unless exactly one context started**. Classes are **named** in `-Dtest=` rather than pattern-matched, so adding one is the moment to check which annotation it carries. A CI service is a plain TCP server, so none of this needs a Docker socket, a privileged runner or a Testcontainers dependency. |
 | `server:package` | `main` branch, non-scheduled pipelines | Uses Kaniko to build `src/Dockerfile` and push `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`. |
 | `server:deploy:staging` | Manual job on `main`, non-scheduled pipelines | SSHes to the deployment host and replaces the Compose-managed `backend` service. |
 | `secrets:new` | Push and merge request pipelines, never scheduled | Runs gitleaks over **only the commits the push or merge request brings**, so it starts green and turns red when a credential is committed. Blocking, on purpose: that is while it is still cheap to fix. Which commits are new depends on the trigger and neither answer is trusted without checking — `CI_COMMIT_BEFORE_SHA` is all-zeros on a branch's first push and stale after a force-push, and a target branch may not be fetched. Each candidate is verified before use and the fallback is to scan nothing here and say so, deferring to `secrets:history`. |
-| `secrets:history` | Scheduled pipelines only, `allow_failure: true` | gitleaks over the **whole history**, reporting credentials that still need rotating at their provider. Expected to be red until `docs/TODO.md`'s rotation list is done: editing a secret out of a file does not unpublish it. Deliberately **no baseline file** — a baseline would make this green while the credentials are still live. |
+| `secrets:history` | Scheduled pipelines only, `allow_failure: true` | gitleaks over the **whole history**, reporting credentials that still need rotating at their provider. Expected to be red until `docs/TODO.md`'s rotation list is done: editing a secret out of a file does not unpublish it. Deliberately **no baseline file** — a baseline would make this green while the credentials are still live. `.gitleaksignore` in the repository root is how a finding is retired instead: one line per finding, uncommented only once that credential has been rotated at its provider, so the job gets less red per rotation and green after the last one. |
 | `mutation:nightly` | Scheduled pipelines only, `allow_failure: true` | Runs PIT through the `pitest` profile: mutates the service classes and re-runs the eighteen context-free service unit tests against each mutant, in roughly two minutes. Publishes the HTML report. No score threshold yet. **`SURVIVED` means those eighteen classes do not kill the mutant, not that the suite misses it** — the API, integration and end-to-end layers are not running in this profile. See P-7 in `docs/test-findings.md`. |
 | `health:check` | Scheduled pipelines only | Curls the configured BW Cloud/staging `/health` URL and expects HTTP 200. |
 | `backup:offsite` | Scheduled pipelines only | Copies the newest server-side PostgreSQL dump, verifies it, encrypts it with `BACKUP_PASSPHRASE`, and stores only the encrypted `.gpg` artifact. |
