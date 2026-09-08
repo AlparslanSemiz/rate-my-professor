@@ -1,4 +1,4 @@
-package com.pse.lecture.dto;
+package com.pse.lecture.mapper;
 
 import com.pse.lecture.model.Lecture;
 

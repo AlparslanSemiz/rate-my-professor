@@ -322,6 +322,8 @@
 							-->
 							<targetClasses>
 								<param>com.pse.*.service.*</param>
+								<param>com.pse.*.mapper.*</param>
+								<param>com.pse.shared.page.*</param>
 								<param>com.pse.audit.revert.*</param>
 								<param>com.pse.security.*</param>
 							</targetClasses>
@@ -329,6 +331,17 @@
 								<param>com.pse.*.*ServiceTests</param>
 								<param>com.pse.*.*.*ServiceTests</param>
 								<param>com.pse.*.*.*ServiceVoteTests</param>
+								<!--
+									Every test in a service or mapper package, not only the ones
+									whose name ends in ServiceTests. The narrower globs above
+									silently dropped a class the moment a collaborator was split
+									out under a name like RatingAverages: it stayed in
+									targetClasses, its tests did not match here, and every mutant
+									survived for want of anything running.
+								-->
+								<param>com.pse.*.service.*Tests</param>
+								<param>com.pse.*.mapper.*Tests</param>
+								<param>com.pse.shared.page.*Tests</param>
 								<param>com.pse.audit.revert.*Tests</param>
 								<param>com.pse.security.*Tests</param>
 							</targetTests>

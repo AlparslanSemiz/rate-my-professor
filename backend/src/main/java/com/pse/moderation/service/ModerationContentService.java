@@ -2,7 +2,7 @@ package com.pse.moderation.service;
 
 import com.pse.audit.model.AuditAction;
 import com.pse.shared.repository.IdCount;
-import com.pse.lecture.dto.LectureLabels;
+import com.pse.lecture.mapper.LectureLabels;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;

@@ -653,58 +653,6 @@ class RatingServiceTests {
     }
 
 
-    @Test
-    void calculateAverageScoreReturnsZeroWhenThereAreNoTopics() {
-
-        Rating rating = mock(Rating.class);
-
-        when(rating.getTopics())
-                .thenReturn(List.of());
-
-
-        double average = RatingService.calculateAverageScore(rating);
-
-
-        assertThat(average).isCloseTo(0.0, within(0.001));
-    }
-
-
-    @Test
-    void calculateAverageScoreCalculatesAverageCorrectly() {
-
-        Rating rating = mock(Rating.class);
-
-
-        // Same category => same weight.
-        // Therefore (4 + 2) / 2 = 3.
-        RatingTopic first =
-                topic(
-                        RatingCategory.ORGANIZATION,
-                        4.0
-                );
-
-        RatingTopic second =
-                topic(
-                        RatingCategory.ORGANIZATION,
-                        2.0
-                );
-
-
-        when(rating.getTopics())
-                .thenReturn(
-                        List.of(
-                                first,
-                                second
-                        )
-                );
-
-
-        double average = RatingService.calculateAverageScore(rating);
-
-
-        assertThat(average).isCloseTo(3.0, within(0.001));
-    }
-
 
 
     private RatingTopic topic(RatingCategory category, double value) {

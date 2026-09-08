@@ -5,10 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.pse.lecture.mapper.LectureResponseMapper;
+import com.pse.rating.service.RatingAverages;
 import com.pse.lecture.dto.response.LectureResponse;
 import com.pse.lecture.model.Lecture;
-import com.pse.lecture.service.LectureService;
-import com.pse.rating.service.RatingService;
 import com.pse.shared.util.ProfilePictureGenerator;
 import com.pse.shared.enums.VoteType;
 import com.pse.social.model.Answer;
@@ -70,7 +70,7 @@ public class StudentService {
                 true,
                 student.getUsername(),
                 ProfilePictureGenerator.generateProfilePicture(student),
-                getAverageRating(student),
+                RatingAverages.scoreAcross(student.getRatings()),
                 student.getRatings().size(),
                 student.getComments().size(),
                 credibilityScore
@@ -93,9 +93,9 @@ public class StudentService {
 
             Lecture lecture = rating.getLecture();
 
-            LectureResponse lectureResponse = LectureService.createLectureResponse(lecture);
+            LectureResponse lectureResponse = LectureResponseMapper.toResponse(lecture);
 
-            double overallRating = RatingService.calculateAverageScore(rating);
+            double overallRating = RatingAverages.weightedScore(rating);
 
             UserRatingDto userRatingDto = new UserRatingDto(
                     lectureResponse,
@@ -175,20 +175,6 @@ public class StudentService {
         student.setStatus(UserStatus.DELETED);
         studentRepository.save(student);
         return true;
-    }
-
-    public double getAverageRating(Student student) {
-        if (student.getRatings().isEmpty()) {
-        return 0;
-        }
-
-        double sum = 0;
-
-        for (Rating rating : student.getRatings()) {
-            sum += RatingService.calculateAverageScore(rating);
-        }
-
-        return sum / student.getRatings().size();
     }
 
 

@@ -90,8 +90,8 @@ class SocialServiceTests {
         when(request.content())
                 .thenReturn("Great lecture");
 
-        when(lectureService.getLectureByID(
-                request.lectureID()
+        when(lectureService.getById(
+                UUID.fromString(request.lectureID())
         )).thenReturn(null);
 
 
@@ -129,7 +129,7 @@ class SocialServiceTests {
         when(request.content())
                 .thenReturn("Great lecture");
 
-        when(lectureService.getLectureByID(lectureId))
+        when(lectureService.getById(UUID.fromString(lectureId)))
                 .thenReturn(lecture);
 
         when(lecture.getCode()).thenReturn("CS101");

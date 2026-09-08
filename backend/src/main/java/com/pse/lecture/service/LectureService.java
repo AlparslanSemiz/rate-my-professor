@@ -1,19 +1,13 @@
 package com.pse.lecture.service;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
-import com.pse.professor.service.ProfessorService;
-import com.pse.rating.model.Rating;
-import com.pse.rating.model.RatingCategory;
-import com.pse.rating.model.RatingTopic;
-import com.pse.rating.service.RatingService;
+import com.pse.lecture.mapper.LectureResponseMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +16,6 @@ import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
-import com.pse.auth.service.AuthService;
 import com.pse.lecture.dto.request.AddLectureRequest;
 import com.pse.lecture.dto.response.LectureDetailResponse;
 import com.pse.lecture.dto.response.LectureResponse;
@@ -32,7 +25,6 @@ import com.pse.lecture.repository.LectureRepository;
 import com.pse.shared.error.ApiException;
 import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
-import com.pse.professor.dto.response.ProfessorShortResponse;
 import com.pse.security.AuthenticatedUser;
 
 
@@ -91,7 +83,7 @@ public class LectureService {
             return new LectureDetailResponse("Couldn find lecture with uuid: " + lectureId, false, null);
         }
 
-        LectureResponse lectureResponse = createLectureResponse(lecture);
+        LectureResponse lectureResponse = LectureResponseMapper.toResponse(lecture);
 
         return new LectureDetailResponse("Found lecture", true, lectureResponse);
     }
@@ -191,112 +183,22 @@ public class LectureService {
         List<LectureResponse> responses = new ArrayList<>();
 
         for (Lecture lecture : lectures) {
-            responses.add(createLectureResponse(lecture));
+            responses.add(LectureResponseMapper.toResponse(lecture));
         }
 
         return new LecturesResponse("Found " + responses.size() + " lectures", true, responses);
     }
 
-
     /**
-     * Orders the teaching staff of a lecture: last name, then first name, then id.
+     * The lecture with this id, or {@code null}.
      *
-     * <p>The same order {@code ProfessorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc}
-     * already uses for the professor listings, so the two surfaces agree. The id is the
-     * tie-breaker and is only there to make the sort total -- two people can share a name.
-     *
-     * <p><b>It is alphabetical, not by role.</b> {@code lecture_professors} records that a
-     * person teaches a lecture and nothing else, so the schema cannot say who lectures and
-     * who runs an exercise group; that would need a column on the join table. Alphabetical
-     * is what the data supports, and it is stable, which is the defect being fixed.
+     * <p>There used to be a second copy of this taking the id as a {@code String} and calling
+     * {@code UUID.fromString} for the one caller that holds it that way. Two methods running
+     * the same query is one too many; the conversion belongs to the caller that has the
+     * string, where the fact that a malformed id throws is at least visible.
      */
-    private static final Comparator<Professor> BY_NAME =
-            Comparator.comparing(Professor::getLastName)
-                    .thenComparing(Professor::getFirstName)
-                    .thenComparing(Professor::getId);
-
-    /**
-     * Creates a LectureResponse for a given Lecture.
-     * @param lecture to be parsed
-     * @return a LectureResponse
-     */
-    public static LectureResponse createLectureResponse(Lecture lecture) {
-
-        // Sorted, not iterated as it comes. lecture.getProfessors() is a Set and Professor
-        // overrides neither equals nor hashCode, so the iteration order is identity-hash
-        // order and can differ on every run -- the read side of BUG-3. An unordered list is
-        // invisible in a JSON payload and obvious in a title built from it.
-        List<ProfessorShortResponse> professorResponses = lecture.getProfessors().stream()
-                .sorted(BY_NAME)
-                .map(ProfessorService::createProfessorShortResponse)
-                .toList();
-
-        double sum = 0;
-        int count = 0;
-
-        for (Rating rating : lecture.getRatings()) {
-            for (RatingTopic topic : rating.getTopics()) {
-                if (topic.getCategory() == RatingCategory.OVERALL) {
-                    sum += topic.getValue();
-                    count++;
-                    break;
-                }
-            }
-        }
-
-        double averageRating = count == 0 ? 0.0 : sum / count;
-
-
-
-        String semesterLabel =
-                lecture.getSemesterSeason().label(lecture.getSemesterYear());
-
-        return new LectureResponse(
-                lecture.getId(),
-                lecture.getName(),
-                lecture.getCode(),
-                lecture.getSemesterYear(),
-                lecture.getSemesterSeason(),
-                semesterLabel,
-                title(semesterLabel, lecture.getName(), professorResponses),
-                lecture.isActive(),
-                lecture.getLectureType(),
-                professorResponses,
-                lecture.getComments().size(),
-                lecture.getRatings().size(),
-                averageRating
-        );
-
-    }
-
-    /**
-     * {@code "SS26 Algorithmen 1 -- Peter Sanders, Uebungsleiter 1"}, with an em dash.
-     *
-     * <p>Built here so that every client shows one string rather than three near-identical
-     * ones. A lecture nobody is assigned to is just {@code "SS26 Algorithmen 1"}: the
-     * separator belongs to the names, and a title ending in a dash reads as a bug.
-     */
-    private static String title(String semesterLabel,
-                                String name,
-                                List<ProfessorShortResponse> professors) {
-
-        String heading = semesterLabel + " " + name;
-
-        if (professors.isEmpty()) {
-            return heading;
-        }
-
-        return heading + " \u2014 " + professors.stream()
-                .map(professor -> professor.firstName() + " " + professor.lastName())
-                .collect(Collectors.joining(", "));
-    }
-
     public Lecture getById(UUID id) {
         return lectureRepository.findById(id).orElse(null);
-    }
-
-    public Lecture getLectureByID(String lectureID) {
-        return lectureRepository.findById(UUID.fromString(lectureID)).orElse(null);
     }
 
 

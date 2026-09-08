@@ -1,19 +1,13 @@
 package com.pse.professor.service;
 
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.pse.professor.dto.response.ProfessorShortResponse;
-import com.pse.rating.model.Rating;
-import com.pse.rating.model.RatingCategory;
-import com.pse.rating.model.RatingTopic;
-import com.pse.user.model.Student;
+import com.pse.professor.mapper.ProfessorResponseMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,7 +51,7 @@ public class ProfessorService {
         List<ProfessorResponse> responses = new ArrayList<>();
 
         for (Professor professor : professors) {
-            responses.add(createProfessorResponse(professor));
+            responses.add(ProfessorResponseMapper.toResponse(professor));
         }
 
         return new ProfessorsResponse("Found " + responses.size() + " professors", true, responses);
@@ -72,7 +66,7 @@ public class ProfessorService {
         List<ProfessorResponse> responses = new ArrayList<>();
 
         for (Professor professor : professors) {
-            responses.add(createProfessorResponse(professor));
+            responses.add(ProfessorResponseMapper.toResponse(professor));
         }
 
         return new ProfessorsResponse("Found " + responses.size() + " professors", true, responses);
@@ -92,7 +86,7 @@ public class ProfessorService {
         return new ProfessorDetailResponse(
                 "Found professor with uuid: " + professor_id,
                 true,
-                createProfessorResponse(professor)
+                ProfessorResponseMapper.toResponse(professor)
         );
 
     }
@@ -158,78 +152,12 @@ public class ProfessorService {
     }
 
 
-
-    public static ProfessorResponse createProfessorResponse(Professor professor) {
-
-
-        double averageRating = calculateAverageRating(professor);
-        professor.setAverageRating(BigDecimal.valueOf(averageRating));
-
-
-
-        return new ProfessorResponse(
-                professor.getId(),
-                professor.getFirstName(),
-                professor.getLastName(),
-                professor.isActive(),
-                professor.getAverageRating(),
-                professor.getRatingCount(),
-                // Sorted for the same reason LectureService sorts the professors of a
-                // lecture: professor.getLectures() is a Set, so the ids come out in a
-                // different order between two requests otherwise. By name and not by id,
-                // because an id order is meaningless to whoever reads the response.
-                professor.getLectures().stream()
-                        .sorted(Comparator.comparing(Lecture::getName)
-                                .thenComparing(Lecture::getId))
-                        .map(Lecture::getId)
-                        .toList()
-        );
-    }
-
-
-
-    public static ProfessorShortResponse createProfessorShortResponse(Professor professor) {
-        return new ProfessorShortResponse(
-                professor.getId(),
-                professor.getFirstName(),
-                professor.getLastName(),
-                professor.isActive()
-        );
-    }
-
-
     public UUID getProfessorID(String firstName, String lastName) {
         Professor professor = professorRepository.findByFirstNameAndLastName(firstName, lastName).orElse(null);
         if(professor == null) {
             return null;
         }
         return professor.getId();
-    }
-
-    public static double calculateAverageRating(Professor professor) {
-
-        double sum = 0.0;
-        int count = 0;
-
-        for (Lecture lecture : professor.getLectures()) {
-
-            for (Rating rating : lecture.getRatings()) {
-
-                for (RatingTopic topic : rating.getTopics()) {
-
-                    if (topic.getCategory() == RatingCategory.OVERALL) {
-                        sum += topic.getValue();
-                        count++;
-                    }
-                }
-            }
-        }
-
-        if (count == 0) {
-            return 0.0;
-        }
-
-        return sum / count;
     }
 
 

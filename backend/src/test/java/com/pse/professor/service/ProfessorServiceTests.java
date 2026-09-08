@@ -467,51 +467,6 @@ class ProfessorServiceTests {
         assertThat(result).isNull();
     }
 
-    @Test
-    void calculateAverageRatingReturnsZeroWhenProfessorHasNoRatings() {
-
-        Professor professor = mock(Professor.class);
-
-        when(professor.getLectures()).thenReturn(Set.of());
-
-        double result = ProfessorService.calculateAverageRating(professor);
-
-        assertThat(result).isEqualTo(0.0);
-    }
-
-    @Test
-    void calculateAverageRatingUsesOverallRatings() {
-
-        Professor professor = mock(Professor.class);
-        Lecture lecture = mock(Lecture.class);
-
-        Rating rating1 = mock(Rating.class);
-        Rating rating2 = mock(Rating.class);
-
-        RatingTopic overall1 = mock(RatingTopic.class);
-        RatingTopic overall2 = mock(RatingTopic.class);
-        RatingTopic organization = mock(RatingTopic.class);
-
-        when(professor.getLectures()).thenReturn(Set.of(lecture));
-        when(lecture.getRatings()).thenReturn(List.of(rating1, rating2));
-
-        when(rating1.getTopics()).thenReturn(List.of(overall1, organization));
-        when(rating2.getTopics()).thenReturn(List.of(overall2));
-
-
-
-        when(overall1.getCategory()).thenReturn(RatingCategory.OVERALL);
-        when(overall1.getValue()).thenReturn(4.0);
-
-        when(overall2.getCategory()).thenReturn(RatingCategory.OVERALL);
-        when(overall2.getValue()).thenReturn(2.0);
-
-        when(organization.getCategory()).thenReturn(RatingCategory.ORGANIZATION);
-
-        double result = ProfessorService.calculateAverageRating(professor);
-
-        assertThat(result).isEqualTo(3.0);
-    }
 
 
     private Professor createProfessor(
@@ -576,40 +531,5 @@ class ProfessorServiceTests {
                 .isInstanceOf(ApiException.class);
 
         verifyNoInteractions(auditWriter);
-    }
-
-    /**
-     * {@code lectureIds} comes out of {@code Professor.lectures}, a {@code Set}, so it has the
-     * same defect the professor list of a lecture had: no order of its own, and therefore a
-     * different one between two requests. Fed a {@code LinkedHashSet} in the wrong order for
-     * the same reason as {@code LectureServiceTests} -- a real {@code HashSet} would make the
-     * test depend on identity-hash order and be flaky about a defect that is not.
-     */
-    @Test
-    void createProfessorResponse_lecturesInAnyOrder_answersTheirIdsByLectureName() {
-
-        Professor professor = new Professor();
-        professor.setFirstName("Peter");
-        professor.setLastName("Sanders");
-
-        Lecture algorithms = lectureNamed("Algorithmen 1");
-        Lecture theory = lectureNamed("Theoretische Grundlagen");
-        Lecture programming = lectureNamed("Programmieren");
-
-        professor.setLectures(new LinkedHashSet<>(List.of(theory, programming, algorithms)));
-
-
-        ProfessorResponse response = ProfessorService.createProfessorResponse(professor);
-
-
-        assertThat(response.lectureIds())
-                .containsExactly(algorithms.getId(), programming.getId(), theory.getId());
-    }
-
-    private static Lecture lectureNamed(String name) {
-        Lecture lecture = new Lecture();
-        lecture.setId(UUID.randomUUID());
-        lecture.setName(name);
-        return lecture;
     }
 }

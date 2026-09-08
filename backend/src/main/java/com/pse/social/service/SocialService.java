@@ -5,8 +5,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.pse.lecture.mapper.LectureResponseMapper;
 import com.pse.shared.util.ProfilePictureGenerator;
-import com.pse.lecture.dto.LectureLabels;
+import com.pse.lecture.mapper.LectureLabels;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,13 +16,11 @@ import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
-import com.pse.auth.service.AuthService;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.service.LectureService;
 import com.pse.shared.enums.ContentStatus;
 import com.pse.shared.enums.NotificationType;
 import com.pse.shared.enums.ReportReason;
-import com.pse.shared.enums.ReportStatus;
 import com.pse.shared.enums.VoteType;
 import com.pse.social.dto.request.AnswerReportRequest;
 import com.pse.social.dto.request.AnswerSubmitRequest;
@@ -111,7 +110,7 @@ public class SocialService {
 
     private boolean submitComment(Student student, String lectureID, String content) {
 
-        Lecture lecture = lectureService.getLectureByID(lectureID);
+        Lecture lecture = lectureService.getById(UUID.fromString(lectureID));
         if (lecture == null) {
             return false;
         }
@@ -407,7 +406,7 @@ public class SocialService {
                     new NotificationResponse(
                             notification.getId(),
                             type,
-                            LectureService.createLectureResponse(notification.getLecture()),
+                            LectureResponseMapper.toResponse(notification.getLecture()),
                             notification.getOwnComment().getId(),
                             notification.getAnswer().getStudent().getUsername(),
                             notification.getAnswer().getContent(),

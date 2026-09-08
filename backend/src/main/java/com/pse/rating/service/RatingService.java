@@ -1,21 +1,19 @@
 package com.pse.rating.service;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.pse.professor.service.ProfessorRatings;
 import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
-import com.pse.auth.service.AuthService;
 import com.pse.lecture.service.LectureService;
 import com.pse.professor.model.Professor;
-import com.pse.professor.service.ProfessorService;
 import com.pse.rating.dto.response.RatingCategoriesResponse;
 import com.pse.rating.dto.response.RatingCategoryResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
@@ -93,7 +91,7 @@ public class RatingService {
 
         //TODO: idk ob hier ein bug ensteht weil wir das rating objekt noch nicht gespeicehrt haben
         //Add overall Rating
-        double overallRating = calculateAverageScore(rating);
+        double overallRating = RatingAverages.weightedScore(rating);
         RatingTopic overallTopic = new RatingTopic();
         overallTopic.setCategory(RatingCategory.OVERALL);
         overallTopic.setValue(overallRating);
@@ -105,7 +103,7 @@ public class RatingService {
         // Durchschnitt für alle Professoren dieser Vorlesung aktualisieren
         for (Professor professor : lecture.getProfessors()) {
 
-            double professorAverageRating = ProfessorService.calculateAverageRating(professor);
+            double professorAverageRating = ProfessorRatings.average(professor);
 
             professor.setAverageRating(BigDecimal.valueOf(professorAverageRating));
         }
@@ -219,37 +217,6 @@ public class RatingService {
         }
 
         return new RatingCategoriesResponse("Found " + responses.size() + " categories", true, responses);
-    }
-
-
-
-    public static double calculateAverageScore(Rating rating){
-
-        // Overall Rating berechnen
-        double weightedSum = 0;
-        double totalWeight = 0;
-
-        for (RatingTopic topic : rating.getTopics()) {
-
-            if (topic.getCategory() == RatingCategory.OVERALL) {
-                continue;
-            }
-
-            double weight = topic.getCategory().getDefaultWeight();
-
-            weightedSum += topic.getValue() * weight;
-            totalWeight += weight;
-        }
-
-        if (totalWeight == 0) {
-            return 0;
-        }
-        double averageScore = weightedSum / totalWeight;
-
-        return BigDecimal.valueOf(averageScore)
-                .setScale(2, RoundingMode.HALF_UP)
-                .doubleValue();
-
     }
 
 
