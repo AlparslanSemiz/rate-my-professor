@@ -282,7 +282,16 @@ class ApiAuthorizationMatrixTests {
         assertThat(professorRepository.count()).isEqualTo(0);
     }
 
-    /** The authenticated tier from the other side: a student session is let through. */
+    /**
+     * The authenticated tier from the other side: a student session is let through.
+     *
+     * <p>It asserts {@code 200} rather than "was not refused" -- P-6. The older form,
+     * {@code status != 401 && status != 403}, is also satisfied by a {@code 404}, so a route
+     * deleted from this list's subject matter would keep the loop green. Unlike every other
+     * sweep in this suite the route list here is hand-written, and it has to be: the question
+     * is which routes the *app* depends on, and Spring cannot answer that. So the list does
+     * not go stale -- the application does, and only an assertion strict enough notices.
+     */
     @Test
     void studentSessionReachesTheEndpointsTheAppNeeds() throws Exception {
         String token = studentSession();
@@ -290,17 +299,15 @@ class ApiAuthorizationMatrixTests {
         // Reads only. logout, logout-all and deleteAccount are left out on purpose: they
         // would end the session under the rest of the loop.
         List<String> routes = List.of(
-                "GET /auth/me",
                 "GET /account/information",
                 "GET /account/ratings",
                 "GET /social/notifications"
         );
 
         for (String route : routes) {
-            int status = statusOf(route, token);
-            assertThat(status != 401 && status != 403)
-                    .as(route + " refused a student session with " + status)
-                    .isTrue();
+            assertThat(statusOf(route, token))
+                    .as(route + " did not answer a student session with 200")
+                    .isEqualTo(200);
         }
     }
 

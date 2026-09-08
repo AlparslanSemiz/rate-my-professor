@@ -4,7 +4,7 @@ import java.util.UUID;
 
 /**
  * The admin a warning is attributed to. {@code id} is the issuing admin's <em>student</em>
- * id — the same value {@code GET /auth/me} returns as {@code user.id} — so a client can tell
+ * id — the same value {@code GET /admin/auth/me} returns as {@code user.id} — so a client can tell
  * whether it issued a warning itself without a second lookup.
  *
  * @param name the issuing admin's display name; a moderation record that cannot say who

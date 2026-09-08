@@ -444,7 +444,7 @@ class AdminApiIntegrationTests {
         mockMvc.perform(patch("/users/{id}/block", target.student().getId())
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
-        mockMvc.perform(get("/auth/me")
+        mockMvc.perform(get("/account/information")
                         .header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isUnauthorized());
         long auditCount = auditLogRepository.count();
@@ -1158,7 +1158,7 @@ class AdminApiIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"kitEmail\":\"MOVED@student.kit.edu\"}"))
                 .andExpect(status().isOk());
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(targetToken)))
+        mockMvc.perform(get("/account/information").header("Authorization", bearer(targetToken)))
                 .andExpect(status().isUnauthorized());
         assertThat(studentRepository.findById(target.student().getId()).orElseThrow().getKitEmail())
                 .isEqualTo("moved@student.kit.edu");
@@ -1898,7 +1898,7 @@ class AdminApiIntegrationTests {
         studentRepository.saveAndFlush(student);
 
         assertThat(tokenRepository.findAll().stream().noneMatch(Token::isRevoked)).isTrue();
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
+        mockMvc.perform(get("/account/information").header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Not logged in"));
 
@@ -1991,7 +1991,7 @@ class AdminApiIntegrationTests {
                 .orElseThrow();
         assertThat(audit.getTargetLabel().contains("gone@student.kit.edu")).isTrue();
 
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(target.rawToken())))
+        mockMvc.perform(get("/account/information").header("Authorization", bearer(target.rawToken())))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -2020,7 +2020,7 @@ class AdminApiIntegrationTests {
         mockMvc.perform(post("/auth/logout").header("Authorization", bearer(student.rawToken())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
-        mockMvc.perform(get("/auth/me").header("Authorization", bearer(student.rawToken())))
+        mockMvc.perform(get("/account/information").header("Authorization", bearer(student.rawToken())))
                 .andExpect(status().isUnauthorized());
         // A student logout is USER_LOGOUT; ADMIN_LOGOUT belongs to the administrative
         // record only.
@@ -2180,7 +2180,7 @@ class AdminApiIntegrationTests {
                 // The issuer is named, not just referenced: a moderation record that cannot
                 // say who warned someone is most of the point of the record missing.
                 .andExpect(jsonPath("$.warnings[0].createdFrom.name").value("admin"))
-                // and the id is the admin's student id, the same one /auth/me returns.
+                // and the id is the admin's student id, the same one /admin/auth/me returns.
                 .andExpect(jsonPath("$.warnings[0].createdFrom.id")
                         .value(admin.student().getId().toString()))
                 .andReturn().getResponse().getContentAsString();

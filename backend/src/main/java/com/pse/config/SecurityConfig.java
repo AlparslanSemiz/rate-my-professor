@@ -94,7 +94,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/ratings/own/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout-all").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()
                         .requestMatchers(
                                 "/users/**",
                                 "/comments",

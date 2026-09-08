@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * address still has to be in {@code admins} — {@link AdminBootstrapPolicy} is what puts
  * it there — before any of it applies.
  *
- * <p>Elevation is deliberately not a role. {@code /auth/me}, the user listing and every
+ * <p>Elevation is deliberately not a role. {@code /admin/auth/me}, the user listing and every
  * audit actor keep reporting {@code ADMIN} for these accounts; the distinction travels
  * as a separate field.
  */

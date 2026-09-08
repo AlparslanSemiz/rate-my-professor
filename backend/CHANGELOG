@@ -468,3 +468,26 @@ us if you want it.
 Also corrected in docs/admin-api.md, where it had been wrong since the file was written: the
 LectureResponse example showed "semesterSeason":"WINTER". The only accepted values are "SS"
 and "WS"; "WINTER" is answered with 400 {"message":"Invalid request"}.
+
+
+///// 8.09 (4)
+
+
+"GET /auth/me" is gone for good. Use "GET /admin/auth/me".
+
+It had already stopped answering some weeks ago -- it was removed from the app API and the
+removal was deliberate, but this file and docs/admin-api.md still described it as a legacy
+path that would keep working until the panel had migrated. They no longer do. There is no
+plan to bring it back.
+
+    GET /auth/me          removed, answers 404
+    GET /admin/auth/me    unchanged, and the one to call
+
+The admin route returns exactly what the old one did:
+
+  {"message", "success", "user": {"id", "username", "kitEmail", "role", "status",
+                                  "isSuperAdmin"}}
+
+Panel teams: this was the fifth line of task 1 in docs/adminweb-tasks.md. It is not a
+migration any more, it is a deletion -- if anything still calls "/auth/me" it is already
+getting a 404.

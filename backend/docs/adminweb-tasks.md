@@ -62,7 +62,8 @@ rather than a failure.
 ```
 
 Read the name from `user.username`. Note `isSuperAdmin` is spelled with the `is` — Jackson
-would otherwise have put it on the wire as `superAdmin`. → **Task 1**, last line.
+would otherwise have put it on the wire as `superAdmin`. → **Task 1**, last line: there is
+no `GET /auth/me` to move off any more, only `GET /admin/auth/me` to move on to.
 
 This second one is an inference from the backend side: we can see what each endpoint returns,
 not which one the panel calls. If the panel is already on `/admin/auth/me` and still shows a
@@ -71,13 +72,15 @@ want it.
 
 ---
 
-## 1. Move the five auth calls
+## 1. Move the auth calls
 
 - [ ] `POST /auth/request-login` → `POST /admin/auth/request-login`
 - [ ] `POST /auth/login` → `POST /admin/auth/login`
 - [ ] `POST /auth/logout` → `POST /admin/auth/logout`
 - [ ] `POST /auth/logout-all` → `POST /admin/auth/logout-all`
-- [ ] `GET /auth/me` → `GET /admin/auth/me`
+- [x] `GET /auth/me` → `GET /admin/auth/me` — **nothing to migrate: the old path is gone.**
+      It was removed from the backend and is not coming back, so a panel still calling it gets
+      a `404`. `GET /admin/auth/me` is the only identity endpoint.
 
 Do `POST /admin/auth/login` first — it is the one that changes behaviour:
 

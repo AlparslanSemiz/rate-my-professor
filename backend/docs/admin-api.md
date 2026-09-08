@@ -39,7 +39,7 @@ the panel can move at its own pace, and they are removed once it has.
 
 | Old | New |
 | --- | --- |
-| `/auth/request-login`, `/auth/login`, `/auth/logout`, `/auth/logout-all`, `/auth/me` | `/admin/auth/...` |
+| `/auth/request-login`, `/auth/login`, `/auth/logout`, `/auth/logout-all` | `/admin/auth/...` |
 | `/users/**` | `/admin/users/**` |
 | `/comments/**`, `/answers/**` | `/admin/comments/**`, `/admin/answers/**` |
 | `GET /ratings`, `DELETE /ratings/{id}` | `/admin/ratings...` |

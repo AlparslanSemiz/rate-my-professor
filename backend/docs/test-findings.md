@@ -7,6 +7,42 @@ where each finding stands.
 Every finding is given together with the name of the test that pins it: a finding is only
 really recorded if it lives in a test.
 
+## At a glance
+
+**28 findings. 26 fixed, 1 closed as a recorded decision (P-3), 1 an existing protection put
+under test (F-13).** Two of the 28 — F-7 and F-8, both behind the "approximate location does
+not work" report — are the ones a *user* reported. The other twenty-six nobody had seen.
+
+Which kind of work turned each one up, because that is the part worth knowing when deciding
+what to write next:
+
+| Found by | How many | Which |
+|---|---|---|
+| **Unit tests** (batches 1–7) | 12 | BUG-3, F-1, F-2, F-3, F-5, F-7, F-9, F-10, F-11, F-12, F-13, F-18 |
+| **API / role sweeps** (MockMvc, whole-route) | 4 | F-14, F-15, F-16, F-17 |
+| **Contract layer** (OpenAPI schema vs. responses) | 1 | F-19 |
+| **Integration layer** (real PostgreSQL) | 1 | P-5 |
+| **End-to-end layer** (real HTTP, real database) | 1 | F-20 |
+| **Reading the code while writing the tests** — no test run found these | 4 | F-4, F-6, F-8, F-21 |
+| **Doing the measuring** — process findings about the suite itself, and about its own assertions | 5 | P-1, P-2, P-3, P-4, P-6 |
+
+That row of four is worth stopping on. It is the second-largest source, and none of those
+four would have been caught by running anything: F-6 was seven methods with no caller, F-4 was
+a route mapping missing its slash, and F-21 was a `Set` whose order nothing had needed to be
+stable until a feature asked for it. Writing tests finds defects partly by making somebody read
+the code closely enough to see them — and P-6 is the same effect turned on the tests
+themselves, an assertion that could not fail, found by reading it rather than by running it.
+
+And the shape of the list shifts by layer. The unit batches found **logic** — a wrong
+comparison, a missing null check, an exception escaping a listener. The sweeps found **protocol**:
+F-14 through F-17 are all "the right thing happened, with the wrong status code", and each was
+wrong on every route at once rather than on one. The contract and end-to-end layers found
+**gaps between the API and its own description** — a schema that declared a nullable field
+non-nullable, a create that wrote no audit entry. Adding a layer did not find more of the same
+defect; it found a different kind.
+
+---
+
 ## Summary
 
 | # | Finding | Impact | Status |
@@ -38,10 +74,12 @@ really recorded if it lives in a test.
 | [P-3](#p-3--lombok-is-not-filtered-in-jacoco) | Lombok is not filtered in JaCoCo | Process | **Closed — decided against** |
 | [P-4](#p-4--a-moved-test-file-was-copied-not-moved) | A "moved" test file was copied, not moved | Process | **Fixed** (duplicates deleted) |
 | [P-5](#p-5--coverage-measured-without-clean-is-not-the-coverage-ci-measures) | Coverage measured without `clean` is inflated by the previous run | Process | **Fixed** (figures re-measured) |
+| [P-6](#p-6--a-sweep-asserted-not-refused-which-a-404-also-satisfies) | A sweep asserted "not refused", which a `404` also satisfies | Process | **Fixed** |
 
 **Nothing in this document is open.** Twelve were closed in one pass; P-5 came later from the
-integration layer, F-19 and F-20 later still from the end-to-end work, and F-21 last of all
-— not from a test run but from asking what a still-open feature request would actually need. What each one's
+integration layer, F-19 and F-20 later still from the end-to-end work, and F-21 and P-6 last of
+all — neither from a test run: one from asking what a still-open feature request would
+actually need, the other from reading a sweep back against the routes it walks. What each one's
 **Status** records is either the fix or, for P-3 alone, the decision not to make one. Four
 changed a client-visible contract — F-3, F-5, F-16 and F-20 — and each was closed deliberately
 rather than quietly; each says below what a client sees differently.
@@ -961,6 +999,34 @@ column on the join table, which is a migration and an admin-API change, and that
 call rather than something to infer from a name. Written up here so the difference between
 "stable" and "by role" is on the record, and in [admin-api.md](admin-api.md) so a client
 reading the contract sees it.
+
+---
+
+### P-6 — A sweep asserted "not refused", which a `404` also satisfies
+
+**Where.** `ApiAuthorizationMatrixTests.studentSessionReachesTheEndpointsTheAppNeeds`.
+
+**What it did.** The test walks a short list of routes the Android client depends on and, for
+each, checked that a student session was not turned away:
+
+```java
+assertThat(status != 401 && status != 403)
+```
+
+An unmapped path answers `404`, which is neither. So the assertion passes both when the route
+is reachable and when the route **is not there at all** — the two outcomes it exists to tell
+apart. It was noticed while `GET /auth/me` was on that list and no longer mapped; that route's
+removal was deliberate and is not a finding, but the assertion that could not see it is.
+
+**Why the list is hand-written, when nothing else here is.** Every other sweep reads its routes
+from Spring's `RequestMappingHandlerMapping`, because a hand-kept list goes stale in silence.
+This one cannot: the question it asks is *which routes the app depends on*, and Spring has no
+opinion about that. The trade-off inverts — the list stays correct and the application drifts
+out from under it — and only an assertion strict enough will say so.
+
+**Fix.** `isEqualTo(200)`. A route that stops answering now fails the sweep.
+
+**Status. Fixed.**
 
 ---
 
