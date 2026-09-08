@@ -2,7 +2,9 @@ package com.pse.lecture.service;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -14,6 +16,9 @@ import com.pse.rating.service.RatingService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.service.AuditWriter;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.auth.service.AuthService;
 import com.pse.lecture.dto.request.AddLectureRequest;
@@ -27,6 +32,7 @@ import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
 import com.pse.user.model.Student;
 import com.pse.professor.dto.response.ProfessorShortResponse;
+import com.pse.security.AuthenticatedUser;
 
 
 /**
@@ -41,11 +47,13 @@ public class LectureService {
 
     private final LectureRepository lectureRepository;
     private final ProfessorRepository professorRepository;
+    private final AuditWriter auditWriter;
 
-    public LectureService(ModerationUserService moderationUserService, LectureRepository lectureRepository, ProfessorRepository professorRepository ) {
+    public LectureService(ModerationUserService moderationUserService, LectureRepository lectureRepository, ProfessorRepository professorRepository, AuditWriter auditWriter ) {
         this.moderationUserService = moderationUserService;
         this.lectureRepository = lectureRepository;
         this.professorRepository = professorRepository;
+        this.auditWriter = auditWriter;
     }
 
 
@@ -90,10 +98,23 @@ public class LectureService {
         return new LectureDetailResponse("Found lecture", true, lectureResponse);
     }
 
+    /**
+     * Creating a lecture is an administrative mutation and is recorded like every other one.
+     *
+     * <p>It was not, for a long time: updating or deleting the same row wrote an entry and
+     * creating it wrote nothing, so the audit log could show a lecture being renamed with no
+     * record of where it came from. The entry is keyed {@code exists} in the same shape
+     * {@code LECTURE_DELETED} uses, which is what makes it a lifecycle event rather than a field
+     * diff -- {@code AuditRevertService} refuses to revert it, correctly: the inverse of a
+     * creation is a deletion, which is its own action with its own guards.
+     *
+     * <p>Takes the principal rather than the student because {@code AuditWriter.write} records
+     * the acting {@code Admin}, and a {@code Student} alone cannot say which admin acted.
+     */
     @Transactional
-    public BasicResponse addLecture(Student student, AddLectureRequest request) {
+    public BasicResponse addLecture(AuthenticatedUser principal, AddLectureRequest request) {
 
-        if (!moderationUserService.verifyAdmin(student)) {
+        if (!moderationUserService.verifyAdmin(principal.student())) {
             return new BasicResponse("User is not authorized to add lectures", false
             );
         }
@@ -141,6 +162,18 @@ public class LectureService {
         }
 
         lectureRepository.save(lecture);
+
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("exists", Map.of("before", false, "after", true));
+        auditWriter.write(
+                principal.admin(),
+                AuditAction.LECTURE_CREATED,
+                AuditTargetType.LECTURE,
+                lecture.getId(),
+                lecture.getName(),
+                changes,
+                Map.of("professors", professors.size())
+        );
 
         return new BasicResponse("Successfully added Lectures", true);
     }

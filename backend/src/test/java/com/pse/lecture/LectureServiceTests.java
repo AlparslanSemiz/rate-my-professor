@@ -6,7 +6,12 @@ import com.pse.lecture.dto.request.AddLectureRequest;
 import com.pse.lecture.dto.response.LectureDetailResponse;
 import com.pse.lecture.dto.response.LecturesResponse;
 import com.pse.lecture.model.Lecture;
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.service.AuditWriter;
+import com.pse.moderation.model.Admin;
 import com.pse.lecture.repository.LectureRepository;
+import com.pse.security.AuthenticatedUser;
 import com.pse.lecture.service.LectureService;
 import com.pse.moderation.service.ModerationUserService;
 import com.pse.professor.model.Professor;
@@ -29,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -52,6 +58,9 @@ class LectureServiceTests {
     @Mock
     private ProfessorRepository professorRepository;
 
+    @Mock
+    private AuditWriter auditWriter;
+
     private LectureService lectureService;
 
 
@@ -61,10 +70,19 @@ class LectureServiceTests {
         lectureService = new LectureService(
                 moderationUserService,
                 lectureRepository,
-                professorRepository
+                professorRepository,
+                auditWriter
         );
     }
 
+
+    /**
+     * The principal the controller would hand in, built round the test's own student so the
+     * {@code verifyAdmin} stubbing below still names the same object.
+     */
+    private static AuthenticatedUser principalFor(Student student) {
+        return new AuthenticatedUser(student, null, mock(Admin.class));
+    }
 
     @Test
     void getLectureReturnsFailureWhenLectureDoesNotExist() {
@@ -157,7 +175,7 @@ class LectureServiceTests {
 
         when(moderationUserService.verifyAdmin(student)).thenReturn(false);
 
-        BasicResponse response = lectureService.addLecture(student, request);
+        BasicResponse response = lectureService.addLecture(principalFor(student), request);
 
 
         assertFalse(response.success());
@@ -179,7 +197,7 @@ class LectureServiceTests {
         when(moderationUserService.verifyAdmin(student)).thenReturn(true);
         when(lectureRepository.findByName("Lineare Algebra 1")).thenReturn(Optional.of(mock(Lecture.class)));
 
-        BasicResponse response = lectureService.addLecture(student, request);
+        BasicResponse response = lectureService.addLecture(principalFor(student), request);
 
 
         assertFalse(response.success());
@@ -214,7 +232,7 @@ class LectureServiceTests {
 
         when(professorRepository.findById(professorId)).thenReturn(Optional.empty());
 
-        BasicResponse response = lectureService.addLecture(student, request);
+        BasicResponse response = lectureService.addLecture(principalFor(student), request);
 
         assertFalse(response.success());
 
@@ -248,7 +266,7 @@ class LectureServiceTests {
 
         when(professorRepository.findById(professorId)).thenReturn(Optional.of(professor));
 
-        BasicResponse response = lectureService.addLecture(student, request);
+        BasicResponse response = lectureService.addLecture(principalFor(student), request);
 
         assertTrue(response.success());
 
@@ -293,7 +311,7 @@ class LectureServiceTests {
 
 
 
-        BasicResponse response = lectureService.addLecture(student, request);
+        BasicResponse response = lectureService.addLecture(principalFor(student), request);
 
 
 
@@ -346,4 +364,57 @@ class LectureServiceTests {
 
 
 
+
+    /**
+     * The audit gap this method used to have: updating or deleting a lecture wrote an entry and
+     * creating one wrote nothing, so the record could show a rename with no sign of where the
+     * row came from.
+     *
+     * <p>Pinned as a lifecycle event, not a field diff. {@code changes} is keyed {@code exists},
+     * which is what {@code AuditRevertService.isFieldDiff} looks for to refuse the revert -- the
+     * inverse of a creation is a deletion, which is its own audited action with its own guards.
+     */
+    @Test
+    void addLectureRecordsTheCreationAsALifecycleEvent() {
+
+        Student student = mock(Student.class);
+        AuthenticatedUser principal = principalFor(student);
+        AddLectureRequest request = mock(AddLectureRequest.class);
+
+        when(request.name()).thenReturn("Lineare Algebra 1");
+        when(request.professorIds()).thenReturn(java.util.List.of());
+        when(moderationUserService.verifyAdmin(student)).thenReturn(true);
+        when(lectureRepository.findByName("Lineare Algebra 1")).thenReturn(Optional.empty());
+
+        assertTrue(lectureService.addLecture(principal, request).success());
+
+        ArgumentCaptor<java.util.Map<String, Object>> changes =
+                ArgumentCaptor.forClass(java.util.Map.class);
+        verify(auditWriter).write(
+                eq(principal.admin()),
+                eq(AuditAction.LECTURE_CREATED),
+                eq(AuditTargetType.LECTURE),
+                any(),
+                eq("Lineare Algebra 1"),
+                changes.capture(),
+                any());
+
+        assertEquals(
+                java.util.Map.of("before", false, "after", true),
+                changes.getValue().get("exists"));
+    }
+
+    /** A refused creation must leave no trace: nothing was created, so nothing happened. */
+    @Test
+    void addLectureRecordsNothingWhenItRefuses() {
+
+        Student student = mock(Student.class);
+        AddLectureRequest request = mock(AddLectureRequest.class);
+
+        when(moderationUserService.verifyAdmin(student)).thenReturn(false);
+
+        assertFalse(lectureService.addLecture(principalFor(student), request).success());
+
+        verifyNoInteractions(auditWriter);
+    }
 }

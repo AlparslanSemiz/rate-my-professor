@@ -3,7 +3,9 @@ package com.pse.professor.service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -15,6 +17,9 @@ import com.pse.user.model.Student;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.service.AuditWriter;
 import com.pse.auth.dto.response.BasicResponse;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
@@ -24,18 +29,21 @@ import com.pse.professor.dto.response.ProfessorResponse;
 import com.pse.professor.dto.response.ProfessorsResponse;
 import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
+import com.pse.security.AuthenticatedUser;
 
 @Service
 public class ProfessorService {
 
     private final ProfessorRepository professorRepository;
     private final LectureRepository lectureRepository;
+    private final AuditWriter auditWriter;
 
 
 
-    public ProfessorService(ProfessorRepository professorRepository, LectureRepository lectureRepository) {
+    public ProfessorService(ProfessorRepository professorRepository, LectureRepository lectureRepository, AuditWriter auditWriter) {
         this.professorRepository = professorRepository;
         this.lectureRepository = lectureRepository;
+        this.auditWriter = auditWriter;
     }
 
 
@@ -89,7 +97,13 @@ public class ProfessorService {
 
 
     @Transactional
-    public BasicResponse addProfessor(ProfessorAddRequest request) {
+    /**
+     * Creating a professor is recorded like every other administrative mutation.
+     *
+     * <p>See {@code LectureService.addLecture} for why this takes the principal and why the
+     * entry is a lifecycle event rather than a field diff.
+     */
+    public BasicResponse addProfessor(AuthenticatedUser principal, ProfessorAddRequest request) {
 
     if (getProfessorID(request.firstName(), request.lastName()) != null) {
         return new BasicResponse(
@@ -128,6 +142,18 @@ public class ProfessorService {
         }
 
         professorRepository.save(professor);
+
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("exists", Map.of("before", false, "after", true));
+        auditWriter.write(
+                principal.admin(),
+                AuditAction.PROFESSOR_CREATED,
+                AuditTargetType.PROFESSOR,
+                professor.getId(),
+                professor.getFirstName() + " " + professor.getLastName(),
+                changes,
+                Map.of("lectures", lectures.size())
+        );
 
         return new BasicResponse("Professor added successfully", true);
     }

@@ -69,7 +69,7 @@ public class LectureController {
      */
     @PostMapping("/lectures")
     public BasicResponse addLecture(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody AddLectureRequest request) {
-        return lectureService.addLecture(principal.student(), request);
+        return lectureService.addLecture(principal, request);
     }
 
 

@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.security.AuthenticatedUser;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.pse.professor.dto.request.ProfessorAddRequest;
 import com.pse.professor.dto.response.ProfessorDetailResponse;
 import com.pse.professor.dto.response.ProfessorsResponse;
@@ -53,8 +55,8 @@ public class ProfessorController {
      * @return
      */
     @PostMapping("/professor")
-    public BasicResponse addProfessor(@Valid @RequestBody ProfessorAddRequest request) {
-        return professorService.addProfessor(request);
+    public BasicResponse addProfessor(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody ProfessorAddRequest request) {
+        return professorService.addProfessor(principal, request);
     }
 
 

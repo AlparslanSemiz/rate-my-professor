@@ -1,6 +1,7 @@
 package com.pse.professor;
 
 import com.pse.auth.dto.response.BasicResponse;
+import com.pse.security.AuthenticatedUser;
 import com.pse.professor.controller.ProfessorController;
 import com.pse.professor.dto.request.ProfessorAddRequest;
 import com.pse.professor.dto.response.ProfessorDetailResponse;
@@ -80,16 +81,18 @@ public class ProfessorControllerTests {
                         true
                 );
 
-        when(professorService.addProfessor(request))
+        AuthenticatedUser principal = mock(AuthenticatedUser.class);
+
+        when(professorService.addProfessor(principal, request))
                 .thenReturn(expectedResponse);
 
 
-        BasicResponse response = professorController.addProfessor(request);
+        BasicResponse response = professorController.addProfessor(principal, request);
 
 
         assertSame(expectedResponse, response);
 
-        verify(professorService).addProfessor(request);
+        verify(professorService).addProfessor(principal, request);
     }
 
     // A companion test used to assert that this handler turned a non-admin away itself,

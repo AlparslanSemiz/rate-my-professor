@@ -109,7 +109,7 @@ public class ModerationCatalogController {
             @AuthenticationPrincipal AuthenticatedUser principal,
             @Valid @RequestBody AddLectureRequest request
     ) {
-        return lectureService.addLecture(principal.student(), request);
+        return lectureService.addLecture(principal, request);
     }
 
     /**
@@ -117,7 +117,7 @@ public class ModerationCatalogController {
      * caller with {@code 200 {"success": false}}. Here the chain answers 403 first.
      */
     @PostMapping("/admin/data/professor")
-    public BasicResponse addProfessor(@Valid @RequestBody ProfessorAddRequest request) {
-        return professorService.addProfessor(request);
+    public BasicResponse addProfessor(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody ProfessorAddRequest request) {
+        return professorService.addProfessor(principal, request);
     }
 }

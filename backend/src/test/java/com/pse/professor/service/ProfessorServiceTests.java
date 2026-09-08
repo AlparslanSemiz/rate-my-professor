@@ -7,7 +7,13 @@ import com.pse.professor.dto.request.ProfessorAddRequest;
 import com.pse.professor.dto.response.ProfessorDetailResponse;
 import com.pse.professor.dto.response.ProfessorsResponse;
 import com.pse.professor.model.Professor;
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.service.AuditWriter;
+import com.pse.user.model.Student;
+import com.pse.moderation.model.Admin;
 import com.pse.professor.repository.ProfessorRepository;
+import com.pse.security.AuthenticatedUser;
 
 import com.pse.rating.model.Rating;
 import com.pse.rating.model.RatingCategory;
@@ -25,8 +31,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,13 +47,24 @@ class ProfessorServiceTests {
     @Mock
     private LectureRepository lectureRepository;
 
+    @Mock
+    private AuditWriter auditWriter;
+
+    /**
+     * A real record rather than a mock: {@link AuthenticatedUser} is a record with no behaviour
+     * to stub, and the audit write only reads the admin off it.
+     */
+    private AuthenticatedUser principal;
+
     private ProfessorService professorService;
 
     @BeforeEach
     void setUp() {
+        principal = new AuthenticatedUser(mock(Student.class), null, mock(Admin.class));
         professorService = new ProfessorService(
                 professorRepository,
-                lectureRepository
+                lectureRepository,
+                auditWriter
         );
     }
 
@@ -224,7 +244,7 @@ class ProfessorServiceTests {
 
 
         BasicResponse response =
-                professorService.addProfessor(request);
+                professorService.addProfessor(principal, request);
 
 
         assertFalse(response.success());
@@ -259,7 +279,7 @@ class ProfessorServiceTests {
 
 
         BasicResponse response =
-                professorService.addProfessor(request);
+                professorService.addProfessor(principal, request);
 
 
         assertFalse(response.success());
@@ -290,7 +310,7 @@ class ProfessorServiceTests {
 
 
         BasicResponse response =
-                professorService.addProfessor(request);
+                professorService.addProfessor(principal, request);
 
 
         assertTrue(response.success());
@@ -339,7 +359,7 @@ class ProfessorServiceTests {
 
 
         BasicResponse response =
-                professorService.addProfessor(request);
+                professorService.addProfessor(principal, request);
 
 
         assertTrue(response.success());
@@ -402,7 +422,7 @@ class ProfessorServiceTests {
 
 
         BasicResponse response =
-                professorService.addProfessor(request);
+                professorService.addProfessor(principal, request);
 
 
         assertTrue(response.success());
@@ -528,5 +548,51 @@ class ProfessorServiceTests {
         professor.setActive(active);
 
         return professor;
+    }
+
+    /**
+     * The other half of the audit gap. See
+     * {@code LectureServiceTests.addLectureRecordsTheCreationAsALifecycleEvent} for why the
+     * entry is keyed {@code exists} rather than shaped as a field diff.
+     */
+    @Test
+    void addProfessorRecordsTheCreationAsALifecycleEvent() {
+
+        ProfessorAddRequest request = new ProfessorAddRequest("Stefan", "Kühnlein", List.of());
+
+        when(professorRepository.findByFirstNameAndLastName("Stefan", "Kühnlein"))
+                .thenReturn(Optional.empty());
+
+        assertTrue(professorService.addProfessor(principal, request).success());
+
+        ArgumentCaptor<Map<String, Object>> changes = ArgumentCaptor.forClass(Map.class);
+        verify(auditWriter).write(
+                eq(principal.admin()),
+                eq(AuditAction.PROFESSOR_CREATED),
+                eq(AuditTargetType.PROFESSOR),
+                any(),
+                eq("Stefan Kühnlein"),
+                changes.capture(),
+                any());
+
+        assertEquals(Map.of("before", false, "after", true), changes.getValue().get("exists"));
+    }
+
+    /** A refused creation must leave no trace: nothing was created, so nothing happened. */
+    @Test
+    void addProfessorRecordsNothingWhenTheProfessorAlreadyExists() {
+
+        ProfessorAddRequest request = new ProfessorAddRequest("Stefan", "Kühnlein", List.of());
+
+        // With an id, because the duplicate guard is getProfessorID(...) != null and a
+        // Professor with no id reads as "not found".
+        Professor existing = new Professor();
+        existing.setId(UUID.randomUUID());
+        when(professorRepository.findByFirstNameAndLastName("Stefan", "Kühnlein"))
+                .thenReturn(Optional.of(existing));
+
+        assertFalse(professorService.addProfessor(principal, request).success());
+
+        verifyNoInteractions(auditWriter);
     }
 }

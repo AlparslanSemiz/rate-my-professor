@@ -74,15 +74,14 @@ public class LectureControllerTests {
 
         AuthenticatedUser principal = mock(AuthenticatedUser.class);
 
-        Student student = mock(Student.class);
-
         AddLectureRequest request = mock(AddLectureRequest.class);
 
         BasicResponse expectedResponse = new BasicResponse("Successfully added Lectures", true);
 
-        when(principal.student()).thenReturn(student);
-
-        when(lectureService.addLecture(student, request))
+        // The controller passes the principal through untouched now. It used to unwrap the
+        // student here, which left the service unable to say which administrator acted -- and
+        // so unable to write an audit entry at all.
+        when(lectureService.addLecture(principal, request))
                 .thenReturn(expectedResponse);
 
 
@@ -91,8 +90,7 @@ public class LectureControllerTests {
 
         assertSame(expectedResponse, response);
 
-        verify(principal).student();
-        verify(lectureService).addLecture(student, request);
+        verify(lectureService).addLecture(principal, request);
     }
 
 

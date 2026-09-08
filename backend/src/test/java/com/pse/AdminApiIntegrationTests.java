@@ -2856,6 +2856,47 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.message").value("Login code sent"));
     }
 
+    /**
+     * Creating a lecture is now audited, and the entry is deliberately not revertible.
+     *
+     * <p>Both halves matter. The record used to skip creations entirely, so a lecture could be
+     * renamed with no entry saying where it came from. And the entry that closes that gap must
+     * not offer a revert button: it is keyed {@code exists}, a lifecycle key, so
+     * {@code AuditRevertService} refuses it -- undoing a creation is a deletion, which is its own
+     * action with its own guards, not the inverse of a field diff.
+     */
+    @Test
+    void creatingALectureIsRecordedAndIsNotRevertible() throws Exception {
+        Session admin = createSession("catalogue-admin@student.kit.edu", true);
+
+        mockMvc.perform(post("/admin/data/lectures")
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Lineare Algebra 1",
+                                  "code": "LA1",
+                                  "semesterYear": 2026,
+                                  "semesterSeason": "WS",
+                                  "active": true,
+                                  "professorIds": []
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/admin/audit-logs").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.auditLogs[0].action").value("LECTURE_CREATED"))
+                .andExpect(jsonPath("$.auditLogs[0].target.type").value("LECTURE"))
+                .andExpect(jsonPath("$.auditLogs[0].target.label").value("Lineare Algebra 1"))
+                .andExpect(jsonPath("$.auditLogs[0].changes.exists.before").value(false))
+                .andExpect(jsonPath("$.auditLogs[0].changes.exists.after").value(true))
+                .andExpect(jsonPath("$.auditLogs[0].revertible").value(false))
+                .andExpect(jsonPath("$.auditLogs[0].revertBlockedReason")
+                        .value("ACTION_NOT_REVERTIBLE"));
+    }
+
     private Session createSession(String email, boolean adminRole) {
         Student student = createStudent(email);
         Admin admin = null;
