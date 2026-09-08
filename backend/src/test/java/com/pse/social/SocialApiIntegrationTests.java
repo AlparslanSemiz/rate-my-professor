@@ -914,6 +914,196 @@ class SocialApiIntegrationTests {
 
 
 
+    /**
+     * The answer half of {@code aVoteCanBeWithdrawnAndTheWithdrawalIsRecorded}. Voting on an
+     * answer is a separate implementation from voting on a comment -- its own repository, its
+     * own entity, its own audit action -- and at this layer it only ever had the bad-request
+     * case. So the route was known to reject a bad vote and not known to accept a good one.
+     */
+    @Test
+    void anAnswerVoteCanBeCastAndWithdrawn() throws Exception {
+
+        Session author = createSession("author@student.kit.edu");
+        Session voter = createSession("voter@student.kit.edu");
+        Lecture lecture = createLecture();
+        Comment comment = createComment(author.student(), lecture, "Original comment");
+        Answer answer = createAnswer(author.student(), comment, "An answer");
+
+        mockMvc.perform(
+                        post("/social/comments/vote/answer/{answerId}", answer.getId())
+                                .header("Authorization", bearer(voter.rawToken()))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "voteType":"UP"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Answer vote saved successfully"));
+
+        assertThat(answerVoteRepository.count()).isEqualTo(1);
+
+        mockMvc.perform(
+                        post("/social/comments/vote/answer/{answerId}", answer.getId())
+                                .header("Authorization", bearer(voter.rawToken()))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "voteType":"NONE"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Answer vote withdrawn successfully"));
+
+        assertThat(answerVoteRepository.count()).isEqualTo(0);
+
+        assertThat(auditLogRepository.findAll().stream()
+                        .filter(log -> log.getAction() == AuditAction.ANSWER_VOTED)
+                        .count()).isEqualTo(2);
+    }
+
+
+    // ---------- GET /social/sync/comments ----------
+
+    /**
+     * The route the app syncs from. It had no functional test: the authorization sweep knew who
+     * may call it, {@code LazyLoadingRegressionTests} knew it does not throw and the OpenAPI
+     * suite knew its body matches the schema -- and none of the three knew what it answers.
+     *
+     * <p>It is public, takes no lecture, and passes {@code student = null} into the response
+     * builder, so it is the one comment read with no per-viewer state in it.
+     */
+    @Test
+    void syncReturnsAnEmptyListRatherThanNullWhenThereAreNoComments() throws Exception {
+
+        mockMvc.perform(get("/social/sync/comments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Comments loaded successfully"))
+                .andExpect(jsonPath("$.comments").isArray())
+                .andExpect(jsonPath("$.comments", hasSize(0)));
+    }
+
+
+    /**
+     * "Returns both Comments *AND* answers", says the handler. The answers are nested inside
+     * each comment rather than served beside them, which is the part a client has to know.
+     */
+    @Test
+    void syncNestsTheAnswersInsideTheirComment() throws Exception {
+
+        Student author = createStudent("author@student.kit.edu");
+        Student replier = createStudent("replier@student.kit.edu");
+        Lecture lecture = createLecture();
+
+        Comment comment = createComment(author, lecture, "Very helpful lecture");
+        createAnswer(replier, comment, "Agreed");
+
+        mockMvc.perform(get("/social/sync/comments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments", hasSize(1)))
+                .andExpect(jsonPath("$.comments[0].content").value("Very helpful lecture"))
+                .andExpect(jsonPath("$.comments[0].studentUsername").value("author"))
+                .andExpect(jsonPath("$.comments[0].lectureID").value(lecture.getId().toString()))
+                .andExpect(jsonPath("$.comments[0].answers", hasSize(1)))
+                .andExpect(jsonPath("$.comments[0].answers[0].content").value("Agreed"))
+                .andExpect(jsonPath("$.comments[0].answers[0].studentUsername").value("replier"))
+                // student is null on this route, so neither carries a vote of its own
+                .andExpect(jsonPath("$.comments[0].userVote").doesNotExist())
+                .andExpect(jsonPath("$.comments[0].answers[0].userVote").doesNotExist());
+    }
+
+
+    /**
+     * The whole catalogue in one answer -- this is what separates the route from
+     * {@code GET /social/comments/{lecture_id}}, which is scoped to one lecture.
+     */
+    @Test
+    void syncCrossesLectures() throws Exception {
+
+        Student author = createStudent("author@student.kit.edu");
+
+        Lecture algebra = createLecture();
+
+        Lecture analysis = new Lecture();
+        analysis.setName("Analysis 1");
+        analysis.setCode("ANA1");
+        analysis.setSemesterYear(2026);
+        analysis.setSemesterSeason(SemesterSeason.SS);
+        analysis.setActive(true);
+        analysis = lectureRepository.saveAndFlush(analysis);
+
+        createComment(author, algebra, "On algebra");
+        createComment(author, analysis, "On analysis");
+
+        mockMvc.perform(get("/social/sync/comments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments", hasSize(2)));
+    }
+
+
+    /**
+     * A moderated comment must not come back through the sync route either. The filter is
+     * {@code findAllByStatus(VISIBLE)}, so the answer to this is structural rather than a
+     * per-row check -- which is exactly why it is worth stating: a later rewrite that pages or
+     * joins this query has to keep it.
+     */
+    @Test
+    void syncLeavesOutAHiddenComment() throws Exception {
+
+        Student author = createStudent("author@student.kit.edu");
+        Lecture lecture = createLecture();
+
+        createComment(author, lecture, "Still visible");
+
+        Comment hidden = new Comment();
+        hidden.setStudent(author);
+        hidden.setLecture(lecture);
+        hidden.setContent("Hidden by a moderator");
+        hidden.setStatus(ContentStatus.HIDDEN);
+        commentRepository.saveAndFlush(hidden);
+
+        mockMvc.perform(get("/social/sync/comments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments", hasSize(1)))
+                .andExpect(jsonPath("$.comments[0].content").value("Still visible"));
+    }
+
+
+    /**
+     * The other half of the same rule, and the half a status filter on the comment query cannot
+     * cover: the comment is visible, one of its answers is not. {@code getAnswerResponses}
+     * skips it in Java, so nothing about the SQL protects this one.
+     */
+    @Test
+    void syncLeavesOutAHiddenAnswerUnderAVisibleComment() throws Exception {
+
+        Student author = createStudent("author@student.kit.edu");
+        Student replier = createStudent("replier@student.kit.edu");
+        Lecture lecture = createLecture();
+
+        Comment comment = createComment(author, lecture, "Very helpful lecture");
+        createAnswer(replier, comment, "Agreed");
+
+        Answer hidden = new Answer();
+        hidden.setStudent(replier);
+        hidden.setComment(comment);
+        hidden.setContent("Hidden by a moderator");
+        hidden.setStatus(ContentStatus.HIDDEN);
+        answerRepository.saveAndFlush(hidden);
+
+        mockMvc.perform(get("/social/sync/comments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments", hasSize(1)))
+                .andExpect(jsonPath("$.comments[0].answers", hasSize(1)))
+                .andExpect(jsonPath("$.comments[0].answers[0].content").value("Agreed"));
+    }
+
+
     private Session createSession(String email) {
 
         Student student = createStudent(email);
