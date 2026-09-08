@@ -16,6 +16,7 @@ import com.example.ratemyprofessor.Adapters.RatingAdapter;
 import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.CommentType;
 import com.example.ratemyprofessor.DomainModel.Lecture;
+import com.example.ratemyprofessor.DomainModel.LectureType;
 import com.example.ratemyprofessor.DomainModel.Notification;
 import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.RatingCategory;
@@ -112,7 +113,7 @@ public class AdapterLogicTest {
         Context context = RuntimeEnvironment.getApplication();
         context.setTheme(R.style.Theme_RateMyProfessor);
         ProfessorShortResponse prof = new ProfessorShortResponse("p1", "First", "Last", true);
-        LectureResponse lecture = new LectureResponse("l1", "NameA", "c1", 2024, SemesterSeason.SS, true, Collections.singletonList(prof), 0, 0);
+        LectureResponse lecture = new LectureResponse("l1", "NameA", "c1", 2024, SemesterSeason.SS, "", "title",true, LectureType.LECTURE_ONLY, Collections.singletonList(prof), 0, 0, 3.5);
         UserRatingDto rating = new UserRatingDto(lecture, 4.0);
         
         ListOfMyRatingsAdapter adapter = new ListOfMyRatingsAdapter(Collections.singletonList(rating), (s, p, l) -> {});

@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.LectureOffering;
+import com.example.ratemyprofessor.DomainModel.LectureType;
 import com.example.ratemyprofessor.DomainModel.Notification;
 import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.Rater;
@@ -160,7 +161,7 @@ public class DomainModelTest {
 
         // Responses
         assertNotNull(new AnswerResponse("a1", "msg", ContentStatus.VISIBLE, "u1", LocalDateTime.now()));
-        assertNotNull(new LectureResponse("l1", "name", "code", 2024, SemesterSeason.SS, true, Collections.emptyList(), 0, 0));
+        assertNotNull(new LectureResponse("l1", "name", "code", 2024, SemesterSeason.SS, "","title", true, LectureType.LECTURE_ONLY, Collections.emptyList(), 0, 0, 3.5));
         assertNotNull(new NotificationResponse("n1", NotificationType.ANSWER, null, "u", "msg", "c", "p", LocalDateTime.now()));
         assertNotNull(new PersonalStatisticsResponse("msg", true, "u", "p", 4.5f, 10, 5, 100));
         assertNotNull(new ProfessorDetailResponse("msg", true, null));
