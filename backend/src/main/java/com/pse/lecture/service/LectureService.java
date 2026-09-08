@@ -29,10 +29,8 @@ import com.pse.lecture.dto.response.LectureResponse;
 import com.pse.lecture.dto.response.LecturesResponse;
 import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
-import com.pse.moderation.service.ModerationUserService;
 import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
-import com.pse.user.model.Student;
 import com.pse.professor.dto.response.ProfessorShortResponse;
 import com.pse.security.AuthenticatedUser;
 
@@ -45,14 +43,11 @@ import com.pse.security.AuthenticatedUser;
 public class LectureService {
 
 
-    private final ModerationUserService moderationUserService;
-
     private final LectureRepository lectureRepository;
     private final ProfessorRepository professorRepository;
     private final AuditWriter auditWriter;
 
-    public LectureService(ModerationUserService moderationUserService, LectureRepository lectureRepository, ProfessorRepository professorRepository, AuditWriter auditWriter ) {
-        this.moderationUserService = moderationUserService;
+    public LectureService(LectureRepository lectureRepository, ProfessorRepository professorRepository, AuditWriter auditWriter ) {
         this.lectureRepository = lectureRepository;
         this.professorRepository = professorRepository;
         this.auditWriter = auditWriter;
@@ -112,14 +107,15 @@ public class LectureService {
      *
      * <p>Takes the principal rather than the student because {@code AuditWriter.write} records
      * the acting {@code Admin}, and a {@code Student} alone cannot say which admin acted.
+     *
+     * <p>There is deliberately no role check here. {@code SecurityConfig} matches
+     * {@code POST /data/lectures} with {@code hasRole("ADMIN")}, and {@code /admin/**} ahead of
+     * everything else, so the chain has already decided by the time this runs. The check that
+     * used to stand here was unreachable, and answered {@code 200 {"success": false}} where the
+     * chain answers {@code 403} -- a second, weaker answer to a question already settled.
      */
     @Transactional
     public BasicResponse addLecture(AuthenticatedUser principal, AddLectureRequest request) {
-
-        if (!moderationUserService.verifyAdmin(principal.student())) {
-            return new BasicResponse("User is not authorized to add lectures", false
-            );
-        }
 
         if (lectureRepository.findByName(request.name()).isPresent()) {
             return new BasicResponse("Lecture already exists: " + request.name(),false);

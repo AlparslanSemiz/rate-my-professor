@@ -14,7 +14,6 @@ import com.pse.moderation.model.Admin;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.security.AuthenticatedUser;
 import com.pse.lecture.service.LectureService;
-import com.pse.moderation.service.ModerationUserService;
 import com.pse.professor.model.Professor;
 import com.pse.shared.enums.SemesterSeason;
 import com.pse.professor.repository.ProfessorRepository;
@@ -46,11 +45,6 @@ class LectureServiceTests {
 
 
     @Mock
-    private ModerationUserService moderationUserService;
-
-
-
-    @Mock
     private LectureRepository lectureRepository;
 
     @Mock
@@ -66,7 +60,6 @@ class LectureServiceTests {
     @BeforeEach
     void setUp() {
         lectureService = new LectureService(
-                moderationUserService,
                 lectureRepository,
                 professorRepository,
                 auditWriter
@@ -74,10 +67,7 @@ class LectureServiceTests {
     }
 
 
-    /**
-     * The principal the controller would hand in, built round the test's own student so the
-     * {@code verifyAdmin} stubbing below still names the same object.
-     */
+    /** The principal the controller would hand in. */
     private static AuthenticatedUser principalFor(Student student) {
         return new AuthenticatedUser(student, null, mock(Admin.class));
     }
@@ -166,33 +156,12 @@ class LectureServiceTests {
 
 
     @Test
-    void addLectureFailsWhenStudentIsNotAdmin() {
-
-        Student student = mock(Student.class);
-        AddLectureRequest request = mock(AddLectureRequest.class);
-
-        when(moderationUserService.verifyAdmin(student)).thenReturn(false);
-
-        BasicResponse response = lectureService.addLecture(principalFor(student), request);
-
-
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("User is not authorized to add lectures");
-
-        verify(moderationUserService).verifyAdmin(student);
-
-        verifyNoInteractions(lectureRepository);
-        verifyNoInteractions(professorRepository);
-    }
-
-    @Test
     void addLectureFailsWhenLectureAlreadyExists() {
 
         Student student = mock(Student.class);
         AddLectureRequest request = mock(AddLectureRequest.class);
 
         when(request.name()).thenReturn("Lineare Algebra 1");
-        when(moderationUserService.verifyAdmin(student)).thenReturn(true);
         when(lectureRepository.findByName("Lineare Algebra 1")).thenReturn(Optional.of(mock(Lecture.class)));
 
         BasicResponse response = lectureService.addLecture(principalFor(student), request);
@@ -220,8 +189,6 @@ class LectureServiceTests {
         when(request.professorIds()).thenReturn(
                 java.util.List.of(professorId)
         );
-
-        when(moderationUserService.verifyAdmin(student)).thenReturn(true);
 
         when(lectureRepository.findByName("Lineare Algebra 1")).thenReturn(Optional.empty());
 
@@ -251,8 +218,6 @@ class LectureServiceTests {
         when(request.name()).thenReturn("Lineare Algebra 1");
 
         when(request.professorIds()).thenReturn(java.util.List.of(professorId));
-
-        when(moderationUserService.verifyAdmin(student)).thenReturn(true);
 
         when(lectureRepository.findByName("Lineare Algebra 1")).thenReturn(Optional.empty());
 
@@ -285,9 +250,6 @@ class LectureServiceTests {
         when(request.code()).thenReturn("LA1");
         when(request.semesterYear()).thenReturn(2026);
         when(request.professorIds()).thenReturn(java.util.List.of(professorId));
-
-        when(moderationUserService.verifyAdmin(student))
-                .thenReturn(true);
 
         when(lectureRepository.findByName("Lineare Algebra 1"))
                 .thenReturn(Optional.empty());
@@ -372,7 +334,6 @@ class LectureServiceTests {
 
         when(request.name()).thenReturn("Lineare Algebra 1");
         when(request.professorIds()).thenReturn(java.util.List.of());
-        when(moderationUserService.verifyAdmin(student)).thenReturn(true);
         when(lectureRepository.findByName("Lineare Algebra 1")).thenReturn(Optional.empty());
 
         assertThat(lectureService.addLecture(principal, request).success()).isTrue();
@@ -392,14 +353,22 @@ class LectureServiceTests {
                 .isEqualTo(java.util.Map.of("before", false, "after", true));
     }
 
-    /** A refused creation must leave no trace: nothing was created, so nothing happened. */
+    /**
+     * A refused creation must leave no trace: nothing was created, so nothing happened.
+     *
+     * <p>The refusal used here is a duplicate name. It used to be a non-admin principal, which
+     * stopped being a refusal the service can reach at all once the unreachable role check came
+     * out -- {@code SecurityConfig} refuses that request before the service is called.
+     */
     @Test
     void addLectureRecordsNothingWhenItRefuses() {
 
         Student student = mock(Student.class);
         AddLectureRequest request = mock(AddLectureRequest.class);
 
-        when(moderationUserService.verifyAdmin(student)).thenReturn(false);
+        when(request.name()).thenReturn("Lineare Algebra 1");
+        when(lectureRepository.findByName("Lineare Algebra 1"))
+                .thenReturn(Optional.of(mock(Lecture.class)));
 
         assertThat(lectureService.addLecture(principalFor(student), request).success()).isFalse();
 
