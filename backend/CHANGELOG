@@ -293,3 +293,123 @@ schema, because they always could be null and the schema said otherwise --
 "revertBlockedReason" and "revertedByAuditId" on an entry, and "target.id", which a
 refusal has no value for. No response changed; only the schema now describes them
 correctly.
+
+
+///// backfill -- shipped between 20.08 and 8.09, never written down here
+
+
+Everything below this line was already released and was missing from this file. It is
+collected here rather than back-dated into the middle, so nothing that was written at the
+time appears to have changed. It comes out of the four test layers; docs/test-findings.md
+holds the full reasoning for each, under the finding number given in brackets.
+
+
+1. Failures carry HTTP status codes now, not 200.  [F-5]
+
+Was: 200 {"message": "Error, couldn't find student", "success": false}
+Now: 404 {"message": "Error, couldn't find student", "success": false}
+
+StudentService, AccountService and SocialService served every failure as a 200 with
+"success": false, while the moderation services already threw and answered 400/404 for the
+same situations. Two error contracts in one API. They are one now.
+
+The BODY IS UNCHANGED in every case. A client that reads "success" has nothing to do. A
+client that reads the status now sees the failure it was already being told about.
+
+
+2. A vote can be taken back.  [F-3]
+
+VoteType gained a third value:
+
+    UP
+    DOWN
++++ NONE     withdraws the vote -- the row is deleted
+
+Send "NONE" to POST /social/comments/vote/comment/{id} or .../vote/answer/{id} to remove a
+vote. Withdrawing a vote that was never cast is not an error.
+
+Additive on purpose: a client that only ever sends UP or DOWN cannot tell the difference. A
+second identical vote still rewrites the first, exactly as before -- making that a toggle
+would have changed silently what an existing client's retry does.
+
+
+3. An invalid "voteType" is a 400 instead of a 409.  [F-2]
+
+Was: 409 {"message": "State conflict"}          (from a database constraint, at flush time)
+Now: 400 {"message": "Invalid request"}
+
+A null or unknown voteType used to travel down to the column and fail there. It is rejected
+at the boundary now, and the status says "your request was wrong" rather than "the server is
+in a conflicting state".
+
+
+4. The answer-vote route had a missing slash.  [F-4]
+
+Was: POST /social/comments/vote/answer{answer_id}     -> /social/comments/vote/answer<uuid>
+Now: POST /social/comments/vote/answer/{answer_id}
+
+BREAKING, and deliberately not served on both paths: the old spelling was a typo, not a
+contract. An Android build still on the old path gets a 404 on the vote call. The comment
+side (.../vote/comment/{comment_id}) was always correct and is untouched.
+
+
+5. A wrong HTTP verb is a 405, not a 404.  [F-16]     -- every route
+
+Was: 404 {"message": "Not found"}
+Now: 405 {"message": "Method not allowed"}  + an "Allow" header naming the verbs that work
+
+A path that does not exist is still a 404. Until now the two were indistinguishable from the
+response, which is why "POST /admin/reports" looked like a missing route rather than a route
+that only answers GET.
+
+
+6. A body in the wrong media type is a 415, not a 500.  [F-17]   -- every route with a body
+
+Was: 500 {"message": "Unexpected backend error"}
+Now: 415 {"message": "Unsupported media type"}
+
+Malformed JSON inside the CORRECT media type was and stays a 400. So: 415 means "do not send
+me text/plain", 400 means "your JSON is broken".
+
+
+7. Two routes that answered 500 answer properly now.  [F-14, F-15]
+
+    GET /data/professor/id            without firstName/lastName    500 -> 400
+    GET /ratings/{lectureId}/categories   unknown lecture id        500 -> 404
+
+
+8. GET /ratings/own/{lectureId} no longer answers "ratings": null.
+
+Was: {"message": "...", "success": false, "ratings": null}
+Now: {"message": "...", "success": false, "ratings": []}
+
+null was the answer for any lecture the student had not rated -- which is every lecture that
+has no ratings yet. A client iterating the field without a null check crashed on it. It is
+an empty list now, always.
+
+An unknown lecture id on the same route is a 404 rather than a successful-looking body, the
+same answer GET /ratings/{lectureId}/categories gives beside it.
+
+
+9. GET /system/status reports whether location lookup is working.  [F-8]
+
++++ "locationLookupEnabled": true | false
+
+Next to "gitlabEnabled" and for the same reason. False means IPINFO_TOKEN is missing or
+revoked and login mails will say "Unknown" for the location -- which used to happen with no
+log line at all.
+
+
+10. Three message typos are corrected.  [F-10]
+
+Was: "Error, couldnt authenticate user"    Now: "Error, couldn't authenticate user"
+Was: "Error, couldnt find student"         Now: "Error, couldn't find student"
+Was: "Deleted Account succesfully: ..."    Now: "Deleted Account successfully: ..."
+
+They reach the user interface through BasicResponse.message. If you match on these strings,
+match on the corrected spelling.
+
+
+Not in this file, because no interface changed: the four test layers (unit, API/role,
+contract, integration, end-to-end -- 869 tests), the CI/CD repairs, and the audit and revert
+fixes that are internal. docs/test-plan.md and docs/test-findings.md hold those.
