@@ -10,6 +10,11 @@ export class TokenLoginService {
     this.client = client
   }
 
+  /**
+   * Exchanges an email + one-time code for an auth token. A refusal is already an `ApiError`
+   * by the time it gets here — the client rejects anything reporting `success: false` — so
+   * the only case left to guard is a success that carried no token.
+   */
   async login(email: string, loginToken: string): Promise<{ token: string }> {
     const response = await this.client.post<LoginResponse>('/auth/login', { email, loginToken })
     if (typeof response.authToken !== 'string' || !response.authToken.trim()) {

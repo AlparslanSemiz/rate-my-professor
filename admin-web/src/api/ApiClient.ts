@@ -1,27 +1,13 @@
-export interface BasicResponse {
-  message: string
-  success: boolean
-}
+import { ApiRequestBuilder, ApiSession, type QueryMethod, type QueryParam } from './apiRequest'
+import { ApiError, ApiResponseParser } from './apiResponse'
 
-export class ApiError extends Error {
-  readonly status: number
-  /**
-   * The machine-readable `reason` a refusal carried, where the endpoint documents one — the
-   * audit revert answers `409` with `VALUE_CHANGED`, `WINDOW_EXPIRED` and the like. Parsed
-   * here because this is the only place that reads a response body.
-   */
-  readonly reason: string | null
-
-  constructor(status: number, message: string, reason: string | null = null) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-    this.reason = reason
-  }
-}
-
-type QueryMethod = 'POST' | 'PATCH'
-type QueryParam = string | number | boolean | null | undefined
+export {
+  ApiError,
+  EMPTY_RESPONSE_MESSAGE,
+  expectArray,
+  type BasicResponse,
+} from './apiResponse'
+export type { QueryMethod, QueryParam } from './apiRequest'
 
 const DEFAULT_API_BASE_URL = 'http://localhost:8080'
 /**
@@ -31,62 +17,30 @@ const DEFAULT_API_BASE_URL = 'http://localhost:8080'
  */
 const NETWORK_ERROR_MESSAGE =
   'Could not reach the server. It may be down, or it may be refusing requests from this origin.'
-export const EMPTY_RESPONSE_MESSAGE = 'The server returned an empty response.'
-const INVALID_RESPONSE_MESSAGE = 'The server returned an invalid JSON response.'
-const REFUSED_MESSAGE = 'The server refused the request.'
-
-function hasErrorMessage(body: unknown): body is { message: string } {
-  if (!body || typeof body !== 'object' || !('message' in body)) return false
-  return typeof body.message === 'string' && body.message.trim().length > 0
-}
-
-function readReason(body: unknown): string | null {
-  if (!body || typeof body !== 'object' || !('reason' in body)) return null
-  return typeof body.reason === 'string' && body.reason.trim() ? body.reason : null
-}
-
-/** A 2xx body that reports `success: false` — the request was served but refused. */
-function isRefusal(body: unknown): boolean {
-  if (!body || typeof body !== 'object' || !('success' in body)) return false
-  return body.success === false
-}
-
-/**
- * Reads a list out of a response body. Without this the services call `.map` straight on a
- * field that may not be there, and the resulting `TypeError` surfaces to the operator as
- * though it were the backend's own explanation.
- */
-export function expectArray<T>(body: unknown, key: string, context: string): T[] {
-  const value = (body as Record<string, unknown> | null | undefined)?.[key]
-  if (!Array.isArray(value)) {
-    throw new ApiError(
-      0,
-      `${context} did not return a "${key}" list. The response did not match what this panel expects.`,
-    )
-  }
-  return value as T[]
-}
 
 export class ApiClient {
-  private readonly baseUrl: string
-  private token: string | null = null
-  private onUnauthorized: (() => void) | null = null
+  private readonly session = new ApiSession()
+  private readonly requestBuilder: ApiRequestBuilder
+  private readonly responseParser = new ApiResponseParser()
 
   constructor(baseUrl: string) {
-    this.baseUrl = baseUrl
+    this.requestBuilder = new ApiRequestBuilder(baseUrl, this.session)
   }
 
   setToken(token: string | null): void {
-    this.token = token
+    this.session.setToken(token)
   }
 
   /** Called when an authenticated request comes back 401, i.e. the session expired. */
   setOnUnauthorized(handler: (() => void) | null): void {
-    this.onUnauthorized = handler
+    this.session.setOnUnauthorized(handler)
   }
 
   async get<T>(path: string, params?: Record<string, QueryParam>): Promise<T> {
-    return this.request<T>(params ? this.withQueryString(path, params) : path, { method: 'GET' })
+    return this.request<T>(
+      params ? this.requestBuilder.withQueryString(path, params) : path,
+      { method: 'GET' },
+    )
   }
 
   async post<T>(path: string, body?: unknown): Promise<T> {
@@ -106,89 +60,24 @@ export class ApiClient {
    * parameters aren't annotated with @RequestBody and so are bound from the query string.
    */
   async withQueryParams<T>(method: QueryMethod, path: string, params: Record<string, string>): Promise<T> {
-    return this.request<T>(this.withQueryString(path, params), { method })
+    return this.request<T>(this.requestBuilder.withQueryString(path, params), { method })
   }
 
   private async request<T>(path: string, init: RequestInit): Promise<T> {
     const response = await this.fetchResponse(path, init)
 
-    if (response.status === 401 && this.token) {
-      this.onUnauthorized?.()
+    if (response.status === 401 && this.session.hasToken()) {
+      this.session.notifyUnauthorized()
     }
 
-    if (!response.ok) {
-      throw await this.toApiError(response, path)
-    }
-
-    return this.parseSuccessResponse<T>(response)
+    return this.responseParser.parse<T>(response, path)
   }
 
   private async fetchResponse(path: string, init: RequestInit): Promise<Response> {
-    let response: Response
     try {
-      response = await fetch(`${this.baseUrl}${path}`, { ...init, headers: this.headers(init) })
+      return await fetch(this.requestBuilder.url(path), this.requestBuilder.init(init))
     } catch {
       throw new ApiError(0, NETWORK_ERROR_MESSAGE)
-    }
-    return response
-  }
-
-  private async parseSuccessResponse<T>(response: Response): Promise<T> {
-    if (response.status === 204) return undefined as T
-
-    const text = await response.text()
-    if (!text) {
-      throw new ApiError(response.status, EMPTY_RESPONSE_MESSAGE)
-    }
-
-    let body: unknown
-    try {
-      body = JSON.parse(text)
-    } catch {
-      throw new ApiError(response.status, INVALID_RESPONSE_MESSAGE)
-    }
-
-    // Every response in this API carries `success`. A 2xx that reports `success: false` is a
-    // refusal the operator has to be told about, not a write that quietly did nothing.
-    if (isRefusal(body)) {
-      throw new ApiError(
-        response.status,
-        hasErrorMessage(body) ? body.message : REFUSED_MESSAGE,
-        readReason(body),
-      )
-    }
-
-    return body as T
-  }
-
-  /** `Content-Type` is only true of a request that carries a body, so it is only sent then. */
-  private headers(init: RequestInit): Record<string, string> {
-    const headers: Record<string, string> = {}
-    if (init.body !== undefined) headers['Content-Type'] = 'application/json'
-    if (this.token) headers.Authorization = `Bearer ${this.token}`
-    return headers
-  }
-
-  private withQueryString(path: string, params: Record<string, QueryParam>): string {
-    const queryParams = new URLSearchParams()
-    for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined && value !== null && value !== '') {
-        queryParams.set(key, String(value))
-      }
-    }
-    const query = queryParams.toString()
-    return query ? `${path}?${query}` : path
-  }
-
-  private async toApiError(response: Response, path: string): Promise<ApiError> {
-    const fallback = `Request to ${path} failed with status ${response.status}`
-    try {
-      const body: unknown = await response.json()
-      const message = hasErrorMessage(body) ? body.message : fallback
-      return new ApiError(response.status, message, readReason(body))
-    } catch {
-      // Body was not JSON; fall through to the generic message.
-      return new ApiError(response.status, fallback)
     }
   }
 }

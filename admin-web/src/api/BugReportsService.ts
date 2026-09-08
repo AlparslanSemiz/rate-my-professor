@@ -12,11 +12,13 @@ export class BugReportsService {
     this.client = client
   }
 
+  /** Reads technical bug reports filed from the app. */
   async getReports(): Promise<BugReport[]> {
     const response = await this.client.get<BugReportsResponse>('/reports')
     return expectArray<BugReport>(response, 'bugReports', 'GET /reports')
   }
 
+  /** Updates report triage fields or makes title/description corrections. */
   updateReport(id: string, update: BugReportUpdate): Promise<BasicResponse> {
     return this.client.patch<BasicResponse>(`/reports/${id}`, update)
   }

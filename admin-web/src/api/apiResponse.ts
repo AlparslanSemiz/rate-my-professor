@@ -5,6 +5,10 @@ export interface BasicResponse {
 
 export class ApiError extends Error {
   readonly status: number
+  /**
+   * The machine-readable `reason` a refusal carried, where the endpoint documents one — the
+   * audit revert answers `409` with `VALUE_CHANGED`, `WINDOW_EXPIRED` and the like.
+   */
   readonly reason: string | null
 
   constructor(status: number, message: string, reason: string | null = null) {
@@ -30,11 +34,17 @@ function readReason(body: unknown): string | null {
   return typeof body.reason === 'string' && body.reason.trim() ? body.reason : null
 }
 
+/** A 2xx body that reports `success: false` — the request was served but refused. */
 function isRefusal(body: unknown): boolean {
   if (!body || typeof body !== 'object' || !('success' in body)) return false
   return body.success === false
 }
 
+/**
+ * Reads a list out of a response body. Without this the services call `.map` straight on a
+ * field that may not be there, and the resulting `TypeError` surfaces to the operator as
+ * though it were the backend's own explanation.
+ */
 export function expectArray<T>(body: unknown, key: string, context: string): T[] {
   const value = (body as Record<string, unknown> | null | undefined)?.[key]
   if (!Array.isArray(value)) {
@@ -65,6 +75,8 @@ export class ApiResponseParser {
 
     const body = this.parseJson(text, response.status)
 
+    // Every response in this API carries `success`. A 2xx that reports `success: false` is a
+    // refusal the operator has to be told about, not a write that quietly did nothing.
     if (isRefusal(body)) {
       throw new ApiError(
         response.status,
@@ -91,6 +103,7 @@ export class ApiResponseParser {
       const message = hasErrorMessage(body) ? body.message : fallback
       return new ApiError(response.status, message, readReason(body))
     } catch {
+      // Body was not JSON; fall through to the generic message.
       return new ApiError(response.status, fallback)
     }
   }

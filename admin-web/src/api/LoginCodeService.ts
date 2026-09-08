@@ -7,6 +7,7 @@ export class LoginCodeService {
     this.client = client
   }
 
+  /** Sends a one-time login code to the given email. */
   requestCode(email: string): Promise<BasicResponse> {
     return this.client.post<BasicResponse>('/auth/request-login', { email })
   }

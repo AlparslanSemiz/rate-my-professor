@@ -7,6 +7,7 @@ export class RatingDeletionService {
     this.client = client
   }
 
+  /** Ratings can be removed but not edited: a rating is someone's actual opinion. */
   delete(id: string): Promise<BasicResponse> {
     return this.client.delete<BasicResponse>(`/ratings/${id}`)
   }

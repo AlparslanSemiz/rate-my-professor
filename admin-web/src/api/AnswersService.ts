@@ -1,88 +1,43 @@
-import { apiClient, expectArray, type ApiClient, type BasicResponse } from './ApiClient'
-import type { ContentUpdate } from './CommentsService'
-import type { UserReference } from '../domain/user'
-import type { ContentStatus, ReportReason, ReportStatus } from '../domain/moderation'
+import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { AnswerContentService } from './AnswerContentService'
+import { AnswerReportsService } from './AnswerReportsService'
+import type { AnswerReportStatus, ManagedAnswer, ReportedAnswer } from './answerTypes'
+import type { ContentUpdate } from './contentTypes'
 
-export type AnswerReportStatus = ReportStatus
-export type { ContentUpdate }
-
-/**
- * An answer as the panel manages it. `commentPreview` is enough of the parent comment to
- * recognise the thread; `postContext` is the lecture it belongs to.
- */
-export interface ManagedAnswer {
-  id: string
-  content: string
-  status: ContentStatus
-  author: UserReference
-  commentId: string
-  commentPreview: string
-  postContext: string
-  reports: number
-  createdAt: string
-}
-
-/** A report against an answer. Mirrors a comment report, with the parent comment as context. */
-export interface ReportedAnswer {
-  /** The **report's** id — what the status and withdrawal routes address. */
-  id: string
-  /** The reported answer's own id, which is what moderating the content addresses. */
-  answerId: string
-  /** The answer's parent comment, for context rather than for moderating. */
-  commentId: string
-  answerContent: string
-  commentContent: string
-  postContext: string
-  reportText: string
-  reportedUser: UserReference
-  reporter: UserReference
-  reason: ReportReason
-  status: AnswerReportStatus
-  date: string
-}
-
-interface ManagedAnswersResponse extends BasicResponse {
-  answers: ManagedAnswer[]
-}
-
-interface ReportedAnswersResponse extends BasicResponse {
-  answers: ReportedAnswer[]
-}
+export type { AnswerReportStatus, ManagedAnswer, ReportedAnswer } from './answerTypes'
+export type { ContentUpdate } from './contentTypes'
 
 export class AnswersService {
-  private readonly client: ApiClient
+  private readonly content: AnswerContentService
+  private readonly reports: AnswerReportsService
 
   constructor(client: ApiClient) {
-    this.client = client
+    this.content = new AnswerContentService(client)
+    this.reports = new AnswerReportsService(client)
   }
 
   async getAll(): Promise<ManagedAnswer[]> {
-    const response = await this.client.get<ManagedAnswersResponse>('/answers')
-    return expectArray<ManagedAnswer>(response, 'answers', 'GET /answers')
+    return this.content.getAll()
   }
 
   async getReported(): Promise<ReportedAnswer[]> {
-    const response = await this.client.get<ReportedAnswersResponse>('/answers/reported')
-    return expectArray<ReportedAnswer>(response, 'answers', 'GET /answers/reported')
+    return this.reports.getReported()
   }
 
-  /** Edits the text or the visibility of an answer, independently of any report. */
   update(id: string, update: ContentUpdate): Promise<BasicResponse> {
-    return this.client.patch<BasicResponse>(`/answers/${id}`, update)
+    return this.content.update(id, update)
   }
 
   delete(id: string): Promise<BasicResponse> {
-    return this.client.delete<BasicResponse>(`/answers/${id}`)
+    return this.content.delete(id)
   }
 
-  /** `ACTION_TAKEN` hides the answer; any other status puts it back. */
   updateStatus(id: string, status: AnswerReportStatus): Promise<BasicResponse> {
-    return this.client.patch<BasicResponse>(`/answers/reported/${id}`, { status })
+    return this.reports.updateStatus(id, status)
   }
 
-  /** Withdraws the report. The answer itself is left as it is. */
   deleteReport(id: string): Promise<BasicResponse> {
-    return this.client.delete<BasicResponse>(`/answers/reported/${id}`)
+    return this.reports.deleteReport(id)
   }
 }
 

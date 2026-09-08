@@ -14,6 +14,11 @@ export class UserAccountsService {
     this.client = client
   }
 
+  /**
+   * One page of the listing. A bad parameter is answered with a `400` carrying a usable
+   * message — `A cursor requires a limit`, `Invalid user status` — which the client turns
+   * into an `ApiError`, so callers should show it rather than a fallback of their own.
+   */
   async list(query: UserQuery = {}): Promise<UserPage> {
     const response = await this.client.get<UserListResponse>('/users', {
       limit: query.limit,
@@ -29,6 +34,7 @@ export class UserAccountsService {
     }
   }
 
+  /** Every account in one read, in the backend's default administrators-first order. */
   async getAll(): Promise<User[]> {
     return (await this.list()).users
   }

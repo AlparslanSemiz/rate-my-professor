@@ -12,6 +12,7 @@ export class ProfessorCatalogService {
     this.client = client
   }
 
+  /** Public professor catalogue read, backed by the singular backend path. */
   async getAll(): Promise<Professor[]> {
     const response = await this.client.get<ProfessorsResponse>('/data/professor')
     return expectArray<Professor>(response, 'professors', 'GET /data/professor')
@@ -21,6 +22,7 @@ export class ProfessorCatalogService {
     return this.client.patch<BasicResponse>(`/data/professor/${id}`, update)
   }
 
+  /** Removes the professor. The lectures stay; only the assignment is dropped. */
   delete(id: string): Promise<BasicResponse> {
     return this.client.delete<BasicResponse>(`/data/professor/${id}`)
   }

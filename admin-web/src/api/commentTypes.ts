@@ -5,6 +5,10 @@ export type CommentReportStatus = ReportStatus
 export type CommentUserRef = UserReference
 export type { ReportReason, UserRole, UserStatus }
 
+/**
+ * A comment as the panel manages it — every comment, not only the reported ones. `status` is
+ * the visibility the student app reads; hidden content is filtered out of its read path.
+ */
 export interface ManagedComment {
   id: string
   content: string
@@ -18,7 +22,9 @@ export interface ManagedComment {
 }
 
 export interface ReportedComment {
+  /** The report's id — what the status and withdrawal routes address. */
   id: string
+  /** The reported comment's own id, which is what moderating the content addresses. */
   commentId: string
   commentContent: string
   postContext: string

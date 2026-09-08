@@ -32,6 +32,11 @@ export interface AuditLogPage {
   nextCursor: string | null
 }
 
+/**
+ * As the entries arrive. The three revert fields are optional here and required on `AuditLog`:
+ * a backend without them serves an entry that simply cannot be undone, rather than one whose
+ * button is drawn from `undefined`.
+ */
 export type BackendAuditLog = Omit<AuditLog, 'revertible' | 'revertBlockedReason' | 'revertedByAuditId'> &
   Partial<Pick<AuditLog, 'revertible' | 'revertBlockedReason' | 'revertedByAuditId'>>
 

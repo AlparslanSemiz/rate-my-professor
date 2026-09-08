@@ -1,3 +1,10 @@
+/**
+ * One student's rating of one lecture.
+ *
+ * `scores` is read as an open map: which categories a rating carries depends on the lecture's
+ * type, and the backend is free to add more without a frontend release. A rating whose shape
+ * is missing a field renders as a dash rather than taking the screen down.
+ */
 export interface Rating {
   id: string
   lectureId: string | null

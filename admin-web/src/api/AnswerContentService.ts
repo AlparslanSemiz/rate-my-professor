@@ -13,15 +13,18 @@ export class AnswerContentService {
     this.client = client
   }
 
+  /** Every answer the panel can moderate, with enough parent-thread context to render it. */
   async getAll(): Promise<ManagedAnswer[]> {
     const response = await this.client.get<ManagedAnswersResponse>('/answers')
     return expectArray<ManagedAnswer>(response, 'answers', 'GET /answers')
   }
 
+  /** Edits the text or the visibility of an answer, independently of any report. */
   update(id: string, update: ContentUpdate): Promise<BasicResponse> {
     return this.client.patch<BasicResponse>(`/answers/${id}`, update)
   }
 
+  /** Removes the answer itself. */
   delete(id: string): Promise<BasicResponse> {
     return this.client.delete<BasicResponse>(`/answers/${id}`)
   }
