@@ -6,7 +6,7 @@ import com.pse.moderation.dto.request.UpdateStatusRequest;
 import com.pse.moderation.dto.response.ManagedCommentsResponse;
 import com.pse.moderation.dto.response.ReportedCommentsResponse;
 import com.pse.moderation.service.ModerationCommentService;
-import com.pse.moderation.service.ModerationContentService;
+import com.pse.moderation.service.ContentModerationService;
 import com.pse.security.AuthenticatedUser;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,11 +24,11 @@ import java.util.UUID;
 public class ModerationCommentController {
 
     private final ModerationCommentService service;
-    private final ModerationContentService contentService;
+    private final ContentModerationService contentService;
 
     public ModerationCommentController(
             ModerationCommentService service,
-            ModerationContentService contentService
+            ContentModerationService contentService
     ) {
         this.service = service;
         this.contentService = contentService;

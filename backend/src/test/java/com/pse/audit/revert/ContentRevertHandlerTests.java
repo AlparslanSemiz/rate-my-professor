@@ -2,7 +2,7 @@ package com.pse.audit.revert;
 
 import com.pse.audit.model.AuditTargetType;
 import com.pse.moderation.dto.request.ContentUpdateRequest;
-import com.pse.moderation.service.ModerationContentService;
+import com.pse.moderation.service.ContentModerationService;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.enums.ContentStatus;
 import com.pse.social.model.Answer;
@@ -46,7 +46,7 @@ class ContentRevertHandlerTests {
     private AnswerRepository answerRepository;
 
     @Mock
-    private ModerationContentService contentService;
+    private ContentModerationService contentService;
 
     private ContentRevertHandler.CommentHandler commentHandler() {
         return new ContentRevertHandler.CommentHandler(commentRepository, contentService);

@@ -5,7 +5,8 @@ import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.moderation.dto.request.LectureUpdateRequest;
 import com.pse.moderation.dto.request.ProfessorUpdateRequest;
-import com.pse.moderation.service.ModerationCatalogService;
+import com.pse.moderation.service.LectureModerationService;
+import com.pse.moderation.service.ProfessorModerationService;
 import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
 import com.pse.rating.model.LectureType;
@@ -55,14 +56,17 @@ class CatalogueRevertHandlerTests {
     private ProfessorRepository professorRepository;
 
     @Mock
-    private ModerationCatalogService catalogService;
+    private LectureModerationService lectureService;
+
+    @Mock
+    private ProfessorModerationService professorService;
 
     private CatalogueRevertHandler.LectureHandler lectureHandler() {
-        return new CatalogueRevertHandler.LectureHandler(lectureRepository, catalogService);
+        return new CatalogueRevertHandler.LectureHandler(lectureRepository, lectureService);
     }
 
     private CatalogueRevertHandler.ProfessorHandler professorHandler() {
-        return new CatalogueRevertHandler.ProfessorHandler(professorRepository, catalogService);
+        return new CatalogueRevertHandler.ProfessorHandler(professorRepository, professorService);
     }
 
     private static Professor professor(UUID id) {
@@ -99,7 +103,7 @@ class CatalogueRevertHandlerTests {
         lectureHandler().applyInverse(PRINCIPAL, targetId, before);
         ArgumentCaptor<LectureUpdateRequest> request =
                 ArgumentCaptor.forClass(LectureUpdateRequest.class);
-        verify(catalogService).updateLecture(eq(PRINCIPAL), eq(targetId), request.capture());
+        verify(lectureService).updateLecture(eq(PRINCIPAL), eq(targetId), request.capture());
         return request.getValue();
     }
 
@@ -107,7 +111,7 @@ class CatalogueRevertHandlerTests {
         professorHandler().applyInverse(PRINCIPAL, targetId, before);
         ArgumentCaptor<ProfessorUpdateRequest> request =
                 ArgumentCaptor.forClass(ProfessorUpdateRequest.class);
-        verify(catalogService).updateProfessor(eq(PRINCIPAL), eq(targetId), request.capture());
+        verify(professorService).updateProfessor(eq(PRINCIPAL), eq(targetId), request.capture());
         return request.getValue();
     }
 
@@ -180,7 +184,7 @@ class CatalogueRevertHandlerTests {
 
         // When / Then
         assertThat(lectureHandler().currentValues(List.of())).isEmpty();
-        verifyNoInteractions(catalogService);
+        verifyNoInteractions(lectureService, professorService);
     }
 
     /**
@@ -341,7 +345,7 @@ class CatalogueRevertHandlerTests {
 
         // When / Then
         assertThat(professorHandler().currentValues(List.of())).isEmpty();
-        verifyNoInteractions(catalogService);
+        verifyNoInteractions(lectureService, professorService);
     }
 
     /** The professor handler has to reach updateProfessor, not updateLecture. */

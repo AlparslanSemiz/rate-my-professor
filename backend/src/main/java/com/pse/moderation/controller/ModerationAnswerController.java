@@ -6,7 +6,7 @@ import com.pse.moderation.dto.request.UpdateStatusRequest;
 import com.pse.moderation.dto.response.ManagedAnswersResponse;
 import com.pse.moderation.dto.response.ReportedAnswersResponse;
 import com.pse.moderation.service.ModerationAnswerReportService;
-import com.pse.moderation.service.ModerationContentService;
+import com.pse.moderation.service.ContentModerationService;
 import com.pse.security.AuthenticatedUser;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,11 +23,11 @@ import java.util.UUID;
 @RequestMapping({"/admin/answers", "/answers"})
 public class ModerationAnswerController {
 
-    private final ModerationContentService contentService;
+    private final ContentModerationService contentService;
     private final ModerationAnswerReportService reportService;
 
     public ModerationAnswerController(
-            ModerationContentService contentService,
+            ContentModerationService contentService,
             ModerationAnswerReportService reportService
     ) {
         this.contentService = contentService;

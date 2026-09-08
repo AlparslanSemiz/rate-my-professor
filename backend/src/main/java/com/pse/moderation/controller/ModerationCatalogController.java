@@ -6,7 +6,8 @@ import com.pse.lecture.dto.response.LecturesResponse;
 import com.pse.lecture.service.LectureService;
 import com.pse.moderation.dto.request.LectureUpdateRequest;
 import com.pse.moderation.dto.request.ProfessorUpdateRequest;
-import com.pse.moderation.service.ModerationCatalogService;
+import com.pse.moderation.service.LectureModerationService;
+import com.pse.moderation.service.ProfessorModerationService;
 import com.pse.professor.dto.request.ProfessorAddRequest;
 import com.pse.professor.dto.response.ProfessorsResponse;
 import com.pse.professor.service.ProfessorService;
@@ -41,16 +42,19 @@ import java.util.UUID;
 @RestController
 public class ModerationCatalogController {
 
-    private final ModerationCatalogService service;
+    private final LectureModerationService lectures;
+    private final ProfessorModerationService professors;
     private final LectureService lectureService;
     private final ProfessorService professorService;
 
     public ModerationCatalogController(
-            ModerationCatalogService service,
+            LectureModerationService lectures,
+            ProfessorModerationService professors,
             LectureService lectureService,
             ProfessorService professorService
     ) {
-        this.service = service;
+        this.lectures = lectures;
+        this.professors = professors;
         this.lectureService = lectureService;
         this.professorService = professorService;
     }
@@ -71,7 +75,7 @@ public class ModerationCatalogController {
             @PathVariable UUID id,
             @RequestBody LectureUpdateRequest request
     ) {
-        return service.updateLecture(principal, id, request);
+        return lectures.updateLecture(principal, id, request);
     }
 
     @DeleteMapping({"/admin/data/lectures/{id}", "/data/lectures/{id}"})
@@ -79,7 +83,7 @@ public class ModerationCatalogController {
             @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID id
     ) {
-        return service.deleteLecture(principal, id);
+        return lectures.deleteLecture(principal, id);
     }
 
     @PatchMapping({"/admin/data/professor/{id}", "/data/professor/{id}"})
@@ -88,7 +92,7 @@ public class ModerationCatalogController {
             @PathVariable UUID id,
             @RequestBody ProfessorUpdateRequest request
     ) {
-        return service.updateProfessor(principal, id, request);
+        return professors.updateProfessor(principal, id, request);
     }
 
     @DeleteMapping({"/admin/data/professor/{id}", "/data/professor/{id}"})
@@ -96,7 +100,7 @@ public class ModerationCatalogController {
             @AuthenticationPrincipal AuthenticatedUser principal,
             @PathVariable UUID id
     ) {
-        return service.deleteProfessor(principal, id);
+        return professors.deleteProfessor(principal, id);
     }
 
     /**

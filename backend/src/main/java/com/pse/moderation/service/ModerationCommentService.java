@@ -1,26 +1,26 @@
 package com.pse.moderation.service;
 
 import com.pse.audit.model.AuditAction;
+import java.util.Set;
+import com.pse.shared.repository.IdCount;
+import com.pse.moderation.mapper.UserReferenceMapper;
 import com.pse.lecture.mapper.LectureLabels;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
 import com.pse.moderation.dto.response.ReportedCommentResponse;
 import com.pse.moderation.dto.response.ReportedCommentsResponse;
-import com.pse.moderation.dto.response.UserReferenceResponse;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.WarningRepository;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.enums.ContentStatus;
 import com.pse.shared.enums.ReportStatus;
-import com.pse.shared.enums.UserRole;
 import com.pse.shared.error.ApiException;
 import com.pse.shared.util.UtcDates;
 import com.pse.social.model.Comment;
 import com.pse.social.model.CommentReport;
 import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.CommentRepository;
-import com.pse.user.model.Student;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,10 +60,14 @@ public class ModerationCommentService {
 
     @Transactional(readOnly = true)
     public ReportedCommentsResponse getReportedComments() {
+        Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
+        Map<UUID, Integer> warningCounts =
+                IdCount.asMap(warningRepository.countGroupedByStudent());
+
         List<ReportedCommentResponse> comments = reportRepository
                 .findAllByOrderByCreatedAtDesc()
                 .stream()
-                .map(this::toResponse)
+                .map(report -> toResponse(report, adminIds, warningCounts))
                 .toList();
         return new ReportedCommentsResponse(
                 "Success",
@@ -102,9 +106,7 @@ public class ModerationCommentService {
         // in the student read path, so they disappear and return with it.
         Comment comment = report.getComment();
         ContentStatus commentBefore = comment.getStatus();
-        ContentStatus commentAfter = status == ReportStatus.ACTION_TAKEN
-                ? ContentStatus.HIDDEN
-                : ContentStatus.VISIBLE;
+        ContentStatus commentAfter = ReportOutcome.visibilityFor(status);
         if (commentBefore != commentAfter) {
             comment.setStatus(commentAfter);
             commentRepository.save(comment);
@@ -154,28 +156,22 @@ public class ModerationCommentService {
         return new BasicResponse("Deleted report successfully", true);
     }
 
-    private ReportedCommentResponse toResponse(CommentReport report) {
+    private ReportedCommentResponse toResponse(
+            CommentReport report,
+            Set<UUID> adminIds,
+            Map<UUID, Integer> warningCounts
+    ) {
         return new ReportedCommentResponse(
                 report.getId(),
                 report.getComment().getId(),
                 report.getComment().getContent(),
                 postContext(report),
                 report.getExplanation() == null ? "" : report.getExplanation(),
-                toUserReference(report.getComment().getStudent()),
-                toUserReference(report.getReporter()),
+                UserReferenceMapper.toReference(report.getComment().getStudent(), adminIds, warningCounts),
+                UserReferenceMapper.toReference(report.getReporter(), adminIds, warningCounts),
                 report.getReason(),
                 report.getStatus(),
                 UtcDates.format(report.getCreatedAt())
-        );
-    }
-
-    private UserReferenceResponse toUserReference(Student student) {
-        return new UserReferenceResponse(
-                student.getId(),
-                student.getUsername(),
-                adminRepository.existsByStudent(student) ? UserRole.ADMIN : UserRole.STUDENT,
-                Math.toIntExact(warningRepository.countByStudent(student)),
-                student.getStatus()
         );
     }
 

@@ -5,7 +5,8 @@ import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.moderation.dto.request.LectureUpdateRequest;
 import com.pse.moderation.dto.request.ProfessorUpdateRequest;
-import com.pse.moderation.service.ModerationCatalogService;
+import com.pse.moderation.service.LectureModerationService;
+import com.pse.moderation.service.ProfessorModerationService;
 import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
 import com.pse.rating.model.LectureType;
@@ -30,11 +31,11 @@ public final class CatalogueRevertHandler {
     public static class LectureHandler implements AuditRevertHandler {
 
         private final LectureRepository lectureRepository;
-        private final ModerationCatalogService catalogService;
+        private final LectureModerationService catalogService;
 
         public LectureHandler(
                 LectureRepository lectureRepository,
-                ModerationCatalogService catalogService
+                LectureModerationService catalogService
         ) {
             this.lectureRepository = lectureRepository;
             this.catalogService = catalogService;
@@ -89,11 +90,11 @@ public final class CatalogueRevertHandler {
     public static class ProfessorHandler implements AuditRevertHandler {
 
         private final ProfessorRepository professorRepository;
-        private final ModerationCatalogService catalogService;
+        private final ProfessorModerationService catalogService;
 
         public ProfessorHandler(
                 ProfessorRepository professorRepository,
-                ModerationCatalogService catalogService
+                ProfessorModerationService catalogService
         ) {
             this.professorRepository = professorRepository;
             this.catalogService = catalogService;

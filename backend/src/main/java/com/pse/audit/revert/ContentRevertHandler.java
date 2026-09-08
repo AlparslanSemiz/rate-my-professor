@@ -2,7 +2,7 @@ package com.pse.audit.revert;
 
 import com.pse.audit.model.AuditTargetType;
 import com.pse.moderation.dto.request.ContentUpdateRequest;
-import com.pse.moderation.service.ModerationContentService;
+import com.pse.moderation.service.ContentModerationService;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.enums.ContentStatus;
 import com.pse.social.model.Answer;
@@ -30,11 +30,11 @@ public final class ContentRevertHandler {
     public static class CommentHandler implements AuditRevertHandler {
 
         private final CommentRepository commentRepository;
-        private final ModerationContentService contentService;
+        private final ContentModerationService contentService;
 
         public CommentHandler(
                 CommentRepository commentRepository,
-                ModerationContentService contentService
+                ContentModerationService contentService
         ) {
             this.commentRepository = commentRepository;
             this.contentService = contentService;
@@ -74,11 +74,11 @@ public final class ContentRevertHandler {
     public static class AnswerHandler implements AuditRevertHandler {
 
         private final AnswerRepository answerRepository;
-        private final ModerationContentService contentService;
+        private final ContentModerationService contentService;
 
         public AnswerHandler(
                 AnswerRepository answerRepository,
-                ModerationContentService contentService
+                ContentModerationService contentService
         ) {
             this.answerRepository = answerRepository;
             this.contentService = contentService;

@@ -1,26 +1,26 @@
 package com.pse.moderation.service;
 
 import com.pse.audit.model.AuditAction;
+import java.util.Set;
+import com.pse.shared.repository.IdCount;
+import com.pse.moderation.mapper.UserReferenceMapper;
 import com.pse.lecture.mapper.LectureLabels;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
 import com.pse.moderation.dto.response.ReportedAnswerResponse;
 import com.pse.moderation.dto.response.ReportedAnswersResponse;
-import com.pse.moderation.dto.response.UserReferenceResponse;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.WarningRepository;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.enums.ContentStatus;
 import com.pse.shared.enums.ReportStatus;
-import com.pse.shared.enums.UserRole;
 import com.pse.shared.error.ApiException;
 import com.pse.shared.util.UtcDates;
 import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerReport;
 import com.pse.social.repository.AnswerReportRepository;
 import com.pse.social.repository.AnswerRepository;
-import com.pse.user.model.Student;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,10 +64,14 @@ public class ModerationAnswerReportService {
 
     @Transactional(readOnly = true)
     public ReportedAnswersResponse getReportedAnswers() {
+        Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
+        Map<UUID, Integer> warningCounts =
+                IdCount.asMap(warningRepository.countGroupedByStudent());
+
         List<ReportedAnswerResponse> answers = reportRepository
                 .findAllByOrderByCreatedAtDesc()
                 .stream()
-                .map(this::toResponse)
+                .map(report -> toResponse(report, adminIds, warningCounts))
                 .toList();
         return new ReportedAnswersResponse("Success", true, answers);
     }
@@ -101,9 +105,7 @@ public class ModerationAnswerReportService {
         // as comment reports.
         Answer answer = report.getAnswer();
         ContentStatus answerBefore = answer.getStatus();
-        ContentStatus answerAfter = status == ReportStatus.ACTION_TAKEN
-                ? ContentStatus.HIDDEN
-                : ContentStatus.VISIBLE;
+        ContentStatus answerAfter = ReportOutcome.visibilityFor(status);
         if (answerBefore != answerAfter) {
             answer.setStatus(answerAfter);
             answerRepository.save(answer);
@@ -151,7 +153,11 @@ public class ModerationAnswerReportService {
         return new BasicResponse("Deleted report successfully", true);
     }
 
-    private ReportedAnswerResponse toResponse(AnswerReport report) {
+    private ReportedAnswerResponse toResponse(
+            AnswerReport report,
+            Set<UUID> adminIds,
+            Map<UUID, Integer> warningCounts
+    ) {
         return new ReportedAnswerResponse(
                 report.getId(),
                 report.getAnswer().getId(),
@@ -160,21 +166,11 @@ public class ModerationAnswerReportService {
                 report.getAnswer().getComment().getContent(),
                 postContext(report),
                 report.getExplanation() == null ? "" : report.getExplanation(),
-                toUserReference(report.getAnswer().getStudent()),
-                toUserReference(report.getReporter()),
+                UserReferenceMapper.toReference(report.getAnswer().getStudent(), adminIds, warningCounts),
+                UserReferenceMapper.toReference(report.getReporter(), adminIds, warningCounts),
                 report.getReason(),
                 report.getStatus(),
                 UtcDates.format(report.getCreatedAt())
-        );
-    }
-
-    private UserReferenceResponse toUserReference(Student student) {
-        return new UserReferenceResponse(
-                student.getId(),
-                student.getUsername(),
-                adminRepository.existsByStudent(student) ? UserRole.ADMIN : UserRole.STUDENT,
-                Math.toIntExact(warningRepository.countByStudent(student)),
-                student.getStatus()
         );
     }
 

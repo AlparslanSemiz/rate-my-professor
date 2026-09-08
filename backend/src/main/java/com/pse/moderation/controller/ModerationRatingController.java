@@ -2,7 +2,7 @@ package com.pse.moderation.controller;
 
 import com.pse.shared.dto.BasicResponse;
 import com.pse.moderation.dto.response.ManagedRatingsResponse;
-import com.pse.moderation.service.ModerationContentService;
+import com.pse.moderation.service.RatingModerationService;
 import com.pse.security.AuthenticatedUser;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,9 +23,9 @@ import java.util.UUID;
 @RequestMapping({"/admin/ratings", "/ratings"})
 public class ModerationRatingController {
 
-    private final ModerationContentService contentService;
+    private final RatingModerationService contentService;
 
-    public ModerationRatingController(ModerationContentService contentService) {
+    public ModerationRatingController(RatingModerationService contentService) {
         this.contentService = contentService;
     }
 
