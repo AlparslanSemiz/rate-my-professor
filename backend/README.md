@@ -20,8 +20,10 @@ administrator — see [docs/admin-api.md](docs/admin-api.md).
 in-memory H2, and the tests that require a real PostgreSQL skip themselves unless
 `POSTGRES_SMOKE_JDBC_URL` is set — CI provides it through a `postgres:16` service.
 
-The suite has four layers: unit, API/role, integration and end-to-end. The last two need a real
-PostgreSQL and run in CI; everything else runs anywhere.
+The suite has five layers: unit, API/role, contract, integration and end-to-end. The last two
+need a real PostgreSQL and run in CI; everything else runs anywhere. The integration layer also
+holds the concurrency tests, which run two requests at once against a database that can actually
+make them collide.
 
 To run those PostgreSQL tests locally, point them at any PostgreSQL 16:
 
@@ -37,6 +39,20 @@ POSTGRES_SMOKE_USERNAME=postgres POSTGRES_SMOKE_PASSWORD=your-password \
 ```
 
 They drop and recreate the `public` schema, so give them a database you do not mind losing.
+
+### Mutation testing
+
+```bash
+./mvnw -Ppitest test-compile org.pitest:pitest-maven:mutationCoverage
+```
+
+Roughly two minutes, and the report lands in `target/pit-reports/`. It runs nightly in CI as
+well. Coverage tells you a line ran; this tells you whether any assertion would have failed had
+the line been wrong.
+
+Read `SURVIVED` carefully: the profile runs only the service unit tests, so a survivor may still
+be caught by the API, integration or end-to-end layers. It is a candidate to investigate, not a
+defect — `docs/test-findings.md` records under P-7 what happens when that distinction is missed.
 
 ### Coverage
 

@@ -9,8 +9,8 @@ really recorded if it lives in a test.
 
 ## At a glance
 
-**28 findings. 26 fixed, 1 closed as a recorded decision (P-3), 1 an existing protection put
-under test (F-13).** Two of the 28 — F-7 and F-8, both behind the "approximate location does
+**29 findings. 26 fixed, 2 closed as a recorded decision (P-3, P-7), 1 an existing protection
+put under test (F-13).** Two of the 28 — F-7 and F-8, both behind the "approximate location does
 not work" report — are the ones a *user* reported. The other twenty-six nobody had seen.
 
 Which kind of work turned each one up, because that is the part worth knowing when deciding
@@ -24,7 +24,8 @@ what to write next:
 | **Integration layer** (real PostgreSQL) | 1 | P-5 |
 | **End-to-end layer** (real HTTP, real database) | 1 | F-20 |
 | **Reading the code while writing the tests** — no test run found these | 4 | F-4, F-6, F-8, F-21 |
-| **Doing the measuring** — process findings about the suite itself, and about its own assertions | 5 | P-1, P-2, P-3, P-4, P-6 |
+| **Concurrency layer** (two requests at once, real PostgreSQL) | 0 | — see [Negative results](#negative-results) |
+| **Doing the measuring** — process findings about the suite itself, and about its own assertions | 6 | P-1, P-2, P-3, P-4, P-6, P-7 |
 
 That row of four is worth stopping on. It is the second-largest source, and none of those
 four would have been caught by running anything: F-6 was seven methods with no caller, F-4 was
@@ -61,6 +62,7 @@ defect; it found a different kind.
 | [F-11](#f-11--a-checkapply-race-in-warning-reverts) | A check/apply race in warning reverts | Low — rare | **Fixed** (the refusal, not the race) |
 | [F-12](#f-12--a-needless-administrator-query-on-an-empty-target-list) | A needless administrator query on an empty target list | Very low | **Fixed** |
 | [F-13](#f-13--token-revocation-hangs-on-a-single-condition) | Token revocation hangs on a single condition | Info — the protection exists | Put under test |
+| [P-7](#p-7--a-surviving-mutant-is-not-a-finding) | A surviving mutant is not a finding | Process — how to read the mutation report | **Closed — recorded as a reading rule** |
 | [F-14](#f-14--500-when-a-required-query-parameter-is-missing) | 500 when a required query parameter is missing | Medium — wrong HTTP code | **Fixed** |
 | [F-15](#f-15--500-for-the-category-list-of-an-unknown-lecture) | 500 for the category list of an unknown lecture | Medium — wrong HTTP code | **Fixed** |
 | [F-16](#f-16--the-wrong-http-method-returns-404-instead-of-405) | The wrong HTTP method returns 404 instead of 405 | Medium — wrong HTTP code, on all 122 routes | **Fixed** |
@@ -1064,6 +1066,56 @@ out from under it — and only an assertion strict enough will say so.
 
 ---
 
+### P-7 — A surviving mutant is not a finding
+
+**Where.** The `pitest` profile in `pom.xml`, and how its report is read.
+
+**What happened.** Mutation testing was added on 8 September and its first run scored 67%:
+1194 mutants, 797 killed, 73 survived, 324 with no coverage. One survivor read as serious --
+`removed call to protectAdministrator` in `ModerationUserService.warnStudent`, which is an
+authorization guard with two rules ("you cannot moderate your own account", and an ordinary
+administrator cannot modify an administrator account). A guard whose deletion no test notices
+is exactly what mutation testing exists to find, and three unit tests were written to close it.
+
+**They were then deleted, because there was nothing to close.** Removing the
+`protectAdministrator` call from `warnStudent` for real turns **two** tests in
+`AdminApiIntegrationTests` red — `adminAccountsAndEmptyWarningsAreProtected:548` and
+`elevatedAdminStillCannotModerateItself:628`, both `expected:<409> but was:<200>`. The guard
+was covered on every path all along, including the elevated case, with stronger assertions than
+the ones written to replace them.
+
+**The cause is the profile's scoping, and it is not a mistake.** PIT runs only the eighteen
+context-free service unit test classes. Pointing it at the whole suite would start a Spring
+context per mutant and take the run from under two minutes to hours, which is the difference
+between a nightly job and one nobody enables. But it means the report has to be read like this:
+
+| Status | Means | Does **not** mean |
+|---|---|---|
+| `KILLED` | a unit test fails when the code is wrong | — |
+| `SURVIVED` | these eighteen classes do not kill it | that the suite misses it |
+| `NO_COVERAGE` | the unit tests never reach the line | that the line is untested |
+
+**Status. Closed as a reading rule rather than a fix.** A survivor is a *candidate*: worth
+opening, not worth a test until it has been checked against the API, integration and
+end-to-end layers. Writing one anyway produces exactly the duplication
+[P-4](#p-4--a-moved-test-file-was-copied-not-moved) is about, and [P-2](#p-2--integration-tests-hide-unit-targets)
+already says the general form of this — "there is no unit test" and "the lines are not covered"
+are not the same thing. P-7 is that sentence again, arrived at from the other direction, and it
+is recorded because the first reading of the first report got it wrong.
+
+P-2's own test applies to whether a duplicate is worth keeping anyway: it kept
+`UserRevertHandlerTests` over a two-line coverage gain because the value was writing down *why*
+the branches are the way they are. The three deleted tests did not pass that test — the API
+tests state the same rules, on more paths.
+
+**What the run is still good for.** Survivors in classes whose only tests *are* unit tests
+carry no such ambiguity. Two worth naming, both in `RateLimitService` and both live after this
+entry: `<init>:46` (removing `setPropagationBehavior(PROPAGATION_REQUIRES_NEW)` kills nothing)
+and `consume:65` (the retry-attempt boundary). The first is load-bearing for the isolation the
+concurrency layer depends on -- see the negative result below.
+
+---
+
 ## Negative results
 
 A sweep that finds nothing is only worth something if what it covered is written down.
@@ -1122,6 +1174,59 @@ left the six moderation tests green, which is the right blast radius for a chang
 service. The mutation was reverted.
 
 BUG-1 therefore still has no explanation on the backend, and now has one fewer place to hide.
+
+### Two requests at once collide, and every protection holds
+
+Nothing in the suite had ever run two requests concurrently — there was no `ExecutorService`
+in `src/test` at all. That left every concurrency protection in the application verified
+against a **mocked** exception: `RateLimitServiceTests` drives the retry loop by stubbing
+`DataIntegrityViolationException` with `thenThrow`, which proves the handler and says nothing
+about whether the race throws it.
+
+`ConcurrencyPostgresTests` runs four races against a real PostgreSQL 16. The starting
+hypothesis was a defect, and it was specific: `RateLimitService.increment` is a
+read-modify-write on an entity carrying `@Version`, its retry loop catches only
+`DataIntegrityViolationException`, and `ObjectOptimisticLockingFailureException` is on a
+disjoint branch of Spring's hierarchy (`TransientDataAccessException`, not
+`NonTransientDataAccessException`) with no handler in `GlobalExceptionHandler` — so a lost
+update race would escape as a 500. `AuthService.requestLogin` consumes against an **IP**
+subject, one row shared by everyone behind the same egress address, so on a university network
+this is two students asking for a login code in the same second, not a double-tap.
+
+**Nothing reproduced. All four races are handled, by three different mechanisms:**
+
+| Race | What holds it | Verified by |
+|---|---|---|
+| Two increments of an existing bucket | `@Lock(PESSIMISTIC_WRITE)` on `findByOperationAndSubjectHash` — `SELECT … FOR UPDATE`, so the second transaction blocks and re-reads | `attempts` ends at 3 for 3 calls |
+| Two first increments, no row yet | `FOR UPDATE` locks nothing when there is no row, so the unique constraint refuses one and `consume`'s retry succeeds on the second attempt | one row, `attempts` = 2 |
+| Two first votes on one comment | `uk_comment_votes_student_comment`; no lock and no retry on this path | one row, and the failure is the kind answered 409 |
+| Two first ratings on one lecture | `uk_ratings_student_lecture` | one row, same |
+
+**The races really race.** Each of the three constraint-backed cases logs its collision
+(`duplicate key value violates unique constraint …`) and did so in **20 of 20** repeated runs,
+so the window is not occasional. The control matters more: with the `CountDownLatch` removed so
+the two tasks run in sequence, all four tests **still pass and zero collisions occur**. That is
+the silent failure mode of a concurrency test, and it is why the latch is described in the
+class rather than left as an implementation detail.
+
+**Both rate-limiter protections were checked by breaking them**, because a green concurrency
+test is worth nothing until it can go red:
+
+- Removing `@Lock(PESSIMISTIC_WRITE)` produces exactly the predicted failure —
+  `ObjectOptimisticLockingFailureException: Unexpected row count (expected row count 1 but was
+  0)`, escaping to the caller. So the hypothesis was right about the mechanism and wrong only
+  about whether it is live: **one annotation on a Spring Data derived query is the whole
+  protection**, and until this class nothing tested it. A refactor that replaces that method
+  with a `@Query`, or renames it, reintroduces a 500 on the login path silently.
+- Neutering the retry loop turns the first-increment test red.
+
+That is the value of the negative result: not "concurrency is fine" but "concurrency is fine
+**because of these three specific things**, each of which now has a test that fails when it is
+removed." [P-7](#p-7--a-surviving-mutant-is-not-a-finding) records a related loose end —
+mutation testing reports that removing `setPropagationBehavior(PROPAGATION_REQUIRES_NEW)` from
+`RateLimitService`'s constructor kills no test, and that propagation is what gives `consume` its
+own transaction. It is outside this class's reach because these tests call `consume` rather than
+constructing the service.
 
 ### No route writes inside a read-only transaction
 

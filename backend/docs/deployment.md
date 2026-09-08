@@ -365,6 +365,9 @@ Jobs:
 | `server:postgres-integration` | Push and merge request pipelines | Everything that needs a real PostgreSQL rather than H2, in **two Maven invocations** against one `postgres:16` CI service. The first runs the integration layer: the production Flyway migrations from `src/main/resources/db/migration/postgresql`, `/health` against them, keyset pagination on a real `timestamp(6)`, the `jsonb` round trip the revert feature reads its values back out of, and the read-only transaction sweep. The second runs the six end-to-end journeys, over real HTTP on a random port. They are separate invocations because they need different Spring contexts and two contexts against one database would reset the schema under each other; separate JVMs cannot interleave. Each invocation is checked on its own: the job greps its log and **fails unless exactly one context started**. Classes are **named** in `-Dtest=` rather than pattern-matched, so adding one is the moment to check which annotation it carries. A CI service is a plain TCP server, so none of this needs a Docker socket, a privileged runner or a Testcontainers dependency. |
 | `server:package` | `main` branch, non-scheduled pipelines | Uses Kaniko to build `src/Dockerfile` and push `$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA`. |
 | `server:deploy:staging` | Manual job on `main`, non-scheduled pipelines | SSHes to the deployment host and replaces the Compose-managed `backend` service. |
+| `secrets:new` | Push and merge request pipelines, never scheduled | Runs gitleaks over **only the commits the push or merge request brings**, so it starts green and turns red when a credential is committed. Blocking, on purpose: that is while it is still cheap to fix. Which commits are new depends on the trigger and neither answer is trusted without checking — `CI_COMMIT_BEFORE_SHA` is all-zeros on a branch's first push and stale after a force-push, and a target branch may not be fetched. Each candidate is verified before use and the fallback is to scan nothing here and say so, deferring to `secrets:history`. |
+| `secrets:history` | Scheduled pipelines only, `allow_failure: true` | gitleaks over the **whole history**, reporting credentials that still need rotating at their provider. Expected to be red until `docs/TODO.md`'s rotation list is done: editing a secret out of a file does not unpublish it. Deliberately **no baseline file** — a baseline would make this green while the credentials are still live. |
+| `mutation:nightly` | Scheduled pipelines only, `allow_failure: true` | Runs PIT through the `pitest` profile: mutates the service classes and re-runs the eighteen context-free service unit tests against each mutant, in roughly two minutes. Publishes the HTML report. No score threshold yet. **`SURVIVED` means those eighteen classes do not kill the mutant, not that the suite misses it** — the API, integration and end-to-end layers are not running in this profile. See P-7 in `docs/test-findings.md`. |
 | `health:check` | Scheduled pipelines only | Curls the configured BW Cloud/staging `/health` URL and expects HTTP 200. |
 | `backup:offsite` | Scheduled pipelines only | Copies the newest server-side PostgreSQL dump, verifies it, encrypts it with `BACKUP_PASSPHRASE`, and stores only the encrypted `.gpg` artifact. |
 
@@ -381,6 +384,12 @@ Branch coverage has a single floor of `0.88`, in the pom only.
 Scheduled `backup:offsite` is expected to fail when `BACKUP_PASSPHRASE` is not
 configured. This prevents CI from uploading a readable dump that contains real
 student email addresses.
+
+**Three scheduled jobs are `allow_failure` and two of them are expected to be red.**
+`backup:offsite` without its passphrase, and `secrets:history` until the rotations are done.
+The reason they cannot be allowed to block is `health:check`, which shares the same scheduled
+pipeline and exists to be believed when it goes red — the server was down for twelve days in
+July 2026 before it was added. A predictable red must never be able to bury it.
 
 ## Verifying a Successful Deployment
 

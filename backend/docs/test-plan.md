@@ -1,6 +1,8 @@
 # Test plan
 
-Layers: **unit → API/role → integration → E2E**. Every batch adds its own section. The unit
+Layers: **unit → API/role → contract → integration → E2E**, plus a concurrency class inside
+the integration layer and two CI-only tools (secret scanning, mutation testing) that answer
+questions no test in the suite can. Every batch adds its own section. The unit
 layer is covered by batches 1–7, the API/role layer by the authorization, protocol and ownership
 sweeps below, the integration layer by the PostgreSQL section, and E2E by six journeys over real
 HTTP. **All four layers exist.** What was once recorded as blocking the integration layer — the
@@ -9,8 +11,9 @@ Testcontainers question — turned out not to be a blocker at all; see
 
 ### Where it stands
 
-**872 tests, 0 failures**, 27 skipped locally (the `@Disabled` `DemoApplicationTests`, the
-twenty PostgreSQL integration tests and the six end-to-end journeys, all of which run in CI).
+**876 tests, 0 failures**, 31 skipped locally (the `@Disabled` `DemoApplicationTests`, the
+twenty-four PostgreSQL integration tests and the six end-to-end journeys, all of which run in
+CI).
 Bundle **95.91% LINE** (3328/3470), **90.61% BRANCH** (1061/1171). Line coverage is gated in two
 tiers — **90% mandatory, 95% target** — and BRANCH has a single floor, ratcheted to 0.88 now
 that batch 7 has cleared it.
@@ -45,7 +48,7 @@ document the panel team treats as authoritative.
 | Unit | Batches 1–7 done. |
 | API / role | The three sweeps below. |
 | Findings | **All closed.** |
-| Integration | **Done for the three questions H2 cannot answer.** Five classes, 20 tests, one shared context against a real PostgreSQL in CI. |
+| Integration | **Done for the questions H2 cannot answer.** Six classes, 24 tests, one shared context against a real PostgreSQL in CI. |
 | E2E | **Done.** Six journeys over real HTTP against the same PostgreSQL, in a second Maven invocation of the same job. |
 
 The integration layer runs in `server:postgres-integration`, against a `postgres:16` GitLab CI
@@ -649,7 +652,7 @@ hand-maintained route list does — by looking at less than it thinks.
 
 ## The integration layer
 
-Five classes, twenty tests, against a real PostgreSQL 16 with the production Flyway migrations.
+Six classes, twenty-four tests, against a real PostgreSQL 16 with the production Flyway migrations.
 They exist for the questions H2 cannot answer, and for nothing else: an assertion that H2 can
 settle belongs in a faster job.
 
@@ -839,6 +842,64 @@ Two seams, both deliberate: a lecture is seeded through the repository so journe
 to rate, and an account is promoted to administrator by writing the row. Neither has a
 self-service endpoint — administrators are not supposed to be able to make themselves — and
 inventing one for a test would be inventing product.
+
+## Two requests at once
+
+`ConcurrencyPostgresTests`, four tests, inside the integration layer and sharing its context.
+
+**Why it is here and not in the main job.** The three protections it exercises are the
+database's — `SELECT … FOR UPDATE` row locking, two unique constraints, and an optimistic
+`@Version` column. H2 does not reproduce their timing, so the same class in `server:test` would
+be measuring its own fixture. It carries `@PostgresIntegrationTest` like the other five classes,
+so Spring's context cache hands it the same context and the job's "exactly one context" guard
+still reads 1.
+
+**It drives services rather than routes**, for two specific reasons rather than as a style
+choice. `POST /auth/request-login` sends mail after the rate limiter and this layer deliberately
+has no `TestDeliveryConfig` — adding one would fork the context for all six classes. And
+`MockMvc` does not document itself as thread-safe, so driving it from two threads would put the
+fixture in the race alongside the code under test.
+
+**It is not written as characterization, which is a deliberate exception to the house rule.**
+`CLAUDE.md` says to pin current behaviour and invert the assertion later. That cannot be done
+for a race: one that does not happen produces no failure, so "one of these two requests fails"
+is flaky by construction and would pass on a fixed system and on a broken one that simply did
+not collide. These tests assert the invariant that has to hold either way — nothing escapes as
+an unhandled failure, and the row count is what serialised execution would have produced.
+
+**The latch is load-bearing and was checked.** Submitting two tasks to a pool does not make them
+collide; the first can finish before the second is scheduled. Both threads block on a
+`CountDownLatch` and are released together. Removing it makes all four tests **pass with zero
+collisions** — the silent failure mode of the whole category, and the reason it is written down
+here.
+
+Result: no defect. What it did establish is which mechanism holds each race, and that each one
+fails the tests when removed — see
+[Negative results](test-findings.md#two-requests-at-once-collide-and-every-protection-holds).
+
+## Beyond the suite: two CI-only tools
+
+Two questions the 876 tests cannot answer, so neither is a test.
+
+**Secret scanning (`secrets:new`, `secrets:history`).** No test can see a credential in a
+tracked file; the bearer token in `testclient/TestClient.java` was found by a person reading it.
+gitleaks over the history found **five** leaked credentials on its first run, four of them
+previously unrecorded — see `docs/TODO.md`, which tracks the rotations. The blocking job scans
+only the commits a push or merge request brings, so it starts green and goes red when somebody
+commits a secret; the full-history job is schedule-only and `allow_failure`, because its red is
+expected until the rotations are done and an expected red must not be able to block anything.
+
+**Mutation testing (`mutation:nightly`).** Coverage says every line ran. It says nothing about
+whether any assertion would have failed had the line been wrong, and that gap has been found by
+hand here more than once — P-6 most clearly. PIT answers it mechanically: 1194 mutants, 67%
+killed, in under two minutes.
+
+Read its report with the caveat [P-7](test-findings.md#p-7--a-surviving-mutant-is-not-a-finding)
+records. The profile runs only the eighteen context-free service unit test classes, because
+pointing PIT at the whole suite would start a Spring context per mutant. So `SURVIVED` means
+"these eighteen classes do not kill it", not "the suite misses it" — the first report's most
+alarming survivor turned out to be covered by two `AdminApiIntegrationTests` all along. A
+survivor is a candidate to investigate, not a finding.
 
 ## Deliberately uncovered
 
