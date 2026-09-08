@@ -35,6 +35,9 @@ import org.robolectric.annotation.Config;
 import java.lang.reflect.Constructor;
 import java.time.LocalDateTime;
 
+/**
+ * tests the login session, light/dark modes and connectivity.
+ */
 @RunWith(RobolectricTestRunner.class)
 public class SessionApplicationAndUtilityTest {
 
@@ -163,23 +166,6 @@ public class SessionApplicationAndUtilityTest {
     }
 
     @Test
-    public void utilityClassesPrivateConstructors() throws Exception {
-        // Calling private constructors via reflection to ensure full coverage of utility classes
-        Class<?>[] classes = {
-                NetworkUtils.class,
-                RatingColorCalculator.class,
-                LocalDateTimeConverter.class,
-                RetrofitClient.class
-        };
-
-        for (Class<?> clazz : classes) {
-            Constructor<?> constructor = clazz.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            constructor.newInstance();
-        }
-    }
-
-    @Test
     public void networkUtilsReturnsFalseWhenNoActiveNetworkExists() {
         Context context = RuntimeEnvironment.getApplication();
         assertFalse(NetworkUtils.isInternetAvailable(context));
@@ -189,8 +175,33 @@ public class SessionApplicationAndUtilityTest {
     public void networkUtilsReturnsFalseWhenNoCapabilitiesExist() {
         Context context = RuntimeEnvironment.getApplication();
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        // Robolectric's default connectivity manager has a network but no capabilities or vice versa?
-        // Let's just try to cover the rest of the logic.
+        org.robolectric.shadows.ShadowConnectivityManager shadowCM = org.robolectric.Shadows.shadowOf(cm);
+
+        // This makes getActiveNetwork() return a non-null network object
+        shadowCM.setDefaultNetworkActive(true);
+
+        // Without adding capabilities, getNetworkCapabilities() returns null
+        assertFalse(NetworkUtils.isInternetAvailable(context));
+    }
+
+    @Test
+    public void networkUtilsReturnsTrueWhenNetworkIsValidated() {
+        Context context = RuntimeEnvironment.getApplication();
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        org.robolectric.shadows.ShadowConnectivityManager shadowCM = org.robolectric.Shadows.shadowOf(cm);
+
+        // This makes getActiveNetwork() return a non-null network object
+        shadowCM.setDefaultNetworkActive(true);
+
+        // Manually creating and configuring capabilities
+        android.net.NetworkCapabilities capabilities = org.robolectric.shadows.ShadowNetworkCapabilities.newInstance();
+        org.robolectric.shadows.ShadowNetworkCapabilities shadowCaps = org.robolectric.Shadows.shadowOf(capabilities);
+        shadowCaps.addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+
+        // Link the active network to these capabilities in the shadow
+        shadowCM.setNetworkCapabilities(cm.getActiveNetwork(), capabilities);
+
+        assertTrue(NetworkUtils.isInternetAvailable(context));
     }
 
     private SharedPreferences cleanSettings() {

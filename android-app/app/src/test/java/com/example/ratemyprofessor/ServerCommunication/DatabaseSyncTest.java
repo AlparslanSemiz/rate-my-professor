@@ -47,6 +47,9 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * tests if the app takes complex, nested data from th server and parses and stores it correctly.
+ */
 @RunWith(RobolectricTestRunner.class)
 public class DatabaseSyncTest {
 

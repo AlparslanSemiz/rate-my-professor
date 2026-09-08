@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.activity.ktx)
     implementation(libs.appcompat)
     implementation(libs.constraintlayout)
+    implementation(libs.core)
     implementation(libs.core.i18n)
     implementation(libs.material)
     implementation(libs.recyclerview)

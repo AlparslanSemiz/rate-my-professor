@@ -1,18 +1,29 @@
 package com.example.ratemyprofessor;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
+import com.example.ratemyprofessor.ServerCommunication.APIService;
 import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 
-import retrofit2.Retrofit;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 
+import retrofit2.Retrofit;
+import retrofit2.http.Header;
+
+/**
+ * Verifies that the API service interface is correctly defined and the client is configured.
+ */
 @RunWith(RobolectricTestRunner.class)
 public class APIServiceContractTest {
+
     @Test
     public void retrofitClientUsesConfiguredBaseUrlAndCachesInstance() {
         Retrofit first = RetrofitClient.getClient();
@@ -23,5 +34,51 @@ public class APIServiceContractTest {
                 first.baseUrl().toString()
         );
         assertSame(first, second);
+    }
+
+    @Test
+    public void apiServiceInterfaceIsValidRetrofitDefinition() {
+        Retrofit retrofit = RetrofitClient.getClient();
+        
+        // This triggers Retrofit's internal validation of the interface annotations.
+        // If there are missing @Path parameters or invalid @Body definitions, 
+        // this will throw an IllegalArgumentException.
+        APIService service = retrofit.create(APIService.class);
+        
+        assertNotNull(service);
+    }
+
+    @Test
+    public void secureRoutesMustHaveAuthorizationHeader() {
+        Method[] methods = APIService.class.getDeclaredMethods();
+        for (Method method : methods) {
+            String name = method.getName();
+
+            // Define which methods we expect to be secure (require login)
+            boolean isUserAction = name.startsWith("post") ||
+                    name.startsWith("submit") ||
+                    name.startsWith("vote") ||
+                    name.startsWith("report") ||
+                    name.startsWith("mark") ||
+                    name.equals("deleteAccount") ||
+                    name.equals("logoutAllDevices") ||
+                    name.equals("validate") ||
+                    name.equals("getUserInformation") ||
+                    name.equals("getUserRatings");
+
+            if (isUserAction) {
+                boolean hasAuthHeader = false;
+                Annotation[][] parameterAnnotations = method.getParameterAnnotations();
+                for (Annotation[] annotations : parameterAnnotations) {
+                    for (Annotation annotation : annotations) {
+                        if (annotation instanceof Header && ((Header) annotation).value().equals("Authorization")) {
+                            hasAuthHeader = true;
+                            break;
+                        }
+                    }
+                }
+                assertTrue("Method " + name + " is a secure user action but is missing the @Header(\"Authorization\") parameter!", hasAuthHeader);
+            }
+        }
     }
 }
