@@ -251,7 +251,16 @@
 										<limit>
 											<counter>BRANCH</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.87</minimum>
+											<!--
+												Ratcheted 0.84, then 0.87, now 0.88 as the suite cleared
+												each one. It sits about two and a half points under
+												the measurement, which is the headroom the 0.87 step
+												chose and enough that ordinary work cannot trip it.
+												What is left above it is mostly Criteria predicate
+												lambdas, which need a database rather than a batch
+												of unit tests. See docs/test-plan.md, batch 7.
+											-->
+											<minimum>0.88</minimum>
 										</limit>
 									</limits>
 								</rule>

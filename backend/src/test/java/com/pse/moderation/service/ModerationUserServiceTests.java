@@ -8,6 +8,11 @@ import com.pse.auth.service.AdminSuperuserPolicy;
 import com.pse.auth.service.AuthService;
 import com.pse.moderation.dto.request.UserUpdateRequest;
 import com.pse.moderation.model.Admin;
+import com.pse.moderation.dto.response.WarningHistoryResponse;
+import com.pse.moderation.dto.request.WarningRequest;
+import com.pse.shared.enums.NotificationType;
+import com.pse.social.model.Notification;
+import com.pse.moderation.model.Warning;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.WarningRepository;
 import com.pse.security.AuthenticatedUser;
@@ -560,6 +565,183 @@ class ModerationUserServiceTests {
                 new UserUpdateRequest(null, null, "Edited", null, null, null));
 
         assertThat(metadataWritten()).doesNotContainKey("elevated");
+    }
+
+    // ---------------------------------------------- the warning lifecycle, batch 7
+
+    /*
+     * Nothing in this file touched warnings before. They are the one moderation action a
+     * student is actually told about -- warnStudent is the only place that writes a
+     * Notification -- and the whole issue/correct/withdraw cycle was covered only through the
+     * admin API, which is what docs/TODO.md meant by "covered only through the API".
+     */
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   ", "\n\t "})
+    void warnStudent_blankMessage_isRejectedBeforeTheTargetIsLookedUp(String message) {
+        assertThatThrownBy(() ->
+                service().warnStudent(caller(false), TARGET_ID, new WarningRequest(message)))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Warning message is required");
+
+        verifyNoInteractions(studentRepository, warningRepository, notificationRepository);
+    }
+
+    @Test
+    void warnStudent_nullMessage_isRejectedRatherThanStoredAsNull() {
+        assertThatThrownBy(() ->
+                service().warnStudent(caller(false), TARGET_ID, new WarningRequest(null)))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Warning message is required");
+    }
+
+    @Test
+    void warnStudent_messageLongerThanTheColumn_isRejected() {
+        assertThatThrownBy(() -> service().warnStudent(
+                caller(false), TARGET_ID, new WarningRequest("x".repeat(2_001))))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Warning message is required");
+    }
+
+    /**
+     * A warning nobody is told about is not a warning. The notification is the only
+     * student-visible effect, and the account status is deliberately left alone.
+     */
+    @Test
+    void warnStudent_notifiesTheStudentAndLeavesTheAccountStatusAlone() {
+        Student target = student(TARGET_ID, "ada", "ada@student.kit.edu");
+        // Not givenTarget: warning an ordinary student never reaches the superuser policy,
+        // and Mockito is right to object to a stub the code cannot use.
+        when(studentRepository.findByIdForUpdate(TARGET_ID)).thenReturn(Optional.of(target));
+        when(adminRepository.existsByStudent(target)).thenReturn(false);
+        when(warningRepository.countByStudent(target)).thenReturn(2L);
+
+        assertThat(service().warnStudent(
+                caller(false), TARGET_ID, new WarningRequest("  Please be civil  ")).success())
+                .isTrue();
+
+        ArgumentCaptor<Warning> warning = ArgumentCaptor.forClass(Warning.class);
+        verify(warningRepository).save(warning.capture());
+        assertThat(warning.getValue().getMessage())
+                .as("stored trimmed, the way it was validated")
+                .isEqualTo("Please be civil");
+
+        ArgumentCaptor<Notification> notification = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notification.capture());
+        assertThat(notification.getValue().getRecipient()).isEqualTo(target);
+        assertThat(notification.getValue().getType()).isEqualTo(NotificationType.WARNING);
+        assertThat(notification.getValue().getMessage()).isEqualTo("Please be civil");
+
+        assertThat(target.getStatus())
+                .as("a warning restricts nothing")
+                .isEqualTo(UserStatus.ACTIVE);
+        assertThat(before(changesWritten(), "warnings")).isEqualTo(2L);
+        assertThat(after(changesWritten(), "warnings")).isEqualTo(3L);
+    }
+
+    @Test
+    void updateWarning_messageResubmittedUnchanged_recordsNothing() {
+        Student target = student(TARGET_ID, "ada", "ada@student.kit.edu");
+        Warning warning = warning(target, "Please be civil");
+        when(warningRepository.findById(warning.getId())).thenReturn(Optional.of(warning));
+
+        assertThat(service().updateWarning(
+                caller(false), TARGET_ID, warning.getId(), new WarningRequest("Please be civil"))
+                .success()).isTrue();
+
+        verify(warningRepository, never()).save(any());
+        verifyNoInteractions(auditWriter);
+    }
+
+    @Test
+    void updateWarning_correctedMessage_isRecordedAndTheStudentIsNotNotifiedAgain() {
+        Student target = student(TARGET_ID, "ada", "ada@student.kit.edu");
+        Warning warning = warning(target, "Please be civil");
+        when(warningRepository.findById(warning.getId())).thenReturn(Optional.of(warning));
+
+        service().updateWarning(caller(false), TARGET_ID, warning.getId(),
+                new WarningRequest("Please be civil to other students"));
+
+        assertThat(warning.getMessage()).isEqualTo("Please be civil to other students");
+        assertThat(before(changesWritten(), "message")).isEqualTo("Please be civil");
+        assertThat(after(changesWritten(), "message"))
+                .isEqualTo("Please be civil to other students");
+        verifyNoInteractions(notificationRepository);
+    }
+
+    /**
+     * A warning is addressed as a sub-resource of the student, so a warning that belongs to
+     * somebody else is a wrong URL rather than somebody else's warning -- and answering 404
+     * rather than 403 is what stops the endpoint confirming that the id exists at all.
+     */
+    @Test
+    void updateWarning_warningBelongingToAnotherStudent_readsAsNotFound() {
+        Student other = student(CALLER_ID, "bob", "bob@student.kit.edu");
+        Warning warning = warning(other, "Please be civil");
+        when(warningRepository.findById(warning.getId())).thenReturn(Optional.of(warning));
+
+        assertThatThrownBy(() -> service().updateWarning(
+                caller(false), TARGET_ID, warning.getId(), new WarningRequest("Reworded")))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Warning not found")
+                .extracting(e -> ((ApiException) e).getStatus())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void deleteWarning_recordsTheWithdrawalWithTheTextItWithdrew() {
+        Student target = student(TARGET_ID, "ada", "ada@student.kit.edu");
+        Warning warning = warning(target, "Please be civil");
+        when(warningRepository.findById(warning.getId())).thenReturn(Optional.of(warning));
+        when(warningRepository.countByStudent(target)).thenReturn(3L);
+
+        assertThat(service().deleteWarning(caller(false), TARGET_ID, warning.getId()).success())
+                .isTrue();
+
+        verify(warningRepository).delete(warning);
+        assertThat(before(changesWritten(), "warnings")).isEqualTo(3L);
+        assertThat(after(changesWritten(), "warnings")).isEqualTo(2L);
+        assertThat(metadataWritten()).containsEntry("reason", "Please be civil");
+    }
+
+    /**
+     * {@code createdFrom} names who issued the warning and when. A warning whose issuing admin
+     * row is gone still has to list: the history is the student's, not the administrator's.
+     */
+    @Test
+    void getWarningsForStudent_warningWithNoIssuerStillLists() {
+        Student target = student(TARGET_ID, "ada", "ada@student.kit.edu");
+        Warning warning = warning(target, "Please be civil");
+        warning.setAdmin(null);
+        when(studentRepository.findByIdAndStatusNot(TARGET_ID, UserStatus.DELETED))
+                .thenReturn(Optional.of(target));
+        when(warningRepository.findByStudentOrderByCreatedAtDesc(target))
+                .thenReturn(List.of(warning));
+
+        WarningHistoryResponse response = service().getWarningsForStudent(TARGET_ID);
+
+        assertThat(response.warnings()).hasSize(1);
+        assertThat(response.warnings().getFirst().createdFrom()).isNull();
+    }
+
+    @Test
+    void getWarningsForStudent_deletedStudent_readsAsNotFound() {
+        when(studentRepository.findByIdAndStatusNot(TARGET_ID, UserStatus.DELETED))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service().getWarningsForStudent(TARGET_ID))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("User not found");
+    }
+
+    private static Warning warning(Student student, String message) {
+        Warning warning = new Warning();
+        warning.setId(UUID.randomUUID());
+        warning.setStudent(student);
+        warning.setAdmin(new Admin());
+        warning.setMessage(message);
+        warning.setCreatedAt(LocalDateTime.parse("2026-01-01T00:00:00"));
+        return warning;
     }
 
     // ------------------------------------------------------------------- fixtures

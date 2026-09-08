@@ -376,7 +376,7 @@ Coverage is configured in three variables, and they answer different questions:
 | `COVERAGE_LINE_MIN` | `90` | Mandatory bundle line coverage. Below it the pipeline is **red**. Kept in step with the `LINE` minimum in the pom's `jacoco:check`, which enforces the same floor on a local `mvnw verify` — move one, move the other. |
 | `COVERAGE_LINE_TARGET` | `95` | The bundle line coverage the suite aims for. Below it `coverage:line-target` goes **yellow** and the pipeline still passes. |
 
-Branch coverage has a single floor of `0.87`, in the pom only.
+Branch coverage has a single floor of `0.88`, in the pom only.
 
 Scheduled `backup:offsite` is expected to fail when `BACKUP_PASSPHRASE` is not
 configured. This prevents CI from uploading a readable dump that contains real
