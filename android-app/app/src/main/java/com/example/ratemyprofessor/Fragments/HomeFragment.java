@@ -136,7 +136,6 @@ public class HomeFragment extends Fragment {
     private void saveImageAndSetProfilePicture(ResponseBody body, ImageView image) {
         if (getContext() == null || !isAdded()) {
             Log.d(TAG, "Fragment is no longer attached.");
-            System.out.println("Fragment is no longer attached.");
             return;
         }
         File imageFile = new File(getContext().getFilesDir(), PROFILE_PICTURE_FILEPATH);

@@ -76,7 +76,6 @@ public class StartActivity extends AppCompatActivity {
         call.enqueue(new Callback<>() {
             @Override
             public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
-                System.out.println("got to on Response. response.isSuccessfull(): " + response.isSuccessful());
                 if (response.isSuccessful()) {
                     AuthManager.getInstance().setAuthState(AuthState.LOGGED_IN);
                 }
@@ -86,7 +85,6 @@ public class StartActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<ServerResponse> call, Throwable t) {
                 Log.e(TAG, "Error: " + t.getMessage());
-                System.out.println("GOT TO onFailure() AND IT SUCKS HERE :(");
                 openScreen(LoginActivity.class);
             }
         });

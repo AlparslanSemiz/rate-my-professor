@@ -9,6 +9,7 @@ import com.example.ratemyprofessor.ServerCommunication.Requests.LoginRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.PostCommentRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.RatingRequest;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.LectureDetailResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorDetailResponse;
@@ -130,6 +131,18 @@ public interface APIService {
     @GET("/data/lectures")
     Call<LecturesResponse> getLectures();
 
+
+    /**
+     * Loads the details of a specific lecture from the backend.
+     *
+     * @param lectureId the id of the lecture
+     * @return the response containing the lectures details
+     */
+    @GET("/data/lectures/{lecture_id}")
+    Call<LectureDetailResponse> getLecture(
+            @Path("lecture_id") String lectureId
+    );
+
     /**
      * posts the comment made to the server.
      * @param token the auth token for authorization.
@@ -184,17 +197,17 @@ public interface APIService {
             @Body SubmitAnswerRequest request
     );
 
-    @POST("/social/comments/vote/comment/{commentID}")
+    @POST("/social/comments/vote/comment/{comment_id}")
     Call<BasicResponse> voteComment(
             @Header("Authorization") String token,
-            @Path("commentID") String commentID,
+            @Path("comment_id") String commentID,
             @Body VoteRequest request
     );
 
-    @POST("/social/comments/vote/answer/{answerID}")
+    @POST("/social/comments/vote/answer/{answer_id}")
     Call<BasicResponse> voteAnswer(
             @Header("Authorization") String token,
-            @Path("answerID") String answerID,
+            @Path("answer_id") String answerID,
             @Body VoteRequest request
     );
 

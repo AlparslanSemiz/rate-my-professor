@@ -2,10 +2,7 @@ package com.example.ratemyprofessor.Fragments;
 
 import static android.view.View.INVISIBLE;
 
-import android.app.Dialog;
 import android.content.Context;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -14,12 +11,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
@@ -27,21 +22,15 @@ import com.example.ratemyprofessor.Adapters.CommentsAdapter;
 import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.CommentType;
 import com.example.ratemyprofessor.DomainModel.VoteType;
-import com.example.ratemyprofessor.R;
 import com.example.ratemyprofessor.ServerCommunication.APIService;
 import com.example.ratemyprofessor.ServerCommunication.AuthManager;
 import com.example.ratemyprofessor.ServerCommunication.LoginSession;
-import com.example.ratemyprofessor.ServerCommunication.ReportReason;
-import com.example.ratemyprofessor.ServerCommunication.Requests.CommentReportRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.SubmitAnswerRequest;
 import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
 import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
-import com.example.ratemyprofessor.ServerCommunication.Requests.VoteRequest;
-import com.example.ratemyprofessor.databinding.DialogCommentReportBinding;
 import com.example.ratemyprofessor.databinding.FragmentReplyBinding;
 import com.example.ratemyprofessor.databinding.ItemCommentBinding;
 import com.example.ratemyprofessor.logic.CommentHelper;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.List;
 

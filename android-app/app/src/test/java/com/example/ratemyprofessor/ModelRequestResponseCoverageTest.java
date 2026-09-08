@@ -11,6 +11,7 @@ import com.example.ratemyprofessor.DomainModel.CommentModel;
 import com.example.ratemyprofessor.DomainModel.CommentType;
 import com.example.ratemyprofessor.DomainModel.Instructor;
 import com.example.ratemyprofessor.DomainModel.LectureModel;
+import com.example.ratemyprofessor.DomainModel.LectureType;
 import com.example.ratemyprofessor.DomainModel.Notification;
 import com.example.ratemyprofessor.DomainModel.OfferingRating;
 import com.example.ratemyprofessor.DomainModel.Professor;
@@ -92,10 +93,15 @@ public class ModelRequestResponseCoverageTest {
                 "240001",
                 2026,
                 SemesterSeason.WS,
+                "",
+                "lecture-title",
+
                 true,
+                LectureType.LECTURE_ONLY,
                 Collections.singletonList(professor),
                 3,
-                5
+                5,
+                3.5
         );
         UserRatingDto rating = new UserRatingDto(lecture, 4.6);
         UserRatingResponse ratings = new UserRatingResponse("ok", true, Collections.singletonList(rating));
@@ -241,7 +247,7 @@ public class ModelRequestResponseCoverageTest {
         assertEquals(SelectionType.LECTURES, SelectionType.values()[1]);
         assertEquals(ContentStatus.DELETED, ContentStatus.valueOf("DELETED"));
         assertEquals(8, ReportReason.values().length);
-        assertEquals("Raum", RatingCategory.ROOM.getDisplayName());
+        assertEquals("Room", RatingCategory.ROOM.getDisplayName());
 
         for (RatingCategory category : RatingCategory.values()) {
             assertNotNull(category.getDisplayName());

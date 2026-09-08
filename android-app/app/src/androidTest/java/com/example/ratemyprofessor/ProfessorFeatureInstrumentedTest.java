@@ -30,8 +30,10 @@ import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsRespons
 import com.example.ratemyprofessor.ServerCommunication.Database;
 import com.example.ratemyprofessor.ServerCommunication.Requests.LoginRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.PostCommentRequest;
+import com.example.ratemyprofessor.ServerCommunication.Responses.LectureDetailResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationsResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorDetailResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoriesResponse;
@@ -239,9 +241,19 @@ public class ProfessorFeatureInstrumentedTest {
         }
 
         @Override
+        public Call<ProfessorDetailResponse> getProfessor(String professorId) {
+            return null;
+        }
+
+        @Override
         public Call<LecturesResponse> getLectures() {
             LecturesResponse resp = new LecturesResponse("its ok", true, lectures);
             return new SuccessfulCall<>(resp);
+        }
+
+        @Override
+        public Call<LectureDetailResponse> getLecture(String lectureId) {
+            return null;
         }
 
         @Override
