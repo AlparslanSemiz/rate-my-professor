@@ -27,7 +27,6 @@ import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.NotificationRepository;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
-import org.h2.engine.Session;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
