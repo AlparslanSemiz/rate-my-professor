@@ -348,6 +348,99 @@ server:deploy:staging:
 # whole point: the server was down for twelve days in July 2026 without anyone noticing.
 # It has to run here rather than in a cron on the server itself, because a cron dies together
 # with the machine it is supposed to watch.
+# Secret scanning, in two jobs because there are two different questions and only one of
+# them can be allowed to block.
+#
+# Why this exists at all: it is the one class of defect the test suite cannot reach. 876 tests
+# say nothing about a credential in a tracked file, and the bearer token in
+# testclient/TestClient.java was found by a person reading the file, not by anything that runs.
+# The first scan of this repository's history found five leaked credentials -- see
+# docs/TODO.md, which tracks the rotations. That is the argument for the job, made by the job.
+#
+# The image is pinned. A floating :latest would change the rule set under the pipeline, and a
+# scanner that starts failing on a day nobody touched the repository is a scanner people
+# switch off.
+
+# The blocking half: did *this change* add a credential? It scans only the commits the push
+# or the merge request brings, so it starts green -- everything it would have found is behind
+# the range -- and goes red the moment somebody commits a secret, which is while it is still
+# cheap to fix.
+secrets:new:
+  stage: test
+  image:
+    name: zricethezav/gitleaks:v8.30.1
+    # The image runs gitleaks as its entrypoint; GitLab needs a shell instead.
+    entrypoint: [""]
+  cache: []
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - |
+      # Which commits are new depends on how the pipeline was triggered, and neither answer
+      # can be trusted without checking. CI_COMMIT_BEFORE_SHA is all-zeros on the first push
+      # of a branch and stale after a force-push; a target branch may not be fetched. The
+      # coverage gate learned this the hard way -- it handed unverified refs to git merge-base
+      # and any git error killed the job with no output. So each candidate is verified before
+      # it is used, and the fallback is a scan of everything rather than a scan of nothing.
+      RANGE=""
+      if [ -n "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" ]; then
+        git fetch --no-tags origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME:refs/remotes/origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" || true
+        if git rev-parse --verify --quiet "refs/remotes/origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" > /dev/null; then
+          RANGE="refs/remotes/origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME..HEAD"
+        fi
+      fi
+      if [ -z "$RANGE" ] && [ -n "$CI_COMMIT_BEFORE_SHA" ] \
+         && [ "$CI_COMMIT_BEFORE_SHA" != "0000000000000000000000000000000000000000" ] \
+         && git cat-file -e "$CI_COMMIT_BEFORE_SHA^{commit}" 2> /dev/null; then
+        RANGE="$CI_COMMIT_BEFORE_SHA..$CI_COMMIT_SHA"
+      fi
+
+      if [ -n "$RANGE" ]; then
+        echo "Scanning $RANGE"
+        gitleaks git . --no-banner --redact --platform gitlab --log-opts="$RANGE"
+      else
+        # No usable comparison point. Scanning the whole history here would fail on the known
+        # leaks and turn a blocking job permanently red, so this reports and defers to
+        # secrets:history, which is where the backlog belongs.
+        echo "No usable commit range (new branch, force-push, or unfetched target)."
+        echo "Nothing scanned here; secrets:history covers the full history nightly."
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
+
+# The informational half: what is still in the history and has to be rotated? Schedule-only
+# and allow_failure, deliberately, and for the reason backup:offsite gives -- health:check
+# shares this pipeline and its red has to stay believable. This job is red until every
+# credential in docs/TODO.md is rotated, and a red that is expected must not be able to block
+# anything or drown out one that is not.
+#
+# Deliberately no --baseline-path. A baseline would make this green while the credentials are
+# still live, which is the opposite of what it is for: the point is that it keeps saying so
+# until somebody rotates them.
+secrets:history:
+  stage: test
+  image:
+    name: zricethezav/gitleaks:v8.30.1
+    entrypoint: [""]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      allow_failure: true
+  cache: []
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - |
+      echo "Scanning the full history. Findings here are credentials to rotate on the"
+      echo "server -- editing a secret out of a file does not unpublish it."
+      gitleaks git . --no-banner --redact --platform gitlab --report-format json --report-path gitleaks.json
+  artifacts:
+    when: always
+    paths:
+      - gitleaks.json
+    expire_in: 1 month
+
 health:check:
   stage: test
   image: alpine:3.20
