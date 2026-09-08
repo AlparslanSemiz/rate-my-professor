@@ -1,9 +1,9 @@
 package com.pse.auth.service;
 
+import com.pse.config.properties.AuthProperties;
 import com.pse.auth.model.OneTimePassword;
 import com.pse.auth.repository.OneTimePasswordRepository;
 import com.pse.shared.util.HashGenerator;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,11 +24,11 @@ public class OtpService {
     public OtpService(
             OneTimePasswordRepository repository,
             Clock clock,
-            @Value("${app.auth.otp-ttl:PT5M}") Duration ttl
+            AuthProperties properties
     ) {
         this.repository = repository;
         this.clock = clock;
-        this.ttl = ttl;
+        this.ttl = properties.otpTtl();
     }
 
     @Transactional

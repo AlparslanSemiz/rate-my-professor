@@ -1,5 +1,6 @@
 package com.pse.auth.service;
 
+import com.pse.config.properties.AuthProperties;
 import com.pse.auth.model.OneTimePassword;
 import com.pse.auth.repository.OneTimePasswordRepository;
 import com.pse.shared.util.HashGenerator;
@@ -49,7 +50,8 @@ class OtpServiceTests {
     private OneTimePasswordRepository repository;
 
     private OtpService serviceWith(Duration ttl) {
-        return new OtpService(repository, CLOCK, ttl);
+        return new OtpService(repository, CLOCK,
+                new AuthProperties(Duration.ofDays(1), Duration.ofDays(365), ttl));
     }
 
     private static OneTimePassword legacyCode(String plaintext) {

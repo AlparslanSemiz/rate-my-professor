@@ -3,8 +3,8 @@ package com.pse.moderation.service;
 import com.pse.shared.error.ApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.pse.config.properties.GitLabProperties;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -34,13 +34,12 @@ public class RestClientGitLabClient implements GitLabClient {
     // candidates and neither marked, the container looks for a default constructor and the
     // bean fails to build.
     @Autowired
-    public RestClientGitLabClient(
-            @Value("${app.gitlab.base-url:}") String baseUrl,
-            @Value("${app.gitlab.project-id:}") String projectId,
-            @Value("${app.gitlab.token:}") String token,
-            @Value("${app.gitlab.timeout:PT10S}") Duration timeout
-    ) {
-        this(restClientFor(baseUrl, timeout), projectId, token);
+    public RestClientGitLabClient(GitLabProperties properties) {
+        this(
+                restClientFor(properties.baseUrl(), properties.timeout()),
+                properties.projectId(),
+                properties.token()
+        );
     }
 
     /**

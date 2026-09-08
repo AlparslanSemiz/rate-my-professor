@@ -1,5 +1,7 @@
 package com.pse.auth;
 
+import com.pse.config.properties.RateLimitProperties;
+import com.pse.config.properties.AuthProperties;
 import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
@@ -113,12 +115,10 @@ class AuthServiceTests {
                         tokenAuthenticationService,
                         eventPublisher,
                         clock,
-                        Duration.ofDays(1),
-                        Duration.ofDays(365),
-                        3,
-                        20,
-                        10,
-                        30
+                        new AuthProperties(
+                                Duration.ofDays(1), Duration.ofDays(365), Duration.ofMinutes(5)),
+                        new RateLimitProperties(
+                                Duration.ofMinutes(15), "x".repeat(32), 3, 20, 10, 30)
                 );
     }
 

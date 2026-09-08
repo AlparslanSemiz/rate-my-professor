@@ -1,10 +1,10 @@
 package com.pse.auth.service;
 
+import com.pse.config.properties.RateLimitProperties;
 import com.pse.auth.model.AuthRateLimitBucket;
 import com.pse.auth.repository.AuthRateLimitBucketRepository;
 import com.pse.shared.error.RateLimitException;
 import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -35,13 +35,12 @@ public class RateLimitService {
             AuthRateLimitBucketRepository repository,
             Clock clock,
             PlatformTransactionManager transactionManager,
-            @Value("${app.auth.rate-limit.window:PT15M}") Duration window,
-            @Value("${app.auth.rate-limit.hmac-key:}") String hmacKey
+            RateLimitProperties properties
     ) {
         this.repository = repository;
         this.clock = clock;
-        this.window = window;
-        this.hmacKey = hmacKey;
+        this.window = properties.window();
+        this.hmacKey = properties.hmacKey();
         this.requiresNew = new TransactionTemplate(transactionManager);
         this.requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }

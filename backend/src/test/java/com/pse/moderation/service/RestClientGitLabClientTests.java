@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.pse.config.properties.GitLabProperties;
 import com.pse.shared.error.ApiException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,7 +87,8 @@ class RestClientGitLabClientTests {
     /** The wiring the application actually uses, so the constructor's own branches are real. */
     private static RestClientGitLabClient configuredClient(
             String baseUrl, String projectId, String token) {
-        return new RestClientGitLabClient(baseUrl, projectId, token, Duration.ofSeconds(10));
+        return new RestClientGitLabClient(
+                new GitLabProperties(baseUrl, projectId, token, Duration.ofSeconds(10)));
     }
 
     // ---------------------------------------------------------------- isEnabled

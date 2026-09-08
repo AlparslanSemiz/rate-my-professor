@@ -1,6 +1,8 @@
 package com.pse.auth.service;
 
 import com.pse.audit.model.AuditAction;
+import com.pse.config.properties.AuthProperties;
+import com.pse.config.properties.RateLimitProperties;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.auth.dto.request.LoginRequest;
@@ -27,14 +29,12 @@ import com.pse.shared.util.UtcDates;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -59,12 +59,8 @@ public class AuthService {
     private final TokenAuthenticationService tokenAuthenticationService;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
-    private final Duration adminSessionTtl;
-    private final Duration appSessionTtl;
-    private final int requestEmailLimit;
-    private final int requestIpLimit;
-    private final int loginEmailLimit;
-    private final int loginIpLimit;
+    private final AuthProperties lifetimes;
+    private final RateLimitProperties rateLimits;
 
     public AuthService(
             StudentRepository studentRepository,
@@ -79,12 +75,8 @@ public class AuthService {
             TokenAuthenticationService tokenAuthenticationService,
             ApplicationEventPublisher eventPublisher,
             Clock clock,
-            @Value("${app.auth.admin-session-ttl:P1D}") Duration adminSessionTtl,
-            @Value("${app.auth.app-session-ttl:${app.auth.student-session-ttl:P365D}}") Duration appSessionTtl,
-            @Value("${app.auth.rate-limit.request-email:3}") int requestEmailLimit,
-            @Value("${app.auth.rate-limit.request-ip:20}") int requestIpLimit,
-            @Value("${app.auth.rate-limit.login-email:10}") int loginEmailLimit,
-            @Value("${app.auth.rate-limit.login-ip:30}") int loginIpLimit
+            AuthProperties lifetimes,
+            RateLimitProperties rateLimits
     ) {
         this.studentRepository = studentRepository;
         this.adminRepository = adminRepository;
@@ -98,20 +90,16 @@ public class AuthService {
         this.tokenAuthenticationService = tokenAuthenticationService;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
-        this.adminSessionTtl = adminSessionTtl;
-        this.appSessionTtl = appSessionTtl;
-        this.requestEmailLimit = requestEmailLimit;
-        this.requestIpLimit = requestIpLimit;
-        this.loginEmailLimit = loginEmailLimit;
-        this.loginIpLimit = loginIpLimit;
+        this.lifetimes = lifetimes;
+        this.rateLimits = rateLimits;
     }
 
     public BasicResponse requestLogin(OTPRequest request, HttpServletRequest httpRequest) {
         String email = normalizeAndValidateEmail(request.email());
         String emailSubject = rateLimitService.emailSubject(email);
         String ipSubject = rateLimitService.ipSubject(httpRequest.getRemoteAddr());
-        rateLimitService.consume(RateLimitService.REQUEST_CODE, emailSubject, requestEmailLimit);
-        rateLimitService.consume(RateLimitService.REQUEST_CODE, ipSubject, requestIpLimit);
+        rateLimitService.consume(RateLimitService.REQUEST_CODE, emailSubject, rateLimits.requestEmail());
+        rateLimitService.consume(RateLimitService.REQUEST_CODE, ipSubject, rateLimits.requestIp());
 
         // A blocked or deleted account cannot complete a login, so do not mail it a
         // code. The response stays identical to the success case on purpose: a
@@ -168,8 +156,8 @@ public class AuthService {
         // Refusals by this gate are deliberately not audited. It consumes nothing, so it
         // answers every request for the rest of the window; one record per refused request
         // would be unbounded. The attempts that filled the bucket are already in the log.
-        rateLimitService.ensureAllowed(RateLimitService.LOGIN_FAILURE, emailSubject, loginEmailLimit);
-        rateLimitService.ensureAllowed(RateLimitService.LOGIN_FAILURE, ipSubject, loginIpLimit);
+        rateLimitService.ensureAllowed(RateLimitService.LOGIN_FAILURE, emailSubject, rateLimits.loginEmail());
+        rateLimitService.ensureAllowed(RateLimitService.LOGIN_FAILURE, ipSubject, rateLimits.loginIp());
 
         // Check the account status before consuming the code. Consuming first burns
         // a valid code on a request that can only ever end in 403.
@@ -214,7 +202,7 @@ public class AuthService {
         token.setHash(HashGenerator.hashToken(rawToken));
         token.setSessionType(sessionType);
         token.setExpiresAt(LocalDateTime.now(clock).plus(
-                api == LoginApi.ADMIN ? adminSessionTtl : appSessionTtl
+                api == LoginApi.ADMIN ? lifetimes.adminSessionTtl() : lifetimes.appSessionTtl()
         ));
         token = tokenRepository.save(token);
 
@@ -318,8 +306,8 @@ public class AuthService {
     }
 
     private void consumeLoginFailure(String emailSubject, String ipSubject) {
-        rateLimitService.consume(RateLimitService.LOGIN_FAILURE, emailSubject, loginEmailLimit);
-        rateLimitService.consume(RateLimitService.LOGIN_FAILURE, ipSubject, loginIpLimit);
+        rateLimitService.consume(RateLimitService.LOGIN_FAILURE, emailSubject, rateLimits.loginEmail());
+        rateLimitService.consume(RateLimitService.LOGIN_FAILURE, ipSubject, rateLimits.loginIp());
     }
 
     /**

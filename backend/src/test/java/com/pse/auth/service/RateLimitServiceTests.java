@@ -1,5 +1,6 @@
 package com.pse.auth.service;
 
+import com.pse.config.properties.RateLimitProperties;
 import com.pse.auth.model.AuthRateLimitBucket;
 import com.pse.auth.repository.AuthRateLimitBucketRepository;
 import com.pse.shared.error.RateLimitException;
@@ -57,7 +58,8 @@ class RateLimitServiceTests {
     }
 
     private RateLimitService serviceWith(Duration window, String hmacKey) {
-        return new RateLimitService(repository, CLOCK, transactionManager, window, hmacKey);
+        return new RateLimitService(repository, CLOCK, transactionManager,
+                new RateLimitProperties(window, hmacKey, 3, 20, 10, 30));
     }
 
     private static AuthRateLimitBucket bucket(int attempts, LocalDateTime windowStartedAt) {
