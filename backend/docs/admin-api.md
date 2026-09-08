@@ -569,7 +569,7 @@ admin-only and return every row regardless of `active`.
 | `GET /data/lectures` | — | Public. Active lectures only. |
 | `GET /admin/data/lectures/all` | — | Admin-only. Every lecture, active or not. |
 | `GET /data/lectures/{id}` | — | Public. `404`-shaped as `{"message":"...","success":false,"lecture":null}` rather than an HTTP 404 if not found. |
-| `POST /admin/data/lectures` | `{"name","code","semesterYear","semesterSeason","active","professorIds"}` | Refused with a plain `403` by the security chain when the caller is not an admin. `active` is currently ignored; new lectures are always created active. `409`-shaped as `{"success":false}` on a duplicate name, not an HTTP `409`. |
+| `POST /admin/data/lectures` | `{"name","code","semesterYear","semesterSeason","active","professorIds"}` | Refused with a plain `403` by the security chain when the caller is not an admin. `active` is currently ignored; new lectures are always created active, but the field must be **present** — omitting it answers `400 {"message":"Invalid request"}`. `409`-shaped as `{"success":false}` on a duplicate name, not an HTTP `409`. `LECTURE_CREATED` audit event, which is deliberately **not** revertible: undoing a creation is a deletion. |
 | `POST /data/lectures` | same | **Legacy, removed once the panel has moved.** Same write, and refused with a plain `403` by the security chain exactly like the `/admin` version. Earlier revisions of this table described a `200 {"success":false}` here; that was never true of this path — `SecurityConfig` has always matched it. |
 | `PATCH /admin/data/lectures/{id}` | any subset of `{"name","code","semesterYear","semesterSeason","active","lectureType","professorIds"}` | `LECTURE_UPDATED` audit event. |
 | `DELETE /admin/data/lectures/{id}` | none | Deletes the lecture and every comment, answer and rating filed under it. Use `active = false` instead to take a lecture out of the app while keeping its history. `LECTURE_DELETED` audit event. |
@@ -577,7 +577,7 @@ admin-only and return every row regardless of `active`.
 | `GET /admin/data/professor/all` | — | Admin-only. Every professor, active or not. |
 | `GET /data/professor/{id}` | — | Public. |
 | `GET /data/professor/id?firstName=&lastName=` | — | Public. Returns a bare UUID string, or `null` if no match — not wrapped in a response object. |
-| `POST /admin/data/professor` | `{"firstName","lastName","lectureIDs"}` | Refused with a plain `403`, like `POST /admin/data/lectures`. |
+| `POST /admin/data/professor` | `{"firstName","lastName","lectureIDs"}` | Refused with a plain `403`, like `POST /admin/data/lectures`. `PROFESSOR_CREATED` audit event, not revertible for the same reason. |
 | `POST /data/professor` | same | **Legacy, removed once the panel has moved.** Refused with a plain `403`, like the `/admin` version. This route did once check the caller inside the handler — answering `200 {"success":false}` to a non-admin, and a `500` to an anonymous caller because the principal it read was null — and is now matched by the security chain like every other `/data` write. |
 | `PATCH /admin/data/professor/{id}` | any subset of `{"firstName","lastName","active","lectureIds"}` | `PROFESSOR_UPDATED` audit event. |
 | `DELETE /admin/data/professor/{id}` | none | Detaches the professor from every lecture; the lectures themselves survive. `PROFESSOR_DELETED` audit event. |
@@ -799,8 +799,8 @@ every other error response is unchanged.
   `COMMENT_DELETED`, `ANSWER_UPDATED`, `ANSWER_DELETED`, `RATING_DELETED`,
   `COMMENT_REPORT_STATUS_CHANGED`, `COMMENT_REPORT_DELETED`,
   `ANSWER_REPORT_STATUS_CHANGED`, `ANSWER_REPORT_DELETED`, `BUG_REPORT_UPDATED`,
-  `BUG_REPORT_ISSUE_CREATED`, `BUG_REPORT_DELETED`, `LECTURE_UPDATED`, `LECTURE_DELETED`,
-  `PROFESSOR_UPDATED`, `PROFESSOR_DELETED`
+  `BUG_REPORT_ISSUE_CREATED`, `BUG_REPORT_DELETED`, `LECTURE_CREATED`, `LECTURE_UPDATED`,
+  `LECTURE_DELETED`, `PROFESSOR_CREATED`, `PROFESSOR_UPDATED`, `PROFESSOR_DELETED`
 - Student activity: `USER_LOGIN`, `USER_LOGOUT`, `COMMENT_CREATED`, `ANSWER_CREATED`,
   `RATING_SUBMITTED`, `COMMENT_REPORT_CREATED`, `ANSWER_REPORT_CREATED`,
   `BUG_REPORT_CREATED`

@@ -263,3 +263,33 @@ Nothing about the app API changed. "POST /auth/login" still returns 365 days, fo
 administrators too. The lifetime is decided by the endpoint you called, not by the account.
 
 Read "expiresAt" from the login response rather than assuming either number.
+
+
+///// 8.09 (2)
+
+
+Creating a lecture or a professor is now recorded in the audit log.
+
+Two new values can appear in "GET /admin/audit-logs" and in its "/meta" enum list:
+
+    LECTURE_CREATED
+    PROFESSOR_CREATED
+
+Both are administrative actions. Updating or deleting a lecture already wrote an entry;
+creating one wrote nothing, so the log could show a rename with no record of where the
+row came from.
+
+Neither is revertible, and that is deliberate: the entry is a lifecycle event
+("changes": {"exists": {"before": false, "after": true}}), not a field diff, so
+"POST /admin/audit-logs/{id}/revert" answers ACTION_NOT_REVERTIBLE. Undoing a creation
+is a deletion, which is its own audited action. This is the same shape
+USER_WARNING_CREATED has always had.
+
+Panels that render the action list from "/meta" pick these up on their own. One that
+hard-codes the vocabulary needs the two values added.
+
+Also: three fields in the audit responses are now declared nullable in the OpenAPI
+schema, because they always could be null and the schema said otherwise --
+"revertBlockedReason" and "revertedByAuditId" on an entry, and "target.id", which a
+refusal has no value for. No response changed; only the schema now describes them
+correctly.

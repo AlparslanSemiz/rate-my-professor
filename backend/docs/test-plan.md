@@ -1,18 +1,19 @@
 # Test plan
 
 Layers: **unit → API/role → integration → E2E**. Every batch adds its own section. The unit
-layer is covered by batches 1–6, the API/role layer by the authorization, protocol and
-ownership sweeps below, and the integration layer by the PostgreSQL section further down. Only
-E2E has not been started. What was recorded as blocking the integration layer — the
+layer is covered by batches 1–7, the API/role layer by the authorization, protocol and ownership
+sweeps below, the integration layer by the PostgreSQL section, and E2E by six journeys over real
+HTTP. **All four layers exist.** What was once recorded as blocking the integration layer — the
 Testcontainers question — turned out not to be a blocker at all; see
 [Settled questions](#settled-questions).
 
 ### Where it stands
 
-**802 tests, 0 failures**, 21 skipped locally (the `@Disabled` `DemoApplicationTests` and the
-twenty PostgreSQL tests, which run in CI). Bundle **95.52% LINE** (3280/3434),
-**89.33% BRANCH** (1046/1171). Line coverage is gated in two tiers — **90% mandatory,
-95% target** — and BRANCH has a single floor at 0.87.
+**856 tests, 0 failures**, 27 skipped locally (the `@Disabled` `DemoApplicationTests`, the
+twenty PostgreSQL integration tests and the six end-to-end journeys, all of which run in CI).
+Bundle **95.92% LINE** (3311/3452), **90.61% BRANCH** (1061/1171). Line coverage is gated in two
+tiers — **90% mandatory, 95% target** — and BRANCH has a single floor, ratcheted to 0.88 now
+that batch 7 has cleared it.
 
 > Those are `./mvnw clean verify` numbers, and the `clean` is not decoration. JaCoCo's
 > `prepare-agent` appends by default, so `target/jacoco.exec` accumulates across runs and a
@@ -34,11 +35,11 @@ not a batch of its own and gets no section below, only updated statuses.
 
 | Layer | State |
 |---|---|
-| Unit | Batches 1–6 done. |
+| Unit | Batches 1–7 done. |
 | API / role | The three sweeps below. |
 | Findings | **All closed.** |
 | Integration | **Done for the three questions H2 cannot answer.** Five classes, 20 tests, one shared context against a real PostgreSQL in CI. |
-| E2E | **Not started.** |
+| E2E | **Done.** Six journeys over real HTTP against the same PostgreSQL, in a second Maven invocation of the same job. |
 
 The integration layer runs in `server:postgres-integration`, against a `postgres:16` GitLab CI
 service with the production Flyway migrations. Its tests skip themselves when
@@ -420,6 +421,61 @@ is no longer one, because it was closed by removing the write rather than by tes
 are no longer blocked either — see [Settled questions](#settled-questions).
 
 
+## Batch 7 — the three services covered only through the API
+
+`docs/TODO.md` carried the same line for weeks: "services with real branching
+(`ModerationUserService`, `AuditLogService`) are covered only through the API." That is not the
+same complaint as "not covered" — the bundle counted those lines, because ten `@SpringBootTest`
+classes drive them end to end. It is a complaint about *where* the covering test lives: a
+rejection reached through MockMvc costs a Spring context and, when it fails, names a status code
+rather than the argument that was at fault.
+
+### `AuditLogService` — a service with no unit test class at all
+
+Before this batch it had none. Almost everything `getLogs` does before it reaches the database is
+parse and reject nine query parameters, and each rejection is a status the panel depends on: an
+unparseable limit, a limit outside 1–100, a malformed actor id, an unknown actor type, target
+type or action, a date that will not parse, a range that ends before it starts, a search longer
+than the column. **21 tests**, and the interesting one is the scope rejection: an action from the
+*other* log page is refused rather than quietly matching nothing, because an empty page reads as
+"no such events" instead of "wrong endpoint".
+
+### `ModerationUserService` — the warning lifecycle
+
+The existing 50 tests covered `getStudents` and `updateStudent` thoroughly and **the entire
+warning lifecycle not at all** — `warnStudent`, `updateWarning`, `deleteWarning` and
+`getWarningsForStudent` had no unit test between them. That is the moderation action a student
+actually experiences: `warnStudent` is the only place in the service that writes a
+`Notification`. **11 tests**, covering the blank and over-long message rejections, that the text
+is stored trimmed the way it was validated, that the account status is deliberately left alone,
+that a reworded warning does *not* notify the student a second time, that a warning belonging to
+another student reads as 404 rather than 403, and that a warning whose issuing admin row is gone
+still lists.
+
+### `SocialService` — the response builders
+
+`createCommentResponse` and `createAnswerResponse` decide `userVote`, the field the app colours
+the vote arrows from. It has three states that look alike from outside — nobody signed in, the
+reader has not voted, the reader has — and only the third produces a value. **7 tests**, plus the
+one that matters most: a visible comment carrying a hidden answer must not leak the answer.
+
+### What this batch deliberately did not do
+
+The remaining branches in these three classes are mostly inside `Specification` lambdas —
+`rolePredicate`, `cursorPredicate`, the filter assembly in `getLogs`. The only way to run those
+without a database is to hand them a mocked `Root`, `CriteriaQuery` and `CriteriaBuilder` and
+then assert which builder methods were called, which asserts the implementation rather than the
+behaviour and would go red on any rewrite that produced the same query. They are covered where
+they mean something: `CursorPaginationPostgresTests` pages all four cursor endpoints against a
+real PostgreSQL. This is the position this document already took on Criteria predicates, and
+batch 7 keeps it.
+
+### The gate moved
+
+BRANCH went 89.15% → **90.61%**, and the pom floor 0.87 → **0.88**. The floor is set from the
+measurement rather than from the hope: two and a half points of headroom, which is the shape the
+0.87 step chose.
+
 ## The API / role batch
 
 A different layer with a different metric. Coverage is not the measure here: these tests drive
@@ -666,6 +722,85 @@ would have been the fourth. It is now `com.pse.support.MappedRoutes`, and all fo
 one thing the three copies disagreed about — what a mapping that declares no verb means — is
 reported rather than decided: such a route arrives with a `null` verb and every call site states
 its own reading. The three sweeps ran 7/7/6 before the extraction and 7/7/6 after.
+
+## The E2E layer
+
+Six journeys, over real HTTP, against the database the application actually runs on. This is the
+last of the four layers and the only one that exercises a socket.
+
+**What it buys over the layer above it.** Every other API test calls handlers through MockMvc,
+which is Spring's dispatcher without a server: no port, no HTTP parsing, no real connection
+handling. That is the right tool for checking a response field by field, and that checking stays
+there. What it cannot say is whether the pieces work *together* — whether a session minted by one
+endpoint is accepted by another, whether a student's comment comes back on the lecture page they
+wrote it on, whether a revert really restores the row. Each test here is one such story, and
+asserts its outcome rather than the shape of every response on the way.
+
+### The client is `RestClient`, and that was a finding
+
+`TestRestTemplate` is the obvious answer and is **not on this classpath**: Spring Boot 4
+reorganised the test starters and this project pulls `spring-boot-starter-webmvc-test`.
+`WebTestClient` is in `spring-test` but is the reactive one and would drag WebFlux into a servlet
+application for the sake of a test. `RestClient` (spring-web) is already there, needs no new
+dependency, and is the client the application itself uses in `RestClientGitLabClient`.
+
+It throws on 4xx and 5xx, and half of these journeys are about a refusal, so
+`com.pse.support.E2EClient` wraps it with a no-op status handler: a response is a value rather
+than an exception, and a journey reads as a sequence of requests and assertions instead of a
+sequence of try/catch.
+
+### The six journeys
+
+| # | Journey | What it proves that the layers below cannot |
+|---|---|---|
+| 1 | Sign up, sign in, sign out | Requesting a code creates nothing; **redeeming** it creates the account; and the logout actually stops the token working |
+| 2 | Rate, comment, answer, vote | Each write is read back through the endpoint the app reads it through — "the write returned 200" and "the reader sees it" are different claims |
+| 3 | Admin CRUD, audited and reverted | Create → edit → both in the audit log → revert the edit → the row is restored and the reversal is its own entry |
+| 4 | Being turned away | A signed-in student gets 403 and is recorded; an anonymous caller gets 401 and is not — `AccessRefusalAuditor` returns early without a principal |
+| 5 | Which login decides the clock | One account, two logins: `/auth/login` about a year, `/admin/auth/login` about a day |
+| 6 | A bug report reaches the tracker | One report, exactly one issue, through the recording client |
+
+Journey 5 is worth its own note: it is the property a **two-minute deployment experiment** was
+once run to demonstrate. It now lives in a test instead of in a setting somebody has to remember
+to change back.
+
+### One database, two contexts, two invocations
+
+The end-to-end context cannot be the integration one: `webEnvironment = RANDOM_PORT` alone would
+fork it, and these journeys additionally need `TestDeliveryConfig`, because the login code is
+normally emailed and `CapturingLoginCodeDelivery` is the only way a test can read it.
+
+Two contexts against one database would reset the schema under each other. So
+`server:postgres-integration` runs **two Maven invocations** sharing one `postgres:16` service. A
+separate JVM cannot interleave, and the *exactly one context* guard stays true for each
+invocation on its own rather than being weakened to allow two. The job greps both logs and fails
+if either started more than one. Cost: one extra Maven start against a container that is already
+running.
+
+`TestDeliveryConfig`'s beans became `@Primary` for this: `MailService` is `@Profile("!test")`, so
+under the `test` profile the capturing delivery is the only candidate and nothing has to win —
+but the PostgreSQL layers run with no profile, where `MailService` is a bean too and two
+`LoginCodeDelivery` beans is a context that will not start.
+
+### Where a browser would come in, and why it is not here
+
+This layer drives the API, not a user interface, and that is the boundary rather than a gap.
+There is no frontend in this repository: the Android client and the admin panel are their own,
+and a browser driver (Playwright or anything else) would have nothing here to open. Its place is
+the panel's repository, against a deployed backend — and what it would test is the panel's
+rendering and navigation, not these routes, which are covered from here.
+
+The one thing worth agreeing with whoever owns the panel is *who asserts what*, so the same
+journey is not written twice and neither side assumes the other has it: the contract between them
+is [admin-api.md](admin-api.md), and the panel's work list is
+[adminweb-tasks.md](adminweb-tasks.md).
+
+### What the journeys do not do through the API
+
+Two seams, both deliberate: a lecture is seeded through the repository so journey 2 has something
+to rate, and an account is promoted to administrator by writing the row. Neither has a
+self-service endpoint — administrators are not supposed to be able to make themselves — and
+inventing one for a test would be inventing product.
 
 ## Deliberately uncovered
 

@@ -20,12 +20,20 @@ administrator — see [docs/admin-api.md](docs/admin-api.md).
 in-memory H2, and the tests that require a real PostgreSQL skip themselves unless
 `POSTGRES_SMOKE_JDBC_URL` is set — CI provides it through a `postgres:16` service.
 
+The suite has four layers: unit, API/role, integration and end-to-end. The last two need a real
+PostgreSQL and run in CI; everything else runs anywhere.
+
 To run those PostgreSQL tests locally, point them at any PostgreSQL 16:
 
 ```bash
 POSTGRES_SMOKE_JDBC_URL=jdbc:postgresql://localhost:5432/postgres \
 POSTGRES_SMOKE_USERNAME=postgres POSTGRES_SMOKE_PASSWORD=your-password \
 ./mvnw -Dtest='*PostgresTests,PostgreSqlMigrationSmokeTests' test
+
+# the end-to-end journeys, which need their own Spring context and so their own run
+POSTGRES_SMOKE_JDBC_URL=jdbc:postgresql://localhost:5432/postgres \
+POSTGRES_SMOKE_USERNAME=postgres POSTGRES_SMOKE_PASSWORD=your-password \
+./mvnw -Dtest=EndToEndJourneyTests test
 ```
 
 They drop and recreate the `public` schema, so give them a database you do not mind losing.
@@ -39,7 +47,7 @@ Bundle line coverage is gated in two tiers, and both numbers live in `.gitlab-ci
 | `COVERAGE_LINE_MIN` | 90% | Mandatory. Below it the build fails, locally and in CI. |
 | `COVERAGE_LINE_TARGET` | 95% | Advisory. Below it `coverage:line-target` goes yellow and the pipeline still passes. |
 
-Branch coverage has a single mandatory floor of 87%. The floor in `pom.xml` and
+Branch coverage has a single mandatory floor of 88%. The floor in `pom.xml` and
 `COVERAGE_LINE_MIN` are kept in step by hand — move one, move the other.
 
 ## Running it locally

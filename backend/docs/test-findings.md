@@ -30,16 +30,19 @@ really recorded if it lives in a test.
 | [F-16](#f-16--the-wrong-http-method-returns-404-instead-of-405) | The wrong HTTP method returns 404 instead of 405 | Medium — wrong HTTP code, on all 122 routes | **Fixed** |
 | [F-17](#f-17--an-unsupported-media-type-returns-500-instead-of-415) | An unsupported media type returns 500 instead of 415 | Medium — wrong HTTP code, on every route that reads a body | **Fixed** |
 | [F-18](#f-18--the-project-id-reaches-gitlab-encoded-twice) | The GitLab project id reaches the tracker encoded twice | High — the integration is dead for a path-shaped id | **Fixed** |
+| [F-19](#f-19--two-audit-response-fields-are-null-by-design-and-the-schema-said-otherwise) | Three audit response fields are null by design, declared non-nullable | Medium — the API contradicts its own schema | **Fixed** |
+| [F-20](#f-20--creating-a-lecture-or-a-professor-was-not-audited) | Creating a lecture or professor wrote no audit entry | Medium — a hole in the administrative record | **Fixed** |
 | [P-1](#p-1--the-coverage-baseline-number-was-wrong) | The coverage baseline number was wrong | Process | **Fixed** (re-measured) |
 | [P-2](#p-2--integration-tests-hide-unit-targets) | Integration tests hide unit targets | Process | **Fixed** (method changed) |
 | [P-3](#p-3--lombok-is-not-filtered-in-jacoco) | Lombok is not filtered in JaCoCo | Process | **Closed — decided against** |
 | [P-4](#p-4--a-moved-test-file-was-copied-not-moved) | A "moved" test file was copied, not moved | Process | **Fixed** (duplicates deleted) |
 | [P-5](#p-5--coverage-measured-without-clean-is-not-the-coverage-ci-measures) | Coverage measured without `clean` is inflated by the previous run | Process | **Fixed** (figures re-measured) |
 
-**Nothing in this document is open.** Twelve were closed in one pass and P-5 was raised and
-fixed later, by the integration layer; what each one's **Status** now records is either the fix
-or, for P-3 alone, the decision not to make one. The three that changed a client-visible contract — F-3, F-5 and F-16 — were closed
-deliberately rather than quietly, and each says below what a client sees differently.
+**Nothing in this document is open.** Twelve were closed in one pass; P-5 came later from the
+integration layer, and F-19, F-20 later still from the end-to-end work. What each one's
+**Status** records is either the fix or, for P-3 alone, the decision not to make one. Four
+changed a client-visible contract — F-3, F-5, F-16 and F-20 — and each was closed deliberately
+rather than quietly; each says below what a client sees differently.
 
 BUG-1 and BUG-2 (the cursor and approximate-location bug reports) are in
 [test-plan.md](test-plan.md#findings); neither was reproducible on the backend and they stay
@@ -840,6 +843,71 @@ context-loading tests are what refused. That is the argument for keeping both la
 
 ---
 
+### F-19 — Two audit response fields are null by design and the schema said otherwise
+
+**Where.** `AuditLogResponse.revertBlockedReason`, `AuditLogResponse.revertedByAuditId` and
+`AuditTargetResponse.id`, against the generated OpenAPI schema.
+
+**What happens.** All three are null in ordinary operation. `AuditRevertService.Revertability.YES`
+is `(true, null, null)`, so a revertible entry reports no blocking reason and no reverting id; and
+a refused request is audited against `AuditTargetType.ENDPOINT`, which is not a row and carries no
+id. The schema declared all three non-nullable, so `GET /admin/audit-logs` and
+`GET /admin/activity-logs` could answer with bodies the schema they publish says are invalid.
+
+**Why it was not found when the other six were.** The contract layer fixed six fields of exactly
+this kind. These three survived because `OpenApiResponseValidationTests` **seeded no data of its
+own** — it validated whatever rows the previously-run test class happened to leave behind, and
+Surefire orders classes by filesystem. With an empty audit log the fields are never rendered and
+the sweep sees nothing.
+
+That is the more interesting half of this finding. The suite passed on one checkout and failed on
+another with the same commit: running it in a fresh worktree turned it red, and forcing
+`ApiAuthorizationMatrixTests` to run first — a class that generates refusals in bulk — reproduced
+it every time.
+
+**Status. Fixed**, in two parts, because there were two defects. The three fields carry
+`@Schema(nullable = true)`. And the sweep now empties the database and seeds the two shapes
+deliberately: a refusal driven through the real refusal path (from a *signed-in* student —
+`AccessRefusalAuditor` returns early with no principal, so an anonymous 401 writes nothing at all),
+and a revertible entry. Each annotation was then removed one at a time to confirm the seed
+actually reaches it; each removal turned the test red on exactly its own field. The suite now
+passes in filesystem, alphabetical and reverse-alphabetical order.
+
+`AuditTargetResponse.label` was left unannotated on purpose. Every writer seen supplies one, and a
+refusal supplies `"VERB /path"`; declaring it nullable would claim an observation nothing makes.
+
+---
+
+### F-20 — Creating a lecture or a professor was not audited
+
+**Where.** `LectureService.addLecture` and `ProfessorService.addProfessor`.
+
+**What happens.** Nothing — which is the defect. Nine services write an `AuditWriter` entry for
+every administrative mutation, `ModerationCatalogService.updateLecture` and `deleteLecture`
+included. Creating the same row wrote none, so the record could show a lecture being renamed with
+no entry saying where it came from, and a lecture appearing between two audited events with
+nothing to say who added it.
+
+**Found by reading, not by a test.** `docs/TODO.md` had carried it as "an audit gap worth its own
+commit" for some time.
+
+**Status. Fixed.** `AuditAction` gained `LECTURE_CREATED` and `PROFESSOR_CREATED`, both
+`ADMINISTRATIVE`. Neither is revertible, and that follows the existing precedent rather than
+inventing one: `USER_WARNING_CREATED` is already an administrative action that is recorded and not
+revertible, and the mechanism is the `changes` key — a lifecycle event is written as
+`exists: {before: false, after: true}`, and `exists` is in `AuditRevertService.LIFECYCLE_KEYS`, so
+`isFieldDiff` refuses it. Undoing a creation is a deletion, which is its own audited action with
+its own guards.
+
+Both services now take the `AuthenticatedUser` rather than a bare `Student`, because
+`AuditWriter.write` records the acting `Admin` and a `Student` alone cannot say which
+administrator acted. Pinned by unit tests in both services (including that a refused creation
+records nothing), by `AdminApiIntegrationTests.creatingALectureIsRecordedAndIsNotRevertible`, and
+end to end by the admin journey. **Client-visible**, so it has a `CHANGELOG` entry: two new values
+can appear in `/admin/audit-logs` and in its `meta`.
+
+---
+
 ## Negative results
 
 A sweep that finds nothing is only worth something if what it covered is written down.
@@ -920,6 +988,33 @@ other than 2xx (`GET /data/professor/id`, which needs two query parameters the s
 send, and which is not transactional anyway), and that exclusion is asserted rather than
 tolerated. Without it, every route could be answering 400 and "no route returned 500" would
 still be green.
+
+### Batch 7 raised no finding, and the E2E layer raised none of its own
+
+Both are worth saying, because both were expected to.
+
+**Batch 7** brought `AuditLogService` (which had no unit test class at all),
+`ModerationUserService`'s warning lifecycle (which had none either) and `SocialService`'s
+response builders under test — 39 tests over code that had only ever been driven through the
+API. Every behaviour matched what the code and its comments already said. After F-18 and F-19 the
+reasonable expectation was another defect in an untested corner; there was none.
+
+**The six end-to-end journeys** found no defect either. What they did turn up is two facts about
+the system that were easy to assume wrongly, and both are now written into the tests that
+depend on them:
+
+- **Asking for a login code creates nothing.** The account is created when the code is
+  *redeemed*, not when it is requested — which is what stops anyone minting accounts for
+  addresses they do not own. The first journey asserts both halves.
+- **An anonymous refusal is not audited.** `AccessRefusalAuditor.record` returns early when there
+  is no authenticated principal, so a 401 leaves no trace while a signed-in student's 403 does.
+  That distinction is deliberate and is now pinned rather than inferred; it is also what made
+  F-19's first fix attempt useless, because an anonymous probe seeded no row.
+
+The E2E layer's value showed up as *design confirmation* rather than defects, which is the
+outcome to expect from a layer added after the ones below it are already green. The one thing it
+is uniquely positioned to catch — a whole journey breaking where each step passes on its own —
+it now watches on every pipeline run.
 
 ### The ownership / IDOR sweep found no defect
 
