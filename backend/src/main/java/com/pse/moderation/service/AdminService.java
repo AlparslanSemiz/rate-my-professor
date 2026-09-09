@@ -20,11 +20,23 @@ public class AdminService {
     private final IdentityService identityService;
     private final AdminRepository adminRepository;
 
+    /**
+     * Creates AdminService.
+     *
+     * @param identityService the identityService
+     * @param adminRepository the adminRepository
+     */
     public AdminService(IdentityService identityService, AdminRepository adminRepository) {
         this.identityService = identityService;
         this.adminRepository = adminRepository;
     }
 
+    /**
+     * Returns validateAdmin.
+     *
+     * @param authHeader the authHeader
+     * @return the result
+     */
     public BasicResponse validateAdmin(String authHeader) {
         return isAdmin(authHeader)
                 ? new BasicResponse("Is Admin", true)

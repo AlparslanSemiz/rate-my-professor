@@ -40,7 +40,14 @@ public class LectureService {
     private final ProfessorRepository professorRepository;
     private final AuditWriter auditWriter;
 
-    public LectureService(LectureRepository lectureRepository, ProfessorRepository professorRepository, AuditWriter auditWriter ) {
+    /**
+     * Creates LectureService.
+     *
+     * @param lectureRepository the lectureRepository
+     * @param professorRepository the professorRepository
+     * @param auditWriter the auditWriter
+     */
+    public LectureService(LectureRepository lectureRepository, ProfessorRepository professorRepository, AuditWriter auditWriter) {
         this.lectureRepository = lectureRepository;
         this.professorRepository = professorRepository;
         this.auditWriter = auditWriter;
@@ -49,6 +56,7 @@ public class LectureService {
 
     /**
      * Searches only for Lectures which are active.
+     *
      * @return all active Lectures.
      */
     @Transactional(readOnly = true)
@@ -61,6 +69,7 @@ public class LectureService {
     /**
      * Used by Admin Panel.
      * Searches for all Lectures (including non-active Lectures)
+     *
      * @return all Lectures
      */
     @Transactional(readOnly = true)
@@ -80,6 +89,8 @@ public class LectureService {
      *
      * @param lectureId UUID
      * @return LectureDetailResponse
+     *
+     * @throws ApiException if the operation fails
      */
     @Transactional(readOnly = true)
     public LectureDetailResponse getLecture(UUID lectureId) {
@@ -113,6 +124,12 @@ public class LectureService {
      * everything else, so the chain has already decided by the time this runs. The check that
      * used to stand here was unreachable, and answered {@code 200 {"success": false}} where the
      * chain answers {@code 403} -- a second, weaker answer to a question already settled.
+     *
+     * @param principal the principal
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
      */
     @Transactional
     public BasicResponse addLecture(AuthenticatedUser principal, AddLectureRequest request) {
@@ -135,12 +152,11 @@ public class LectureService {
         // field: an omitted list means "no professors yet", and the assignment is writable
         // afterwards through PATCH. Omitting it used to reach the for-each below and answer
         // 500 -- the one field of this request that @Valid was not checking.
-        List<UUID> professorsIDs =
-                request.professorIds() == null ? List.of() : request.professorIds();
+        List<UUID> professorsIDs = request.professorIds() == null ? List.of() : request.professorIds();
         Set<Professor> professors = new HashSet<>();
 
         //Validate professorIDs exist
-        for (UUID professorID: professorsIDs){
+        for (UUID professorID: professorsIDs) {
 
             Professor professor = professorRepository.findById(professorID).orElse(null);
 
@@ -167,7 +183,7 @@ public class LectureService {
         //Link Profs to Lecture and vice versa
         lecture.setProfessors(professors);
 
-        for(Professor professor: professors){
+        for (Professor professor: professors) {
             professor.getLectures().add(lecture);
             professorRepository.save(professor);
         }
@@ -189,11 +205,11 @@ public class LectureService {
     }
 
 
-    private LecturesResponse getLectures(boolean includeInactive){
+    private LecturesResponse getLectures(boolean includeInactive) {
 
         List<Lecture> lectures;
 
-        if(includeInactive){
+        if (includeInactive) {
             lectures = lectureRepository.findAllByOrderByNameAsc();
         } else {
             lectures = lectureRepository.findByActiveTrueOrderByNameAsc();
@@ -215,6 +231,9 @@ public class LectureService {
      * {@code UUID.fromString} for the one caller that holds it that way. Two methods running
      * the same query is one too many; the conversion belongs to the caller that has the
      * string, where the fact that a malformed id throws is at least visible.
+     *
+     * @param id the id
+     * @return the result
      */
     public Lecture getById(UUID id) {
         return lectureRepository.findById(id).orElse(null);

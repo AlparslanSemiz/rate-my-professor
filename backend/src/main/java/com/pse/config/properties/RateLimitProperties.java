@@ -18,6 +18,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param window       how long one counting window lasts before the counts reset
  * @param hmacKey      the key subjects are hashed with; {@code RateLimitService} refuses to
  *                     start on anything shorter than 32 characters
+ *
  * @param requestEmail codes that may be requested for one address per window
  * @param requestIp    codes that may be requested from one address per window
  * @param loginEmail   failed logins tolerated for one account per window

@@ -27,10 +27,20 @@ public class AccessRefusalAuditor {
 
     private final AuditWriter auditWriter;
 
+    /**
+     * Creates AccessRefusalAuditor.
+     *
+     * @param auditWriter the auditWriter
+     */
     public AccessRefusalAuditor(AuditWriter auditWriter) {
         this.auditWriter = auditWriter;
     }
 
+    /**
+     * Executes record.
+     *
+     * @param request the request
+     */
     public void record(HttpServletRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null

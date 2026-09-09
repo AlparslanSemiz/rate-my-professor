@@ -26,12 +26,21 @@ public final class ReportStatusRevertHandler {
     private ReportStatusRevertHandler() {
     }
 
+    /**
+     * Provides CommentReportHandler.
+     */
     @Component
     public static class CommentReportHandler implements AuditRevertHandler {
 
         private final CommentReportRepository reportRepository;
         private final ModerationCommentService commentService;
 
+        /**
+         * Creates CommentReportHandler.
+         *
+         * @param reportRepository the reportRepository
+         * @param commentService the commentService
+         */
         public CommentReportHandler(
                 CommentReportRepository reportRepository,
                 ModerationCommentService commentService
@@ -85,12 +94,21 @@ public final class ReportStatusRevertHandler {
         }
     }
 
+    /**
+     * Provides AnswerReportHandler.
+     */
     @Component
     public static class AnswerReportHandler implements AuditRevertHandler {
 
         private final AnswerReportRepository reportRepository;
         private final ModerationAnswerReportService answerReportService;
 
+        /**
+         * Creates AnswerReportHandler.
+         *
+         * @param reportRepository the reportRepository
+         * @param answerReportService the answerReportService
+         */
         public AnswerReportHandler(
                 AnswerReportRepository reportRepository,
                 ModerationAnswerReportService answerReportService

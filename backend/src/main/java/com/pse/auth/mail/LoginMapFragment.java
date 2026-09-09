@@ -23,10 +23,21 @@ public class LoginMapFragment {
 
     private final String geoapifyApiKey;
 
+    /**
+     * Creates LoginMapFragment.
+     *
+     * @param geoapifyApiKey the geoapifyApiKey
+     */
     public LoginMapFragment(@Value("${geoapify.api.key:}") String geoapifyApiKey) {
         this.geoapifyApiKey = geoapifyApiKey;
     }
 
+    /**
+     * Returns html.
+     *
+     * @param location the location
+     * @return the result
+     */
     public String html(LoginLocation location) {
 
         String mapsUrl = location.mapsUrl();

@@ -10,6 +10,7 @@ package com.pse.system.dto;
  *
  * @param status         {@code OK}, {@code DEGRADED} (database up, a read failed), or
  *                       {@code DOWN} (database unreachable)
+ *
  * @param checkedAt      UTC ISO 8601 timestamp of this check
  * @param startedAt      UTC ISO 8601 timestamp of the last backend start
  * @param uptimeSeconds  seconds since {@code startedAt}
@@ -22,13 +23,19 @@ package com.pse.system.dto;
  * only ever be null. Both forms are wrong, so neither is used and
  * {@code OpenApiResponseValidationTests} names the two pointers instead. The fix is one
  * annotation each when springdoc emits the 3.1 {@code anyOf} form.
+ *
  * @param gitlabEnabled  whether the GitLab issue integration is configured. The panel
  *                       hides the "create issue" action when it is not, rather than
  *                       discovering it by pressing the button and getting a 503.
+ *
  * @param locationLookupEnabled whether login locations can be resolved -- F-8. Without it
  *                       an unset or revoked IPINFO_TOKEN shows up only as every login mail
  *                       saying "Unknown", which is what made the original report
  *                       ("approximate location stopped working") undiagnosable.
+ *
+ * @param message the message
+ * @param success the success
+ * @param database the database
  */
 public record SystemStatusResponse(
         String message,

@@ -32,6 +32,12 @@ public class SocialResponseMapper {
     private final CommentVoteRepository commentVoteRepository;
     private final AnswerVoteRepository answerVoteRepository;
 
+    /**
+     * Creates SocialResponseMapper.
+     *
+     * @param commentVoteRepository the commentVoteRepository
+     * @param answerVoteRepository the answerVoteRepository
+     */
     public SocialResponseMapper(
             CommentVoteRepository commentVoteRepository,
             AnswerVoteRepository answerVoteRepository
@@ -40,7 +46,12 @@ public class SocialResponseMapper {
         this.answerVoteRepository = answerVoteRepository;
     }
 
-    /** @param student the caller, or {@code null} for the unauthenticated sync route */
+    /**
+     * Creates a CommentResponse.
+     * @param student the caller, or {@code null} for the unauthenticated sync route
+     * @param comment the comment
+     * @return the result
+     */
     public CommentResponse toResponse(Comment comment, Student student) {
 
         VoteType userVote = null;
@@ -68,6 +79,13 @@ public class SocialResponseMapper {
         );
     }
 
+    /**
+     * Returns toResponse.
+     *
+     * @param answer the answer
+     * @param student the student
+     * @return the result
+     */
     public AnswerResponse toResponse(Answer answer, Student student) {
 
         VoteType userVote = null;

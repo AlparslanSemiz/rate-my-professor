@@ -23,7 +23,12 @@ public final class KitEmail {
     private KitEmail() {
     }
 
-    /** Trimmed and lowercased. Null in, null out. */
+    /**
+     * Trimmed and lowercased. Null in, null out.
+     *
+     * @param email the email
+     * @return the result
+     */
     public static String normalize(String email) {
         return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
@@ -32,6 +37,11 @@ public final class KitEmail {
      * Normalized, or a 400 if it is not a KIT student address. A null address is treated as
      * the empty string and fails the pattern like any other non-address, which is what the
      * caller this was lifted from did.
+     *
+     * @param email the email
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
      */
     public static String requireKitAddress(String email) {
         String normalized = email == null ? "" : normalize(email);

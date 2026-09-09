@@ -75,6 +75,14 @@ public class AuditRevertService {
     private final Duration window;
     private final Clock clock;
 
+    /**
+     * Creates AuditRevertService.
+     *
+     * @param repository the repository
+     * @param handlers the handlers
+     * @param window the window
+     * @param clock the clock
+     */
     public AuditRevertService(
             AuditLogRepository repository,
             List<AuditRevertHandler> handlers,
@@ -94,6 +102,8 @@ public class AuditRevertService {
      * Whether one entry can be reverted, and if not, why.
      *
      * @param revertedByAuditId the entry that already reversed this one, or null
+     * @param revertible the revertible
+     * @param reason the reason
      */
     public record Revertability(
             boolean revertible,
@@ -113,6 +123,9 @@ public class AuditRevertService {
      * <p>Batched deliberately. The staleness rule needs the target's current values, and
      * doing that per entry would put a query per row onto the panel's heaviest read; grouped
      * by target type it is a handful of queries for the page however long the page is.
+     *
+     * @param page the page
+     * @return the result
      */
     @Transactional(readOnly = true)
     public Map<UUID, Revertability> describe(List<AuditLog> page) {
@@ -146,7 +159,13 @@ public class AuditRevertService {
         return result;
     }
 
-    /** Reverses one entry, or refuses it with a reason the panel can act on. */
+    /**
+     * Reverses one entry, or refuses it with a reason the panel can act on.
+     *
+     * @param principal the principal
+     * @param auditId the auditId
+     * @return the result
+     */
     @Transactional
     public BasicResponse revert(AuthenticatedUser principal, UUID auditId) {
         AuditLog log = repository.findById(auditId)

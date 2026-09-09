@@ -17,14 +17,32 @@ public class AuditCursorCodec {
 
     private final KeysetCursorCodec codec;
 
+    /**
+     * Creates AuditCursorCodec.
+     *
+     * @param codec the codec
+     */
     public AuditCursorCodec(KeysetCursorCodec codec) {
         this.codec = codec;
     }
 
+    /**
+     * Returns encode.
+     *
+     * @param createdAt the createdAt
+     * @param id the id
+     * @return the result
+     */
     public String encode(Instant createdAt, UUID id) {
         return codec.encode(createdAt, id);
     }
 
+    /**
+     * Returns decode.
+     *
+     * @param value the value
+     * @return the result
+     */
     public KeysetCursorCodec.Cursor decode(String value) {
         return codec.decode(value, INVALID);
     }

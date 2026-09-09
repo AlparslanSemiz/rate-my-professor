@@ -16,6 +16,11 @@ import java.util.UUID;
  */
 public interface AuditRevertHandler {
 
+    /**
+     * Simple Getter.
+     *
+     * @return AuditTargetType
+     */
     AuditTargetType targetType();
 
     /**
@@ -24,6 +29,9 @@ public interface AuditRevertHandler {
      *
      * <p>Batched because a page of audit entries is checked in one pass; doing it per entry
      * would put a query per row on the panel's heaviest read.
+     *
+     * @param targetIds the targetIds
+     * @return the result
      */
     Map<UUID, Map<String, Object>> currentValues(Collection<UUID> targetIds);
 
@@ -31,6 +39,8 @@ public interface AuditRevertHandler {
      * Applies the recorded {@code before} values back onto the target.
      *
      * @param before the {@code before} half of the entry's {@code changes} map, keyed by field
+     * @param principal the principal
+     * @param targetId the targetId
      */
     void applyInverse(AuthenticatedUser principal, UUID targetId, Map<String, Object> before);
 }

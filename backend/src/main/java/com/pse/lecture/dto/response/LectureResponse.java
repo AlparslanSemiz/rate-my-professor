@@ -20,6 +20,20 @@ import com.pse.shared.enums.SemesterSeason;
  * {@code Set} with no order of its own, so without that sort the same lecture answers with
  * the names in a different order between two requests, and any title built from them
  * reshuffles under the reader. That is the read side of BUG-3.
+ *
+ * @param id the id
+ * @param name the name
+ * @param code the code
+ * @param semesterYear the semesterYear
+ * @param semesterSeason the semesterSeason
+ * @param semesterLabel the semesterLabel
+ * @param title the title
+ * @param active the active
+ * @param lectureType the lectureType
+ * @param professors the professors
+ * @param commentCount the commentCount
+ * @param ratingCount the ratingCount
+ * @param averageRating the averageRating
  */
 public record LectureResponse(
         UUID id,
@@ -35,4 +49,4 @@ public record LectureResponse(
         int commentCount,
         int ratingCount,
         double averageRating
-) {}
+) { }

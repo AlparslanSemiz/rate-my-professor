@@ -4,6 +4,9 @@ import com.pse.user.model.Student;
 
 import java.util.UUID;
 
+/**
+ * Provides ProfilePictureGenerator.
+ */
 public final class ProfilePictureGenerator {
 
     private static final String DICEBEAR_BASE_URL =
@@ -17,11 +20,23 @@ public final class ProfilePictureGenerator {
     }
 
 
+    /**
+     * Returns generateProfilePicture.
+     *
+     * @param student the student
+     * @return the result
+     */
     public static String generateProfilePicture(Student student) {
         return generateProfilePicture(student.getId());
     }
 
 
+    /**
+     * Returns generateProfilePicture.
+     *
+     * @param studentId the studentId
+     * @return the result
+     */
     public static String generateProfilePicture(UUID studentId) {
         return DICEBEAR_BASE_URL + studentId;
     }

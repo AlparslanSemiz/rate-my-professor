@@ -12,6 +12,14 @@ import java.util.UUID;
  * @param issueState whether an issue exists, was never created, or failed to be created —
  *                   which is what decides whether a client shows a link, an action, or a
  *                   retry
+ *
+ * @param id the id
+ * @param title the title
+ * @param description the description
+ * @param severity the severity
+ * @param status the status
+ * @param reporterName the reporterName
+ * @param reportedAt the reportedAt
  */
 public record BugReportResponse(
 

@@ -13,6 +13,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
+/**
+ * Provides OneTimePassword.
+ */
 @Entity
 @Table(name = "one_time_passwords")
 @Getter

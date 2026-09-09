@@ -26,6 +26,10 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+
+/**
+ * Provides GlobalExceptionHandler.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -45,12 +49,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
-            MethodArgumentNotValidException.class,
-            HandlerMethodValidationException.class,
-            ConstraintViolationException.class,
-            HttpMessageNotReadableException.class,
-            MethodArgumentTypeMismatchException.class,
-            MissingServletRequestParameterException.class
+        MethodArgumentNotValidException.class,
+        HandlerMethodValidationException.class,
+        ConstraintViolationException.class,
+        HttpMessageNotReadableException.class,
+        MethodArgumentTypeMismatchException.class,
+        MissingServletRequestParameterException.class
     })
     ResponseEntity<BasicResponse> handleBadRequest(Exception exception) {
         return ResponseEntity.badRequest()
@@ -69,6 +73,9 @@ public class GlobalExceptionHandler {
      * hand -- {@code POST /reports}, {@code /auth/validate}, {@code /admins/validate} --
      * because the security chain leaves those open. Without this it fell through to the
      * catch-all below and answered 500, where the documented contract is 401.
+     *
+     * @param exception the exception
+     * @return the result
      */
     @ExceptionHandler(InvalidAuthTokenException.class)
     ResponseEntity<BasicResponse> handleInvalidAuthToken(InvalidAuthTokenException exception) {
@@ -91,6 +98,9 @@ public class GlobalExceptionHandler {
      *
      * <p>The {@code Allow} header is half of a 405. Without it the caller learns that its
      * verb is wrong but not which verb would have worked, and RFC 9110 requires it.
+     *
+     * @param exception the exception
+     * @return the result
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     ResponseEntity<BasicResponse> handleWrongMethod(HttpRequestMethodNotSupportedException exception) {
@@ -120,6 +130,9 @@ public class GlobalExceptionHandler {
      * remaining one is not: the base class clashes with {@link #handleWrongMethod} -- an
      * ambiguous mapping the context refuses to start with -- and switches the body to
      * {@code ProblemDetail}, which the Android client does not parse.
+     *
+     * @param exception the exception
+     * @return the result
      */
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     ResponseEntity<BasicResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException exception) {

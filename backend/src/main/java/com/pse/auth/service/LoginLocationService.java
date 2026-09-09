@@ -33,6 +33,12 @@ public class LoginLocationService {
     private final RestClient ipInfoClient;
     private final String ipInfoToken;
 
+    /**
+     * Creates LoginLocationService.
+     *
+     * @param ipInfoRestClient the ipInfoRestClient
+     * @param ipInfoToken the ipInfoToken
+     */
     public LoginLocationService(
             RestClient ipInfoRestClient,
             @Value("${ipinfo.token:}") String ipInfoToken
@@ -55,6 +61,9 @@ public class LoginLocationService {
 
     /**
      * Resolves an approximate location for an IP address.
+     *
+     * @param rawIp the rawIp
+     * @return the result
      */
     public LoginLocation getLoginLocation(String rawIp) {
 
@@ -115,6 +124,8 @@ public class LoginLocationService {
      * so an operator can see that lookups are off rather than inferring it from every login
      * mail saying "Unknown" -- F-8. The startup warning covers a token that was missing at
      * boot; this covers the whole life of the process.
+     *
+     * @return the result
      */
     public boolean isConfigured() {
         return !ipInfoToken.isBlank();

@@ -30,15 +30,33 @@ public class ModerationBugReportController {
 
     private final ModerationBugReportService service;
 
+    /**
+     * Creates ModerationBugReportController.
+     *
+     * @param service the service
+     */
     public ModerationBugReportController(ModerationBugReportService service) {
         this.service = service;
     }
 
+    /**
+     * Returns getAllReports.
+     *
+     * @return the result
+     */
     @GetMapping({"/admin/reports", "/reports"})
     public BugReportsResponse getAllReports() {
         return service.getAllReports();
     }
 
+    /**
+     * Returns updateBugReport.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @param request the request
+     * @return the result
+     */
     @PatchMapping({"/admin/reports/{id}", "/reports/{id}"})
     public BasicResponse updateBugReport(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -48,6 +66,13 @@ public class ModerationBugReportController {
         return service.updateBugReport(principal, id, request);
     }
 
+    /**
+     * Returns deleteBugReport.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
+     */
     @DeleteMapping({"/admin/reports/{id}", "/reports/{id}"})
     public BasicResponse deleteBugReport(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -60,6 +85,10 @@ public class ModerationBugReportController {
      * Opens a GitLab issue for this report, or returns the one it already has. Admin-only,
      * and matched explicitly in the security chain — {@code POST /reports} itself is the
      * student submission endpoint and stays open.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
      */
     @PostMapping({"/admin/reports/{id}/gitlab-issue", "/reports/{id}/gitlab-issue"})
     public GitLabIssueResponse createGitLabIssue(
@@ -69,6 +98,13 @@ public class ModerationBugReportController {
         return service.createIssue(principal, id);
     }
 
+    /**
+     * Returns sendBugReport.
+     *
+     * @param authHeader the authHeader
+     * @param request the request
+     * @return the result
+     */
     @PostMapping("/reports")
     public BasicResponse sendBugReport(
             @RequestHeader(value = "Authorization", required = false) String authHeader,

@@ -27,6 +27,14 @@ final class CatalogueEdits {
      *
      * <p>The comparison is against the number of <em>distinct</em> ids: a request repeating an
      * id is not a request for a row that does not exist, and must not be answered as one.
+     *
+     * @param <T> the type parameter
+     * @param ids the ids
+     * @param findAllById the findAllById
+     * @param missingMessage the missingMessage
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
      */
     static <T> List<T> resolveAll(List<UUID> ids, Function<List<UUID>, List<T>> findAllById,
                                   String missingMessage) {
@@ -67,6 +75,10 @@ final class CatalogueEdits {
      * Whether two id assignments hold the same members, regardless of the order they come
      * out in. Both sides are read from a {@code Set} on one end and from a request or a
      * repository lookup on the other, so position carries no information -- BUG-3.
+     *
+     * @param before the before
+     * @param after the after
+     * @return the result
      */
     static boolean sameAssignment(List<UUID> before, List<UUID> after) {
         return labels(before).equals(labels(after));

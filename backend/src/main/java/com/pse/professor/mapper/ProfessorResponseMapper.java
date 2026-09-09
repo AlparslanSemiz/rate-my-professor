@@ -19,8 +19,7 @@ import com.pse.professor.service.ProfessorRatings;
  */
 public final class ProfessorResponseMapper {
 
-    private ProfessorResponseMapper() {
-    }
+
 
     /**
      * Sorted for the same reason a lecture sorts its professors: {@code getLectures()} is a
@@ -31,6 +30,19 @@ public final class ProfessorResponseMapper {
     private static final Comparator<Lecture> BY_NAME =
             Comparator.comparing(Lecture::getName).thenComparing(Lecture::getId);
 
+
+
+
+    private ProfessorResponseMapper() {
+    }
+
+
+    /**
+     * Returns toResponse.
+     *
+     * @param professor the professor
+     * @return the result
+     */
     public static ProfessorResponse toResponse(Professor professor) {
         // Recomputed on read rather than taken from the stored column, so a rating an
         // administrator removed is reflected without anything having to refresh it.
@@ -60,6 +72,12 @@ public final class ProfessorResponseMapper {
         );
     }
 
+    /**
+     * Returns toShortResponse.
+     *
+     * @param professor the professor
+     * @return the result
+     */
     public static ProfessorShortResponse toShortResponse(Professor professor) {
         return new ProfessorShortResponse(
                 professor.getId(),

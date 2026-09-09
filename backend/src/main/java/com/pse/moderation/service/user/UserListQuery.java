@@ -30,6 +30,12 @@ final class UserListQuery {
      * Role is membership of the {@code admins} table rather than a column on the student, so
      * it filters as an id set. The empty set still has to produce a valid predicate:
      * {@code IN ()} is not legal SQL, so both degenerate cases are answered directly.
+     *
+     * @param builder the builder
+     * @param root the root
+     * @param adminIds the adminIds
+     * @param role the role
+     * @return the result
      */
     static Predicate rolePredicate(
             CriteriaBuilder builder,
@@ -78,6 +84,11 @@ final class UserListQuery {
      * ordering runs in. Resolved to a {@code Sort.Direction} here rather than carried as a
      * {@code newestFirst} boolean: the flag had to be read the same way at the cursor
      * predicate and at the {@code Sort}, and nothing tied the two together.
+     *
+     * @param rawSort the rawSort
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
      */
     static Sort.Direction parseSortDirection(String rawSort) {
         if (rawSort == null || rawSort.isBlank() || rawSort.trim().equalsIgnoreCase("newest")) {

@@ -32,6 +32,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Provides ModerationCommentService.
+ */
 @Service
 public class ModerationCommentService {
 
@@ -42,6 +45,16 @@ public class ModerationCommentService {
     private final AuditWriter auditWriter;
     private final Clock clock;
 
+    /**
+     * Creates ModerationCommentService.
+     *
+     * @param reportRepository the reportRepository
+     * @param commentRepository the commentRepository
+     * @param warningRepository the warningRepository
+     * @param adminRepository the adminRepository
+     * @param auditWriter the auditWriter
+     * @param clock the clock
+     */
     public ModerationCommentService(
             CommentReportRepository reportRepository,
             CommentRepository commentRepository,
@@ -58,6 +71,11 @@ public class ModerationCommentService {
         this.clock = clock;
     }
 
+    /**
+     * Returns getReportedComments.
+     *
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public ReportedCommentsResponse getReportedComments() {
         Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
@@ -76,6 +94,16 @@ public class ModerationCommentService {
         );
     }
 
+    /**
+     * Returns updateReportStatus.
+     *
+     * @param principal the principal
+     * @param reportId the reportId
+     * @param status the status
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse updateReportStatus(
             AuthenticatedUser principal,
@@ -132,6 +160,10 @@ public class ModerationCommentService {
     /**
      * Removes the report record itself. The reported comment is untouched: withdrawing a
      * report that should not have been filed is not a judgement on the content.
+     *
+     * @param principal the principal
+     * @param reportId the reportId
+     * @return the result
      */
     @Transactional
     public BasicResponse deleteReport(AuthenticatedUser principal, UUID reportId) {

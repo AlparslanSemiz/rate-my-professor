@@ -9,6 +9,13 @@ import com.pse.shared.enums.UserStatus;
  *
  * <p>{@code status} accepts {@code ACTIVE} and {@code BLOCKED} only — deleting a user
  * anonymizes it, which is {@code DELETE /users/{id}} and not a field edit.
+ *
+ * @param username the username
+ * @param kitEmail the kitEmail
+ * @param biography the biography
+ * @param status the status
+ * @param role the role
+ * @param credibilityScore the credibilityScore
  */
 public record UserUpdateRequest(
         String username,

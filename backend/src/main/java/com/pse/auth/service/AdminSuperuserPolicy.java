@@ -25,6 +25,11 @@ public class AdminSuperuserPolicy {
 
     private final Set<String> superuserEmails;
 
+    /**
+     * Creates AdminSuperuserPolicy.
+     *
+     * @param configuredEmails the configuredEmails
+     */
     public AdminSuperuserPolicy(@Value("${app.auth.admin-superuser-emails:}") String configuredEmails) {
         this.superuserEmails = Arrays.stream(configuredEmails.split(","))
                 .map(value -> value.trim().toLowerCase(Locale.ROOT))
@@ -32,12 +37,23 @@ public class AdminSuperuserPolicy {
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    /** Whether this address is an elevated operator. Admin membership is checked separately. */
+
+    /**
+     * Whether this address is an elevated operator. Admin membership is checked separately
+     *
+     * @param kitEmail email of user
+     * @return true if user is superUser
+     */
     public boolean isSuperuser(String kitEmail) {
         return kitEmail != null
                 && superuserEmails.contains(kitEmail.trim().toLowerCase(Locale.ROOT));
     }
 
+    /**
+     * Returns superuserEmails.
+     *
+     * @return the result
+     */
     public Set<String> superuserEmails() {
         return superuserEmails;
     }

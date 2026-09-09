@@ -29,6 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Provides ModerationBugReportService.
+ */
 @Service
 public class ModerationBugReportService {
 
@@ -39,6 +42,15 @@ public class ModerationBugReportService {
     private final BugReportIssueTransactions issueTransactions;
     private final Clock clock;
 
+    /**
+     * Creates ModerationBugReportService.
+     *
+     * @param repository the repository
+     * @param identityService the identityService
+     * @param auditWriter the auditWriter
+     * @param gitLabClient the gitLabClient
+     * @param issueTransactions the issueTransactions
+     */
     public ModerationBugReportService(
             BugReportRepository repository,
             IdentityService identityService,
@@ -55,6 +67,11 @@ public class ModerationBugReportService {
         this.clock = clock;
     }
 
+    /**
+     * Returns getAllReports.
+     *
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public BugReportsResponse getAllReports() {
         List<BugReportResponse> reports = repository
@@ -65,6 +82,16 @@ public class ModerationBugReportService {
         return new BugReportsResponse("Successfully found all entries", true, reports);
     }
 
+    /**
+     * Returns updateBugReport.
+     *
+     * @param principal the principal
+     * @param reportId the reportId
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse updateBugReport(
             AuthenticatedUser principal,
@@ -139,7 +166,13 @@ public class ModerationBugReportService {
         return new BasicResponse("Updated", true);
     }
 
-    /** Discards a bug report — a duplicate, or one filed by mistake. */
+    /**
+     * Discards a bug report — a duplicate, or one filed by mistake.
+     *
+     * @param principal the principal
+     * @param reportId the reportId
+     * @return the result
+     */
     @Transactional
     public BasicResponse deleteBugReport(AuthenticatedUser principal, UUID reportId) {
         BugReport report = repository.findByIdForUpdate(reportId)
@@ -162,6 +195,15 @@ public class ModerationBugReportService {
         return new BasicResponse("Deleted bug report successfully", true);
     }
 
+    /**
+     * Returns sendBugReport.
+     *
+     * @param authHeader the authHeader
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse sendBugReport(String authHeader, BugReportRequest request) {
         Student student = identityService.verifyUser(authHeader);
@@ -221,6 +263,12 @@ public class ModerationBugReportService {
      *
      * <p>Deliberately not transactional: the failure path has to persist a marker that the
      * failing transaction would otherwise roll back. See {@link BugReportIssueTransactions}.
+     *
+     * @param principal the principal
+     * @param reportId the reportId
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
      */
     public GitLabIssueResponse createIssue(AuthenticatedUser principal, UUID reportId) {
         if (!gitLabClient.isEnabled()) {

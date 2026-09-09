@@ -6,6 +6,16 @@ import com.pse.shared.enums.UserStatus;
 
 import java.util.UUID;
 
+/**
+ * Represents AuthUserResponse.
+ *
+ * @param id the id
+ * @param username the username
+ * @param kitEmail the kitEmail
+ * @param role the role
+ * @param status the status
+ * @param isSuperAdmin the isSuperAdmin
+ */
 public record AuthUserResponse(
         UUID id,
         String username,

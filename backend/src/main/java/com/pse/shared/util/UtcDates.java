@@ -6,6 +6,9 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 
+/**
+ * Provides UtcDates.
+ */
 public final class UtcDates {
 
     private static final DateTimeFormatter FORMATTER =
@@ -14,10 +17,22 @@ public final class UtcDates {
     private UtcDates() {
     }
 
+    /**
+     * Returns format.
+     *
+     * @param value the value
+     * @return the result
+     */
     public static String format(LocalDateTime value) {
         return value == null ? null : format(value.toInstant(ZoneOffset.UTC));
     }
 
+    /**
+     * Returns format.
+     *
+     * @param value the value
+     * @return the result
+     */
     public static String format(Instant value) {
         return value == null ? null : FORMATTER.format(value);
     }

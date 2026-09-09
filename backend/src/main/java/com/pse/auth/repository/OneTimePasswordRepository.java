@@ -15,15 +15,31 @@ import com.pse.auth.model.OneTimePassword;
 
 import jakarta.persistence.LockModeType;
 
+/**
+ * Defines OneTimePasswordRepository.
+ */
 public interface OneTimePasswordRepository extends JpaRepository<OneTimePassword, Integer> {
 
    
+    /**
+     * Returns findByEmailAndUsedFalseAndExpiresAtAfterOrderByCreatedAtDesc.
+     *
+     * @param email the email
+     * @param expiresAt the expiresAt
+     * @return the result
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<OneTimePassword> findByEmailAndUsedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
             String email,
             LocalDateTime expiresAt
     );
 
+    /**
+     * Returns consumeOutstandingForEmail.
+     *
+     * @param email the email
+     * @return the result
+     */
     @Modifying
     @Query("""
             update OneTimePassword otp

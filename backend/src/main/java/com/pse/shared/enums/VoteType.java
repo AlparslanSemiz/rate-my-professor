@@ -10,7 +10,16 @@ package com.pse.shared.enums;
  * had no way to express before.
  */
 public enum VoteType {
+    /**
+     * The UP.
+     */
     UP,
+    /**
+     * The DOWN.
+     */
     DOWN,
+    /**
+     * The NONE.
+     */
     NONE
 }

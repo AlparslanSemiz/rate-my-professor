@@ -43,6 +43,16 @@ public class StudentProfileService {
     private final Clock clock;
     private final ModeratedStudents students;
 
+    /**
+     * Creates StudentProfileService.
+     *
+     * @param studentRepository the studentRepository
+     * @param adminRepository the adminRepository
+     * @param auditWriter the auditWriter
+     * @param superuserPolicy the superuserPolicy
+     * @param clock the clock
+     * @param students the students
+     */
     public StudentProfileService(
             StudentRepository studentRepository,
             AdminRepository adminRepository,
@@ -59,6 +69,16 @@ public class StudentProfileService {
         this.students = students;
     }
 
+    /**
+     * Returns updateStudent.
+     *
+     * @param principal the principal
+     * @param studentId the studentId
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse updateStudent(
             AuthenticatedUser principal,

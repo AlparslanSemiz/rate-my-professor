@@ -40,12 +40,25 @@ public class StudentService {
     private final StudentRepository studentRepository;
 
 
+    /**
+     * Creates StudentService.
+     *
+     * @param studentRepository the studentRepository
+     */
     public StudentService(StudentRepository studentRepository) {
         this.studentRepository = studentRepository;
     }
 
 
 
+    /**
+     * Returns getUserInformation.
+     *
+     * @param studentId the studentId
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional(readOnly = true)
     public StudentProfileResponse getUserInformation(UUID studentId) {
         Student student = studentRepository.findById(studentId).orElse(null);
@@ -79,6 +92,14 @@ public class StudentService {
 
 
 
+    /**
+     * Returns getUserRatings.
+     *
+     * @param studentId the studentId
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional(readOnly = true)
     public UserRatingResponse getUserRatings(UUID studentId) {
 
@@ -114,6 +135,14 @@ public class StudentService {
     }
 
 
+    /**
+     * Returns deleteAccount.
+     *
+     * @param student the student
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     public BasicResponse deleteAccount(Student student) {
 
         if (student == null) {
@@ -121,7 +150,7 @@ public class StudentService {
         }
 
         //Soft delete in Database: Set "deleted" to true
-        if( !softDeleteByKitEmail(student.getKitEmail())){
+        if (!softDeleteByKitEmail(student.getKitEmail())) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Student not found");
         }
 
@@ -131,6 +160,7 @@ public class StudentService {
 
     /**
      * CredibilityScore = |Upvotes| - |DownVotes|
+     *
      * @param student
      * @return
      */
@@ -166,10 +196,16 @@ public class StudentService {
 
     //Methods used by (other) Services
 
-    public boolean softDeleteByKitEmail(String email){
+    /**
+     * Checks softDeleteByKitEmail.
+     *
+     * @param email the email
+     * @return the result
+     */
+    public boolean softDeleteByKitEmail(String email) {
         Student student = studentRepository.findByKitEmail(email).orElse(null);
 
-        if(student == null) {
+        if (student == null) {
             return false;
         }
         student.setStatus(UserStatus.DELETED);

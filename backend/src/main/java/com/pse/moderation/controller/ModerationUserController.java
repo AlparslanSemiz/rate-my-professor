@@ -24,6 +24,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+/**
+ * Provides ModerationUserController.
+ */
 @RestController
 @RequestMapping({"/admin/users", "/users"})
 public class ModerationUserController {
@@ -33,6 +36,14 @@ public class ModerationUserController {
     private final StudentLifecycleService lifecycle;
     private final WarningService warnings;
 
+    /**
+     * Creates ModerationUserController.
+     *
+     * @param directory the directory
+     * @param profiles the profiles
+     * @param lifecycle the lifecycle
+     * @param warnings the warnings
+     */
     public ModerationUserController(
             UserDirectoryService directory,
             StudentProfileService profiles,
@@ -49,6 +60,14 @@ public class ModerationUserController {
      * Every parameter is declared as a String and parsed in the service, the same way
      * {@code AuditLogController} does it, so a bad value answers with a specific message
      * instead of Spring's generic type-mismatch failure.
+     *
+     * @param limit the limit
+     * @param cursor the cursor
+     * @param q the q
+     * @param status the status
+     * @param role the role
+     * @param sort the sort
+     * @return the result
      */
     @GetMapping
     public UserListResponse getStudents(
@@ -62,11 +81,25 @@ public class ModerationUserController {
         return directory.getStudents(limit, cursor, q, status, role, sort);
     }
 
+    /**
+     * Returns getStudent.
+     *
+     * @param id the id
+     * @return the result
+     */
     @GetMapping("/{id}")
     public UserResponse getStudent(@PathVariable UUID id) {
         return directory.getStudent(id);
     }
 
+    /**
+     * Returns updateStudent.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @param request the request
+     * @return the result
+     */
     @PatchMapping("/{id}")
     public BasicResponse updateStudent(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -76,6 +109,13 @@ public class ModerationUserController {
         return profiles.updateStudent(principal, id, request);
     }
 
+    /**
+     * Returns deleteStudent.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
+     */
     @DeleteMapping("/{id}")
     public BasicResponse deleteStudent(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -84,6 +124,13 @@ public class ModerationUserController {
         return lifecycle.deleteStudent(principal, id);
     }
 
+    /**
+     * Returns blockStudent.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
+     */
     @PatchMapping("/{id}/block")
     public BasicResponse blockStudent(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -92,6 +139,13 @@ public class ModerationUserController {
         return lifecycle.blockStudent(principal, id);
     }
 
+    /**
+     * Returns unblockStudent.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
+     */
     @PatchMapping("/{id}/unblock")
     public BasicResponse unblockStudent(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -100,6 +154,14 @@ public class ModerationUserController {
         return lifecycle.unblockStudent(principal, id);
     }
 
+    /**
+     * Returns warnStudent.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @param request the request
+     * @return the result
+     */
     @PostMapping("/{id}/warnings")
     public BasicResponse warnStudent(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -109,11 +171,26 @@ public class ModerationUserController {
         return warnings.warnStudent(principal, id, request);
     }
 
+    /**
+     * Returns getWarningsForStudent.
+     *
+     * @param id the id
+     * @return the result
+     */
     @GetMapping("/{id}/warnings")
     public WarningHistoryResponse getWarningsForStudent(@PathVariable UUID id) {
         return warnings.getWarningsForStudent(id);
     }
 
+    /**
+     * Returns updateWarning.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @param warningId the warningId
+     * @param request the request
+     * @return the result
+     */
     @PatchMapping("/{id}/warnings/{warningId}")
     public BasicResponse updateWarning(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -124,6 +201,14 @@ public class ModerationUserController {
         return warnings.updateWarning(principal, id, warningId, request);
     }
 
+    /**
+     * Returns deleteWarning.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @param warningId the warningId
+     * @return the result
+     */
     @DeleteMapping("/{id}/warnings/{warningId}")
     public BasicResponse deleteWarning(
             @AuthenticationPrincipal AuthenticatedUser principal,

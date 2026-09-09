@@ -2,6 +2,9 @@ package com.pse.lecture.mapper;
 
 import com.pse.lecture.model.Lecture;
 
+/**
+ * Provides LectureLabels.
+ */
 public final class LectureLabels {
 
     private LectureLabels() {
@@ -20,6 +23,9 @@ public final class LectureLabels {
      * entry, so the five had to agree and nothing made them.
      *
      * <p>The separator is an em dash, not a hyphen.
+     *
+     * @param lecture the lecture
+     * @return the result
      */
     public static String of(Lecture lecture) {
         String code = lecture.getCode();

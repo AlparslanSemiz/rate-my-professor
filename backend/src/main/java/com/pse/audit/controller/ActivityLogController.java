@@ -20,10 +20,29 @@ public class ActivityLogController {
 
     private final AuditLogService service;
 
+    /**
+     * Creates ActivityLogController.
+     *
+     * @param service the service
+     */
     public ActivityLogController(AuditLogService service) {
         this.service = service;
     }
 
+    /**
+     * Returns getLogs.
+     *
+     * @param limit the limit
+     * @param cursor the cursor
+     * @param q the q
+     * @param actorId the actorId
+     * @param actorType the actorType
+     * @param action the action
+     * @param targetType the targetType
+     * @param from the from
+     * @param to the to
+     * @return the result
+     */
     @GetMapping
     public ActivityLogPageResponse getLogs(
             @RequestParam(required = false) String limit,
@@ -56,6 +75,11 @@ public class ActivityLogController {
         );
     }
 
+    /**
+     * Returns getMeta.
+     *
+     * @return the result
+     */
     @GetMapping("/meta")
     public AuditMetaResponse getMeta() {
         return service.getMeta(AuditActionScope.ACTIVITY);

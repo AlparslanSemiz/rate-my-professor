@@ -10,18 +10,29 @@ package com.pse.moderation.service;
  */
 public interface GitLabClient {
 
-    /** Whether the integration is configured. False disables the endpoint that uses it. */
+    /**
+     * Whether the integration is configured. False disables the endpoint that uses it.
+     *
+     * @return the result
+     */
     boolean isEnabled();
 
     /**
      * Opens an issue and returns where it landed.
      *
      * @throws com.pse.shared.error.ApiException if the tracker refuses or cannot be reached
+     * @param title the title
+     * @param description the description
+     * @return the result
      */
     CreatedIssue createIssue(String title, String description);
 
+
     /**
-     * @param iid the project-scoped issue number a human would quote, not the global id
+     * Creates CreatedIssue.
+     *
+     * @param url the url
+     * @param iid the iid
      */
     record CreatedIssue(String url, Integer iid) {
     }

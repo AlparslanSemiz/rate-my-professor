@@ -16,6 +16,9 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+/**
+ * Provides TokenAuthenticationService.
+ */
 @Service
 public class TokenAuthenticationService {
 
@@ -32,6 +35,14 @@ public class TokenAuthenticationService {
     private final StudentRepository studentRepository;
     private final Clock clock;
 
+    /**
+     * Creates TokenAuthenticationService.
+     *
+     * @param tokenRepository the tokenRepository
+     * @param adminRepository the adminRepository
+     * @param studentRepository the studentRepository
+     * @param clock the clock
+     */
     public TokenAuthenticationService(
             TokenRepository tokenRepository,
             AdminRepository adminRepository,
@@ -44,6 +55,12 @@ public class TokenAuthenticationService {
         this.clock = clock;
     }
 
+    /**
+     * Returns authenticate.
+     *
+     * @param rawToken the rawToken
+     * @return the result
+     */
     @Transactional
     public Optional<AuthenticatedUser> authenticate(String rawToken) {
         if (rawToken == null || rawToken.isBlank() || rawToken.length() > 512) {

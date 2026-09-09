@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+/**
+ * Provides ModerationCommentController.
+ */
 @RestController
 @RequestMapping({"/admin/comments", "/comments"})
 public class ModerationCommentController {
@@ -26,6 +29,12 @@ public class ModerationCommentController {
     private final ModerationCommentService service;
     private final ContentModerationService contentService;
 
+    /**
+     * Creates ModerationCommentController.
+     *
+     * @param service the service
+     * @param contentService the contentService
+     */
     public ModerationCommentController(
             ModerationCommentService service,
             ContentModerationService contentService
@@ -34,16 +43,34 @@ public class ModerationCommentController {
         this.contentService = contentService;
     }
 
+    /**
+     * Returns getComments.
+     *
+     * @return the result
+     */
     @GetMapping
     public ManagedCommentsResponse getComments() {
         return contentService.getComments();
     }
 
+    /**
+     * Returns getReportedComments.
+     *
+     * @return the result
+     */
     @GetMapping("/reported")
     public ReportedCommentsResponse getReportedComments() {
         return service.getReportedComments();
     }
 
+    /**
+     * Returns updateReportStatus.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @param request the request
+     * @return the result
+     */
     @PatchMapping("/reported/{id}")
     public BasicResponse updateReportStatus(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -53,6 +80,13 @@ public class ModerationCommentController {
         return service.updateReportStatus(principal, id, request.status());
     }
 
+    /**
+     * Returns deleteReport.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
+     */
     @DeleteMapping("/reported/{id}")
     public BasicResponse deleteReport(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -61,6 +95,14 @@ public class ModerationCommentController {
         return service.deleteReport(principal, id);
     }
 
+    /**
+     * Returns updateComment.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @param request the request
+     * @return the result
+     */
     @PatchMapping("/{id}")
     public BasicResponse updateComment(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -70,6 +112,13 @@ public class ModerationCommentController {
         return contentService.updateComment(principal, id, request);
     }
 
+    /**
+     * Returns deleteComment.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
+     */
     @DeleteMapping("/{id}")
     public BasicResponse deleteComment(
             @AuthenticationPrincipal AuthenticatedUser principal,

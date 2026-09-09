@@ -50,7 +50,13 @@ public class SessionIssuer {
      * panel's expiry schedule.
      */
     private enum LoginApi {
+        /**
+         * The APP.
+         */
         APP,
+        /**
+         * The ADMIN.
+         */
         ADMIN
     }
 
@@ -68,6 +74,23 @@ public class SessionIssuer {
     private final AuthProperties lifetimes;
     private final RateLimitProperties rateLimits;
 
+    /**
+     * Creates SessionIssuer.
+     *
+     * @param studentRepository the studentRepository
+     * @param adminRepository the adminRepository
+     * @param tokenRepository the tokenRepository
+     * @param otpService the otpService
+     * @param rateLimitService the rateLimitService
+     * @param bootstrapPolicy the bootstrapPolicy
+     * @param studentProvisioning the studentProvisioning
+     * @param sessionAudit the sessionAudit
+     * @param auditWriter the auditWriter
+     * @param eventPublisher the eventPublisher
+     * @param clock the clock
+     * @param lifetimes the lifetimes
+     * @param rateLimits the rateLimits
+     */
     public SessionIssuer(
             StudentRepository studentRepository,
             AdminRepository adminRepository,
@@ -98,6 +121,13 @@ public class SessionIssuer {
         this.rateLimits = rateLimits;
     }
 
+    /**
+     * Returns login.
+     *
+     * @param request the request
+     * @param httpRequest the httpRequest
+     * @return the result
+     */
     @Transactional
     public LoginResponse login(LoginRequest request, HttpServletRequest httpRequest) {
         return issueSession(request, httpRequest, LoginApi.APP);
@@ -106,6 +136,10 @@ public class SessionIssuer {
     /**
      * Login for the admin panel. Only an account with an {@code admins} row gets through,
      * and the session is always an administrator session whatever the body asks for.
+     *
+     * @param request the request
+     * @param httpRequest the httpRequest
+     * @return the result
      */
     @Transactional
     public LoginResponse adminLogin(LoginRequest request, HttpServletRequest httpRequest) {

@@ -21,6 +21,10 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *
  * <p>The rate limits are deliberately not here. They are one policy read by two classes and
  * have their own record -- see {@link RateLimitProperties}.
+ *
+ * @param adminSessionTtl the adminSessionTtl
+ * @param appSessionTtl the appSessionTtl
+ * @param otpTtl the otpTtl
  */
 @ConfigurationProperties(prefix = "app.auth")
 public record AuthProperties(

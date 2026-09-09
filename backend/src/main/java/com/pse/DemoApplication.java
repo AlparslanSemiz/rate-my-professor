@@ -6,8 +6,9 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 
 /**
- * Boilerplate Code
+ * Boilerplate Code.
  */
+@SuppressWarnings("ALL")
 @SpringBootApplication
 @ConfigurationPropertiesScan
 public class DemoApplication {
@@ -15,7 +16,8 @@ public class DemoApplication {
 	public static void main(String[] args) {
 
 		SpringApplication.run(DemoApplication.class, args);
-		
+
+
 	}
 
 }

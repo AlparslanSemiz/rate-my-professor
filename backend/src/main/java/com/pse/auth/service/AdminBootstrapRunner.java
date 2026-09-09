@@ -35,6 +35,14 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     private final AdminRepository adminRepository;
     private final StudentProvisioning studentProvisioning;
 
+    /**
+     * Creates AdminBootstrapRunner.
+     *
+     * @param policy the policy
+     * @param studentRepository the studentRepository
+     * @param adminRepository the adminRepository
+     * @param studentProvisioning the studentProvisioning
+     */
     public AdminBootstrapRunner(
             AdminBootstrapPolicy policy,
             StudentRepository studentRepository,

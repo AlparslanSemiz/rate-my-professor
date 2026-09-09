@@ -30,6 +30,9 @@ import org.springframework.http.HttpStatus;
  */
 public final class KeysetPage {
 
+    /**
+     * The MAX_LIMIT.
+     */
     public static final int MAX_LIMIT = 100;
 
     private static final String LIMIT_MESSAGE =
@@ -41,6 +44,10 @@ public final class KeysetPage {
     /**
      * A page of rows and the cursor that resumes after them, or {@code null} when the page is
      * the last one.
+     *
+     * @param <T> the type parameter
+     * @param items the items
+     * @param nextCursor the nextCursor
      */
     public record Slice<T>(List<T> items, String nextCursor) {
     }
@@ -48,6 +55,9 @@ public final class KeysetPage {
     /**
      * The limit for a listing where absent means "do not paginate" -- which is not the same
      * as a default page size, and is why this returns a boxed {@code Integer}.
+     *
+     * @param rawLimit the rawLimit
+     * @return the result
      */
     public static Integer optionalLimit(String rawLimit) {
         if (rawLimit == null || rawLimit.isBlank()) {
@@ -56,7 +66,13 @@ public final class KeysetPage {
         return bounded(rawLimit);
     }
 
-    /** The limit for a listing that always paginates, falling back to {@code fallback}. */
+    /**
+     * The limit for a listing that always paginates, falling back to {@code fallback}.
+     *
+     * @param rawLimit the rawLimit
+     * @param fallback the fallback
+     * @return the result
+     */
     public static int limitOr(String rawLimit, int fallback) {
         if (rawLimit == null || rawLimit.isBlank()) {
             return fallback;
@@ -82,6 +98,11 @@ public final class KeysetPage {
      * everything from that point would quietly ignore half of what was asked. Call this
      * before decoding the cursor: how the request is formed is the more fundamental
      * complaint than what the cursor happens to contain.
+     *
+     * @param hasCursor the hasCursor
+     * @param limit the limit
+     *
+     * @throws ApiException if the operation fails
      */
     public static void requireLimitWithCursor(boolean hasCursor, Integer limit) {
         if (hasCursor && limit == null) {
@@ -89,7 +110,12 @@ public final class KeysetPage {
         }
     }
 
-    /** The total ordering every cursor in this codebase is defined against. */
+    /**
+     * The total ordering every cursor in this codebase is defined against.
+     *
+     * @param direction the direction
+     * @return the result
+     */
     public static Sort byCreatedAtThenId(Sort.Direction direction) {
         return Sort.by(new Sort.Order(direction, "createdAt"), new Sort.Order(direction, "id"));
     }
@@ -98,6 +124,14 @@ public final class KeysetPage {
      * Resumes the {@code (createdAt, id)} ordering strictly after the cursor's row. The id is
      * the tie-breaker and is what makes the ordering total -- two rows can share a timestamp,
      * and without it a page boundary that falls between them drops or repeats one.
+     *
+     * @param <Y> the type parameter
+     * @param builder the builder
+     * @param root the root
+     * @param createdAt the createdAt
+     * @param id the id
+     * @param direction the direction
+     * @return the result
      */
     public static <Y extends Comparable<? super Y>> Predicate after(
             CriteriaBuilder builder,
@@ -132,6 +166,12 @@ public final class KeysetPage {
      *
      * <p>Fetching one row too many is what says there is a next page without a second count
      * query that could disagree with this one.
+     *
+     * @param <T> the type parameter
+     * @param fetched the fetched
+     * @param limit the limit
+     * @param encodeCursor the encodeCursor
+     * @return the result
      */
     public static <T> Slice<T> of(List<T> fetched, int limit, Function<T, String> encodeCursor) {
         boolean hasNext = fetched.size() > limit;

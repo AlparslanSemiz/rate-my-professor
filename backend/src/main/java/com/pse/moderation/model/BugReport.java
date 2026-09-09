@@ -4,6 +4,15 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.pse.user.model.Student;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -12,11 +21,14 @@ import com.pse.shared.enums.ReportStatus;
 import com.pse.shared.enums.BugSeverity;
 import com.pse.shared.enums.IssueState;
 
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+
+/**
+ * Provides BugReport.
+ */
 @Entity
 @Table(name = "bug_reports")
 @Getter

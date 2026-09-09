@@ -3,22 +3,32 @@ package com.pse.moderation.model;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.CreationTimestamp;
 
 import com.pse.user.model.Student;
 
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Provides Admin.
+ */
 @Entity
 @Table(
         name = "admins",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = "student_id")
-        }
+        uniqueConstraints = {@UniqueConstraint(columnNames = "student_id")}
 )
+
+
 @Getter
 @Setter
 @NoArgsConstructor

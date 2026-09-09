@@ -12,6 +12,11 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * {@code POST /reports/{id}/gitlab-issue} answers 503 and {@code GET /system/status} reports
  * {@code gitlabEnabled=false}. The token is read from the environment and is never returned
  * by any endpoint.
+ *
+ * @param baseUrl the baseUrl
+ * @param projectId the projectId
+ * @param token the token
+ * @param timeout the timeout
  */
 @ConfigurationProperties(prefix = "app.gitlab")
 public record GitLabProperties(

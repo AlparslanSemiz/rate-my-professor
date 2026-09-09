@@ -26,7 +26,12 @@ public final class ProfessorRatings {
     private ProfessorRatings() {
     }
 
-    /** Every rating on every lecture this professor teaches. */
+    /**
+     * Every rating on every lecture this professor teaches.
+     *
+     * @param professor the professor
+     * @return the result
+     */
     public static List<Rating> of(Professor professor) {
         return professor.getLectures().stream()
                 .map(Lecture::getRatings)
@@ -34,7 +39,12 @@ public final class ProfessorRatings {
                 .toList();
     }
 
-    /** The professor's overall rating: {@code 0.0} when nobody has rated them. */
+    /**
+     * The professor's overall rating: {@code 0.0} when nobody has rated them.
+     *
+     * @param professor the professor
+     * @return the result
+     */
     public static double average(Professor professor) {
         return RatingAverages.overallAcross(of(professor));
     }

@@ -30,6 +30,13 @@ public class UserRevertHandler implements AuditRevertHandler {
     private final AdminRepository adminRepository;
     private final StudentProfileService profiles;
 
+    /**
+     * Creates UserRevertHandler.
+     *
+     * @param studentRepository the studentRepository
+     * @param adminRepository the adminRepository
+     * @param profiles the profiles
+     */
     public UserRevertHandler(
             StudentRepository studentRepository,
             AdminRepository adminRepository,

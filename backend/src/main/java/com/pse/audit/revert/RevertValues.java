@@ -39,6 +39,10 @@ public final class RevertValues {
      * made the defect look flaky in production rather than broken.
      *
      * <p>Sorted, not de-duplicated: two of the same entry is still a different value from one.
+     *
+     * @param recorded the recorded
+     * @param current the current
+     * @return the result
      */
     public static boolean sameValue(Object recorded, Object current) {
         if (recorded == null || current == null) {
@@ -57,11 +61,25 @@ public final class RevertValues {
         return values.stream().map(String::valueOf).sorted().toList();
     }
 
+    /**
+     * Returns asString.
+     *
+     * @param before the before
+     * @param field the field
+     * @return the result
+     */
     public static String asString(Map<String, Object> before, String field) {
         Object value = before.get(field);
         return value == null ? null : String.valueOf(value);
     }
 
+    /**
+     * Returns asInteger.
+     *
+     * @param before the before
+     * @param field the field
+     * @return the result
+     */
     public static Integer asInteger(Map<String, Object> before, String field) {
         Object value = before.get(field);
         if (value == null) {
@@ -73,6 +91,13 @@ public final class RevertValues {
         return parsed(field, () -> Integer.valueOf(String.valueOf(value).trim()));
     }
 
+    /**
+     * Returns asBoolean.
+     *
+     * @param before the before
+     * @param field the field
+     * @return the result
+     */
     public static Boolean asBoolean(Map<String, Object> before, String field) {
         Object value = before.get(field);
         if (value == null) {
@@ -84,6 +109,15 @@ public final class RevertValues {
         return Boolean.valueOf(String.valueOf(value).trim());
     }
 
+    /**
+     * Returns asEnum.
+     *
+     * @param before the before
+     * @param field the field
+     * @param type the type
+     * @return the result
+     * @param <E> the type parameter
+     */
     public static <E extends Enum<E>> E asEnum(
             Map<String, Object> before,
             String field,
@@ -99,6 +133,10 @@ public final class RevertValues {
     /**
      * A recorded list of ids. The catalogue records lecture and professor assignments as
      * lists of UUID strings, which is what a reassignment has to be given back.
+     *
+     * @param before the before
+     * @param field the field
+     * @return the result
      */
     public static List<UUID> asIds(Map<String, Object> before, String field) {
         Object value = before.get(field);

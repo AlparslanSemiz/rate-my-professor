@@ -1,6 +1,5 @@
 package com.pse.social.service;
 
-import java.util.UUID;
 
 import com.pse.shared.util.Uuids;
 import com.pse.audit.model.AuditAction;
@@ -33,6 +32,14 @@ public class AnswerService {
     private final NotificationRepository notificationRepository;
     private final AuditWriter auditWriter;
 
+    /**
+     * Creates AnswerService.
+     *
+     * @param commentRepository the commentRepository
+     * @param answerRepository the answerRepository
+     * @param notificationRepository the notificationRepository
+     * @param auditWriter the auditWriter
+     */
     public AnswerService(
             CommentRepository commentRepository,
             AnswerRepository answerRepository,
@@ -45,6 +52,14 @@ public class AnswerService {
         this.auditWriter = auditWriter;
     }
 
+    /**
+     * Returns submitAnswer.
+     *
+     * @param student the student
+     * @param request the request
+     * @throws ApiException if comment not found
+     * @return the result
+     */
     @Transactional
     public BasicResponse submitAnswer(Student student, AnswerSubmitRequest request) {
 

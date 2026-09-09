@@ -26,6 +26,12 @@ public class WarningRevertHandler implements AuditRevertHandler {
     private final WarningRepository warningRepository;
     private final WarningService warnings;
 
+    /**
+     * Creates WarningRevertHandler.
+     *
+     * @param warningRepository the warningRepository
+     * @param warnings the warnings
+     */
     public WarningRevertHandler(
             WarningRepository warningRepository,
             WarningService warnings

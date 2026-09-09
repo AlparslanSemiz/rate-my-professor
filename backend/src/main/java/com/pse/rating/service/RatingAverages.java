@@ -42,6 +42,7 @@ public final class RatingAverages {
      * {@code RatingService.submitRating} stores as the rating's {@code OVERALL} topic.
      *
      * @return {@code 0} for a rating carrying no weighted topic at all
+     * @param rating the rating
      */
     public static double weightedScore(Rating rating) {
         double weightedSum = 0;
@@ -70,6 +71,7 @@ public final class RatingAverages {
      * each of these ratings. Ratings without one do not count towards the divisor.
      *
      * @return {@code 0.0} when none of the ratings carries an {@code OVERALL} topic
+     * @param ratings the ratings
      */
     public static double overallAcross(Collection<Rating> ratings) {
         double sum = 0.0;
@@ -92,6 +94,7 @@ public final class RatingAverages {
      * average out, re-derived rather than read off the {@code OVERALL} topic.
      *
      * @return {@code 0} when there are no ratings
+     * @param ratings the ratings
      */
     public static double scoreAcross(Collection<Rating> ratings) {
         if (ratings.isEmpty()) {

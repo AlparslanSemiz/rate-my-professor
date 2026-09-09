@@ -27,6 +27,15 @@ public class LoginCodeService {
     private final LoginCodeDelivery loginCodeDelivery;
     private final RateLimitProperties rateLimits;
 
+    /**
+     * Creates LoginCodeService.
+     *
+     * @param studentRepository the studentRepository
+     * @param otpService the otpService
+     * @param rateLimitService the rateLimitService
+     * @param loginCodeDelivery the loginCodeDelivery
+     * @param rateLimits the rateLimits
+     */
     public LoginCodeService(
             StudentRepository studentRepository,
             OtpService otpService,
@@ -41,6 +50,15 @@ public class LoginCodeService {
         this.rateLimits = rateLimits;
     }
 
+    /**
+     * Returns requestLogin.
+     *
+     * @param request the request
+     * @param httpRequest the httpRequest
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     public BasicResponse requestLogin(OTPRequest request, HttpServletRequest httpRequest) {
         String email = KitEmail.requireKitAddress(request.email());
         String emailSubject = rateLimitService.emailSubject(email);

@@ -13,6 +13,9 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Provides OtpService.
+ */
 @Service
 public class OtpService {
 
@@ -20,6 +23,13 @@ public class OtpService {
     private final Clock clock;
     private final Duration ttl;
 
+    /**
+     * Creates OtpService.
+     *
+     * @param repository the repository
+     * @param clock the clock
+     * @param properties the properties
+     */
     public OtpService(
             OneTimePasswordRepository repository,
             Clock clock,
@@ -30,6 +40,12 @@ public class OtpService {
         this.ttl = properties.otpTtl();
     }
 
+    /**
+     * Returns issue.
+     *
+     * @param normalizedEmail the normalizedEmail
+     * @return the result
+     */
     @Transactional
     public String issue(String normalizedEmail) {
         repository.consumeOutstandingForEmail(normalizedEmail);
@@ -43,11 +59,23 @@ public class OtpService {
         return code;
     }
 
+    /**
+     * Executes invalidate.
+     *
+     * @param normalizedEmail the normalizedEmail
+     */
     @Transactional
     public void invalidate(String normalizedEmail) {
         repository.consumeOutstandingForEmail(normalizedEmail);
     }
 
+    /**
+     * Checks consume.
+     *
+     * @param normalizedEmail the normalizedEmail
+     * @param submittedCode the submittedCode
+     * @return the result
+     */
     @Transactional
     public boolean consume(String normalizedEmail, String submittedCode) {
         List<OneTimePassword> candidates =

@@ -15,6 +15,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Provides AuditWriter.
+ */
 @Service
 public class AuditWriter {
 
@@ -23,6 +26,11 @@ public class AuditWriter {
 
     private final AuditLogRepository repository;
 
+    /**
+     * Creates AuditWriter.
+     *
+     * @param repository the repository
+     */
     public AuditWriter(AuditLogRepository repository) {
         this.repository = repository;
     }
@@ -30,6 +38,15 @@ public class AuditWriter {
     /**
      * Records an administrative action. Joins the caller's transaction on purpose, so a
      * failing audit insert rolls the domain mutation back with it.
+     *
+     * @param actor the actor
+     * @param action the action
+     * @param targetType the targetType
+     * @param targetId the targetId
+     * @param targetLabel the targetLabel
+     * @param changes the changes
+     * @param metadata the metadata
+     * @return the result
      */
     public AuditLog write(
             Admin actor,
@@ -56,6 +73,14 @@ public class AuditWriter {
     /**
      * Records something a user did in the student app. Joins the caller's transaction
      * for the same reason {@link #write} does.
+     *
+     * @param actor the actor
+     * @param action the action
+     * @param targetType the targetType
+     * @param targetId the targetId
+     * @param targetLabel the targetLabel
+     * @param metadata the metadata
+     * @return the result
      */
     public AuditLog writeStudentAction(
             Student actor,
@@ -82,6 +107,15 @@ public class AuditWriter {
      * Records a refused request in its own transaction. The caller is about to answer
      * with an error and roll its own work back, which would take a record written in
      * the caller's transaction with it.
+     *
+     * @param actor the actor
+     * @param admin the admin
+     * @param action the action
+     * @param targetType the targetType
+     * @param targetId the targetId
+     * @param targetLabel the targetLabel
+     * @param metadata the metadata
+     * @return the result
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AuditLog writeRefusal(
@@ -135,12 +169,28 @@ public class AuditWriter {
         return repository.saveAndFlush(log);
     }
 
+    /**
+     * Returns change.
+     *
+     * @param field the field
+     * @param before the before
+     * @param after the after
+     * @return the result
+     */
     public static Map<String, Object> change(String field, Object before, Object after) {
         Map<String, Object> changes = new LinkedHashMap<>();
         changes.put(field, Map.of("before", before, "after", after));
         return changes;
     }
 
+    /**
+     * Returns nullableChange.
+     *
+     * @param field the field
+     * @param before the before
+     * @param after the after
+     * @return the result
+     */
     public static Map<String, Object> nullableChange(String field, Object before, Object after) {
         Map<String, Object> changes = new LinkedHashMap<>();
         changes.put(field, value(before, after));
@@ -153,6 +203,10 @@ public class AuditWriter {
      *
      * <p>Null-tolerant, unlike {@link #change}: {@code Map.of} rejects a null value and a
      * cleared biography or a removed display name is a legitimate {@code after}.
+     *
+     * @param before the before
+     * @param after the after
+     * @return the result
      */
     public static Map<String, Object> value(Object before, Object after) {
         Map<String, Object> value = new LinkedHashMap<>();
@@ -169,6 +223,10 @@ public class AuditWriter {
      * the action is classified. The inverse of a creation is a deletion, which is its own
      * action with its own guards. Spelling the key by hand at eleven call sites made that
      * contract a string literal; a typo would have quietly made the entry revertible.
+     *
+     * @param before the before
+     * @param after the after
+     * @return the result
      */
     public static Map<String, Object> lifecycle(boolean before, boolean after) {
         return change("exists", before, after);

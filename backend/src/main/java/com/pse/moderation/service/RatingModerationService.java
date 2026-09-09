@@ -50,6 +50,15 @@ public class RatingModerationService {
     private final AuditWriter auditWriter;
     private final KeysetCursorCodec cursorCodec;
 
+    /**
+     * Creates RatingModerationService.
+     *
+     * @param ratingRepository the ratingRepository
+     * @param warningRepository the warningRepository
+     * @param adminRepository the adminRepository
+     * @param auditWriter the auditWriter
+     * @param cursorCodec the cursorCodec
+     */
     public RatingModerationService(
             RatingRepository ratingRepository,
             WarningRepository warningRepository,
@@ -72,6 +81,11 @@ public class RatingModerationService {
      * <p>Pagination is opt-in in the same way {@code GET /users} is: no {@code limit} returns
      * everything and a null cursor, so a caller that has not learned to follow cursors is not
      * silently truncated.
+     *
+     * @param rawLimit the rawLimit
+     * @param rawCursor the rawCursor
+     * @param rawLectureId the rawLectureId
+     * @return the result
      */
     @Transactional(readOnly = true)
     public ManagedRatingsResponse getRatings(String rawLimit, String rawCursor, String rawLectureId) {
@@ -150,6 +164,10 @@ public class RatingModerationService {
      * Discards a rating. Deliberately delete-only: rewriting someone's scores would put
      * an opinion they never gave into the lecture average, so a bogus rating is removed
      * rather than corrected.
+     *
+     * @param principal the principal
+     * @param ratingId the ratingId
+     * @return the result
      */
     @Transactional
     public BasicResponse deleteRating(AuthenticatedUser principal, UUID ratingId) {

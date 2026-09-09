@@ -35,12 +35,18 @@ public class LectureController {
 
     private final LectureService lectureService;
 
+    /**
+     * Creates LectureController.
+     *
+     * @param lectureService the lectureService
+     */
     public LectureController(LectureService lectureService) {
         this.lectureService = lectureService;
     }
 
     /**
-     * Retrieving all lectures in a List
+     * Retrieving all lectures in a List.
+     *
      * @return : See .success() and .message() for further information
      */
     @GetMapping("/lectures")
@@ -49,7 +55,8 @@ public class LectureController {
     }
 
     /**
-     * Retrieving one lecture
+     * Retrieving one lecture.
+     *
      * @param lecture_id ID of the retrieving Lecture
      * @return : See .success() and .message() for further information
      */
@@ -61,10 +68,11 @@ public class LectureController {
 
     /**
      * Add one Lecture
-     * AuthToken needs to be connected to an Admin
-     * @param authHeader (needs administrator privileges)
+     * AuthToken needs to be connected to an Admin.
+     *
      * @param request (see wiki for details)
      * @return : See .success() and .message() for further information
+     * @param principal the principal
      */
     @PostMapping("/lectures")
     public BasicResponse addLecture(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody AddLectureRequest request) {

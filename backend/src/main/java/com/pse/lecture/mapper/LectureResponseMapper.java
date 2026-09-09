@@ -21,8 +21,7 @@ import com.pse.rating.service.RatingAverages;
  */
 public final class LectureResponseMapper {
 
-    private LectureResponseMapper() {
-    }
+
 
     /**
      * Orders the teaching staff of a lecture: last name, then first name, then id.
@@ -41,6 +40,18 @@ public final class LectureResponseMapper {
                     .thenComparing(Professor::getFirstName)
                     .thenComparing(Professor::getId);
 
+
+
+    private LectureResponseMapper() {
+    }
+
+
+    /**
+     * Returns toResponse.
+     *
+     * @param lecture the lecture
+     * @return the result
+     */
     public static LectureResponse toResponse(Lecture lecture) {
 
         // Sorted, not iterated as it comes. lecture.getProfessors() is a Set and Professor

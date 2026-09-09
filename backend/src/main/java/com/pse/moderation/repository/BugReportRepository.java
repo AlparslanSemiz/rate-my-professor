@@ -17,13 +17,33 @@ import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Defines BugReportRepository.
+ */
 public interface BugReportRepository extends JpaRepository<BugReport, UUID> {
 
+    /**
+     * Returns findAllByOrderByCreatedAtDesc.
+     *
+     * @return the result
+     */
     @EntityGraph(attributePaths = "reporter")
     List<BugReport> findAllByOrderByCreatedAtDesc();
 
+    /**
+     * Returns countByStatus.
+     *
+     * @param status the status
+     * @return the result
+     */
     long countByStatus(ReportStatus status);
 
+    /**
+     * Returns findByIdForUpdate.
+     *
+     * @param id the id
+     * @return the result
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = "reporter")
     @Query("select report from BugReport report where report.id = :id")

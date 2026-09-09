@@ -20,6 +20,14 @@ public final class UserReferenceMapper {
     private UserReferenceMapper() {
     }
 
+    /**
+     * Returns toReference.
+     *
+     * @param student the student
+     * @param adminIds the adminIds
+     * @param warningCounts the warningCounts
+     * @return the result
+     */
     public static UserReferenceResponse toReference(
             Student student,
             Set<UUID> adminIds,

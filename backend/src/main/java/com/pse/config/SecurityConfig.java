@@ -15,9 +15,22 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Provides SecurityConfig.
+ */
 @Configuration
 public class SecurityConfig {
 
+    /**
+     * Returns securityFilterChain.
+     *
+     * @param http the http
+     * @param bearerTokenFilter the bearerTokenFilter
+     * @param accessRefusalAuditor the accessRefusalAuditor
+     * @param objectMapper the objectMapper
+     * @return the result
+     * @throws Exception if the filter chain cannot be built
+     */
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,

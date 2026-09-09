@@ -30,6 +30,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
+/**
+ * Provides SystemStatusService.
+ */
 @Service
 public class SystemStatusService {
 
@@ -55,6 +58,24 @@ public class SystemStatusService {
     private final GitLabClient gitLabClient;
     private final LoginLocationService loginLocationService;
 
+    /**
+     * Creates SystemStatusService.
+     *
+     * @param jdbcTemplate the jdbcTemplate
+     * @param applicationContext the applicationContext
+     * @param clock the clock
+     * @param studentRepository the studentRepository
+     * @param adminRepository the adminRepository
+     * @param lectureRepository the lectureRepository
+     * @param commentRepository the commentRepository
+     * @param answerRepository the answerRepository
+     * @param ratingRepository the ratingRepository
+     * @param commentReportRepository the commentReportRepository
+     * @param bugReportRepository the bugReportRepository
+     * @param auditLogRepository the auditLogRepository
+     * @param gitLabClient the gitLabClient
+     * @param loginLocationService the loginLocationService
+     */
     public SystemStatusService(
             JdbcTemplate jdbcTemplate,
             ApplicationContext applicationContext,
@@ -91,6 +112,8 @@ public class SystemStatusService {
      * Deliberately not transactional: a failing database is a documented outcome of this
      * endpoint, and opening a transaction first would turn it into a 500 before the
      * failure could be reported.
+     *
+     * @return the result
      */
     public SystemStatusResponse getStatus() {
         Instant now = Instant.now(clock);

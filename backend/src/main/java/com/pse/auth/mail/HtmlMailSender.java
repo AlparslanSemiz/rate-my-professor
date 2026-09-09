@@ -37,6 +37,13 @@ public class HtmlMailSender {
     private final String senderMail;
     private final String senderName;
 
+    /**
+     * Creates HtmlMailSender.
+     *
+     * @param mailSender the mailSender
+     * @param senderMail the senderMail
+     * @param senderName the senderName
+     */
     public HtmlMailSender(
             JavaMailSender mailSender,
             @Value("${app.mail.from-address}") String senderMail,
@@ -47,6 +54,15 @@ public class HtmlMailSender {
         this.senderName = senderName;
     }
 
+    /**
+     * Executes send.
+     *
+     * @param to the to
+     * @param subject the subject
+     * @param htmlBody the htmlBody
+     *
+     * @throws IllegalStateException if the operation fails
+     */
     public void send(String to, String subject, String htmlBody) {
 
         MimeMessage message = mailSender.createMimeMessage();

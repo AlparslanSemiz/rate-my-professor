@@ -20,14 +20,25 @@ import java.util.UUID;
  */
 public interface IdCount {
 
+    /**
+     * Simple Getter.
+     * @return the id
+     */
     UUID getId();
 
+    /**
+     * Simple Getter.
+     * @return the count
+     */
     long getCount();
 
     /**
      * Collapses the rows into the lookup the callers actually want. A {@code HashMap} and a
      * loop rather than {@code Collectors.toMap}, which throws on a null key -- a grouped
      * column is not guaranteed non-null and the previous code tolerated one.
+     *
+     * @param rows the rows
+     * @return the result
      */
     static Map<UUID, Integer> asMap(List<IdCount> rows) {
         Map<UUID, Integer> counts = new HashMap<>();

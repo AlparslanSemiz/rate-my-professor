@@ -33,6 +33,13 @@ public class BugReportIssueTransactions {
     private final GitLabClient gitLabClient;
     private final AuditWriter auditWriter;
 
+    /**
+     * Creates BugReportIssueTransactions.
+     *
+     * @param repository the repository
+     * @param gitLabClient the gitLabClient
+     * @param auditWriter the auditWriter
+     */
     public BugReportIssueTransactions(
             BugReportRepository repository,
             GitLabClient gitLabClient,
@@ -49,6 +56,10 @@ public class BugReportIssueTransactions {
      * <p>The row is locked for the duration, which is what makes this idempotent against a
      * double-click and against two admins working the same queue: the second caller waits
      * and then sees {@code CREATED} rather than opening a duplicate issue.
+     *
+     * @param principal the principal
+     * @param reportId the reportId
+     * @return the result
      */
     @Transactional
     public Attempt createOrReturnExisting(AuthenticatedUser principal, UUID reportId) {
@@ -82,6 +93,8 @@ public class BugReportIssueTransactions {
     /**
      * Records that creation was tried and did not work, in its own transaction so it outlives
      * the failure. Not audited: nothing about the report changed that an administrator did.
+     *
+     * @param reportId the reportId
      */
     @Transactional
     public void markFailed(UUID reportId) {
@@ -111,7 +124,13 @@ public class BugReportIssueTransactions {
                 + "Bug report id: " + report.getId();
     }
 
-    /** @param existing whether the issue was already there, rather than opened just now */
+    /**
+     * Creates Attempt.
+     *
+     * @param url the url
+     * @param iid the iid
+     * @param existing whether the issue was already there, rather than opened just now
+     */
     public record Attempt(String url, Integer iid, boolean existing) {
     }
 }

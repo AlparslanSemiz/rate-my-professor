@@ -46,6 +46,16 @@ public class ModerationAnswerReportService {
     private final AuditWriter auditWriter;
     private final Clock clock;
 
+    /**
+     * Creates ModerationAnswerReportService.
+     *
+     * @param reportRepository the reportRepository
+     * @param answerRepository the answerRepository
+     * @param warningRepository the warningRepository
+     * @param adminRepository the adminRepository
+     * @param auditWriter the auditWriter
+     * @param clock the clock
+     */
     public ModerationAnswerReportService(
             AnswerReportRepository reportRepository,
             AnswerRepository answerRepository,
@@ -62,6 +72,11 @@ public class ModerationAnswerReportService {
         this.clock = clock;
     }
 
+    /**
+     * Returns getReportedAnswers.
+     *
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public ReportedAnswersResponse getReportedAnswers() {
         Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
@@ -76,6 +91,16 @@ public class ModerationAnswerReportService {
         return new ReportedAnswersResponse("Success", true, answers);
     }
 
+    /**
+     * Returns updateReportStatus.
+     *
+     * @param principal the principal
+     * @param reportId the reportId
+     * @param status the status
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse updateReportStatus(
             AuthenticatedUser principal,
@@ -130,6 +155,10 @@ public class ModerationAnswerReportService {
     /**
      * Removes the report record itself. The reported answer is untouched: withdrawing a
      * report that should not have been filed is not a judgement on the content.
+     *
+     * @param principal the principal
+     * @param reportId the reportId
+     * @return the result
      */
     @Transactional
     public BasicResponse deleteReport(AuthenticatedUser principal, UUID reportId) {
