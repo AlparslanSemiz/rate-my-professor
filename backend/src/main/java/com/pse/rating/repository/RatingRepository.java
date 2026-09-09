@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import com.pse.rating.model.Rating;
+import org.springframework.data.jpa.repository.Query;
 
 /**
  * Defines RatingRepository.
@@ -21,7 +22,13 @@ public interface RatingRepository
      * @param lectureId the lectureId
      * @return the result
      */
-    List<Rating> findByLectureId(UUID lectureId);
+    @Query("""
+    SELECT r
+    FROM Rating r
+    WHERE r.lecture.id = :lectureId
+      AND r.student.status = com.pse.user.model.StudentStatus.ACTIVE
+    """)
+    List<Rating> findActiveByLectureId(UUID lectureId);
 
 
     /**

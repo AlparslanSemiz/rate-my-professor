@@ -401,7 +401,7 @@ class RatingServiceTests {
                 topic(RatingCategory.PROFESSOR_ENGAGEMENT, 5.0),
                 topic(RatingCategory.ORGANIZATION, 2.0),
                 topic(RatingCategory.EXERCISE_PACE, 1.0)));
-        when(ratingRepository.findByLectureId(lectureId)).thenReturn(List.of(rating));
+        when(ratingRepository.findActiveByLectureId(lectureId)).thenReturn(List.of(rating));
 
         RatingsAverageResponse response = ratingService.getRatings(lectureId);
 
@@ -445,7 +445,7 @@ class RatingServiceTests {
                 .thenReturn(List.of(second));
 
         when(ratingRepository
-                .findByLectureId(lectureId))
+                .findActiveByLectureId(lectureId))
                 .thenReturn(
                         List.of(
                                 rating1,
@@ -476,7 +476,7 @@ class RatingServiceTests {
 
         UUID lectureId = UUID.randomUUID();
 
-        when(ratingRepository.findByLectureId(lectureId))
+        when(ratingRepository.findActiveByLectureId(lectureId))
                 .thenReturn(List.of());
 
 

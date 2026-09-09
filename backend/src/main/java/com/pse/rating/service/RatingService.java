@@ -16,6 +16,7 @@ import com.pse.rating.dto.response.RatingCategoriesResponse;
 import com.pse.rating.dto.response.RatingCategoryResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
 import com.pse.rating.model.RatingCategory;
+import com.pse.shared.enums.UserStatus;
 import com.pse.shared.error.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -153,7 +154,7 @@ public class RatingService {
     @Transactional(readOnly = true)
     public RatingsAverageResponse getRatings(UUID lectureId) {
 
-        List<Rating> ratings = ratingRepository.findByLectureId(lectureId);
+        List<Rating> ratings = ratingRepository.findActiveByLectureId(lectureId);
 
         // EnumMap, not HashMap: Enum.hashCode is the identity hash, so a HashMap's key order
         // is decided by where the JVM put the constants -- different between two runs of the
