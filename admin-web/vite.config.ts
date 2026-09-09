@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import { loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -24,6 +25,17 @@ export default defineConfig(({ command, mode }) => {
     base: command === 'build' ? (process.env.VITE_BASE_PATH ?? '/admin/') : '/',
     plugins: [react()],
     /**
+     * `@/` resolves to `src/`, so a module is imported by where it lives rather than by how
+     * far the importing file happens to sit from it. Vitest reads this config, so the alias
+     * holds in tests too; the matching declaration for the type-checker is `paths` in
+     * `tsconfig.app.json`, and the two have to be changed together.
+     */
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
+    },
+    /**
      * In production the panel is served from the same host as the API, so every call is
      * same-origin. This proxy gives development the same shape: the browser calls
      * `/api/...` on the dev server, which forwards to the backend. Without it the backend
@@ -47,6 +59,22 @@ export default defineConfig(({ command, mode }) => {
       environment: 'jsdom',
       setupFiles: './src/test/setup.ts',
       css: true,
+      /**
+       * `all: true` so a file no test imports counts as zero rather than disappearing from
+       * the report — the point of the baseline is to show what is uncovered.
+       *
+       * No thresholds. `docs/TODO.md` decided on thresholds at target from day one, which is
+       * deliberately red until roughly Phase 6 of the test strategy; that would leave the
+       * refactor without a pass/fail signal of its own. They are enforced on the
+       * `test-strategy` branch instead, where a red suite is the intended state.
+       */
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'html', 'lcov'],
+        all: true,
+        include: ['src/**'],
+        exclude: ['src/main.tsx', 'src/vite-env.d.ts', '**/*.d.ts', 'src/test/**'],
+      },
     },
   }
 })

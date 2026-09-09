@@ -44,3 +44,6 @@ STATUS.md
 BACKEND-PROMPT.md
 FRONTEND-TASKS.md
 ISSUES.md
+
+# Coverage reports (npm run test:coverage)
+coverage/
