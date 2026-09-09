@@ -1,18 +1,19 @@
 import { Box, type CSSProperties } from '@mantine/core'
 import { Navigate } from 'react-router-dom'
-import ErrorAlert from '../../components/ErrorAlert'
-import Panel from '../../components/Panel'
-import { useAuth } from '../../context/useAuth'
+import ErrorAlert from '@/components/ErrorAlert'
+import Panel from '@/components/Panel'
+import { useAuth } from '@/context/useAuth'
 import LoginCardHeader from './components/LoginCardHeader'
 import LoginForms from './components/LoginForms'
 import { useLoginFlow } from './hooks/useLoginFlow'
+import { chrome } from '@/theme'
 
 const pageStyle: CSSProperties = {
   minHeight: '100vh',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: '#0f1117',
+  background: chrome.surfaceSunken,
 }
 const cardStyle: CSSProperties = {
   width: 400,

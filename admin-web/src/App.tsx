@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { MantineProvider } from '@mantine/core'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -7,6 +8,7 @@ import PageLoader from './components/PageLoader'
 import ProtectedRoute from './components/ProtectedRoute'
 import { theme } from './theme'
 import { routes } from './constants/routes'
+import { createQueryClient } from './query'
 
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'))
 const LoginPage = lazy(() => import('./features/auth/LoginPage'))
@@ -19,6 +21,11 @@ const LoginPage = lazy(() => import('./features/auth/LoginPage'))
 const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '') || undefined
 
 export default function App() {
+  // One client per mounted app, not per module. At module scope a test rendering `App` twice
+  // would have the second render read the first one's cache, which is exactly the kind of
+  // order dependence the suite is kept free of.
+  const [queryClient] = useState(createQueryClient)
+
   return (
     <MantineProvider theme={theme} defaultColorScheme="dark">
       {/* Last line of defence. Without it a render error anywhere below leaves the operator
@@ -28,23 +35,25 @@ export default function App() {
         retryLabel="Reload the panel"
         onReset={() => window.location.reload()}
       >
-        <AuthProvider>
-          <BrowserRouter basename={routerBasename}>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path={routes.login} element={<LoginPage />} />
-                <Route
-                  path="/*"
-                  element={
-                    <ProtectedRoute>
-                      <AdminLayout />
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <BrowserRouter basename={routerBasename}>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path={routes.login} element={<LoginPage />} />
+                  <Route
+                    path="/*"
+                    element={
+                      <ProtectedRoute>
+                        <AdminLayout />
+                      </ProtectedRoute>
+                    }
+                  />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </AuthProvider>
+        </QueryClientProvider>
       </ErrorBoundary>
     </MantineProvider>
   )

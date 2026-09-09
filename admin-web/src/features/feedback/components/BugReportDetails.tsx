@@ -1,16 +1,17 @@
 import { useState, type CSSProperties } from 'react'
 import { Box, Button, Group, Text } from '@mantine/core'
 import { IconPencil, IconTrash } from '@tabler/icons-react'
-import type { BugReport, BugReportUpdate } from '../../../api/FeedbackService'
-import ErrorAlert from '../../../components/ErrorAlert'
+import type { BugReport, BugReportUpdate } from '@/api/feedback'
+import ErrorAlert from '@/components/ErrorAlert'
 import BugReportControls from './BugReportControls'
 import BugReportEditForm from './BugReportEditForm'
 import BugReportIssueControl from './BugReportIssueControl'
 import BugReportSummary from './BugReportSummary'
+import { chrome } from '@/theme'
 
 const detailsPanelStyle: CSSProperties = {
-  background: '#0f1117',
-  border: '1px solid #21262d',
+  background: chrome.surfaceSunken,
+  border: `1px solid ${chrome.border}`,
   borderRadius: 10,
   padding: '14px 16px',
 }
@@ -83,10 +84,10 @@ export default function BugReportDetails({
         />
       ) : (
         <Box mb={20} style={detailsPanelStyle}>
-          <Text size="xs" c="#4b5563" mb={4}>
+          <Text size="xs" c={chrome.textFaint} mb={4}>
             Description
           </Text>
-          <Text size="sm" c="#9ca3af">
+          <Text size="sm" c={chrome.textMuted}>
             {report.description}
           </Text>
         </Box>

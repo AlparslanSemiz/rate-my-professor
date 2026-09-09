@@ -1,10 +1,10 @@
 import { SimpleGrid } from '@mantine/core'
 import { IconAlertCircle, IconBug, IconCircleCheck, IconClock } from '@tabler/icons-react'
-import type { BugReport } from '../../../api/FeedbackService'
-import StatCard from '../../../components/StatCard'
-import { statGridCols } from '../../../constants/layout'
-import { countByValue } from '../../../utils/collection'
-import { KIT } from '../../../constants/colors'
+import type { BugReport } from '@/api/feedback'
+import StatCard from '@/components/StatCard'
+import { statGridCols } from '@/constants/layout'
+import { countByValue } from '@/utils/collection'
+import { KIT } from '@/constants/colors'
 
 export default function FeedbackStats({ reports }: { reports: BugReport[] }) {
   return (

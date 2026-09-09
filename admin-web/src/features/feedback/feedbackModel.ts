@@ -1,6 +1,6 @@
 import { IconAlertCircle, IconCircleCheck, IconEye, IconX, type Icon } from '@tabler/icons-react'
-import type { BugReport } from '../../api/FeedbackService'
-import type { ReportStatus } from '../../domain/moderation'
+import type { BugReport } from '@/api/feedback'
+import type { ReportStatus } from '@/domain/moderation'
 
 /**
  * A report is finished once it has been acted on or dismissed. Everything else is still work:

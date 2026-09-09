@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { chrome } from '@/theme'
 
 export const catalogCellStyle: CSSProperties = { padding: '14px 20px' }
 export const catalogNowrapCellStyle: CSSProperties = {
@@ -7,5 +8,5 @@ export const catalogNowrapCellStyle: CSSProperties = {
 }
 
 export function catalogRowStyle(isLast: boolean): CSSProperties {
-  return { borderBottom: isLast ? 'none' : '1px solid #1c2128' }
+  return { borderBottom: isLast ? 'none' : `1px solid ${chrome.borderSubtle}` }
 }

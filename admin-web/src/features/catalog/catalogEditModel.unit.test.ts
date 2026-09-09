@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Lecture, Professor } from '../../api/CatalogService'
+import type { Lecture, Professor } from '@/api/catalog'
 import {
   buildLectureUpdate,
   buildProfessorUpdate,

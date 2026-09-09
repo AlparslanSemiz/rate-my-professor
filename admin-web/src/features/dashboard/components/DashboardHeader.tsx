@@ -1,5 +1,6 @@
 import { Text, type CSSProperties } from '@mantine/core'
-import { useAuth } from '../../../context/useAuth'
+import { useAuth } from '@/context/useAuth'
+import { chrome } from '@/theme'
 
 const titleStyle: CSSProperties = { fontSize: 32, lineHeight: 1.1 }
 
@@ -15,10 +16,10 @@ export default function DashboardHeader() {
 
   return (
     <>
-      <Text fw={700} c="#f1f5f9" mb={4} style={titleStyle}>
+      <Text fw={700} c={chrome.textBright} mb={4} style={titleStyle}>
         Welcome back, {greetingName(user?.name, user?.email)}
       </Text>
-      <Text size="sm" c="#6b7280" mb={32}>
+      <Text size="sm" c={chrome.textDim} mb={32}>
         A quick look at how your community's doing today.
       </Text>
     </>

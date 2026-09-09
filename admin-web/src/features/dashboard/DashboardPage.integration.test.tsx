@@ -3,25 +3,25 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { systemStatusService, type SystemStatus } from '../../api/SystemStatusService'
-import { usersService, type User } from '../../api/UsersService'
-import { AuthProvider } from '../../context/AuthContext'
+import { systemStatusService, type SystemStatus } from '@/api/system'
+import { usersService, type User } from '@/api/users'
+import { AuthProvider } from '@/context/AuthContext'
 import DashboardPage from './DashboardPage'
 
-vi.mock('../../api/AuthService', () => ({
+vi.mock('@/api/auth', () => ({
   authService: {
     me: vi.fn().mockResolvedValue({ success: true, message: 'OK' }),
     logout: vi.fn().mockResolvedValue({ success: true, message: 'Logged out' }),
   },
 }))
 
-vi.mock('../../api/SystemStatusService', () => ({
+vi.mock('@/api/system', () => ({
   systemStatusService: {
     getStatus: vi.fn(),
   },
 }))
 
-vi.mock('../../api/UsersService', () => ({
+vi.mock('@/api/users', () => ({
   usersService: {
     list: vi.fn(),
   },

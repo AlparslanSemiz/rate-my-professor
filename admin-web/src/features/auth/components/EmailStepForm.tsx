@@ -1,7 +1,7 @@
 import { type FormEvent } from 'react'
 import { Button, Stack, TextInput } from '@mantine/core'
 import type { LoginFormsProps } from './LoginForms'
-import { loginInputStyles, submitButtonStyle } from './loginFormStyles'
+import { LOGIN_INPUT_RADIUS, loginInputStyles, submitButtonStyle } from './loginFormStyles'
 
 type EmailStepFormProps = Pick<
   LoginFormsProps,
@@ -32,6 +32,7 @@ export default function EmailStepForm({
           onChange={(event) => onEmailChange(event.currentTarget.value)}
           required
           styles={loginInputStyles}
+          radius={LOGIN_INPUT_RADIUS}
         />
         <Button
           type="submit"

@@ -1,9 +1,9 @@
 import { SimpleGrid } from '@mantine/core'
 import { IconMessage, IconSchool, IconStar, IconUserStar } from '@tabler/icons-react'
-import type { Lecture, Professor } from '../../../api/CatalogService'
-import StatCard from '../../../components/StatCard'
-import { statGridCols } from '../../../constants/layout'
-import { KIT } from '../../../constants/colors'
+import type { Lecture, Professor } from '@/api/catalog'
+import StatCard from '@/components/StatCard'
+import { statGridCols } from '@/constants/layout'
+import { KIT } from '@/constants/colors'
 
 interface CatalogStatsProps {
   lectures: Lecture[]
@@ -21,10 +21,10 @@ export default function CatalogStats({ lectures, professors }: CatalogStatsProps
         label="Professors"
         value={professors.length}
         icon={IconUserStar}
-        accent="#a855f7"
+        accent={KIT.grape}
       />
       <StatCard label="Comments" value={comments} icon={IconMessage} accent={KIT.green} />
-      <StatCard label="Ratings" value={ratings} icon={IconStar} accent="#f59e0b" />
+      <StatCard label="Ratings" value={ratings} icon={IconStar} accent={KIT.orange} />
     </SimpleGrid>
   )
 }

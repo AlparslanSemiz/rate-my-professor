@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { Button, Group, Modal, MultiSelect, Stack, Switch, TextInput } from '@mantine/core'
-import type { Lecture, Professor, ProfessorUpdate } from '../../../api/CatalogService'
-import ErrorAlert from '../../../components/ErrorAlert'
-import { darkInputStyles } from '../../../constants/inputStyles'
-import { darkModalStyles } from '../../../constants/modalStyles'
+import type { Lecture, Professor, ProfessorUpdate } from '@/api/catalog'
+import ErrorAlert from '@/components/ErrorAlert'
 import {
   buildProfessorUpdate,
   canSaveProfessorEdit,
@@ -36,7 +34,6 @@ export default function ProfessorEditModal({
       title="Edit professor"
       centered
       size="lg"
-      styles={darkModalStyles}
     >
       {/* Keyed on the professor so the fields are initial state rather than state kept in
           step with a prop. */}
@@ -93,7 +90,6 @@ function ProfessorEditForm({
               const firstName = event.currentTarget.value
               setDraft((current) => ({ ...current, firstName }))
             }}
-            styles={darkInputStyles}
           />
           <TextInput
             label="Last name"
@@ -102,7 +98,6 @@ function ProfessorEditForm({
               const lastName = event.currentTarget.value
               setDraft((current) => ({ ...current, lastName }))
             }}
-            styles={darkInputStyles}
           />
         </Group>
         <MultiSelect
@@ -116,7 +111,6 @@ function ProfessorEditForm({
           onChange={(lectureIds) => setDraft((current) => ({ ...current, lectureIds }))}
           searchable
           clearable
-          styles={darkInputStyles}
         />
         <Switch
           label="Active"

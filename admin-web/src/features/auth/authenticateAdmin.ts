@@ -1,7 +1,7 @@
-import { ApiError, apiClient } from '../../api/ApiClient'
-import { authService, type AuthUser } from '../../api/AuthService'
-import { isRequiredAdminEmail, withRequiredAdminRole } from '../../utils/adminAccess'
-import { getErrorMessage } from '../../utils/getErrorMessage'
+import { ApiError, apiClient } from '@/api/client'
+import { authService, type AuthUser } from '@/api/auth'
+import { isRequiredAdminEmail, withRequiredAdminRole } from '@/utils/adminAccess'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 
 const LOGIN_ERROR_FALLBACK = 'Login failed'
 export const ADMIN_ACCESS_ERROR = 'Login succeeded, but this account is not authorized for the admin panel.'

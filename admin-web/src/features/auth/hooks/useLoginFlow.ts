@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { apiClient } from '../../../api/ApiClient'
-import { authService } from '../../../api/AuthService'
-import { routes } from '../../../constants/routes'
-import { useAuth } from '../../../context/useAuth'
-import { isRequiredAdminEmail } from '../../../utils/adminAccess'
+import { apiClient } from '@/api/client'
+import { authService } from '@/api/auth'
+import { routes } from '@/constants/routes'
+import { useAuth } from '@/context/useAuth'
+import { isRequiredAdminEmail } from '@/utils/adminAccess'
 import {
   authenticateAdmin,
   getLoginErrorMessage,

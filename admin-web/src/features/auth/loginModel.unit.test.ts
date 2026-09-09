@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { routes } from '../../constants/routes'
+import { routes } from '@/constants/routes'
 import { attemptedPath, isCompleteLoginCode } from './loginModel'
 
 describe('login model', () => {

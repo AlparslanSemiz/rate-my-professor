@@ -1,19 +1,18 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { User } from './api/UsersService'
-import { ApiError, apiClient } from './api/ApiClient'
-import { authService } from './api/AuthService'
-import { usersService } from './api/UsersService'
-import { auditLogsService } from './api/AuditLogsService'
-import { systemStatusService, type SystemStatus } from './api/SystemStatusService'
+import { type User, usersService } from '@/api/users'
+import { ApiError, apiClient } from '@/api/client'
+import { authService } from '@/api/auth'
+import { auditLogsService } from '@/api/logs'
+import { systemStatusService, type SystemStatus } from '@/api/system'
 import { moduleAccent } from './constants/colors'
 import { routes } from './constants/routes'
 import { withAlpha } from './utils/color'
 import App from './App'
 import { SESSION_EXPIRED_MESSAGE } from './features/auth/hooks/useLoginFlow'
 
-vi.mock('./api/AuthService', () => ({
+vi.mock('@/api/auth', () => ({
   authService: {
     requestLoginCode: vi.fn(),
     login: vi.fn(),
@@ -21,20 +20,20 @@ vi.mock('./api/AuthService', () => ({
   },
 }))
 
-vi.mock('./api/SystemStatusService', () => ({
+vi.mock('@/api/system', () => ({
   systemStatusService: {
     getStatus: vi.fn(),
   },
 }))
 
-vi.mock('./api/UsersService', () => ({
+vi.mock('@/api/users', () => ({
   usersService: {
     getAll: vi.fn(),
     list: vi.fn(),
   },
 }))
 
-vi.mock('./api/AuditLogsService', () => ({
+vi.mock('@/api/logs', () => ({
   auditLogsService: {
     getLogs: vi.fn(),
     getMeta: vi.fn(),
@@ -188,17 +187,29 @@ describe('App routing and authentication', () => {
     const oversightNavigation = screen.getByRole('navigation', { name: 'Oversight navigation' })
     expect(oversightNavigation).toHaveTextContent('Audit Logs')
     expect(oversightNavigation).toHaveTextContent('Admin activity')
-    expect(oversightNavigation).toHaveTextContent('Activity Log')
     expect(oversightNavigation).toHaveTextContent('Help')
     // Removed 2026-08-21. `/system/status` is still read by the dashboard, the Users stat
     // cards and the GitLab button — it is the screen that went, not the endpoint.
     expect(oversightNavigation).not.toHaveTextContent('System Status')
+    // Removed 2026-09-09. `/activity-logs` is still served by the backend; the panel simply
+    // has no screen for it any more.
+    expect(oversightNavigation).not.toHaveTextContent('Activity Log')
   })
 
   it('has no System Status route left — the path falls back to the dashboard', async () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(adminUser))
     window.history.pushState({}, '', '/system-status')
+
+    render(<App />)
+
+    await waitFor(() => expect(window.location.pathname).toBe('/dashboard'))
+  })
+
+  it('has no Activity Log route left — the path falls back to the dashboard', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(adminUser))
+    window.history.pushState({}, '', '/activity-logs')
 
     render(<App />)
 

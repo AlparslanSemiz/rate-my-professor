@@ -1,7 +1,7 @@
 import { Anchor, Button, Group } from '@mantine/core'
 import { IconBrandGitlab, IconExternalLink } from '@tabler/icons-react'
-import type { BugReport } from '../../../api/FeedbackService'
-import { KIT } from '../../../constants/colors'
+import type { BugReport } from '@/api/feedback'
+import { KIT } from '@/constants/colors'
 
 interface BugReportIssueControlProps {
   report: BugReport

@@ -10,17 +10,15 @@ import {
   Switch,
   TextInput,
 } from '@mantine/core'
-import type { Lecture, LectureUpdate, Professor } from '../../../api/CatalogService'
-import ErrorAlert from '../../../components/ErrorAlert'
-import { darkInputStyles } from '../../../constants/inputStyles'
-import { darkModalStyles } from '../../../constants/modalStyles'
+import type { Lecture, LectureUpdate, Professor } from '@/api/catalog'
+import ErrorAlert from '@/components/ErrorAlert'
 import {
   LECTURE_TYPES,
   SEMESTER_SEASONS,
   isLectureType,
   isSemesterSeason,
-} from '../../../domain/catalog'
-import { enumLabel } from '../../../utils/enumLabel'
+} from '@/domain/catalog'
+import { enumLabel } from '@/utils/enumLabel'
 import {
   buildLectureUpdate,
   canSaveLectureEdit,
@@ -56,7 +54,6 @@ export default function LectureEditModal({
       title="Edit lecture"
       centered
       size="lg"
-      styles={darkModalStyles}
     >
       {/* Keyed on the lecture so the fields are initial state rather than state kept in
           step with a prop. */}
@@ -104,7 +101,6 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
             const name = event.currentTarget.value
             setDraft((current) => ({ ...current, name }))
           }}
-          styles={darkInputStyles}
         />
         <TextInput
           label="Code"
@@ -113,7 +109,6 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
             const code = event.currentTarget.value
             setDraft((current) => ({ ...current, code }))
           }}
-          styles={darkInputStyles}
         />
         <Group grow align="flex-start">
           <NumberInput
@@ -129,7 +124,6 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
             max={2999}
             clampBehavior="strict"
             allowDecimal={false}
-            styles={darkInputStyles}
           />
           <Select
             label="Semester season"
@@ -141,7 +135,6 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
               }
             }}
             clearable={false}
-            styles={darkInputStyles}
           />
         </Group>
         <MultiSelect
@@ -155,7 +148,6 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
           onChange={(professorIds) => setDraft((current) => ({ ...current, professorIds }))}
           searchable
           clearable
-          styles={darkInputStyles}
         />
         <Select
           label="Lecture type"
@@ -168,7 +160,6 @@ function LectureEditForm({ lecture, professors, onClose, onSubmit }: LectureEdit
             }
           }}
           clearable={false}
-          styles={darkInputStyles}
         />
         <Switch
           label="Active"

@@ -1,5 +1,5 @@
-import type { Lecture, Professor } from '../../api/CatalogService'
-import { semesterLabel } from '../../domain/catalog'
+import type { Lecture, Professor } from '@/api/catalog'
+import { semesterLabel } from '@/domain/catalog'
 
 export function professorName(professor: { firstName: string; lastName: string }) {
   return `${professor.firstName} ${professor.lastName}`.trim()

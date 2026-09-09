@@ -1,15 +1,16 @@
 import { ActionIcon, Badge, Group, Text, Tooltip } from '@mantine/core'
 import { IconPencil, IconTrash } from '@tabler/icons-react'
 import type { MouseEvent } from 'react'
-import type { Lecture } from '../../../api/CatalogService'
-import { enumLabel } from '../../../utils/enumLabel'
-import { activateOnEnterOrSpace } from '../../../utils/keyboard'
+import type { Lecture } from '@/api/catalog'
+import { enumLabel } from '@/utils/enumLabel'
+import { activateOnEnterOrSpace } from '@/utils/keyboard'
 import { lectureLabel, lectureTerm, professorName } from '../catalogModel'
 import {
   catalogCellStyle,
   catalogNowrapCellStyle,
   catalogRowStyle,
 } from './catalogTableStyles'
+import { chrome } from '@/theme'
 
 interface LectureTableRowProps {
   lecture: Lecture
@@ -39,30 +40,30 @@ export default function LectureTableRow({
       tabIndex={0}
     >
       <td style={catalogCellStyle}>
-        <Text size="sm" fw={500} c="#e2e8f0">
+        <Text size="sm" fw={500} c={chrome.textPrimary}>
           {lecture.name}
         </Text>
-        <Text size="xs" c="#6b7280">
+        <Text size="xs" c={chrome.textDim}>
           {lecture.code}
         </Text>
       </td>
       <td style={catalogNowrapCellStyle}>
-        <Text size="sm" c="#9ca3af">
+        <Text size="sm" c={chrome.textMuted}>
           {lectureTerm(lecture)}
         </Text>
       </td>
       <td style={catalogNowrapCellStyle}>
-        <Text size="xs" c="#6b7280">
+        <Text size="xs" c={chrome.textDim}>
           {enumLabel(lecture.lectureType)}
         </Text>
       </td>
       <td style={catalogCellStyle}>
         {lecture.professors.length === 0 ? (
-          <Text size="xs" c="#374151">
+          <Text size="xs" c={chrome.iconFaint}>
             Unassigned
           </Text>
         ) : (
-          <Text size="sm" c="#9ca3af" lineClamp={2}>
+          <Text size="sm" c={chrome.textMuted} lineClamp={2}>
             {lecture.professors.map(professorName).join(', ')}
           </Text>
         )}
@@ -73,12 +74,12 @@ export default function LectureTableRow({
         </Badge>
       </td>
       <td style={catalogCellStyle}>
-        <Text size="sm" c="#9ca3af">
+        <Text size="sm" c={chrome.textMuted}>
           {lecture.commentCount}
         </Text>
       </td>
       <td style={catalogCellStyle}>
-        <Text size="sm" c="#9ca3af">
+        <Text size="sm" c={chrome.textMuted}>
           {lecture.ratingCount}
         </Text>
       </td>

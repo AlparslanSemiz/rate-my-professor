@@ -2,18 +2,11 @@ import { MantineProvider } from '@mantine/core'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { catalogService, type Lecture, type Professor } from '../../api/CatalogService'
-import { ratingsService, type Rating } from '../../api/RatingsService'
+import { catalogService, type Lecture, type Professor, ratingsService, type Rating } from '@/api/catalog'
 import CatalogPage from './CatalogPage'
 
-vi.mock('../../api/RatingsService', () => ({
-  ratingsService: {
-    list: vi.fn(),
-    delete: vi.fn(),
-  },
-}))
-
-vi.mock('../../api/CatalogService', () => ({
+// Lectures, professors and ratings are one package now, so they are one mock.
+vi.mock('@/api/catalog', () => ({
   catalogService: {
     getLectures: vi.fn(),
     getProfessors: vi.fn(),
@@ -21,6 +14,10 @@ vi.mock('../../api/CatalogService', () => ({
     deleteLecture: vi.fn(),
     updateProfessor: vi.fn(),
     deleteProfessor: vi.fn(),
+  },
+  ratingsService: {
+    list: vi.fn(),
+    delete: vi.fn(),
   },
 }))
 

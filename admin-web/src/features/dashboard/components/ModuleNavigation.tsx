@@ -1,8 +1,9 @@
 import { Box, SimpleGrid, Text } from '@mantine/core'
-import ModuleCard from '../../../components/ModuleCard'
-import { moduleAccent } from '../../../constants/colors'
-import { moduleGridCols } from '../../../constants/layout'
-import { routes } from '../../../constants/routes'
+import ModuleCard from '@/components/ModuleCard'
+import { moduleAccent } from '@/constants/colors'
+import { moduleGridCols } from '@/constants/layout'
+import { routes } from '@/constants/routes'
+import { chrome } from '@/theme'
 
 const MODULES = [
   {
@@ -31,10 +32,10 @@ const MODULES = [
 export default function ModuleNavigation({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
     <Box mb={8}>
-      <Text fw={600} c="#e2e8f0" mb={4} size="sm">
+      <Text fw={600} c={chrome.textPrimary} mb={4} size="sm">
         Jump to
       </Text>
-      <Text size="xs" c="#6b7280" mb={16}>
+      <Text size="xs" c={chrome.textDim} mb={16}>
         Head straight to any section.
       </Text>
       <SimpleGrid cols={moduleGridCols} spacing={16}>

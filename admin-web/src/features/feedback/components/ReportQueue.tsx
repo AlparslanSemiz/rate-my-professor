@@ -1,11 +1,12 @@
 import { Box, Text, type CSSProperties } from '@mantine/core'
 import { IconBug } from '@tabler/icons-react'
-import type { BugReport } from '../../../api/FeedbackService'
-import Panel from '../../../components/Panel'
+import type { BugReport } from '@/api/feedback'
+import Panel from '@/components/Panel'
 import ReportQueueItem from './ReportQueueItem'
+import { chrome } from '@/theme'
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
-const panelHeaderStyle: CSSProperties = { borderBottom: '1px solid #21262d' }
+const panelHeaderStyle: CSSProperties = { borderBottom: `1px solid ${chrome.border}` }
 const emptyStateStyle: CSSProperties = { textAlign: 'center' }
 const emptyIconStyle: CSSProperties = { marginBottom: 12 }
 
@@ -27,10 +28,10 @@ export default function ReportQueue({
   return (
     <Panel style={panelStyle}>
       <Box px={20} py={16} style={panelHeaderStyle}>
-        <Text fw={600} c="#e2e8f0" size="sm">
+        <Text fw={600} c={chrome.textPrimary} size="sm">
           {title}
         </Text>
-        <Text size="xs" c="#4b5563">
+        <Text size="xs" c={chrome.textFaint}>
           {subtitle}
         </Text>
       </Box>
@@ -54,8 +55,8 @@ export default function ReportQueue({
 function EmptyReportQueue({ message }: { message: string }) {
   return (
     <Box py={60} style={emptyStateStyle}>
-      <IconBug size={32} color="#374151" style={emptyIconStyle} />
-      <Text c="#4b5563" size="sm">
+      <IconBug size={32} color={chrome.iconFaint} style={emptyIconStyle} />
+      <Text c={chrome.textFaint} size="sm">
         {message}
       </Text>
     </Box>

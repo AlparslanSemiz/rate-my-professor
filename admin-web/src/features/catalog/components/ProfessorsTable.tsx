@@ -1,9 +1,9 @@
 import { Text, TextInput, type CSSProperties } from '@mantine/core'
 import { IconSearch, IconUserStar } from '@tabler/icons-react'
-import type { Lecture, Professor } from '../../../api/CatalogService'
-import { darkInputStyles } from '../../../constants/inputStyles'
+import type { Lecture, Professor } from '@/api/catalog'
 import CatalogTablePanel, { CatalogEmptyRow } from './CatalogTablePanel'
 import ProfessorTableRow from './ProfessorTableRow'
+import { chrome } from '@/theme'
 
 const TABLE_COLUMNS = ['Professor', 'Lectures', 'Status', 'Average rating', 'Ratings', ''] as const
 
@@ -33,7 +33,7 @@ export default function ProfessorsTable({
   return (
     <CatalogTablePanel
       title="Professors"
-      icon={<IconUserStar size={14} color="#6b7280" />}
+      icon={<IconUserStar size={14} color={chrome.textDim} />}
       description={`${professors.length} of ${totalCount} in the catalogue`}
       columns={TABLE_COLUMNS}
       minWidth={860}
@@ -45,14 +45,13 @@ export default function ProfessorsTable({
           style={searchInputStyle}
           size="sm"
           aria-label="Search professors"
-          leftSection={<IconSearch size={14} color="#6b7280" />}
-          styles={darkInputStyles}
+          leftSection={<IconSearch size={14} color={chrome.textDim} />}
         />
       }
     >
       {professors.length === 0 ? (
         <CatalogEmptyRow colSpan={TABLE_COLUMNS.length}>
-          <Text c="#4b5563" size="sm">
+          <Text c={chrome.textFaint} size="sm">
             No professors found.
           </Text>
         </CatalogEmptyRow>

@@ -1,11 +1,10 @@
 import { Box, Button, Select, Text, type CSSProperties } from '@mantine/core'
 import { IconStar } from '@tabler/icons-react'
-import type { Lecture } from '../../../api/CatalogService'
-import type { Rating } from '../../../api/RatingsService'
-import { darkInputStyles } from '../../../constants/inputStyles'
+import { type Lecture, type Rating } from '@/api/catalog'
 import { lectureLabel } from '../catalogModel'
 import CatalogTablePanel, { CatalogEmptyRow } from './CatalogTablePanel'
 import RatingTableRow from './RatingTableRow'
+import { chrome } from '@/theme'
 
 const TABLE_COLUMNS = ['Lecture', 'Scores', 'Rated by', 'Date', ''] as const
 
@@ -61,7 +60,6 @@ export default function RatingsTable({
           size="sm"
           searchable
           clearable
-          styles={darkInputStyles}
         />
       }
       footer={nextCursor && (
@@ -74,8 +72,8 @@ export default function RatingsTable({
     >
       {ratings.length === 0 ? (
         <CatalogEmptyRow colSpan={TABLE_COLUMNS.length}>
-          <IconStar size={28} color="#374151" style={{ marginBottom: 10 }} />
-          <Text c="#4b5563" size="sm">
+          <IconStar size={28} color={chrome.iconFaint} style={{ marginBottom: 10 }} />
+          <Text c={chrome.textFaint} size="sm">
             No ratings here yet.
           </Text>
         </CatalogEmptyRow>

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
-import { ratingsService, type Rating } from '../../../api/RatingsService'
-import { useAsyncData } from '../../../hooks/useAsyncData'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
+import { ratingsService, type Rating } from '@/api/catalog'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 
 const RATINGS_PAGE_SIZE = 50
 const EMPTY_PAGE = { ratings: [] as Rating[], nextCursor: null as string | null }

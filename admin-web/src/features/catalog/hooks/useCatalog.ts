@@ -5,10 +5,10 @@ import {
   type LectureUpdate,
   type Professor,
   type ProfessorUpdate,
-} from '../../../api/CatalogService'
-import { useAsyncData } from '../../../hooks/useAsyncData'
-import { useSearch } from '../../../hooks/useSearch'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
+} from '@/api/catalog'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { useSearch } from '@/hooks/useSearch'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 import { matchesLectureQuery, matchesProfessorQuery } from '../catalogModel'
 
 const EMPTY_LECTURES: Lecture[] = []

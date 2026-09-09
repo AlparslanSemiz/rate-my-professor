@@ -2,7 +2,7 @@ import { type FormEvent } from 'react'
 import { Button, Stack, TextInput } from '@mantine/core'
 import { isCompleteLoginCode, LOGIN_CODE_LENGTH } from '../loginModel'
 import type { LoginFormsProps } from './LoginForms'
-import { loginInputStyles, submitButtonStyle } from './loginFormStyles'
+import { LOGIN_INPUT_RADIUS, loginInputStyles, submitButtonStyle } from './loginFormStyles'
 
 type CodeStepFormProps = Pick<
   LoginFormsProps,
@@ -35,6 +35,7 @@ export default function CodeStepForm({
           onChange={(event) => onCodeChange(event.currentTarget.value)}
           required
           styles={loginInputStyles}
+          radius={LOGIN_INPUT_RADIUS}
         />
         <Button
           type="submit"

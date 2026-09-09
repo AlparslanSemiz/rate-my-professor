@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 
 interface CatalogEditSubmitOptions<TUpdate extends object> {
   id: string

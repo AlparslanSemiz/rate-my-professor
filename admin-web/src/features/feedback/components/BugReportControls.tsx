@@ -1,18 +1,19 @@
 import { Group, Select } from '@mantine/core'
-import type { BugReport, BugReportUpdate } from '../../../api/FeedbackService'
+import type { BugReport, BugReportUpdate } from '@/api/feedback'
 import {
   REPORT_STATUSES,
   SEVERITIES,
   isReportStatus,
   isSeverity,
-} from '../../../domain/moderation'
-import { enumLabel } from '../../../utils/enumLabel'
+} from '@/domain/moderation'
+import { enumLabel } from '@/utils/enumLabel'
+import { chrome } from '@/theme'
 
 const selectStyles = {
   input: {
-    background: '#0f1117',
-    border: '1px solid #21262d',
-    color: '#e2e8f0',
+    background: chrome.surfaceSunken,
+    border: `1px solid ${chrome.border}`,
+    color: chrome.textPrimary,
     fontSize: 13,
   },
 }

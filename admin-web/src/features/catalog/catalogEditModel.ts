@@ -3,9 +3,9 @@ import type {
   LectureUpdate,
   Professor,
   ProfessorUpdate,
-} from '../../api/CatalogService'
-import type { LectureType, SemesterSeason } from '../../domain/catalog'
-import { sameIdSet } from '../../utils/collection'
+} from '@/api/catalog'
+import type { LectureType, SemesterSeason } from '@/domain/catalog'
+import { sameIdSet } from '@/utils/collection'
 
 export interface LectureEditDraft {
   name: string

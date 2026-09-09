@@ -2,11 +2,11 @@ import { MantineProvider } from '@mantine/core'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { feedbackService, type BugReport } from '../../api/FeedbackService'
-import { systemStatusService, type SystemStatus } from '../../api/SystemStatusService'
+import { feedbackService, type BugReport } from '@/api/feedback'
+import { systemStatusService, type SystemStatus } from '@/api/system'
 import FeedbackPage from './FeedbackPage'
 
-vi.mock('../../api/FeedbackService', () => ({
+vi.mock('@/api/feedback', () => ({
   feedbackService: {
     getReports: vi.fn(),
     updateReport: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock('../../api/FeedbackService', () => ({
   },
 }))
 
-vi.mock('../../api/SystemStatusService', () => ({
+vi.mock('@/api/system', () => ({
   systemStatusService: {
     getStatus: vi.fn(),
   },

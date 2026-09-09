@@ -1,15 +1,15 @@
 import { ActionIcon, Text, Tooltip } from '@mantine/core'
 import { IconTrash } from '@tabler/icons-react'
-import type { Lecture } from '../../../api/CatalogService'
-import type { Rating } from '../../../api/RatingsService'
-import { enumLabel } from '../../../utils/enumLabel'
-import { formatDate } from '../../../utils/formatDate'
+import { type Lecture, type Rating } from '@/api/catalog'
+import { enumLabel } from '@/utils/enumLabel'
+import { formatDate } from '@/utils/formatDate'
 import { lectureLabel } from '../catalogModel'
 import {
   catalogCellStyle,
   catalogNowrapCellStyle,
   catalogRowStyle,
 } from './catalogTableStyles'
+import { chrome } from '@/theme'
 
 interface RatingTableRowProps {
   rating: Rating
@@ -35,22 +35,22 @@ export default function RatingTableRow({
   return (
     <tr style={catalogRowStyle(isLast)}>
       <td style={catalogCellStyle}>
-        <Text size="sm" c="#e2e8f0">
+        <Text size="sm" c={chrome.textPrimary}>
           {lecture ? lectureLabel(lecture) : '—'}
         </Text>
       </td>
       <td style={catalogCellStyle}>
-        <Text size="xs" c="#9ca3af">
+        <Text size="xs" c={chrome.textMuted}>
           {scoreLine(rating.scores)}
         </Text>
       </td>
       <td style={catalogNowrapCellStyle}>
-        <Text size="sm" c="#9ca3af">
+        <Text size="sm" c={chrome.textMuted}>
           {rating.authorName}
         </Text>
       </td>
       <td style={catalogNowrapCellStyle}>
-        <Text size="xs" c="#6b7280">
+        <Text size="xs" c={chrome.textDim}>
           {rating.createdAt ? formatDate(rating.createdAt) : '—'}
         </Text>
       </td>

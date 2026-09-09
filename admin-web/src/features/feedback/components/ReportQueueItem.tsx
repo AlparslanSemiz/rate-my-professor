@@ -1,10 +1,11 @@
 import { Badge, Box, Group, Text, type CSSProperties } from '@mantine/core'
-import type { BugReport } from '../../../api/FeedbackService'
-import { reportStatusColor, severityAccent } from '../../../constants/colors'
-import { activateOnEnterOrSpace } from '../../../utils/keyboard'
-import { enumLabel } from '../../../utils/enumLabel'
-import { formatDate } from '../../../utils/formatDate'
+import type { BugReport } from '@/api/feedback'
+import { reportStatusColor, severityAccent } from '@/constants/colors'
+import { activateOnEnterOrSpace } from '@/utils/keyboard'
+import { enumLabel } from '@/utils/enumLabel'
+import { formatDate } from '@/utils/formatDate'
 import { reportStatusIcon } from '../feedbackModel'
+import { chrome } from '@/theme'
 
 const severityBarStyle: CSSProperties = {
   width: 3,
@@ -15,7 +16,7 @@ const severityBarStyle: CSSProperties = {
 const bodyIndentStyle: CSSProperties = { paddingLeft: 11 }
 
 function reportRowStyle(isLast: boolean): CSSProperties {
-  return { borderBottom: isLast ? 'none' : '1px solid #1c2128' }
+  return { borderBottom: isLast ? 'none' : `1px solid ${chrome.borderSubtle}` }
 }
 
 interface ReportQueueItemProps {
@@ -53,7 +54,7 @@ export default function ReportQueueItem({
             aria-hidden
           />
           <div>
-            <Text fw={600} c="#e2e8f0" size="sm">
+            <Text fw={600} c={chrome.textPrimary} size="sm">
               {report.title}
             </Text>
             <Group gap={8} mt={4}>
@@ -65,20 +66,20 @@ export default function ReportQueueItem({
               >
                 {enumLabel(report.status)}
               </Badge>
-              <Text size="xs" c="#6b7280">
+              <Text size="xs" c={chrome.textDim}>
                 {enumLabel(report.severity)} severity
               </Text>
             </Group>
           </div>
         </Group>
-        <Text size="xs" c="#4b5563" style={{ whiteSpace: 'nowrap' }}>
+        <Text size="xs" c={chrome.textFaint} style={{ whiteSpace: 'nowrap' }}>
           {formatDate(report.reportedAt, { withTime: true })}
         </Text>
       </Group>
-      <Text size="sm" c="#6b7280" style={bodyIndentStyle}>
+      <Text size="sm" c={chrome.textDim} style={bodyIndentStyle}>
         {report.description}
       </Text>
-      <Text size="xs" c="#374151" mt={6} style={bodyIndentStyle}>
+      <Text size="xs" c={chrome.iconFaint} mt={6} style={bodyIndentStyle}>
         Reported by {report.reporterName}
       </Text>
     </Box>

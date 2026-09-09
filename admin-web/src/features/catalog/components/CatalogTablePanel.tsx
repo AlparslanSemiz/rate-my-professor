@@ -1,10 +1,11 @@
 import { Box, Group, Text, type CSSProperties } from '@mantine/core'
 import type { ReactNode } from 'react'
-import Panel from '../../../components/Panel'
-import TableHeaderRow from '../../../components/TableHeaderRow'
+import Panel from '@/components/Panel'
+import TableHeaderRow from '@/components/TableHeaderRow'
+import { chrome } from '@/theme'
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
-const headerStyle: CSSProperties = { borderBottom: '1px solid #21262d' }
+const headerStyle: CSSProperties = { borderBottom: `1px solid ${chrome.border}` }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
 const baseTableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse' }
 const emptyCellStyle: CSSProperties = { padding: '40px 20px', textAlign: 'center' }
@@ -37,11 +38,11 @@ export default function CatalogTablePanel({
           <div>
             <Group gap={6}>
               {icon}
-              <Text fw={600} c="#e2e8f0" size="sm">
+              <Text fw={600} c={chrome.textPrimary} size="sm">
                 {title}
               </Text>
             </Group>
-            <Text size="xs" c="#4b5563">
+            <Text size="xs" c={chrome.textFaint}>
               {description}
             </Text>
           </div>

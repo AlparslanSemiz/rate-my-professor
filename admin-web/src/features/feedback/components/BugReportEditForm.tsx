@@ -1,9 +1,9 @@
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import { Box, Button, Group, Text, TextInput, Textarea } from '@mantine/core'
-import type { BugReport, BugReportUpdate } from '../../../api/FeedbackService'
-import ErrorAlert from '../../../components/ErrorAlert'
-import { darkInputStyles } from '../../../constants/inputStyles'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
+import type { BugReport, BugReportUpdate } from '@/api/feedback'
+import ErrorAlert from '@/components/ErrorAlert'
+import { getErrorMessage } from '@/utils/getErrorMessage'
+import { KIT } from '@/constants/colors'
 
 const formStyle: CSSProperties = {
   background: 'rgba(59,130,246,0.05)',
@@ -53,7 +53,7 @@ export default function BugReportEditForm({
 
   return (
     <Box component="form" mb={20} style={formStyle} onSubmit={handleSubmit}>
-      <Text size="xs" fw={600} c="#60a5fa" mb={10}>
+      <Text size="xs" fw={600} c={KIT.blue} mb={10}>
         Edit report
       </Text>
       <TextInput
@@ -62,7 +62,6 @@ export default function BugReportEditForm({
         onChange={(event) => setTitle(event.currentTarget.value)}
         size="sm"
         mb={10}
-        styles={darkInputStyles}
       />
       <Textarea
         label="Description"
@@ -71,7 +70,6 @@ export default function BugReportEditForm({
         minRows={4}
         size="sm"
         mb={12}
-        styles={darkInputStyles}
       />
       <ErrorAlert message={error} />
       <Group gap={8} justify="flex-end">

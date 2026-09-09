@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError } from '../../api/ApiClient'
-import { authService } from '../../api/AuthService'
+import { ApiError } from '@/api/client'
+import { authService } from '@/api/auth'
 import {
   authenticateAdmin,
   CODE_RATE_LIMITED_ERROR,
@@ -8,7 +8,7 @@ import {
   NOT_AN_ADMIN_ERROR,
 } from './authenticateAdmin'
 
-vi.mock('../../api/AuthService', () => ({
+vi.mock('@/api/auth', () => ({
   authService: {
     login: vi.fn(),
     me: vi.fn(),

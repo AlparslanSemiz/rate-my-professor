@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
-import { systemStatusService } from '../../../api/SystemStatusService'
-import { usersService, type User } from '../../../api/UsersService'
-import { useVisibleInterval } from '../../../hooks/useVisibleInterval'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
+import { systemStatusService } from '@/api/system'
+import { usersService, type User } from '@/api/users'
+import { useVisibleInterval } from '@/hooks/useVisibleInterval'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 import {
   EMPTY_DASHBOARD_STATS,
   dashboardActiveRate,

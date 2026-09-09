@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import { Badge, Box, Group, Text, UnstyledButton, type CSSProperties } from '@mantine/core'
-import type { User } from '../../../api/UsersService'
-import Panel from '../../../components/Panel'
-import { KIT, roleColor } from '../../../constants/colors'
-import { enumLabel } from '../../../utils/enumLabel'
+import type { User } from '@/api/users'
+import Panel from '@/components/Panel'
+import { KIT, roleColor } from '@/constants/colors'
+import { enumLabel } from '@/utils/enumLabel'
+import { chrome } from '@/theme'
 
 const panelStyle: CSSProperties = { padding: '20px 24px' }
 const RECENT_COUNT = 4
@@ -41,7 +42,7 @@ export default function RecentRegistrations({
   return (
     <Panel style={panelStyle}>
       <Group justify="space-between" mb={4}>
-        <Text fw={600} c="#e2e8f0" size="sm">
+        <Text fw={600} c={chrome.textPrimary} size="sm">
           Newest members
         </Text>
         <UnstyledButton style={{ cursor: 'pointer' }} onClick={onViewAll}>
@@ -50,12 +51,12 @@ export default function RecentRegistrations({
           </Text>
         </UnstyledButton>
       </Group>
-      <Text size="xs" c="#6b7280" mb={16}>
+      <Text size="xs" c={chrome.textDim} mb={16}>
         The latest folks to join.
       </Text>
       {users.length === 0 ? (
         <Box py={18} style={{ textAlign: 'center' }}>
-          <Text size="sm" c="#4b5563">
+          <Text size="sm" c={chrome.textFaint}>
             No new members just yet.
           </Text>
         </Box>
@@ -63,10 +64,10 @@ export default function RecentRegistrations({
         newest.map((user) => (
           <Box key={user.id} mb={12} style={rowStyle}>
             <div style={{ minWidth: 0 }}>
-              <Text size="sm" fw={500} c="#d1d5db" truncate>
+              <Text size="sm" fw={500} c={chrome.textSecondary} truncate>
                 {user.username}
               </Text>
-              <Text size="xs" c="#4b5563" truncate>
+              <Text size="xs" c={chrome.textFaint} truncate>
                 {user.kitEmail}
               </Text>
             </div>

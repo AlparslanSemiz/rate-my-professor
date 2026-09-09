@@ -1,6 +1,6 @@
 import { useState, type Dispatch, type SetStateAction } from 'react'
-import { feedbackService, type BugReport, type BugReportUpdate } from '../../../api/FeedbackService'
-import { getErrorMessage, getStaleAfterWriteMessage } from '../../../utils/getErrorMessage'
+import { feedbackService, type BugReport, type BugReportUpdate } from '@/api/feedback'
+import { getErrorMessage, getStaleAfterWriteMessage } from '@/utils/getErrorMessage'
 
 const UPDATE_ERROR_MESSAGE = 'Failed to update the report. The change was not saved.'
 const ISSUE_ERROR_MESSAGE = 'The issue could not be created. Nothing was opened on the board.'

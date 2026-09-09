@@ -1,4 +1,4 @@
-import { routes } from '../../constants/routes'
+import { routes } from '@/constants/routes'
 
 /**
  * What the backend mails out as a one-time login code. Both the form and the flow check

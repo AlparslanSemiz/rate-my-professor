@@ -1,6 +1,5 @@
 import { Modal } from '@mantine/core'
-import type { BugReport, BugReportUpdate } from '../../../api/FeedbackService'
-import { darkModalStyles } from '../../../constants/modalStyles'
+import type { BugReport, BugReportUpdate } from '@/api/feedback'
 import BugReportDetails from './BugReportDetails'
 
 interface BugReportModalProps {
@@ -36,7 +35,6 @@ export default function BugReportModal({
       title="Bug Report"
       centered
       size="lg"
-      styles={darkModalStyles}
     >
       {/* Keyed on the report so opening a different one starts collapsed, without an effect
           resetting the toggle. */}

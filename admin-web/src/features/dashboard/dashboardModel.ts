@@ -1,4 +1,4 @@
-import type { SystemHealth } from '../../api/SystemStatusService'
+import type { SystemHealth } from '@/api/system'
 
 export interface DashboardStats {
   total: number
