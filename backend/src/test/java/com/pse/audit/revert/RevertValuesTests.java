@@ -1,5 +1,7 @@
 package com.pse.audit.revert;
 
+import org.springframework.http.HttpStatus;
+import com.pse.shared.error.ApiException;
 import com.pse.shared.enums.UserStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -165,15 +167,22 @@ class RevertValuesTests {
         assertThat(RevertValues.asInteger(Map.of(), "score")).isNull();
     }
 
+    /**
+     * Inverted, not deleted. This asserted a raw {@code NumberFormatException}, which escaped
+     * to the catch-all and made the panel's revert button answer 500 -- F-23's shape, reached
+     * through a value the column outlived rather than through a request.
+     */
     @Test
-    void asInteger_nonNumericString_throwsNumberFormatException() {
+    void asInteger_nonNumericString_isRefusedRatherThanCrashing() {
         // Given
         Map<String, Object> before = before("score", "abc");
 
         // When / Then
         assertThatThrownBy(() -> RevertValues.asInteger(before, "score"))
-                .isInstanceOf(NumberFormatException.class)
-                .hasMessageContaining("abc");
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("score")
+                .extracting(thrown -> ((ApiException) thrown).getStatus())
+                .isEqualTo(HttpStatus.CONFLICT);
     }
 
     /** Narrowing is silent, which is worth knowing about before a wider column appears. */
@@ -232,16 +241,21 @@ class RevertValuesTests {
         assertThat(RevertValues.asEnum(Map.of(), "status", UserStatus.class)).isNull();
     }
 
+    /**
+     * The case that is not hypothetical: remove or rename an enum constant and every audit row
+     * naming the old one reaches here. Inverted from a raw {@code IllegalArgumentException}.
+     */
     @Test
-    void asEnum_valueThatIsNotAConstant_throwsIllegalArgumentException() {
+    void asEnum_valueThatIsNotAConstant_isRefusedRatherThanCrashing() {
         // Given
         Map<String, Object> before = before("status", "NOPE");
 
         // When / Then
         assertThatThrownBy(() -> RevertValues.asEnum(before, "status", UserStatus.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("No enum constant")
-                .hasMessageContaining("NOPE");
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("status")
+                .extracting(thrown -> ((ApiException) thrown).getCode())
+                .isEqualTo("ACTION_NOT_REVERTIBLE");
     }
 
     // ---------- asIds ----------
@@ -273,14 +287,17 @@ class RevertValuesTests {
         assertThat(RevertValues.asIds(before("professors", null), "professors")).isNull();
     }
 
+    /** Inverted with its two neighbours; {@code Uuids} was never adopted here. */
     @Test
-    void asIds_listContainingSomethingThatIsNotAUuid_throwsIllegalArgumentException() {
+    void asIds_listContainingSomethingThatIsNotAUuid_isRefusedRatherThanCrashing() {
         // Given
         Map<String, Object> before = before("professors", List.of("nope"));
 
         // When / Then
         assertThatThrownBy(() -> RevertValues.asIds(before, "professors"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Invalid UUID string");
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("professors")
+                .extracting(thrown -> ((ApiException) thrown).getStatus())
+                .isEqualTo(HttpStatus.CONFLICT);
     }
 }

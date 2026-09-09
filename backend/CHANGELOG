@@ -804,3 +804,23 @@ order-insensitive -- that half was BUG-3's fix; this is the half it did not reac
 
 Nothing to change if you sort or look up by key. If you render any of these lists in the order
 they arrive, they will stop reshuffling.
+
+
+///// 9.09 (12)
+
+
+"POST /admin/audit-logs/{id}/revert" refuses an entry whose recorded value cannot be read back,
+instead of answering 500.
+
+Was: 500 {"message": "Unexpected backend error", "success": false}
+Now: 409 {"message": "The recorded value for '<field>' cannot be read back",
+          "success": false, "reason": "ACTION_NOT_REVERTIBLE"}
+
+No new "reason" value -- ACTION_NOT_REVERTIBLE already covers it, so nothing branching on the
+five documented reasons has to change.
+
+This cannot be triggered by anything a client sends. It happens when an audit entry names a
+value the current code no longer understands: an enum constant that has since been renamed or
+removed, or a number that no longer parses. The entry still reports revertible: true, because
+revertibility is decided by comparing recorded values as text, so the panel draws the button
+and pressing it used to report a backend failure for what is really an unreversible entry.
