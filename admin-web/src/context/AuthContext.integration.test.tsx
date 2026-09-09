@@ -1,18 +1,23 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { describe, expect, it } from 'vitest'
 import { AuthProvider } from './AuthContext'
 import { useAuth } from './useAuth'
-import { authService } from '@/api/auth'
 import { apiClient } from '@/api/client'
-import { jsonResponse } from '@/test/http'
+import { apiUrl } from '@/test/msw/apiUrl'
+import { failure } from '@/test/msw/envelope'
+import { failSessionCheck, setSessionUser } from '@/test/msw/handlers/auth'
+import { requestsTo } from '@/test/msw/requests'
+import { server, startMockBackend } from '@/test/msw/server'
 
-vi.mock('@/api/auth', () => ({
-  authService: {
-    logout: vi.fn(),
-    me: vi.fn(),
-  },
-}))
+/**
+ * Named `.integration.` and not `.unit.`, because that is what it is: it renders a React tree,
+ * drives it with `user-event`, and now runs the real `ApiClient` against a request layer. The
+ * plan's own definition — "a unit test isolates one unit; it is not a scenario" — was being
+ * broken by the filename, and the two `npm run test:*` scripts filter on exactly that.
+ */
+startMockBackend()
 
 const testUser = {
   id: 'admin-1',
@@ -22,7 +27,7 @@ const testUser = {
 }
 
 function AuthHarness() {
-  const { user, token, login, logout, isAuthenticated } = useAuth()
+  const { user, token, login, logout, isAuthenticated, sessionCheckError } = useAuth()
 
   return (
     <div>
@@ -32,6 +37,7 @@ function AuthHarness() {
       <p data-testid="token">{token ?? 'no-token'}</p>
       <p data-testid="user-email">{user?.email ?? 'no-user'}</p>
       <p data-testid="user-name">{user?.name ?? 'no-user'}</p>
+      <p data-testid="session-check-error">{sessionCheckError ?? 'none'}</p>
       <button type="button" onClick={() => login('test-token', testUser)}>
         Log in
       </button>
@@ -51,11 +57,6 @@ function renderAuthHarness() {
 }
 
 describe('AuthProvider', () => {
-  beforeEach(() => {
-    vi.mocked(authService.logout).mockResolvedValue({ success: true, message: 'Logged out' })
-    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'Signed in' })
-  })
-
   it('hydrates auth state from localStorage', () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(testUser))
@@ -129,8 +130,13 @@ describe('AuthProvider', () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(testUser))
     // The account was renamed and promoted after this session was stored.
-    const current = { ...testUser, name: 'Renamed Admin', role: 'SUPERADMIN' }
-    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'ok', user: current })
+    const current = { ...testUser, name: 'Renamed Admin', role: 'SUPERADMIN', isSuperAdmin: false }
+    setSessionUser({
+      id: current.id,
+      username: current.name,
+      kitEmail: current.email,
+      role: current.role,
+    })
 
     renderAuthHarness()
 
@@ -143,7 +149,13 @@ describe('AuthProvider', () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify({ ...testUser, isSuperAdmin: true }))
     const current = { ...testUser, isSuperAdmin: false }
-    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'ok', user: current })
+    setSessionUser({
+      id: current.id,
+      username: current.name,
+      kitEmail: current.email,
+      role: current.role,
+      isSuperAdmin: false,
+    })
 
     renderAuthHarness()
 
@@ -155,8 +167,6 @@ describe('AuthProvider', () => {
   it('keeps the stored user when /auth/me names nobody', async () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(testUser))
-    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'ok' })
-
     renderAuthHarness()
 
     // A response that carries no user is not a correction — the session stays as it was.
@@ -176,7 +186,7 @@ describe('AuthProvider', () => {
 
     await user.click(screen.getByRole('button', { name: 'Log out' }))
 
-    expect(authService.logout).toHaveBeenCalledOnce()
+    await waitFor(() => expect(requestsTo('POST', '/api/auth/logout')).toHaveLength(1))
     expect(screen.getByTestId('auth-state')).toHaveTextContent('anonymous')
     expect(screen.getByTestId('token')).toHaveTextContent('no-token')
     expect(screen.getByTestId('user-email')).toHaveTextContent('no-user')
@@ -185,7 +195,7 @@ describe('AuthProvider', () => {
   })
 
   it('still clears local state when the explicit logout request fails', async () => {
-    vi.mocked(authService.logout).mockRejectedValue(new Error('Network unavailable'))
+    server.use(http.post(apiUrl('/auth/logout'), () => failure(503, 'Network unavailable')))
     const user = userEvent.setup()
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(testUser))
@@ -201,15 +211,75 @@ describe('AuthProvider', () => {
   it('clears an unauthorized session without sending an explicit logout request', async () => {
     localStorage.setItem('token', 'expired-token')
     localStorage.setItem('user', JSON.stringify(testUser))
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({
-      success: false,
-      message: 'Unauthorized',
-    }, 401)))
+    server.use(http.get(apiUrl('/users'), () => failure(401, 'Unauthorized')))
     renderAuthHarness()
 
+    // Any authenticated request coming back 401 ends the session, not just `/auth/me` —
+    // the client reports it through one handler and the provider acts on it.
     await expect(apiClient.get('/users')).rejects.toThrow('Unauthorized')
 
     await waitFor(() => expect(screen.getByTestId('auth-state')).toHaveTextContent('anonymous'))
-    expect(authService.logout).not.toHaveBeenCalled()
+    // Ended locally, without asking the backend to revoke a token it has already refused.
+    expect(requestsTo('POST', '/api/auth/logout')).toHaveLength(0)
+  })
+
+  it('keeps the session but reports it when /auth/me answers 404', async () => {
+    // F-013. The legacy path being gone is not a refusal, so the session survives — but the
+    // stored account is now a copy nothing has confirmed, and the operator was told nothing.
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(testUser))
+    server.use(failSessionCheck(404, 'No handler for GET /auth/me'))
+
+    renderAuthHarness()
+
+    await waitFor(() =>
+      expect(screen.getByTestId('session-check-error')).not.toHaveTextContent('none')
+    )
+    expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated')
+    expect(localStorage.getItem('token')).toBe('stored-token')
+  })
+
+  it('reports a session check the backend answered but the panel could not read', async () => {
+    // A `ContractError` is permanent in the same way a 404 is: retrying cannot fix a payload
+    // whose shape the panel does not recognise.
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(testUser))
+    server.use(http.get(apiUrl('/auth/me'), () => HttpResponse.text('<html>nope</html>')))
+
+    renderAuthHarness()
+
+    await waitFor(() =>
+      expect(screen.getByTestId('session-check-error')).not.toHaveTextContent('none')
+    )
+    expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated')
+  })
+
+  it('stays quiet when the session check fails in a way that may pass on a retry', async () => {
+    // A 500 answers `transient`, and so does an unreachable host. Warning about a blip that
+    // heals itself is noise, and noise is how a warning that matters gets ignored.
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(testUser))
+    server.use(failSessionCheck(500, 'Backend is having a moment'))
+
+    renderAuthHarness()
+
+    await waitFor(() => expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated'))
+    expect(screen.getByTestId('session-check-error')).toHaveTextContent('none')
+  })
+
+  it('reports nothing when the session check succeeds', async () => {
+    localStorage.setItem('token', 'stored-token')
+    localStorage.setItem('user', JSON.stringify(testUser))
+    setSessionUser({
+      id: testUser.id,
+      username: testUser.name,
+      kitEmail: testUser.email,
+      role: testUser.role,
+    })
+
+    renderAuthHarness()
+
+    await waitFor(() => expect(screen.getByTestId('user-name')).toHaveTextContent(testUser.name))
+    expect(screen.getByTestId('session-check-error')).toHaveTextContent('none')
   })
 })
