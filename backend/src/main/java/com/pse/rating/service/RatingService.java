@@ -1,19 +1,16 @@
 package com.pse.rating.service;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.pse.professor.service.ProfessorRatings;
 import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
 import com.pse.lecture.service.LectureService;
-import com.pse.professor.model.Professor;
 import com.pse.rating.dto.response.RatingCategoriesResponse;
 import com.pse.rating.dto.response.RatingCategoryResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
@@ -100,13 +97,10 @@ public class RatingService {
         rating.getTopics().add(overallTopic);
         ratingRepository.saveAndFlush(rating);
 
-        // Durchschnitt für alle Professoren dieser Vorlesung aktualisieren
-        for (Professor professor : lecture.getProfessors()) {
-
-            double professorAverageRating = ProfessorRatings.average(professor);
-
-            professor.setAverageRating(BigDecimal.valueOf(professorAverageRating));
-        }
+        // No professor average is written here any more. The read moved to
+        // ProfessorResponseMapper, which recomputes it -- so this loop was an UPDATE per
+        // professor per submitted rating for a column nothing reads back, and the stale value
+        // it left behind was what made recomputing on read necessary in the first place.
 
         String code = lecture.getCode();
         auditWriter.writeStudentAction(
