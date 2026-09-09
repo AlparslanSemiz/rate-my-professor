@@ -470,6 +470,16 @@ public class DatabaseSyncTest {
         public List<Lecture> getLecturesByTitle(String lectureTitle) {
             return Collections.emptyList();
         }
+
+        @Override
+        public void updateLectureRating(String lectureId, double averageRating) {
+
+        }
+
+        @Override
+        public void updateProfessorAverageRating(String professorId, double averageRating) {
+
+        }
     }
 
 

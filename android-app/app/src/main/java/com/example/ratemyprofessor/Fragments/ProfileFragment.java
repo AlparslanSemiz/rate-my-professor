@@ -28,6 +28,7 @@ import com.example.ratemyprofessor.databinding.FragmentProfileBinding;
 import com.example.ratemyprofessor.logic.RatingColorCalculator;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -97,6 +98,21 @@ public class ProfileFragment extends Fragment {
         executor = Executors.newSingleThreadExecutor();
 
         // Displaying average rating in the header
+        displayHeaderRating();
+
+        bindHeader();
+        loadUpperList();
+        binding.backButton.setOnClickListener(v ->
+                getParentFragmentManager().popBackStack()
+        );
+
+        setHeader();
+
+        return binding.getRoot();
+
+    }
+
+    private void displayHeaderRating() {
         if (selectionType == SelectionType.PROFESSORS) {
             binding.averageRatingBackground.setText(String.format(Locale.ROOT, RATING_FORMAT,
                     professor.averageRating));
@@ -119,17 +135,6 @@ public class ProfileFragment extends Fragment {
                 }
             });
         }
-
-        bindHeader();
-        loadUpperList();
-        binding.backButton.setOnClickListener(v ->
-                getParentFragmentManager().popBackStack()
-        );
-
-        setHeader();
-
-        return binding.getRoot();
-
     }
 
     /**
@@ -227,18 +232,28 @@ public class ProfileFragment extends Fragment {
      * <p>Both lists lead here, since picking either one narrows down the same pair.</p>
      */
     private void showSemesters() {
-        RecyclerView semesterList = binding.semesterList;
 
         executor.execute(() -> {
-            List<Semester> semesters = service.getSemestersByProfessorAndLectureTitle(professor.id, lectureTitle);
-            Log.d(TAG, "semesters " + semesters);
 
+            List<Semester> semesters = service.getSemestersByProfessorAndLectureTitle(
+                            professor.id, lectureTitle);
 
+            List<Lecture> lectures = new ArrayList<>();
+
+            for (Semester semester : semesters) {
+
+                List<Lecture> result = service.getLecture(professor.id, lectureTitle,
+                        semester.semesterYear(), semester.semesterSeason());
+
+                if (!result.isEmpty()) {
+                    lectures.add(result.get(0));
+                }
+            }
             runOnUiThread(() -> {
-                ProfileSemesterAdapter adapter =
-                        new ProfileSemesterAdapter(requireContext(), semesters,
-                                this::openLectureProfile, lectureTitle, professor.id);
-                semesterList.setAdapter(adapter);
+
+                ProfileSemesterAdapter adapter = new ProfileSemesterAdapter(requireContext(),
+                                semesters, lectures, this::openLectureProfile);
+                binding.semesterList.setAdapter(adapter);
             });
         });
     }
@@ -304,5 +319,12 @@ public class ProfileFragment extends Fragment {
         if (executor != null) {
             executor.shutdown();
         }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        displayHeaderRating();
+        showSemesters();
     }
 }

@@ -1,5 +1,6 @@
 package com.example.ratemyprofessor.ServerCommunication.Responses;
 
+import com.example.ratemyprofessor.DomainModel.LectureType;
 import com.example.ratemyprofessor.DomainModel.SemesterSeason;
 
 import java.util.List;
@@ -10,13 +11,13 @@ public record LectureResponse(
         String code,
         int semesterYear,
         SemesterSeason semesterSeason,
+        String semesterLabel,
+        String title,
         boolean active,
-
-        //can be ignored at this time says luis... :O
-        //lectureType lectureType,
-
+        LectureType lectureType,
         List<ProfessorShortResponse> professors,
         int commentCount,
-        int ratingCount
+        int ratingCount,
+        double averageRating
 ) {
 }

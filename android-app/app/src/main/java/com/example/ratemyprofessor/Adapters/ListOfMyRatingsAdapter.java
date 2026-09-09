@@ -43,8 +43,6 @@ public class ListOfMyRatingsAdapter extends RecyclerView.Adapter<ListOfMyRatings
         UserRatingDto rating = ratings.get(position);
         holder.averageRating.setText(String.format(Locale.ROOT,"%.1f", rating.overallRating()));
         holder.averageRating.setTextColor(RatingColorCalculator.calculateColour(holder.itemView.getContext(), rating.overallRating()));
-        System.out.println("semesterYear = " + rating.lecture().semesterYear());
-        System.out.println("semesterSeason = " + rating.lecture().semesterSeason());
         holder.lectureName.setText(rating.lecture().name());
         holder.semester.setText(
                 holder.itemView.getContext().getString(

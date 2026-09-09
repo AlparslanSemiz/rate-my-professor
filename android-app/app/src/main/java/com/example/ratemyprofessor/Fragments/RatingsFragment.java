@@ -1,6 +1,7 @@
 package com.example.ratemyprofessor.Fragments;
 
 import static android.view.View.INVISIBLE;
+import static android.view.View.resolveSize;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -27,6 +28,7 @@ import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.CommentModel;
 import com.example.ratemyprofessor.DomainModel.CommentType;
 import com.example.ratemyprofessor.DomainModel.Lecture;
+import com.example.ratemyprofessor.DomainModel.LectureType;
 import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.Rater;
 import com.example.ratemyprofessor.DomainModel.Rating;
@@ -41,6 +43,8 @@ import com.example.ratemyprofessor.ServerCommunication.Requests.PostCommentReque
 import com.example.ratemyprofessor.ServerCommunication.Requests.RatingRequest;
 import com.example.ratemyprofessor.ServerCommunication.Requests.RatingTopicRequest;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.LectureDetailResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.LectureResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorDetailResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
@@ -53,6 +57,7 @@ import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
 import com.example.ratemyprofessor.databinding.FragmentRatingsBinding;
 import com.example.ratemyprofessor.logic.CommentHelper;
 import com.example.ratemyprofessor.logic.RatingColorCalculator;
+import com.example.ratemyprofessor.logic.WeightedRatingCalc;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -384,18 +389,14 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
                     List<TopicAverageResponse> ratings = body.ratings();
                     // Dont know why we even get "null" categories but it happens
-                    System.out.println(ratings.size());
                     ratings.removeIf(rating -> rating.category() == null);
                     ratings.removeIf(rating -> rating.category().equals(RatingCategory.OVERALL));
-                    System.out.println(ratings.size());
                     if (body.ratings().isEmpty()) {
                         setEmptyRating();
                         return;
                     }
                     updateLocalRatingsFromResponse(ratings);
-                    for (TopicAverageResponse rating : ratings) {
-                        System.out.println(rating.category() + "->" + rating.value());
-                    }
+
                     executorService.execute(() -> {
                         List<Rating> storedUserRatings = searchService.getLectureRatings(lecture.id, Rater.USER);
                         List<TopicAverageResponse> userRatings = new ArrayList<>();
@@ -500,9 +501,6 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
 
         if (ratings == null || ratings.isEmpty()) {
-            System.out.println(ratings == null);
-            System.out.println(ratings.isEmpty());
-            System.out.println(":(");
             return;
         }
         // Sorting the categories alphabetically, so they always come out in the same order
@@ -511,14 +509,11 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                 r -> r.category().getDisplayName(),
                 String.CASE_INSENSITIVE_ORDER
         ));
-        System.out.println("1");
 
         if (userRatings == null || userRatings.isEmpty()) {
-            System.out.println("2");
             ratingAdapter = new RatingAdapter(ratingsSorted, (ArrayList<TopicAverageResponse>) userRatings);
             recyclerView.setAdapter(ratingAdapter);
         } else {
-            System.out.println("3");
             ArrayList<TopicAverageResponse> userRatingsSorted = new ArrayList<>(userRatings);
 
 
@@ -538,19 +533,40 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             return;
         }
 
-        double sum = 0;
-        for (TopicAverageResponse rating : ratings) {
-            sum += rating.value();
-        }
-        double lectureRating = sum / ratings.size();
-        // temporary fix, see how it should be handled later.
-        if (sum == 0) {
+        double lectureRating = WeightedRatingCalc.calcRating(ratings);
+
+        if (lectureRating == -1) {
             binding.averageLectureRating.setText("-");
             return;
         }
-        binding.averageLectureRating.setText(String.format(Locale.ROOT, RATING_FORMAT, lectureRating));
-        binding.averageLectureRating.setTextColor(RatingColorCalculator.calculateColour(
-                binding.averageLectureRating.getContext(), lectureRating));
+
+        Call<LectureDetailResponse> call = apiService.getLecture(lecture.id);
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                call.enqueue(new Callback<LectureDetailResponse>() {
+                    @Override
+                    public void onResponse(Call<LectureDetailResponse> call, Response<LectureDetailResponse> response) {
+                        if (response.isSuccessful()) {
+                            double averageRating = response.body().lecture().averageRating();
+
+                            binding.averageLectureRating.setText(
+                                    String.format(Locale.ROOT, RATING_FORMAT, averageRating));
+
+                            binding.averageLectureRating.setTextColor(
+                                    RatingColorCalculator.calculateColour(binding.averageLectureRating.getContext(),
+                                            averageRating));
+
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<LectureDetailResponse> call, Throwable throwable) {
+
+                    }
+                });
+            }
+        });
     }
 
     /**
@@ -607,6 +623,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                         updateLocalRatingsFromRequest(requestList);
                         insertAverageRatings(lecture);
                         updateProfRating();
+                        updateLectureRating();
                     }
 
                     @Override
@@ -627,7 +644,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
     /**
      * Updates the local average rating of a professor to reflect a submitted rating.
      */
-    public void updateProfRating() {
+    private void updateProfRating() {
         String profId = professor.id;
 
         apiService.getProfessor(profId).enqueue(new Callback<ProfessorDetailResponse>() {
@@ -638,7 +655,20 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                     ProfessorDetailResponse professorDetail = response.body();
 
                     ProfessorResponse professorResponse = professorDetail.professor();
-                    professor.averageRating = (float) professorResponse.averageRating();
+                    float newAverage = (float) professorResponse.averageRating();
+
+                    professor.averageRating = newAverage;
+
+                    // Room-Datenbank aktualisieren
+                    executorService.execute(() -> {
+                        SearchService searchService =
+                                Database.getInstance(requireContext()).searchService();
+
+                        searchService.updateProfessorAverageRating(
+                                profId,
+                                newAverage
+                        );
+                    });
                 }
             }
 
@@ -647,6 +677,45 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                 t.printStackTrace();
             }
         });
+    }
+
+    private void updateLectureRating() {
+        String lectureId = lecture.id;
+
+        apiService.getLecture(lectureId).enqueue(new Callback<LectureDetailResponse>() {
+            @Override
+            public void onResponse(Call<LectureDetailResponse> call,
+                                   Response<LectureDetailResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    LectureDetailResponse lectureDetail = response.body();
+                    LectureResponse lectureResponse = lectureDetail.lecture();
+                    float newAverage = (float) lectureResponse.averageRating();
+                    lecture.averageRating = newAverage;
+
+                    binding.averageLectureRating.setText(String.valueOf(newAverage));
+                    binding.averageLectureRating.setTextColor(RatingColorCalculator.calculateColour(
+                            binding.averageLectureRating.getContext(), newAverage));
+
+                    // Update Room database
+                    executorService.execute(() -> {
+                        SearchService searchService =
+                                Database.getInstance(requireContext()).searchService();
+
+                        searchService.updateLectureRating(lectureId, newAverage);
+
+                        List<Lecture> x = searchService.getLecture(professor.id, lecture.name,
+                                lecture.semesterYear, lecture.semesterSeason);
+
+                    });
+                }
+            }
+
+            @Override
+            public void onFailure(Call<LectureDetailResponse> call, Throwable throwable) {
+                throwable.printStackTrace();
+            }
+        });
+
     }
 
 
@@ -662,7 +731,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
     @Override
     public void vote(String commentID, VoteType voteType, CommentType commentType) {
-        CommentHelper.vote(getContext(), apiService, commentID, voteType, commentType);
+        CommentHelper.vote(requireContext(), apiService, commentID, voteType, commentType);
     }
 
     @Override

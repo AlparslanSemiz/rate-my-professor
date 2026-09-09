@@ -1,9 +1,5 @@
 package com.example.ratemyprofessor.logic;
 
-import static androidx.core.content.ContentProviderCompat.requireContext;
-
-import static java.security.AccessController.getContext;
-
 import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
@@ -27,6 +23,8 @@ import com.example.ratemyprofessor.ServerCommunication.Requests.VoteRequest;
 import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
 import com.example.ratemyprofessor.databinding.DialogCommentReportBinding;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import java.io.IOException;
 
 import retrofit2.Call;
 import retrofit2.Callback;

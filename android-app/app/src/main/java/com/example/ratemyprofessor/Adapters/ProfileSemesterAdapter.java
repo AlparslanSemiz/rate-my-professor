@@ -29,28 +29,17 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
 
     private static final String RATING_FORMAT = "%.1f";
     private final List<Semester> semesters;
+
+    private final List<Lecture> lectures;
     private final OnSemesterClickListener listener;
 
     private final Context context;
 
-    private final String lectureTitle;
-
-    private final String profId;
-
-    private final SearchService searchService;
-
-    private final ExecutorService executor;
-
-    public ProfileSemesterAdapter(Context context, List<Semester> semesters, OnSemesterClickListener listener,
-                                  String lectureTitle, String profId) {
+    public ProfileSemesterAdapter(Context context, List<Semester> semesters, List<Lecture> lectures, OnSemesterClickListener listener) {
         this.context = context;
         this.semesters = semesters;
+        this.lectures = lectures;
         this.listener = listener;
-        this.lectureTitle = lectureTitle;
-        this.profId = profId;
-
-        searchService = Database.getInstance(context).searchService();
-        executor = Executors.newSingleThreadExecutor();
     }
 
     @NonNull
@@ -62,32 +51,19 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
     }
 
     @Override
-    public void onBindViewHolder(@NonNull SemesterViewHolder holder, int position) {
+    public void onBindViewHolder(
+            @NonNull SemesterViewHolder holder,
+            int position) {
+
         Semester semester = semesters.get(position);
-
-        holder.textView.setText(semester.semesterSeason().toString() + " " + semester.semesterYear());
-
-        executor.execute(() -> {
-            List<Lecture> lectureList = searchService.getLecture(profId, lectureTitle,
-                    semester.semesterYear(), semester.semesterSeason());
-
-            if (lectureList.isEmpty()) {
-                return;
-            }
-            Lecture lecture = lectureList.get(0);
-
-            // Using Post to return to the UI thread
-            holder.itemView.post(() -> {
-                holder.averageRating.setText(String.format(Locale.getDefault(), RATING_FORMAT,
-                        lecture.averageRating));
-                holder.averageRating.setTextColor(RatingColorCalculator.calculateColour(context,
-                        lecture.averageRating));
-            });
-        });
-
-        holder.itemView.setOnClickListener(
-                v -> listener.onSemesterClick(semester)
-        );
+        Lecture lecture = lectures.get(position);
+        holder.textView.setText(semester.semesterSeason().toString()
+                + " " + semester.semesterYear());
+        holder.averageRating.setText(String.format(Locale.getDefault(),
+                RATING_FORMAT, lecture.averageRating));
+        holder.averageRating.setTextColor(RatingColorCalculator.calculateColour(context,
+                lecture.averageRating));
+        holder.itemView.setOnClickListener(v -> listener.onSemesterClick(semester));
     }
 
     @Override

@@ -206,4 +206,10 @@ public interface SearchService {
 
     @Query("SELECT * FROM lectures WHERE name = :lectureTitle")
     List<Lecture> getLecturesByTitle(String lectureTitle);
+
+    @Query("UPDATE lectures SET averageRating = :averageRating WHERE id = :lectureId")
+    void updateLectureRating(String lectureId, double averageRating);
+
+    @Query("UPDATE professors SET averageRating = :averageRating WHERE id = :professorId")
+    void updateProfessorAverageRating(String professorId, double averageRating);
 }
