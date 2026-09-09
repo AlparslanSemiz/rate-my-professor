@@ -104,7 +104,18 @@ classDiagram
 **Nothing points back up, and that is checked rather than claimed.** `src/api` holds
 no import of `@/features`, `@/hooks`, `@/components`, `@/layouts` or `@/context`;
 `src/domain`, `src/utils` and `src/theme` hold no `@/` import of any kind;
-`src/components` holds no import of `@/features`. There are no cycles.
+`src/components` holds no import of `@/features`.
+
+**There are no cycles either, and that claim used to be weaker than it read.** It
+had been checked once, by hand, and only *between packages* — which is why it missed
+three cycles inside features, where a type declared on the module that renders it
+was imported back by the hook that produces it. All three were `import type`, so
+nothing failed at runtime and every one of them was still a real edge on this
+diagram. `npm run check` now runs `scripts/check-cycles.mjs` over every file in
+`src/`, so this line is true of the code rather than of somebody's reading of it —
+**276 files, 899 edges, no cycle** — and the check itself was verified by introducing
+a cycle and watching it fail. It counts `import type` edges deliberately: they are
+erased at build time and they are exactly the three that had been missed.
 
 **Two feature-to-feature edges exist**, both one-way:
 
@@ -164,25 +175,61 @@ classDiagram
       +setToken(token)
       +setOnUnauthorized(handler)
     }
+    class HttpTransport {
+      <<interface>>
+      +get(path, params) Promise~T~
+      +post(path, body) Promise~T~
+      +patch(path, body) Promise~T~
+      +delete(path) Promise~T~
+    }
     class ApiSession {
       +setToken(token)
-      +authorize(headers)
-      +expire()
+      +setOnUnauthorized(handler)
+      +hasToken() boolean
+      +authorizationHeader() string
+      +notifyUnauthorized()
     }
     class ApiRequestBuilder {
+      +url(path) string
       +withQueryString(path, params) string
-      +build(path, init) Request
+      +init(init) RequestInit
     }
     class ApiResponseParser {
-      +parse(response) Promise~T~
-    }
-    class ApiError {
-      +status int
-      +reason string
+      +parse(response, path) Promise~T~
     }
     class HttpService {
       <<abstract>>
-      #client ApiClient
+      #client HttpTransport
+    }
+  }
+
+  namespace api_errors {
+    class ApiError {
+      <<abstract>>
+      +reason string
+      +cause unknown
+      +transient() boolean*
+    }
+    class NetworkError {
+      +transient = true
+    }
+    class ContractError {
+      +transient = false
+    }
+    class ResponseError {
+      +status int
+      +transient() status >= 500
+    }
+    class BadRequestError
+    class UnauthorizedError
+    class ForbiddenError
+    class NotFoundError
+    class ConflictError
+    class RateLimitedError {
+      +retryAfterSeconds int
+    }
+    class RefusedError {
+      +transient = false
     }
   }
 
@@ -262,8 +309,20 @@ classDiagram
   ApiClient *-- ApiSession
   ApiClient *-- ApiRequestBuilder
   ApiClient *-- ApiResponseParser
+  ApiClient ..|> HttpTransport
   ApiResponseParser ..> ApiError : throws
-  HttpService --> ApiClient
+  HttpService --> HttpTransport
+
+  NetworkError --|> ApiError
+  ContractError --|> ApiError
+  ResponseError --|> ApiError
+  BadRequestError --|> ResponseError
+  UnauthorizedError --|> ResponseError
+  ForbiddenError --|> ResponseError
+  NotFoundError --|> ResponseError
+  ConflictError --|> ResponseError
+  RateLimitedError --|> ResponseError
+  RefusedError --|> ResponseError
 
   AuthService --|> HttpService
   UsersService --|> HttpService
@@ -280,12 +339,20 @@ classDiagram
   AnswersService --|> ModerationService
 ```
 
-Three things this diagram is drawn to make visible.
+Four things this diagram is drawn to make visible.
+
+**A service is handed `HttpTransport`, not `ApiClient`.** This is the edge worth
+pointing at. `ApiClient` publicly exposes `setToken` and `setOnUnauthorized`, so while
+services held one, `BugReportsService` could revoke the operator's session and nothing
+but convention stopped it. `HttpTransport` is four verbs and no session, so the
+capability is not merely discouraged — it is absent from the type. `ApiClient`
+implements it; only `src/context` ever holds the whole client.
 
 **`HttpService` is a base class rather than a parameter property.**
 `tsconfig.app.json` sets `erasableSyntaxOnly`, so
-`constructor(private readonly client: ApiClient)` is not available in this project.
-Nineteen services had written the same field and the same constructor by hand.
+`constructor(private readonly client: HttpTransport)` is not available in this
+project. Nineteen services had written the same field and the same constructor by
+hand.
 
 **`CommentsService` and `AnswersService` differ by one string.** The backend names
 the list in each response after the resource — `/comments` returns `comments`,
@@ -298,6 +365,20 @@ only the seam that lets a page hold one service instead of two.
 bearer token, `401` ending the session, and an unreachable backend deliberately
 **not** ending it — a rejected origin and a downed host are the same `TypeError` to
 `fetch`, so the two cannot be told apart from here.
+
+**Eleven error classes, and the hierarchy is the point.** `ApiError` was one class
+carrying a `status`, thrown for five different things, with `status: 0` standing in
+for three of them that are not HTTP failures at all. Callers then compared numbers, in
+six files across four layers. Now every failure answers `transient` **for itself**, so
+`src/query.ts`'s retry predicate compares no statuses, and `responseErrorFor` is the
+one table that turns a number into a meaning. `ApiResponseParser` is the only code in
+the panel that reads `response.status`.
+
+The abstraction earns its keep outside the retry rule too: `AuthContext` decides
+whether a failed session check is worth telling the operator about by asking
+`error.transient`, not by listing statuses — so a `404` and an unreadable payload are
+reported while a 500 and a dropped connection stay quiet, and nothing had to enumerate
+which is which. [ADR 0013](adr/0013-errors-are-types-not-status-codes.md).
 
 The `api_domains` grouping above is drawn for legibility. On disk these are five
 separate packages — `auth`, `users`, `catalog`, `logs`, `feedback`, `system` — each
@@ -605,13 +686,22 @@ classDiagram
     <<component>>
     +login(token, user)
     +logout()
+    +checking boolean
     +sessionExpired boolean
+    +sessionCheckError string
+    +acknowledgeExpiry()
+    +acknowledgeSessionCheckError()
   }
   class authSessionStorage {
     <<module>>
-    +readStoredSession() AuthState
+    +readStoredSession() StoredSession
+    +restoreSession() AuthState
     +storeSession(token, user)
     +clearStoredSession()
+  }
+  class ErrorAlert {
+    <<component>>
+    +level error|warning
   }
   class ProtectedRoute {
     <<component>>
@@ -646,6 +736,7 @@ classDiagram
   ProtectedRoute ..> PageLoader : while /auth/me is in flight
   AdminLayout *-- Sidebar
   AdminLayout *-- AdminRoutes
+  AdminLayout ..> ErrorAlert : the unconfirmed-session notice
   AdminRoutes ..> PageLoader : Suspense fallback
 ```
 
@@ -662,6 +753,15 @@ signed-in operator.
 
 **Each page under `AdminRoutes` is a `React.lazy` chunk**, which is where the code
 split lives — see [ADR 0007](adr/0007-route-based-lazy-loading.md).
+
+**The provider carries three session states, not two.** `checking`, `sessionExpired`
+and `sessionCheckError` answer three different questions — "we do not know yet", "the
+backend refused", and "the backend answered, but not usefully" — and the panel owes
+the operator a different screen for each. The third was missing entirely: a `404` on
+`/auth/me` left the operator signed in against an unconfirmed account copy with
+nothing on screen and nothing in state (`F-013`). `AdminLayout` renders it through the
+same `ErrorAlert` a page uses for its own errors, at a `warning` level rather than an
+`error` one, because the operator can carry on working through it.
 
 ---
 
