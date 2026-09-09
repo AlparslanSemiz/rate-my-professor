@@ -17,6 +17,7 @@ import com.pse.rating.model.RatingCategory;
 import com.pse.rating.model.RatingTopic;
 import com.pse.rating.repository.RatingRepository;
 import com.pse.rating.service.RatingService;
+import com.pse.shared.enums.UserStatus;
 import com.pse.shared.error.ApiException;
 import com.pse.user.model.Student;
 
@@ -401,7 +402,11 @@ class RatingServiceTests {
                 topic(RatingCategory.PROFESSOR_ENGAGEMENT, 5.0),
                 topic(RatingCategory.ORGANIZATION, 2.0),
                 topic(RatingCategory.EXERCISE_PACE, 1.0)));
-        when(ratingRepository.findByLectureId(lectureId)).thenReturn(List.of(rating));
+
+        when(ratingRepository.findByLectureIdAndStudentStatus(
+                lectureId,
+                UserStatus.ACTIVE
+        )).thenReturn(List.of(rating));
 
         RatingsAverageResponse response = ratingService.getRatings(lectureId);
 
@@ -444,14 +449,13 @@ class RatingServiceTests {
         when(rating2.getTopics())
                 .thenReturn(List.of(second));
 
-        when(ratingRepository
-                .findByLectureId(lectureId))
-                .thenReturn(
-                        List.of(
-                                rating1,
-                                rating2
-                        )
-                );
+        when(ratingRepository.findByLectureIdAndStudentStatus(
+                lectureId,
+                UserStatus.ACTIVE
+        )).thenReturn(List.of(
+                rating1,
+                rating2
+        ));
 
 
         RatingsAverageResponse response = ratingService.getRatings(lectureId);
@@ -476,9 +480,10 @@ class RatingServiceTests {
 
         UUID lectureId = UUID.randomUUID();
 
-        when(ratingRepository.findByLectureId(lectureId))
-                .thenReturn(List.of());
-
+        when(ratingRepository.findByLectureIdAndStudentStatus(
+                lectureId,
+                UserStatus.ACTIVE
+        )).thenReturn(List.of());
 
         RatingsAverageResponse response = ratingService.getRatings(lectureId);
 

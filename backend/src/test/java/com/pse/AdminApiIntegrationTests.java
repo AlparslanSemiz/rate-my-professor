@@ -88,7 +88,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.pse.support.ApiIntegrationTest;
 import com.pse.support.DatabaseReset;
 
+import org.springframework.test.context.TestPropertySource;
+
 @ApiIntegrationTest
+@TestPropertySource(properties = {
+        "ipinfo.token=",
+        "geoapify.api.key="
+})
 class AdminApiIntegrationTests {
 
     /** Matches app.auth.admin-superuser-emails in application-test.properties. It is

@@ -3,6 +3,7 @@ package com.pse.social.mapper;
 import java.util.List;
 
 import com.pse.shared.enums.ContentStatus;
+import com.pse.shared.enums.UserStatus;
 import com.pse.shared.enums.VoteType;
 import com.pse.shared.util.ProfilePictureGenerator;
 import com.pse.social.dto.response.AnswerResponse;
@@ -64,16 +65,22 @@ public class SocialResponseMapper {
             }
         }
 
+        Student commentAuthor = comment.getStudent();
+
+        String username = commentAuthor.getStatus() == UserStatus.DELETED
+                ? "Deleted User"
+                : commentAuthor.getUsername();
+
         return new CommentResponse(
                 comment.getId(),
                 comment.getContent(),
                 comment.getStatus(),
-                comment.getStudent().getUsername(),
-                ProfilePictureGenerator.generateProfilePicture(comment.getStudent()),
+                username,
+                ProfilePictureGenerator.generateProfilePicture(commentAuthor),
                 comment.getLecture().getId(),
                 comment.getCreatedAt(),
-                commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
-                commentVoteRepository.countByCommentAndVote(comment, VoteType.UP),
+                commentVoteRepository.countByCommentAndVoteAndStudentStatus(comment, VoteType.DOWN, UserStatus.ACTIVE),
+                commentVoteRepository.countByCommentAndVoteAndStudentStatus(comment, VoteType.UP, UserStatus.ACTIVE),
                 userVote,
                 answersOf(comment, student)
         );
@@ -93,20 +100,27 @@ public class SocialResponseMapper {
             AnswerVote vote = answerVoteRepository
                     .findByStudentAndAnswer(student, answer)
                     .orElse(null);
+
             if (vote != null) {
                 userVote = vote.getVote();
             }
         }
 
+        Student answerAuthor = answer.getStudent();
+
+        String username = answerAuthor.getStatus() == UserStatus.DELETED
+                ? "Deleted User"
+                : answerAuthor.getUsername();
+
         return new AnswerResponse(
                 answer.getId(),
                 answer.getContent(),
                 answer.getStatus(),
-                answer.getStudent().getUsername(),
-                ProfilePictureGenerator.generateProfilePicture(answer.getStudent()),
+                username,
+                ProfilePictureGenerator.generateProfilePicture(answerAuthor),
                 answer.getCreatedAt(),
-                answerVoteRepository.countByAnswerAndVote(answer, VoteType.DOWN),
-                answerVoteRepository.countByAnswerAndVote(answer, VoteType.UP),
+                answerVoteRepository.countByAnswerAndVoteAndStudentStatus(answer, VoteType.DOWN, UserStatus.ACTIVE),
+                answerVoteRepository.countByAnswerAndVoteAndStudentStatus(answer, VoteType.UP, UserStatus.ACTIVE),
                 userVote
         );
     }
