@@ -4,7 +4,7 @@ import type { BugReport } from '@/api/feedback'
 import { reportStatusColor, severityColor } from '@/constants/colors'
 import { enumLabel } from '@/utils/enumLabel'
 import { formatDate } from '@/utils/formatDate'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
 
 const titleStyle: CSSProperties = { fontSize: 20 }
 
@@ -23,13 +23,13 @@ export default function BugReportSummary({ report }: { report: BugReport }) {
         </Badge>
       </Group>
       <Group gap={6}>
-        <IconUser size={13} color={chrome.textDim} />
+        <IconUser size={iconSize.compact} color={chrome.textDim} />
         <Text size="sm" c={chrome.textDim}>
           Reported by {report.reporterName}
         </Text>
       </Group>
       <Group gap={6} mt={4}>
-        <IconClock size={13} color={chrome.textDim} />
+        <IconClock size={iconSize.compact} color={chrome.textDim} />
         <Text size="xs" c={chrome.textFaint}>
           {formatDate(report.reportedAt, { withTime: true })}
         </Text>

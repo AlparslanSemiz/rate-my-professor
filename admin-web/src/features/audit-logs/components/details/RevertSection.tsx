@@ -2,7 +2,7 @@ import { Button, Text } from '@mantine/core'
 import { IconArrowBackUp } from '@tabler/icons-react'
 import type { AuditLog } from '@/api/logs'
 import ErrorAlert from '@/components/ErrorAlert'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
 import { revertRefusalMessage } from '../../auditLogModel'
 import DetailSection from './DetailSection'
 
@@ -58,7 +58,7 @@ export default function RevertSection({
         size="xs"
         color="orange"
         variant="light"
-        leftSection={<IconArrowBackUp size={14} />}
+        leftSection={<IconArrowBackUp size={iconSize.inline} />}
         loading={reverting}
         onClick={() => onRevert(log)}
       >

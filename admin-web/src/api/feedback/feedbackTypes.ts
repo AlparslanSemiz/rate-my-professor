@@ -5,6 +5,13 @@ export type { ReportStatus, Severity }
 /** Whether a GitLab issue has been opened for a report, and how that went. */
 export type IssueState = 'NONE' | 'CREATED' | 'FAILED'
 
+/**
+ * One bug report a student filed.
+ *
+ * There is no `statusChangedAt`: the backend records only when the report was created, so
+ * "how long has this been open" cannot be answered here. That is `F3` in
+ * `docs/backend-tasks.md`.
+ */
 export interface BugReport {
   id: string
   title: string
@@ -30,6 +37,7 @@ export interface BugReportUpdate {
   description?: string
 }
 
+/** The issue created from a report, whose URL is then shown beside it. */
 export interface GitlabIssueResponse {
   message: string
   success: boolean

@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react'
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { auditLogsService, type AuditLogFilters } from '@/api/logs'
+import { EMPTY_AUDIT_META } from '@/domain/auditLog'
 import {
-  EMPTY_AUDIT_META,
   EMPTY_FILTERS,
   getAuditErrorMessage,
   toAuditFilters,
@@ -24,6 +24,17 @@ const auditLogKeys = {
   list: (filters: AuditLogFilters) => [...auditLogKeys.all, 'list', filters] as const,
 }
 
+/**
+ * The audit log screen's data: the entries, the filter form, and the vocabulary it offers.
+ *
+ * Filtering is **server-side**, which is why there are two pieces of filter state rather than
+ * one. `draft` is what the operator is typing and changes on every keystroke; `activeFilters`
+ * is what has actually been submitted, and it is the query key — so an unsubmitted keystroke
+ * does not fetch a page, and pressing Apply with nothing changed does not either.
+ *
+ * @returns the entries and paging state, the filter draft and its validation error, the
+ *          backend's filter vocabulary, and the commands to apply, clear and load more
+ */
 export function useAuditLogs() {
   const [draft, setDraft] = useState<FilterDraft>(EMPTY_FILTERS)
   const [activeFilters, setActiveFilters] = useState<AuditLogFilters>(NO_FILTERS)

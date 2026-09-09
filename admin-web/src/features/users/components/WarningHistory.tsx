@@ -7,7 +7,14 @@ import { formatDate } from '@/utils/formatDate'
 import { getErrorMessage } from '@/utils/getErrorMessage'
 import WarningActions from './warnings/WarningActions'
 import WarningEditor from './warnings/WarningEditor'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+
+/**
+ * The empty state here sits inside a modal, so it is drawn smaller than the page-level
+ * `iconSize.emptyState`. That the two differ is drift, recorded rather than quietly unified.
+ */
+const EMPTY_ICON_SIZE = 20
+
 
 const sectionTitleStyle: CSSProperties = { letterSpacing: '0.05em' }
 const emptyWarningsStyle: CSSProperties = {
@@ -35,7 +42,7 @@ function warningKey(warning: Warning) {
 }
 
 interface WarningHistoryProps {
-  warnings: Warning[]
+  warnings: readonly Warning[]
   busy: boolean
   onEdit: (warning: Warning, message: string) => Promise<void>
   onWithdraw: (warning: Warning) => void
@@ -84,14 +91,14 @@ export default function WarningHistory({
   return (
     <Box>
       <Group gap={6} mb={12}>
-        <IconClock size={13} color={chrome.textDim} />
+        <IconClock size={iconSize.compact} color={chrome.textDim} />
         <Text size="xs" fw={600} c={chrome.textDim} tt="uppercase" style={sectionTitleStyle}>
           Warning history ({warnings.length})
         </Text>
       </Group>
       {warnings.length === 0 ? (
         <Box style={emptyWarningsStyle}>
-          <IconUser size={20} color={chrome.iconFaint} style={{ marginBottom: 6 }} />
+          <IconUser size={EMPTY_ICON_SIZE} color={chrome.iconFaint} style={{ marginBottom: 6 }} />
           <Text size="xs" c={chrome.textFaint}>
             No warnings issued.
           </Text>

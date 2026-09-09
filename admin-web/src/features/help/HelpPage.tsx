@@ -4,6 +4,10 @@ import Panel from '@/components/Panel'
 import { HELP_SECTIONS, type HelpActionRow, type HelpValueGroup } from './content'
 import { chrome } from '@/theme'
 
+/** The icon in an accordion control, matched to its heading rather than to body text. */
+const SECTION_ICON_SIZE = 16
+
+
 const accordionStyles = {
   item: { background: 'transparent', border: 'none' },
   control: {
@@ -58,7 +62,7 @@ function ValueTable({ group }: { group: HelpValueGroup }) {
   )
 }
 
-function ActionList({ actions }: { actions: HelpActionRow[] }) {
+function ActionList({ actions }: { actions: readonly HelpActionRow[] }) {
   return (
     <Box>
       <Text size="xs" c={chrome.textDim} fw={600} mb={6} style={groupHeadingStyle}>
@@ -96,7 +100,7 @@ export default function HelpPage() {
       <Accordion multiple variant="separated" transitionDuration={0} styles={accordionStyles}>
         {HELP_SECTIONS.map((section) => (
           <Accordion.Item key={section.id} value={section.id}>
-            <Accordion.Control icon={<section.icon size={16} color={chrome.textDim} />}>
+            <Accordion.Control icon={<section.icon size={SECTION_ICON_SIZE} color={chrome.textDim} />}>
               {section.title}
             </Accordion.Control>
             <Accordion.Panel>

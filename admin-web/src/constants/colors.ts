@@ -1,6 +1,7 @@
+import type { AuditAction } from '@/domain/auditLog'
 import type { ContentStatus, ReportReason, ReportStatus, Severity } from '@/domain/moderation'
 import type { UserRole, UserStatus } from '@/domain/user'
-import { routes } from './routes'
+import { routes, type Route } from './routes'
 
 /**
  * KIT's colours at the pastel end of the ramps defined in `src/theme.ts` — shade 3 of each.
@@ -41,66 +42,79 @@ export const KIT = {
 export const KIT_GREEN_PUBLISHED = '#009682'
 
 /**
- * The colour a section is drawn in, keyed by its route. The dashboard's module cards, its
- * stat cards and the sidebar all read it from here: they used to hold their own copies, so
- * the same section could be one colour on the dashboard and another in the navigation.
+ * The colour a section is drawn in, keyed by its route. Not exported: the table and the rule
+ * for what happens when a route is not in it are one decision, and `accentForRoute` is where
+ * that decision is made. It used to be public and typed `Record<string, string>`, so
+ * `moduleAccent['/dashbaord']` compiled and yielded `undefined` — and four of the five call
+ * sites had no fallback.
  */
-export const moduleAccent: Record<string, string> = {
+const MODULE_ACCENTS: Partial<Record<Route, string>> = Object.freeze({
   [routes.dashboard]: KIT.green,
   [routes.catalog]: KIT.lime,
   [routes.users]: KIT.blue,
   [routes.comments]: KIT.grape,
   [routes.feedback]: KIT.orange,
-}
+})
 
 /** For the oversight views, which are not modules and have no colour of their own. */
 export const DEFAULT_ACCENT = KIT.green
 
-export const roleColor: Record<UserRole, string> = {
+/**
+ * The accent for a section of the panel.
+ *
+ * @param route the path the section is served at
+ * @returns the section's own colour, or `DEFAULT_ACCENT` for the views that have none —
+ *          audit logs, help and login, which are oversight rather than modules
+ */
+export function accentForRoute(route: string): string {
+  return MODULE_ACCENTS[route as Route] ?? DEFAULT_ACCENT
+}
+
+export const roleColor: Readonly<Record<UserRole, string>> = Object.freeze({
   ADMIN: 'blue',
   STUDENT: 'gray',
-}
+})
 
-export const roleAccent: Record<UserRole, string> = {
+export const roleAccent: Readonly<Record<UserRole, string>> = Object.freeze({
   ADMIN: KIT.blue,
   STUDENT: KIT.neutral,
-}
+})
 
-export const userStatusColor: Record<UserStatus, string> = {
+export const userStatusColor: Readonly<Record<UserStatus, string>> = Object.freeze({
   ACTIVE: 'green',
   INACTIVE: 'gray',
   BLOCKED: 'red',
   DELETED: 'dark',
-}
+})
 
-export const severityColor: Record<Severity, string> = {
+export const severityColor: Readonly<Record<Severity, string>> = Object.freeze({
   LOW: 'gray',
   MEDIUM: 'yellow',
   HIGH: 'orange',
   CRITICAL: 'red',
-}
+})
 
-export const severityAccent: Record<Severity, string> = {
+export const severityAccent: Readonly<Record<Severity, string>> = Object.freeze({
   LOW: KIT.neutral,
   MEDIUM: KIT.yellow,
   HIGH: KIT.orange,
   CRITICAL: KIT.red,
-}
+})
 
-export const reportStatusColor: Record<ReportStatus, string> = {
+export const reportStatusColor: Readonly<Record<ReportStatus, string>> = Object.freeze({
   OPEN: 'red',
   REVIEWED: 'blue',
   DISMISSED: 'gray',
   ACTION_TAKEN: 'green',
-}
+})
 
-export const contentStatusColor: Record<ContentStatus, string> = {
+export const contentStatusColor: Readonly<Record<ContentStatus, string>> = Object.freeze({
   VISIBLE: 'green',
   HIDDEN: 'orange',
   DELETED: 'dark',
-}
+})
 
-export const reportReasonColor: Record<ReportReason, string> = {
+export const reportReasonColor: Readonly<Record<ReportReason, string>> = Object.freeze({
   SPAM: 'yellow',
   INSULT: 'orange',
   HARASSMENT: 'red',
@@ -109,4 +123,55 @@ export const reportReasonColor: Record<ReportReason, string> = {
   OFF_TOPIC: 'gray',
   INAPPROPRIATE_CONTENT: 'orange',
   OTHER: 'gray',
+})
+
+/**
+ * Whether a catalogue record is offered to students.
+ *
+ * Written inline as `active ? 'green' : 'gray'` in both catalogue rows, and it was the one
+ * state in the panel with no entry here and no row on the Help page either.
+ */
+export const activeStatusColor: Readonly<Record<'active' | 'inactive', string>> = Object.freeze({
+  active: 'green',
+  inactive: 'gray',
+})
+
+/**
+ * The four actions that read as something other than an ordinary edit.
+ *
+ * Only the exceptions: everything else is decided by {@link auditActionColor}'s suffix rule or
+ * falls through to the default. Keyed on `AuditAction`, so an action the backend adds and the
+ * domain learns about is a compile-time prompt to decide its colour rather than a silent blue.
+ */
+const AUDIT_ACTION_COLORS: Partial<Record<AuditAction, string>> = Object.freeze({
+  ADMIN_LOGIN: 'green',
+  ADMIN_LOGOUT: 'gray',
+  USER_BLOCKED: 'orange',
+  USER_WARNING_CREATED: 'orange',
+})
+
+/** Anything that removed something reads as a removal, whatever it removed. */
+const DELETION_ACTION_SUFFIX = '_DELETED'
+const DELETION_COLOR = 'red'
+const DEFAULT_AUDIT_ACTION_COLOR = 'blue'
+
+/**
+ * The colour an audit entry's action badge is drawn in.
+ *
+ * Half table and half rule, and both halves are deliberate. The named actions are exceptions
+ * and belong in a table. Deletions are a *class* — the administrative action set grows with
+ * every new thing an admin can do, and a deletion has to read as a deletion whether it removed
+ * a comment, a lecture or a warning — so that half stays a rule.
+ *
+ * It used to be one if-chain, in the audit feature, typed on `string`. Being typed on `string`
+ * meant the `AuditAction` union bought nothing: a caller could pass a typo and get blue.
+ *
+ * @param action the recorded action
+ * @returns a Mantine colour name
+ */
+export function auditActionColor(action: AuditAction): string {
+  return (
+    AUDIT_ACTION_COLORS[action] ??
+    (action.endsWith(DELETION_ACTION_SUFFIX) ? DELETION_COLOR : DEFAULT_AUDIT_ACTION_COLOR)
+  )
 }

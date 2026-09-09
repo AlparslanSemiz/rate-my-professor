@@ -6,6 +6,7 @@ import {
   useQueryClient,
   type InfiniteData,
 } from '@tanstack/react-query'
+import { DEFAULT_PAGE_SIZE } from '@/api/client'
 import { systemStatusService } from '@/api/system'
 import { usersService, type User, type UserPage, type UserQuery } from '@/api/users'
 import { updateById } from '@/utils/collection'
@@ -16,7 +17,6 @@ import {
   NO_USER_QUERY,
   toUserCounts,
   toUserQuery,
-  USERS_PAGE_SIZE,
   type UserChange,
   type UserFilterDraft,
 } from '../model'
@@ -48,10 +48,22 @@ function isSameQuery(left: UserQuery, right: UserQuery): boolean {
 }
 
 /** Applies a change to every loaded page, so the list reflects it without a second request. */
-function patchPages(data: UserPages, patch: (users: User[]) => User[]): UserPages {
+function patchPages(data: UserPages, patch: (users: readonly User[]) => User[]): UserPages {
   return { ...data, pages: data.pages.map((page) => ({ ...page, users: patch(page.users) })) }
 }
 
+/**
+ * The users screen: a cursor-paged listing, its filter form, and the counters above it.
+ *
+ * Filtering is server-side, so `draft` (what is being typed) and `query` (what was submitted)
+ * are separate — the same split as the audit log, and for the same reason.
+ *
+ * A write patches the pages already loaded rather than refetching them. Asking for the page
+ * again would re-request fifty rows to change one of them, and would move rows under the
+ * operator's cursor if the ordering happened to change.
+ *
+ * @returns the accounts and paging state, the filter draft, the counters, and the commands
+ */
 export function useUsersPage() {
   const queryClient = useQueryClient()
   const [draft, setDraft] = useState<UserFilterDraft>(EMPTY_USER_FILTERS)
@@ -62,7 +74,7 @@ export function useUsersPage() {
   const users = useInfiniteQuery({
     queryKey: usersKeys.list(query),
     queryFn: ({ pageParam }) =>
-      usersService.list({ ...query, limit: USERS_PAGE_SIZE, cursor: pageParam }),
+      usersService.list({ ...query, limit: DEFAULT_PAGE_SIZE, cursor: pageParam }),
     initialPageParam: null as string | null,
     getNextPageParam: (page) => page.nextCursor,
     // Applying a filter is a different query. Without this the rows vanish while it runs, and

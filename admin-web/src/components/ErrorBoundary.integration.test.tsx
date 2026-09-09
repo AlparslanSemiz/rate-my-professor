@@ -4,6 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ErrorBoundary from './ErrorBoundary'
 
+/**
+ * Named `.integration.` because it renders through `MantineProvider` over the third-party
+ * `react-error-boundary` and drives it with `user-event`. It is a component scenario, not a
+ * unit.
+ */
+
 // React reports every caught render error through `console.error`, and the boundary logs its
 // own on top of that. Silencing it keeps a deliberate failure from reading like a broken suite.
 let consoleError: ReturnType<typeof vi.spyOn>

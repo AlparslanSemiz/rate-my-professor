@@ -1,6 +1,7 @@
 import { ActionIcon, Group, Tooltip } from '@mantine/core'
 import { IconPencil, IconTrash } from '@tabler/icons-react'
 import type { Warning } from '@/api/users'
+import { iconSize } from '@/theme'
 
 interface WarningActionsProps {
   warning: Warning
@@ -33,7 +34,7 @@ export default function WarningActions({
           aria-label="Edit warning"
           onClick={onEdit}
         >
-          <IconPencil size={14} />
+          <IconPencil size={iconSize.inline} />
         </ActionIcon>
       </Tooltip>
       <Tooltip label="Withdraw this warning" withArrow>
@@ -45,7 +46,7 @@ export default function WarningActions({
           aria-label="Withdraw warning"
           onClick={onWithdraw}
         >
-          <IconTrash size={14} />
+          <IconTrash size={iconSize.inline} />
         </ActionIcon>
       </Tooltip>
     </Group>

@@ -4,7 +4,14 @@ import type { AuditLog } from '@/api/logs'
 import Panel from '@/components/Panel'
 import TableHeaderRow from '@/components/TableHeaderRow'
 import AuditLogRow from './AuditLogRow'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+
+/**
+ * This table's empty state, drawn a touch larger than `iconSize.emptyState` because it fills
+ * a full-width row rather than a card. Recorded as drift, not unified without a visual pass.
+ */
+const EMPTY_ICON_SIZE = 34
+
 
 const TABLE_COLUMNS = ['Time', 'Admin', 'Action', 'Target', 'Changed fields'] as const
 const panelStyle: CSSProperties = { overflow: 'hidden' }
@@ -43,7 +50,7 @@ export default function AuditLogsTable({
     <Panel style={panelStyle} aria-busy={loading}>
       <Box px={20} py={14} style={{ borderBottom: `1px solid ${chrome.border}` }}>
         <Group gap={7}>
-          <IconFileSearch size={15} color={chrome.textDim} />
+          <IconFileSearch size={iconSize.rowAction} color={chrome.textDim} />
           <Text size="xs" c={chrome.textDim}>
             {logs.length} audit event{logs.length === 1 ? '' : 's'} loaded · newest first
           </Text>
@@ -52,7 +59,7 @@ export default function AuditLogsTable({
 
       {logs.length === 0 ? (
         <Box style={emptyStyle}>
-          <IconFileSearch size={34} color={chrome.iconFaint} />
+          <IconFileSearch size={EMPTY_ICON_SIZE} color={chrome.iconFaint} />
           <Text c={chrome.textDim} size="sm" mt={10}>
             No audit events match these filters.
           </Text>

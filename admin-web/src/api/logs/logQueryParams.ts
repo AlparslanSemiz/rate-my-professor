@@ -1,11 +1,22 @@
-import { endOfDay, startOfDay, type LogFilters } from '@/domain/auditLog'
+import { endOfDay, startOfDay, type AuditLogFilters } from '@/domain/auditLog'
+import { DEFAULT_PAGE_SIZE } from '@/api/client/paging'
 
-const DEFAULT_LOG_PAGE_SIZE = 50
 
+/**
+ * Turns the filter draft into the query string `/audit-logs` expects.
+ *
+ * The date bounds are the part worth knowing: `from` and `to` arrive as `yyyy-mm-dd` picked
+ * on the operator's own calendar and go out as inclusive instants in their timezone, not UTC.
+ *
+ * @param filters what to narrow on; absent and blank fields are dropped by the client
+ * @param cursor the cursor from the previous page
+ * @param limit how many entries to ask for
+ * @returns the parameters, with absent ones left for the client to omit
+ */
 export function toLogQueryParams(
-  filters: LogFilters = {},
+  filters: AuditLogFilters = {},
   cursor?: string | null,
-  limit = DEFAULT_LOG_PAGE_SIZE,
+  limit = DEFAULT_PAGE_SIZE,
 ): Record<string, string | number | boolean | null | undefined> {
   return {
     limit,

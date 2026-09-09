@@ -3,6 +3,8 @@ import { systemStatusService } from '@/api/system'
 import { usersService } from '@/api/users'
 import {
   EMPTY_DASHBOARD_STATS,
+  RECENT_MEMBER_COUNT,
+  REFRESH_INTERVAL_MS,
   dashboardActiveRate,
   dashboardReadingError,
   dashboardStatsFromCounts,
@@ -10,10 +12,8 @@ import {
   type DashboardReading,
 } from '../dashboardModel'
 
-export const REFRESH_INTERVAL_MS = 15_000
 const LOAD_ERROR_FALLBACK = 'The dashboard could not be refreshed.'
 /** Enough to fill the "Newest members" panel, which shows four. */
-const RECENT_USER_LIMIT = 4
 
 const dashboardKeys = {
   all: ['dashboard'] as const,
@@ -43,7 +43,7 @@ export function useDashboardData() {
 
   const recent = useQuery({
     queryKey: dashboardKeys.recentUsers(),
-    queryFn: () => usersService.list({ limit: RECENT_USER_LIMIT, sort: 'newest' }),
+    queryFn: () => usersService.list({ limit: RECENT_MEMBER_COUNT, sort: 'newest' }),
     refetchInterval: REFRESH_INTERVAL_MS,
   })
 

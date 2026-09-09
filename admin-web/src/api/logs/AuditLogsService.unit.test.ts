@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClient } from '@/api/client/ApiClient'
-import { AuditLogsService, type AuditLog } from './AuditLogsService'
+import { AuditLogsService } from './AuditLogsService'
+import type { AuditLog } from './index'
 import { jsonResponse, TEST_API_BASE_URL } from '@/test/http'
 
 const fetchMock = vi.fn()

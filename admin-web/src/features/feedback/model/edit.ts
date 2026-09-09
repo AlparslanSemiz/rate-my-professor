@@ -1,10 +1,15 @@
 import type { BugReport, BugReportUpdate } from '@/api/feedback'
 
+/** The bug-report edit form's working copy. */
 export interface BugReportEditDraft {
   title: string
   description: string
 }
 
+/**
+ * @param report the report to edit
+ * @returns the draft the form works on
+ */
 export function createBugReportEditDraft(report: BugReport): BugReportEditDraft {
   return { title: report.title, description: report.description }
 }

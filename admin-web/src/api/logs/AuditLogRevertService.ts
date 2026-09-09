@@ -1,6 +1,7 @@
 import type { BasicResponse } from '@/api/client/ApiClient'
 import { HttpService } from '@/api/client/HttpService'
 
+/** Undoing a single recorded field edit. */
 export class AuditLogRevertService extends HttpService {
   /**
    * Undoes the field edit an entry recorded. The caller must re-read the log afterwards:

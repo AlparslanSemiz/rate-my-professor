@@ -3,7 +3,7 @@ import { IconArrowRight } from '@tabler/icons-react'
 import type { AuditChange } from '@/api/logs'
 import { enumLabel } from '@/utils/enumLabel'
 import { formatAuditValue } from '../../auditLogModel'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
 import { KIT } from '@/constants/colors'
 
 const cardStyle: CSSProperties = {
@@ -47,7 +47,7 @@ export default function AuditChangeList({
           <Group gap={8} wrap="nowrap" align="stretch">
             <ChangeValue label="Before" color={KIT.red} value={formatAuditValue(change.before)} />
             <Box style={{ display: 'flex', alignItems: 'center' }}>
-              <IconArrowRight size={15} color={chrome.textFaint} />
+              <IconArrowRight size={iconSize.rowAction} color={chrome.textFaint} />
             </Box>
             <ChangeValue label="After" color={KIT.green} value={formatAuditValue(change.after)} />
           </Group>

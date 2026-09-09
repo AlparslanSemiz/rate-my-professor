@@ -7,6 +7,10 @@ import { routes } from '@/constants/routes'
  */
 export const LOGIN_CODE_LENGTH = 6
 
+/**
+ * @param code whatever is in the code field
+ * @returns whether it is long enough to be worth sending; the backend decides correctness
+ */
 export function isCompleteLoginCode(code: string): boolean {
   return code.trim().length === LOGIN_CODE_LENGTH
 }

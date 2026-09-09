@@ -9,7 +9,8 @@ import {
   type ReasonFilter,
   type StatusFilter,
 } from '../model'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+import { controlWidth } from '@/constants/layout'
 
 const panelStyle: CSSProperties = { padding: '14px 20px' }
 const searchInputStyle: CSSProperties = { flex: 1, minWidth: 200 }
@@ -40,7 +41,7 @@ export default function ReportFilters({
           placeholder="Search by content, user, or report message..."
           value={search}
           onChange={(event) => onSearchChange(event.currentTarget.value)}
-          leftSection={<IconSearch size={14} color={chrome.textDim} />}
+          leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
           style={searchInputStyle}
           size="sm"
           aria-label={searchLabel}
@@ -51,7 +52,7 @@ export default function ReportFilters({
           data={reportStatusFilterOptions}
           value={status}
           onChange={(value) => onStatusChange(toStatusFilter(value))}
-          w={150}
+          w={controlWidth.compact}
           size="sm"
           clearable={false}
         />
@@ -61,7 +62,7 @@ export default function ReportFilters({
           data={reasonFilterOptions}
           value={reason}
           onChange={(value) => onReasonChange(toReasonFilter(value))}
-          w={180}
+          w={controlWidth.roomy}
           size="sm"
           clearable={false}
         />

@@ -39,7 +39,10 @@ describe('SystemStatusService', () => {
       startedAt: '2026-07-27T02:00:00.000Z',
       uptimeSeconds: 128400,
       database: { reachable: true, latencyMs: 3, error: null },
-      counts: { users: 412, admins: 6, openBugReports: 1 },
+      // Narrowed to the four counters the panel reads, and `activeUsers` — which this
+      // response does not carry — is null rather than zero. A counter that was not served is
+      // not a counter that read zero.
+      counts: { users: 412, activeUsers: null, admins: 6, openBugReports: 1 },
       lastWrite: {
         at: '2026-07-28T13:39:48.000Z',
         ageSeconds: 12,

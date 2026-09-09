@@ -1,5 +1,6 @@
 import { IconMessage } from '@tabler/icons-react'
 import type { HelpSection } from './types'
+import { contentStatusColor, reportStatusColor } from '@/constants/colors'
 
 export const COMMENTS_HELP: HelpSection = {
   id: 'comments',
@@ -11,15 +12,15 @@ export const COMMENTS_HELP: HelpSection = {
     {
       heading: 'Visibility',
       rows: [
-        { value: 'Visible', color: 'green', meaning: 'Shown in the student app.' },
+        { value: 'Visible', color: contentStatusColor.VISIBLE, meaning: 'Shown in the student app.' },
         {
           value: 'Hidden',
-          color: 'orange',
+          color: contentStatusColor.HIDDEN,
           meaning: 'Filtered out of the student app but kept in the database. Reversible.',
         },
         {
           value: 'Deleted',
-          color: 'dark',
+          color: contentStatusColor.DELETED,
           meaning: 'Not a visibility you can set — deleting is permanent, and deleting a comment takes every answer under it with it.',
         },
       ],
@@ -27,12 +28,12 @@ export const COMMENTS_HELP: HelpSection = {
     {
       heading: 'Report status',
       rows: [
-        { value: 'Open', color: 'red', meaning: 'Waiting for review.' },
-        { value: 'Reviewed', color: 'blue', meaning: 'Looked at, no final decision recorded yet.' },
-        { value: 'Dismissed', color: 'gray', meaning: 'Closed with no action against the content.' },
+        { value: 'Open', color: reportStatusColor.OPEN, meaning: 'Waiting for review.' },
+        { value: 'Reviewed', color: reportStatusColor.REVIEWED, meaning: 'Looked at, no final decision recorded yet.' },
+        { value: 'Dismissed', color: reportStatusColor.DISMISSED, meaning: 'Closed with no action against the content.' },
         {
           value: 'Action Taken',
-          color: 'green',
+          color: reportStatusColor.ACTION_TAKEN,
           meaning: 'Closed and the content was hidden. Moving a report away from this status makes the content visible again.',
         },
       ],

@@ -9,7 +9,8 @@ import {
   catalogNowrapCellStyle,
   catalogRowStyle,
 } from './catalogTableStyles'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+import { EMPTY_VALUE } from '@/utils/emptyValue'
 
 interface RatingTableRowProps {
   rating: Rating
@@ -21,7 +22,7 @@ interface RatingTableRowProps {
 
 function scoreLine(scores: Record<string, number>): string {
   const entries = Object.entries(scores)
-  if (entries.length === 0) return '—'
+  if (entries.length === 0) return EMPTY_VALUE
   return entries.map(([category, score]) => `${enumLabel(category)} ${score}`).join(' · ')
 }
 
@@ -36,7 +37,7 @@ export default function RatingTableRow({
     <tr style={catalogRowStyle(isLast)}>
       <td style={catalogCellStyle}>
         <Text size="sm" c={chrome.textPrimary}>
-          {lecture ? lectureLabel(lecture) : '—'}
+          {lecture ? lectureLabel(lecture) : EMPTY_VALUE}
         </Text>
       </td>
       <td style={catalogCellStyle}>
@@ -51,7 +52,7 @@ export default function RatingTableRow({
       </td>
       <td style={catalogNowrapCellStyle}>
         <Text size="xs" c={chrome.textDim}>
-          {rating.createdAt ? formatDate(rating.createdAt) : '—'}
+          {rating.createdAt ? formatDate(rating.createdAt) : EMPTY_VALUE}
         </Text>
       </td>
       <td style={catalogCellStyle}>
@@ -64,7 +65,7 @@ export default function RatingTableRow({
             aria-label={`Delete rating by ${rating.authorName}`}
             onClick={() => onDelete(rating)}
           >
-            <IconTrash size={15} />
+            <IconTrash size={iconSize.rowAction} />
           </ActionIcon>
         </Tooltip>
       </td>

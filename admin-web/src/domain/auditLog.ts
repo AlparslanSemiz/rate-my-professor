@@ -8,7 +8,7 @@ import { enumGuard } from './enumGuard'
  */
 
 /** What admins did through the panel — served by `/audit-logs`. */
-export const ADMINISTRATIVE_ACTIONS = [
+export const AUDIT_ACTIONS = [
   'ADMIN_LOGIN',
   'ADMIN_LOGOUT',
   'USER_UPDATED',
@@ -40,7 +40,7 @@ export const ADMINISTRATIVE_ACTIONS = [
  * what `/audit-logs/meta` may return, and the panel renders whatever it is given rather than
  * filtering the backend's vocabulary down to its own.
  */
-export const LOG_TARGET_TYPES = [
+export const AUDIT_TARGET_TYPES = [
   'ADMIN_SESSION',
   'USER_SESSION',
   'USER',
@@ -57,47 +57,61 @@ export const LOG_TARGET_TYPES = [
 ] as const
 
 /** `USER` stays: the backend reports it on `/audit-logs/meta`, so the filter must accept it. */
-export const LOG_ACTOR_TYPES = ['ADMIN', 'USER'] as const
+export const AUDIT_ACTOR_TYPES = ['ADMIN', 'USER'] as const
 
-export type LogAction = (typeof ADMINISTRATIVE_ACTIONS)[number]
-export type LogTargetType = (typeof LOG_TARGET_TYPES)[number]
-export type LogActorType = (typeof LOG_ACTOR_TYPES)[number]
-export type LogValue = string | number | boolean | null
+/** One of {@link AUDIT_ACTIONS} — what an admin did. */
+export type AuditAction = (typeof AUDIT_ACTIONS)[number]
+/** One of {@link AUDIT_TARGET_TYPES} — what kind of record an entry names. */
+export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number]
+/** One of {@link AUDIT_ACTOR_TYPES} — who acted. */
+export type AuditActorType = (typeof AUDIT_ACTOR_TYPES)[number]
+/** A field value as the log records it: whatever JSON could hold, flattened to a scalar. */
+export type AuditValue = string | number | boolean | null
 
-export interface LogActor {
-  type: LogActorType
+/** Who performed the action, denormalised into the entry so reading the log needs no joins. */
+export interface AuditActor {
+  type: AuditActorType
   id: string
   name: string
   email: string
   role: string
 }
 
-export interface LogTarget {
-  type: LogTargetType
+/** What the action was performed on. `label` is how it read at the time, not how it reads now. */
+export interface AuditTarget {
+  type: AuditTargetType
   id: string
   label: string
 }
 
-export interface LogChange {
-  before: LogValue
-  after: LogValue
+/** One field's value either side of an edit. Both sides are recorded, so a revert has a value to put back. */
+export interface AuditChange {
+  before: AuditValue
+  after: AuditValue
 }
 
-export interface LogEntry {
+/**
+ * One thing that happened, as the log records it.
+ *
+ * `target` is null for entries that name no record — a sign-in is about the session, not
+ * about a row. `changes` is empty for everything that is not a field edit, which is why the
+ * details view shows a heading with nothing under it for a deletion.
+ */
+export interface AuditEntry {
   id: string
-  action: LogAction
+  action: AuditAction
   createdAt: string
-  actor: LogActor
-  target: LogTarget | null
-  changes: Record<string, LogChange>
-  metadata: Record<string, LogValue>
+  actor: AuditActor
+  target: AuditTarget | null
+  changes: Record<string, AuditChange>
+  metadata: Record<string, AuditValue>
 }
 
 /**
  * An administrative entry, which the backend also says something about undoing. Only the
  * audit log carries these: what a student did in the app is not the panel's to reverse.
  */
-export interface RevertableLogEntry extends LogEntry {
+export interface AuditLog extends AuditEntry {
   /** Whether this entry can be undone right now. Only field edits ever can. */
   revertible: boolean
   /**
@@ -118,22 +132,23 @@ export const REVERT_BLOCKED_REASONS = [
   'TARGET_MISSING',
 ] as const
 
+/** One of {@link REVERT_BLOCKED_REASONS}. */
 export type RevertBlockedReason = (typeof REVERT_BLOCKED_REASONS)[number]
 
-export interface LogFilters {
+/**
+ * What `GET /audit-logs` narrows on. Every field is optional and an omitted one is not sent;
+ * `from` and `to` are inclusive ISO instants, built by {@link startOfDay} and {@link endOfDay}.
+ */
+export interface AuditLogFilters {
   q?: string
   actorId?: string
-  actorType?: LogActorType
-  action?: LogAction
-  targetType?: LogTargetType
+  actorType?: AuditActorType
+  action?: AuditAction
+  targetType?: AuditTargetType
   from?: string
   to?: string
 }
 
-export interface LogPage {
-  entries: LogEntry[]
-  nextCursor: string | null
-}
 
 /**
  * Filter vocabulary the audit log's dropdowns are built from. `actors` is capped rather
@@ -141,21 +156,31 @@ export interface LogPage {
  * record, so every account that ever signed in is an actor in it — `q` is what finds
  * someone beyond the cap.
  */
-export interface LogMeta {
-  actors: Array<Pick<LogActor, 'id' | 'name' | 'email' | 'role'>>
-  actions: LogAction[]
-  targetTypes: LogTargetType[]
-  actorTypes: LogActorType[]
+export interface AuditMeta {
+  readonly actors: readonly Pick<AuditActor, 'id' | 'name' | 'email' | 'role'>[]
+  readonly actions: readonly AuditAction[]
+  readonly targetTypes: readonly AuditTargetType[]
+  readonly actorTypes: readonly AuditActorType[]
 }
 
-export const EMPTY_LOG_META: LogMeta = {
-  actors: [],
-  actions: [],
-  targetTypes: [],
-  actorTypes: [],
-}
+/**
+ * The filter vocabulary before anything has been read, and while a read is failing.
+ *
+ * Frozen because it is a *shared* default: one object is handed to every caller that asks,
+ * and `features/audit-logs/auditLogModel.ts` re-exports this very reference under a second
+ * name. A `const` binding stops the name being reassigned and does nothing about the four
+ * arrays inside it, so a single `push` anywhere would have added an entry to the empty meta
+ * for the rest of the session.
+ */
+export const EMPTY_AUDIT_META: AuditMeta = Object.freeze({
+  actors: Object.freeze([]),
+  actions: Object.freeze([]),
+  targetTypes: Object.freeze([]),
+  actorTypes: Object.freeze([]),
+})
 
-export const isLogActorType = enumGuard(LOG_ACTOR_TYPES)
+/** @returns whether the value is an actor type this panel knows. */
+export const isAuditActorType = enumGuard(AUDIT_ACTOR_TYPES)
 
 /**
  * The backend takes inclusive ISO date-times; the filter form supplies `yyyy-mm-dd`, picked
@@ -164,6 +189,10 @@ export const isLogActorType = enumGuard(LOG_ACTOR_TYPES)
  * the 20th and pulled in the first two hours of the 21st. The bounds are built from the
  * local day instead, so the range covers exactly the day that was chosen.
  */
+const FIRST_MOMENT_OF_DAY = [0, 0, 0, 0] as const
+/** 23:59:59.999 — the last millisecond the backend's inclusive upper bound will match. */
+const LAST_MOMENT_OF_DAY = [23, 59, 59, 999] as const
+
 function dayBoundary(value: string | undefined, endOfDay: boolean): string | undefined {
   if (!value) return undefined
 
@@ -171,15 +200,25 @@ function dayBoundary(value: string | undefined, endOfDay: boolean): string | und
   if (!year || !month || !day) return undefined
 
   const date = endOfDay
-    ? new Date(year, month - 1, day, 23, 59, 59, 999)
-    : new Date(year, month - 1, day, 0, 0, 0, 0)
+    ? new Date(year, month - 1, day, ...LAST_MOMENT_OF_DAY)
+    : new Date(year, month - 1, day, ...FIRST_MOMENT_OF_DAY)
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
 }
 
+/**
+ * @param value a `yyyy-mm-dd` date as the filter form supplies it
+ * @returns the first instant of that day in the operator's own timezone, as ISO, or
+ *          `undefined` when there is no date to bound
+ */
 export function startOfDay(value?: string) {
   return dayBoundary(value, false)
 }
 
+/**
+ * @param value a `yyyy-mm-dd` date as the filter form supplies it
+ * @returns the last instant of that day in the operator's own timezone, as ISO, or
+ *          `undefined` when there is no date to bound
+ */
 export function endOfDay(value?: string) {
   return dayBoundary(value, true)
 }

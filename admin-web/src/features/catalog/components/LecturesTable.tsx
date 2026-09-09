@@ -3,11 +3,12 @@ import { IconSchool, IconSearch } from '@tabler/icons-react'
 import type { Lecture } from '@/api/catalog'
 import CatalogTablePanel, { CatalogEmptyRow } from './CatalogTablePanel'
 import LectureTableRow from './LectureTableRow'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+import { searchFieldWidth } from '@/constants/layout'
 
 const TABLE_COLUMNS = ['Lecture', 'Term', 'Type', 'Professors', 'Status', 'Comments', 'Ratings', ''] as const
 
-const searchInputStyle: CSSProperties = { flex: '1 1 240px', maxWidth: 320 }
+const searchInputStyle: CSSProperties = searchFieldWidth
 
 interface LecturesTableProps {
   lectures: Lecture[]
@@ -31,7 +32,7 @@ export default function LecturesTable({
   return (
     <CatalogTablePanel
       title="Lectures"
-      icon={<IconSchool size={14} color={chrome.textDim} />}
+      icon={<IconSchool size={iconSize.inline} color={chrome.textDim} />}
       description={`${lectures.length} of ${totalCount} in the catalogue`}
       columns={TABLE_COLUMNS}
       minWidth={1000}
@@ -43,7 +44,7 @@ export default function LecturesTable({
           style={searchInputStyle}
           size="sm"
           aria-label="Search lectures"
-          leftSection={<IconSearch size={14} color={chrome.textDim} />}
+          leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
         />
       }
     >

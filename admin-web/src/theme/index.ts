@@ -4,6 +4,7 @@ import { kitColors } from './palette'
 
 export { chrome } from './chrome'
 export type { ChromeToken } from './chrome'
+export { iconSize } from './iconSize'
 
 export const theme = createTheme({
   primaryColor: 'green',

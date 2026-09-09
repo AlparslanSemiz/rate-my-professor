@@ -1,12 +1,12 @@
 import type { MouseEvent } from 'react'
 import { ActionIcon, Box, Group, Text, Tooltip } from '@mantine/core'
 import { IconChevronDown, IconChevronRight } from '@tabler/icons-react'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
 import type { ModeratedItem } from '../model'
 import { breakWordStyle, contentTextBoxStyle, replyIndentStyle } from './contentRowStyles'
+import { TOOLTIP_THRESHOLD } from './contentRowStyles'
 
 /** Past this length the text is clamped to two lines, so the full text needs a tooltip. */
-const TOOLTIP_THRESHOLD = 90
 
 interface ContentCellProps {
   item: ModeratedItem
@@ -25,7 +25,7 @@ export default function ContentCell({
   onToggleExpand,
   onStopRowClick,
 }: ContentCellProps) {
-  const hasTooltip = item.content.length > TOOLTIP_THRESHOLD
+  const hasTooltip = item.content.length > TOOLTIP_THRESHOLD.contentColumn
 
   return (
     <Group gap={6} wrap="nowrap" align="flex-start" style={isReply ? replyIndentStyle : undefined}>
@@ -40,7 +40,7 @@ export default function ContentCell({
             onToggleExpand()
           }}
         >
-          {expanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+          {expanded ? <IconChevronDown size={iconSize.inline} /> : <IconChevronRight size={iconSize.inline} />}
         </ActionIcon>
       )}
       <Box style={contentTextBoxStyle}>

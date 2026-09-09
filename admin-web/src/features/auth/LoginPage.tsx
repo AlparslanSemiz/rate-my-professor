@@ -7,6 +7,7 @@ import LoginCardHeader from './components/LoginCardHeader'
 import LoginForms from './components/LoginForms'
 import { useLoginFlow } from './hooks/useLoginFlow'
 import { chrome } from '@/theme'
+import { LOGIN_CARD_MAX_WIDTH } from '@/constants/layout'
 
 const pageStyle: CSSProperties = {
   minHeight: '100vh',
@@ -16,7 +17,8 @@ const pageStyle: CSSProperties = {
   background: chrome.surfaceSunken,
 }
 const cardStyle: CSSProperties = {
-  width: 400,
+  width: '100%',
+  maxWidth: LOGIN_CARD_MAX_WIDTH,
   borderRadius: 14,
   padding: '36px 32px',
 }

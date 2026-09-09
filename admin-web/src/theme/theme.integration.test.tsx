@@ -13,6 +13,14 @@ import { describe, expect, it } from 'vitest'
 import { chrome } from './chrome'
 import { theme } from './index'
 
+/**
+ * Named `.integration.` because that is what it is: it renders real Mantine components inside
+ * a provider and asserts the computed styles, so it exercises the theme *against the Styles
+ * API* rather than in isolation. It exists because moving a style into the theme fails
+ * quietly — an input that stops being themed still renders, only paler — and no other test
+ * would notice.
+ */
+
 function renderThemed(ui: React.ReactNode) {
   return render(
     <MantineProvider theme={theme} defaultColorScheme="dark">

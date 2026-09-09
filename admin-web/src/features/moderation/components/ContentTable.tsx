@@ -6,7 +6,7 @@ import Panel from '@/components/Panel'
 import TableHeaderRow from '@/components/TableHeaderRow'
 import type { ModeratedItem } from '../model'
 import ContentRow from './ContentRow'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
 
 const TABLE_COLUMNS = ['Content', 'Author', 'Lecture', 'Visibility', 'Reports', 'Posted', ''] as const
 
@@ -71,7 +71,7 @@ export default function ContentTable({
     <Panel style={panelStyle}>
       <Box px={20} py={14} style={panelHeaderStyle}>
         <Group gap={6}>
-          <IconMessage size={14} color={chrome.textDim} />
+          <IconMessage size={iconSize.inline} color={chrome.textDim} />
           <Text size="xs" c={chrome.textDim}>
             {items.length} {noun}
             {items.length === 1 ? '' : 's'} matching filters · newest first
@@ -81,7 +81,7 @@ export default function ContentTable({
 
       {items.length === 0 ? (
         <Box py={60} style={emptyStateStyle}>
-          <IconMessage size={32} color={chrome.iconFaint} style={{ marginBottom: 12 }} />
+          <IconMessage size={iconSize.emptyState} color={chrome.iconFaint} style={{ marginBottom: 12 }} />
           <Text c={chrome.textFaint} size="sm">
             Nothing here — no {noun}s match these filters.
           </Text>

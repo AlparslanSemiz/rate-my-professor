@@ -1,9 +1,10 @@
 import ConfirmModal from '@/components/ConfirmModal'
-import { getCatalogDeletion, type CatalogDeletion } from '../model'
+import { getCatalogDeletion, type CatalogDeleters, type CatalogDeletion } from '../model'
 
 interface CatalogDeleteModalProps {
   deletion: CatalogDeletion
-  onConfirm: (deletion: CatalogDeletion) => Promise<void>
+  /** How each kind of record is deleted. The model picks which one this deletion needs. */
+  deleters: CatalogDeleters
   onClose: () => void
 }
 
@@ -15,10 +16,10 @@ interface CatalogDeleteModalProps {
  */
 export default function CatalogDeleteModal({
   deletion,
-  onConfirm,
+  deleters,
   onClose,
 }: CatalogDeleteModalProps) {
-  const copy = getCatalogDeletion(deletion)
+  const copy = getCatalogDeletion(deletion, deleters)
 
   return (
     <ConfirmModal
@@ -28,7 +29,7 @@ export default function CatalogDeleteModal({
       confirmLabel={copy.confirmLabel}
       confirmColor="red"
       onConfirm={async () => {
-        await onConfirm(deletion)
+        await copy.remove()
         onClose()
       }}
       onClose={onClose}

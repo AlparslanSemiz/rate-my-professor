@@ -1,6 +1,7 @@
 import { Button, Group, Textarea } from '@mantine/core'
 import { IconCheck, IconX } from '@tabler/icons-react'
 import ErrorAlert from '@/components/ErrorAlert'
+import { iconSize } from '@/theme'
 
 interface WarningEditorProps {
   draft: string
@@ -35,7 +36,7 @@ export default function WarningEditor({
           size="compact-xs"
           variant="subtle"
           color="gray"
-          leftSection={<IconX size={12} />}
+          leftSection={<IconX size={iconSize.badge} />}
           onClick={onCancel}
           disabled={busy}
         >
@@ -44,7 +45,7 @@ export default function WarningEditor({
         <Button
           size="compact-xs"
           color="yellow"
-          leftSection={<IconCheck size={12} />}
+          leftSection={<IconCheck size={iconSize.badge} />}
           loading={busy}
           disabled={!draft.trim()}
           onClick={onSave}

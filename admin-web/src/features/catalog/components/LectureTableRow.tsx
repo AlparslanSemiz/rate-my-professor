@@ -1,16 +1,17 @@
 import { ActionIcon, Badge, Group, Text, Tooltip } from '@mantine/core'
 import { IconPencil, IconTrash } from '@tabler/icons-react'
-import type { MouseEvent } from 'react'
 import type { Lecture } from '@/api/catalog'
 import { enumLabel } from '@/utils/enumLabel'
-import { activateOnEnterOrSpace } from '@/utils/keyboard'
 import { lectureLabel, lectureTerm, professorName } from '../model'
 import {
   catalogCellStyle,
   catalogNowrapCellStyle,
   catalogRowStyle,
 } from './catalogTableStyles'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+import { activeStatusColor } from '@/constants/colors'
+import ClickableRow from '@/components/ClickableRow'
+import { keepFromRow } from '@/components/rowActivation'
 
 interface LectureTableRowProps {
   lecture: Lecture
@@ -18,10 +19,6 @@ interface LectureTableRowProps {
   mutating: boolean
   onEdit: (lecture: Lecture) => void
   onDelete: (lecture: Lecture) => void
-}
-
-function keepFromRow(event: MouseEvent) {
-  event.stopPropagation()
 }
 
 export default function LectureTableRow({
@@ -32,12 +29,10 @@ export default function LectureTableRow({
   onDelete,
 }: LectureTableRowProps) {
   return (
-    <tr
-      className="row-interactive row-clickable"
+    <ClickableRow
       style={catalogRowStyle(isLast)}
-      onClick={() => onEdit(lecture)}
-      onKeyDown={(event) => activateOnEnterOrSpace(event, () => onEdit(lecture))}
-      tabIndex={0}
+      onActivate={() => onEdit(lecture)}
+      label={`Edit ${lectureLabel(lecture)}`}
     >
       <td style={catalogCellStyle}>
         <Text size="sm" fw={500} c={chrome.textPrimary}>
@@ -69,7 +64,7 @@ export default function LectureTableRow({
         )}
       </td>
       <td style={catalogCellStyle}>
-        <Badge color={lecture.active ? 'green' : 'gray'} variant="light" size="sm">
+        <Badge color={activeStatusColor[lecture.active ? 'active' : 'inactive']} variant="light" size="sm">
           {lecture.active ? 'Active' : 'Inactive'}
         </Badge>
       </td>
@@ -94,7 +89,7 @@ export default function LectureTableRow({
               aria-label={`Edit ${lectureLabel(lecture)}`}
               onClick={() => onEdit(lecture)}
             >
-              <IconPencil size={15} />
+              <IconPencil size={iconSize.rowAction} />
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Delete lecture and everything posted under it" withArrow>
@@ -106,11 +101,11 @@ export default function LectureTableRow({
               aria-label={`Delete ${lectureLabel(lecture)}`}
               onClick={() => onDelete(lecture)}
             >
-              <IconTrash size={15} />
+              <IconTrash size={iconSize.rowAction} />
             </ActionIcon>
           </Tooltip>
         </Group>
       </td>
-    </tr>
+    </ClickableRow>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { endOfDay, startOfDay, isLogActorType } from './auditLog'
+import { endOfDay, startOfDay, isAuditActorType } from './auditLog'
 
 describe('log date bounds', () => {
   it('covers the local day that was picked rather than the UTC one', () => {
@@ -39,11 +39,11 @@ describe('log date bounds', () => {
   })
 })
 
-describe('isLogActorType', () => {
+describe('isAuditActorType', () => {
   it('accepts the two actor types and rejects anything else', () => {
-    expect(isLogActorType('ADMIN')).toBe(true)
-    expect(isLogActorType('USER')).toBe(true)
-    expect(isLogActorType('ROBOT')).toBe(false)
-    expect(isLogActorType(null)).toBe(false)
+    expect(isAuditActorType('ADMIN')).toBe(true)
+    expect(isAuditActorType('USER')).toBe(true)
+    expect(isAuditActorType('ROBOT')).toBe(false)
+    expect(isAuditActorType(null)).toBe(false)
   })
 })

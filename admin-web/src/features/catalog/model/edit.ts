@@ -7,6 +7,7 @@ import type {
 import type { LectureType, SemesterSeason } from '@/domain/catalog'
 import { sameIdSet } from '@/utils/collection'
 
+/** The lecture edit form's working copy. */
 export interface LectureEditDraft {
   name: string
   code: string
@@ -17,6 +18,7 @@ export interface LectureEditDraft {
   professorIds: string[]
 }
 
+/** The professor edit form's working copy. */
 export interface ProfessorEditDraft {
   firstName: string
   lastName: string
@@ -24,6 +26,10 @@ export interface ProfessorEditDraft {
   lectureIds: string[]
 }
 
+/**
+ * @param lecture the lecture to edit
+ * @returns the draft the form works on, with the assignment flattened to ids
+ */
 export function createLectureEditDraft(lecture: Lecture): LectureEditDraft {
   return {
     name: lecture.name,
@@ -36,18 +42,37 @@ export function createLectureEditDraft(lecture: Lecture): LectureEditDraft {
   }
 }
 
+/**
+ * @param professor the professor to edit
+ * @param assignedLectureIds their lectures, built by the caller from the lecture list — the
+ *        professor read does not report the assignment
+ * @returns the draft the form works on
+ */
 export function createProfessorEditDraft(
   professor: Professor,
-  assignedLectureIds: string[],
+  assignedLectureIds: readonly string[],
 ): ProfessorEditDraft {
   return {
     firstName: professor.firstName,
     lastName: professor.lastName,
     active: professor.active,
-    lectureIds: assignedLectureIds,
+    // Copied, not aliased. The draft is the form's to edit; the list it was built from
+    // belongs to the catalogue query's cache, and handing the same array to both would let
+    // an edit in progress reach into cached data nothing has re-read.
+    lectureIds: [...assignedLectureIds],
   }
 }
 
+/**
+ * The fields that actually changed.
+ *
+ * The assignment is compared as a *set*: reordering it is not an edit, and sending it back
+ * unchanged would write an audit entry saying the lecture was edited when it was not.
+ *
+ * @param lecture the lecture as it stands
+ * @param draft the form's working copy
+ * @returns only the changed fields; possibly empty, which the caller must not send
+ */
 export function buildLectureUpdate(lecture: Lecture, draft: LectureEditDraft): LectureUpdate {
   const trimmedName = draft.name.trim()
   const trimmedCode = draft.code.trim()
@@ -65,9 +90,17 @@ export function buildLectureUpdate(lecture: Lecture, draft: LectureEditDraft): L
   return update
 }
 
+/**
+ * The fields that actually changed, with the assignment compared as a set.
+ *
+ * @param professor the professor as they stand
+ * @param assignedLectureIds their current lectures, for the comparison
+ * @param draft the form's working copy
+ * @returns only the changed fields; possibly empty
+ */
 export function buildProfessorUpdate(
   professor: Professor,
-  assignedLectureIds: string[],
+  assignedLectureIds: readonly string[],
   draft: ProfessorEditDraft,
 ): ProfessorUpdate {
   const trimmedFirstName = draft.firstName.trim()
@@ -82,6 +115,7 @@ export function buildProfessorUpdate(
   return update
 }
 
+/** @returns whether Save should be offered: something changed, and name and code are set. */
 export function canSaveLectureEdit(lecture: Lecture, draft: LectureEditDraft) {
   return (
     draft.name.trim().length > 0 &&
@@ -91,9 +125,10 @@ export function canSaveLectureEdit(lecture: Lecture, draft: LectureEditDraft) {
   )
 }
 
+/** @returns whether Save should be offered: something changed, and both names are set. */
 export function canSaveProfessorEdit(
   professor: Professor,
-  assignedLectureIds: string[],
+  assignedLectureIds: readonly string[],
   draft: ProfessorEditDraft,
 ) {
   return (

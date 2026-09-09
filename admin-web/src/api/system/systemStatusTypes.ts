@@ -1,5 +1,7 @@
+/** Overall health, as the backend judges it from its own probes. */
 export const SYSTEM_HEALTH_VALUES = ['OK', 'DEGRADED', 'DOWN'] as const
 
+/** One of {@link SYSTEM_HEALTH_VALUES}. */
 export type SystemHealth = (typeof SYSTEM_HEALTH_VALUES)[number]
 
 /**
@@ -24,12 +26,31 @@ export interface LastWrite {
 }
 
 /**
+ * The counters the panel reads, lifted out of the open map the backend serves them in.
+ *
+ * The wire names — `users`, `activeUsers`, `admins`, `openBugReports` — used to be spelled out
+ * in two feature modules that knew nothing about each other, with different defaults and with
+ * `openBugReports` known to only one of them. A rename by the backend broke two features, and
+ * neither of them lived in this package.
+ *
+ * Each counter is `null` when the backend did not serve it. What to *show* for a missing
+ * counter is the screen's decision and stays with the screen: the users table draws a dash,
+ * the dashboard draws a zero.
+ */
+export interface SystemCounts {
+  readonly users: number | null
+  readonly activeUsers: number | null
+  readonly admins: number | null
+  readonly openBugReports: number | null
+}
+
+/**
  * `counts` and `lastWrite` are null unless the database answered: a degraded or unreachable
  * database is reported in `status` rather than in the HTTP code, because a page that has to
  * show "the API is up but the database is not" cannot do that if the request itself fails.
  *
- * `counts` is read as an open map so a counter added by the backend renders without a
- * frontend release.
+ * `counts` arrives as an open map and is narrowed to {@link SystemCounts} here, so that the
+ * counter names are written down once.
  */
 export interface SystemStatus {
   status: SystemHealth
@@ -37,7 +58,7 @@ export interface SystemStatus {
   startedAt: string | null
   uptimeSeconds: number | null
   database: DatabaseStatus
-  counts: Record<string, number> | null
+  counts: SystemCounts | null
   lastWrite: LastWrite | null
   /**
    * Whether the backend holds GitLab credentials. False until the operator supplies them,

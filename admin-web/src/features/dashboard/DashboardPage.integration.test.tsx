@@ -77,7 +77,7 @@ const status: SystemStatus = {
   startedAt: '2026-06-01T00:00:00Z',
   uptimeSeconds: 900,
   database: { reachable: true, latencyMs: 3, error: null },
-  counts: { users: 3, activeUsers: 2, admins: 1, openBugReports: 1, comments: 12 },
+  counts: { users: 3, activeUsers: 2, admins: 1, openBugReports: 1 },
   lastWrite: null,
   gitlabEnabled: false,
 }

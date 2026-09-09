@@ -27,9 +27,13 @@ export interface ModeratedItem extends ContentRef {
   detail: string
   reports: number
   createdAt: string
-  replies?: ModeratedItem[]
+  readonly replies?: readonly ModeratedItem[]
 }
 
+/**
+ * @param comment the comment as the backend sends it
+ * @returns it flattened to what the table renders, with the answer count as its second line
+ */
 export function toModeratedComment(comment: ManagedComment): ModeratedItem {
   return {
     id: comment.id,
@@ -44,6 +48,10 @@ export function toModeratedComment(comment: ManagedComment): ModeratedItem {
   }
 }
 
+/**
+ * @param answer the answer as the backend sends it
+ * @returns it flattened to what the table renders, with its parent thread as the second line
+ */
 export function toModeratedAnswer(answer: ManagedAnswer): ModeratedItem {
   return {
     id: answer.id,
@@ -89,6 +97,11 @@ export function findContent(items: ModeratedItem[], ref: ContentRef): ModeratedI
   return null
 }
 
+/**
+ * @param item the row to test
+ * @param query the search text, already trimmed and lower-cased by the caller
+ * @returns whether the text, the author or the lecture matches
+ */
 export function matchesContentQuery(item: ModeratedItem, query: string) {
   return (
     item.content.toLowerCase().includes(query) ||
@@ -97,6 +110,11 @@ export function matchesContentQuery(item: ModeratedItem, query: string) {
   )
 }
 
+/**
+ * @param item the row to test
+ * @param status the status filter, or `ALL_FILTERS`
+ * @returns whether the row survives the filter
+ */
 export function matchesContentFilters(item: ModeratedItem, status: ContentStatusFilter) {
   return status === ALL_FILTERS || item.status === status
 }

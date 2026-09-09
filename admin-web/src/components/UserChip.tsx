@@ -4,6 +4,7 @@ import { roleAccent } from '@/constants/colors'
 import { enumLabel } from '@/utils/enumLabel'
 import type { UserRole, UserStatus } from '@/api/users'
 import { chrome } from '@/theme'
+import { userStatusColor } from '@/constants/colors'
 
 interface UserChipProps {
   id: string
@@ -53,7 +54,7 @@ export default function UserChip({ id, name, role, warningCount, status, onClick
           </Badge>
         )}
         {status === 'BLOCKED' && (
-          <Badge size="xs" color="red" variant="light">
+          <Badge size="xs" color={userStatusColor.BLOCKED} variant="light">
             Blocked
           </Badge>
         )}

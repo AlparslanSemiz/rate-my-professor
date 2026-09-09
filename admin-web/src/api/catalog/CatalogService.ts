@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient, type BasicResponse } from '@/api/client/ApiClient'
+import { apiClient, type HttpTransport, type BasicResponse } from '@/api/client/ApiClient'
 import { LectureCatalogService } from './LectureCatalogService'
 import { ProfessorCatalogService } from './ProfessorCatalogService'
 import type { Lecture, LectureUpdate, Professor, ProfessorUpdate } from './catalogTypes'
@@ -19,34 +19,74 @@ export class CatalogService {
   private readonly lectures: LectureCatalogService
   private readonly professors: ProfessorCatalogService
 
-  constructor(client: ApiClient) {
+  constructor(client: HttpTransport) {
     this.lectures = new LectureCatalogService(client)
     this.professors = new ProfessorCatalogService(client)
   }
 
+  /**
+   * Every lecture, unpaged.
+   *
+   * This calls the read that returns **active** lectures only. `/data/lectures/all` exists and
+   * would include inactive ones, and moving to it is a behaviour change the panel has not made
+   * — see `F-006`.
+   *
+   * @returns the catalogue
+   * @throws {ContractError} when the response holds no `lectures` list
+   */
   async getLectures(): Promise<Lecture[]> {
     return this.lectures.getAll()
   }
 
+  /**
+   * Every professor, unpaged. Active only, for the same reason as {@link getLectures}.
+   *
+   * @returns the professors
+   * @throws {ContractError} when the response holds no `professors` list
+   */
   async getProfessors(): Promise<Professor[]> {
     return this.professors.getAll()
   }
 
+  /**
+   * @param id the lecture to edit
+   * @param update only the fields that changed; `professorIds` replaces the assignment whole
+   * @returns the envelope
+   */
   updateLecture(id: string, update: LectureUpdate): Promise<BasicResponse> {
     return this.lectures.update(id, update)
   }
 
+  /**
+   * Deletes a lecture **and everything hanging off it** — its comments, answers and ratings.
+   * Not reversible.
+   *
+   * @param id the lecture to delete
+   * @returns the envelope
+   */
   deleteLecture(id: string): Promise<BasicResponse> {
     return this.lectures.delete(id)
   }
 
+  /**
+   * @param id the professor to edit
+   * @param update only the fields that changed; `lectureIds` replaces the assignment whole
+   * @returns the envelope
+   */
   updateProfessor(id: string, update: ProfessorUpdate): Promise<BasicResponse> {
     return this.professors.update(id, update)
   }
 
+  /**
+   * Deletes a professor. The lectures stay — only the assignment goes.
+   *
+   * @param id the professor to delete
+   * @returns the envelope
+   */
   deleteProfessor(id: string): Promise<BasicResponse> {
     return this.professors.delete(id)
   }
 }
 
+/** The panel's catalogue service, bound to the shared client. */
 export const catalogService = new CatalogService(apiClient)

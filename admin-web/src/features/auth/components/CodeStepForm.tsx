@@ -1,6 +1,6 @@
 import { Button, Stack, TextInput } from '@mantine/core'
 import { isCompleteLoginCode, LOGIN_CODE_LENGTH } from '../loginModel'
-import type { LoginFormsProps } from './LoginForms'
+import type { LoginFormsProps } from './loginFormsProps'
 import { LOGIN_INPUT_RADIUS, loginInputStyles, submitButtonStyle } from './loginFormStyles'
 
 type CodeStepFormProps = Pick<

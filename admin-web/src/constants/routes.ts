@@ -1,3 +1,4 @@
+/** Every path the panel serves. The one place a route string is written. */
 export const routes = {
   login: '/login',
   dashboard: '/dashboard',
@@ -8,3 +9,6 @@ export const routes = {
   auditLogs: '/audit-logs',
   help: '/help',
 } as const
+
+/** Any path in `routes`, so a map keyed by route cannot be indexed with a typo. */
+export type Route = (typeof routes)[keyof typeof routes]

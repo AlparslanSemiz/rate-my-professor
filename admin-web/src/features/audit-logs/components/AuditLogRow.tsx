@@ -2,9 +2,9 @@ import { Badge, Text, type CSSProperties } from '@mantine/core'
 import type { AuditLog } from '@/api/logs'
 import { enumLabel } from '@/utils/enumLabel'
 import { formatDate } from '@/utils/formatDate'
-import { activateOnEnterOrSpace } from '@/utils/keyboard'
-import { auditActionColor } from '../auditLogModel'
+import { auditActionColor } from '@/constants/colors'
 import { chrome } from '@/theme'
+import ClickableRow from '@/components/ClickableRow'
 
 const cellStyle: CSSProperties = { padding: '14px 20px', verticalAlign: 'middle' }
 const nowrapCellStyle: CSSProperties = { ...cellStyle, whiteSpace: 'nowrap' }
@@ -26,13 +26,10 @@ export default function AuditLogRow({ log, isLast, onOpen }: AuditLogRowProps) {
   const changedFields = Object.keys(log.changes)
 
   return (
-    <tr
-      className="row-interactive row-clickable"
+    <ClickableRow
       style={rowStyle(isLast)}
-      onClick={openDetails}
-      onKeyDown={(event) => activateOnEnterOrSpace(event, openDetails)}
-      tabIndex={0}
-      aria-label={`Open audit event ${enumLabel(log.action)} by ${log.actor.name}`}
+      onActivate={openDetails}
+      label={`Open audit event ${enumLabel(log.action)} by ${log.actor.name}`}
     >
       <td style={nowrapCellStyle}>
         <Text size="xs" c={chrome.textDim}>
@@ -73,6 +70,6 @@ export default function AuditLogRow({ log, isLast, onOpen }: AuditLogRowProps) {
           {changedFields.length > 0 ? changedFields.map(enumLabel).join(', ') : 'No field changes'}
         </Text>
       </td>
-    </tr>
+    </ClickableRow>
   )
 }

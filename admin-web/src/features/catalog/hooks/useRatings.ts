@@ -8,8 +8,8 @@ import {
 import { ratingsService } from '@/api/catalog'
 import { getErrorMessage } from '@/utils/getErrorMessage'
 import { catalogKeys } from './catalogKeys'
+import { DEFAULT_PAGE_SIZE } from '@/api/client'
 
-const RATINGS_PAGE_SIZE = 50
 
 /**
  * The ratings listing: read and delete, never edit. Kept apart from `useCatalog` because it
@@ -23,7 +23,7 @@ export function useRatings() {
     queryKey: catalogKeys.ratings(lectureId),
     queryFn: ({ pageParam }) =>
       ratingsService.list({
-        limit: RATINGS_PAGE_SIZE,
+        limit: DEFAULT_PAGE_SIZE,
         cursor: pageParam,
         lectureId: lectureId ?? undefined,
       }),

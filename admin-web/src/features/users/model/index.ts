@@ -4,7 +4,6 @@ export {
   USER_ROLE_FILTERS,
   USER_SORTS,
   USER_STATUS_FILTERS,
-  USERS_PAGE_SIZE,
   isUserRoleFilter,
   isUserSort,
   isUserStatusFilter,
@@ -14,7 +13,13 @@ export {
 } from './filters'
 export { EMPTY_USER_COUNTS, toUserCounts, type UserCounts } from './counts'
 export { getUserAccess, type UserAccess } from './access'
-export { getUserConfirmation, type ConfirmAction, type ConfirmConfig } from './confirmation'
+export {
+  USER_ACTION_COLORS,
+  blockToggleAction,
+  getUserConfirmation,
+  type ConfirmAction,
+  type ConfirmConfig,
+} from './confirmation'
 export {
   USER_ROLE_EDIT_OPTIONS,
   USER_STATUS_EDIT_OPTIONS,
@@ -27,3 +32,4 @@ export {
   type UserEditDraft,
 } from './userEdit'
 export type { UserChange } from './userChange'
+export type { LoadedProfile } from './profile'

@@ -15,17 +15,36 @@ import {
 } from '../authenticateAdmin'
 import { attemptedPath, isCompleteLoginCode } from '../loginModel'
 
+/** Which half of the two-step sign-in is showing. */
 export type LoginStep = 'email' | 'code'
 
+/** What the sign-in form holds. Both fields exist from the start; the step decides what is shown. */
 export interface LoginDraft {
   email: string
   code: string
 }
 
 const REQUEST_CODE_ERROR_FALLBACK = 'Could not send login code'
+/**
+ * Shown when the operator is sent back here by a refused token rather than by signing out.
+ * Exported so the routing test asserts the message instead of a substring of it.
+ */
 export const SESSION_EXPIRED_MESSAGE =
   'Your session ended because the server no longer accepts it. Sign in again to continue.'
 
+/**
+ * The whole sign-in flow: the form, which step it is on, and what each button does.
+ *
+ * The admin-list check runs **twice** — before a code is requested and again before it is
+ * exchanged. That is not redundancy: the address field stays editable between the two steps,
+ * and `/auth/login` serves students as well.
+ *
+ * On success the operator lands wherever they were trying to reach, which travels in the
+ * router's `state.from` rather than in a query parameter, so it cannot be tampered with by
+ * editing the URL.
+ *
+ * @returns the form, the current step, the pending and error state, and the three commands
+ */
 export function useLoginFlow() {
   const form = useForm<LoginDraft>({ initialValues: { email: '', code: '' } })
   const [step, setStep] = useState<LoginStep>('email')
@@ -41,7 +60,7 @@ export function useLoginFlow() {
   const redirectTo = attemptedPath(location.state) ?? routes.dashboard
 
   const requestCodeMutation = useMutation({
-    // A refused request is already an ApiError: the client rejects any body reporting
+    // A refused request has already been raised as a typed error: the client rejects any body reporting
     // `success: false`, so resolving here means the code was sent.
     mutationFn: (email: string) => authService.requestLoginCode(email),
     onSuccess: () => setStep('code'),
@@ -117,4 +136,10 @@ export function useLoginFlow() {
   }
 }
 
+/**
+ * The form object, as the step components receive it.
+ *
+ * Named here rather than written out at each component, so that swapping the form library
+ * would be one type to change rather than four.
+ */
 export type LoginForm = UseFormReturnType<LoginDraft>

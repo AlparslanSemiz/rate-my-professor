@@ -3,7 +3,7 @@ import { IconArrowRight } from '@tabler/icons-react'
 import type { CSSProperties } from 'react'
 import Panel from './Panel'
 import { activateOnEnterOrSpace } from '@/utils/keyboard'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
 
 interface ModuleCardProps {
   label: string
@@ -60,7 +60,7 @@ export default function ModuleCard({ label, title, description, accent, path, on
         <Text size="xs" fw={500} c={accent}>
           Open
         </Text>
-        <IconArrowRight size={12} color={accent} />
+        <IconArrowRight size={iconSize.badge} color={accent} />
       </Group>
     </Panel>
   )

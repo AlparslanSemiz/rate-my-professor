@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { formatDate } from './formatDate'
+import { EMPTY_VALUE } from './emptyValue'
 
 // The rendered values are the operator's local time, so these assert the shape rather than a
 // fixed string: the suite has to pass in every timezone.
@@ -28,6 +29,8 @@ describe('formatDate', () => {
   })
 
   it('reports an unparseable value rather than rendering "Invalid Date"', () => {
-    expect(formatDate('not a date', { withTime: true })).toBe('-')
+    // The shared marker, not a literal: an unparseable date is the same "no value" the
+    // rest of the panel draws, and the two used to be different glyphs.
+    expect(formatDate('not a date', { withTime: true })).toBe(EMPTY_VALUE)
   })
 })

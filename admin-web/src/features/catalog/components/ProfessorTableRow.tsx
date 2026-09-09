@@ -1,15 +1,16 @@
 import { ActionIcon, Badge, Group, Text, Tooltip } from '@mantine/core'
 import { IconPencil, IconTrash } from '@tabler/icons-react'
-import type { MouseEvent } from 'react'
 import type { Lecture, Professor } from '@/api/catalog'
-import { activateOnEnterOrSpace } from '@/utils/keyboard'
 import { formatAverageRating, lectureLabel, professorName } from '../model'
 import {
   catalogCellStyle,
   catalogNowrapCellStyle,
   catalogRowStyle,
 } from './catalogTableStyles'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+import { activeStatusColor } from '@/constants/colors'
+import ClickableRow from '@/components/ClickableRow'
+import { keepFromRow } from '@/components/rowActivation'
 
 interface ProfessorTableRowProps {
   professor: Professor
@@ -18,10 +19,6 @@ interface ProfessorTableRowProps {
   mutating: boolean
   onEdit: (professor: Professor) => void
   onDelete: (professor: Professor) => void
-}
-
-function keepFromRow(event: MouseEvent) {
-  event.stopPropagation()
 }
 
 export default function ProfessorTableRow({
@@ -37,12 +34,10 @@ export default function ProfessorTableRow({
     .filter((lecture): lecture is Lecture => lecture !== undefined)
 
   return (
-    <tr
-      className="row-interactive row-clickable"
+    <ClickableRow
       style={catalogRowStyle(isLast)}
-      onClick={() => onEdit(professor)}
-      onKeyDown={(event) => activateOnEnterOrSpace(event, () => onEdit(professor))}
-      tabIndex={0}
+      onActivate={() => onEdit(professor)}
+      label={`Edit ${professorName(professor)}`}
     >
       <td style={catalogCellStyle}>
         <Text size="sm" fw={500} c={chrome.textPrimary}>
@@ -61,7 +56,7 @@ export default function ProfessorTableRow({
         )}
       </td>
       <td style={catalogCellStyle}>
-        <Badge color={professor.active ? 'green' : 'gray'} variant="light" size="sm">
+        <Badge color={activeStatusColor[professor.active ? 'active' : 'inactive']} variant="light" size="sm">
           {professor.active ? 'Active' : 'Inactive'}
         </Badge>
       </td>
@@ -86,7 +81,7 @@ export default function ProfessorTableRow({
               aria-label={`Edit ${professorName(professor)}`}
               onClick={() => onEdit(professor)}
             >
-              <IconPencil size={15} />
+              <IconPencil size={iconSize.rowAction} />
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Delete professor — the lectures stay" withArrow>
@@ -98,11 +93,11 @@ export default function ProfessorTableRow({
               aria-label={`Delete ${professorName(professor)}`}
               onClick={() => onDelete(professor)}
             >
-              <IconTrash size={15} />
+              <IconTrash size={iconSize.rowAction} />
             </ActionIcon>
           </Tooltip>
         </Group>
       </td>
-    </tr>
+    </ClickableRow>
   )
 }

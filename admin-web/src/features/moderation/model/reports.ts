@@ -22,6 +22,10 @@ export interface ReportItem {
   date: string
 }
 
+/**
+ * @param report a comment report as the backend sends it
+ * @returns it flattened to the shape both report tables render
+ */
 export function toCommentReport(report: ReportedComment): ReportItem {
   return {
     id: report.id,
@@ -39,6 +43,10 @@ export function toCommentReport(report: ReportedComment): ReportItem {
   }
 }
 
+/**
+ * @param report an answer report as the backend sends it
+ * @returns it flattened to the shape both report tables render
+ */
 export function toAnswerReport(report: ReportedAnswer): ReportItem {
   return {
     id: report.id,
@@ -56,6 +64,11 @@ export function toAnswerReport(report: ReportedAnswer): ReportItem {
   }
 }
 
+/**
+ * @param report the row to test
+ * @param query the search text, already trimmed and lower-cased
+ * @returns whether the content, the reporter or the reported user matches
+ */
 export function matchesReportQuery(report: ReportItem, query: string) {
   return (
     report.content.toLowerCase().includes(query) ||
@@ -65,6 +78,12 @@ export function matchesReportQuery(report: ReportItem, query: string) {
   )
 }
 
+/**
+ * @param report the row to test
+ * @param status the status filter, or `ALL_FILTERS`
+ * @param reason the reason filter, or `ALL_FILTERS`
+ * @returns whether the row survives both filters
+ */
 export function matchesReportFilters(
   report: ReportItem,
   status: StatusFilter,

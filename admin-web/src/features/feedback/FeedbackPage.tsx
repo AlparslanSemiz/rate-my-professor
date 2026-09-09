@@ -12,6 +12,7 @@ import ReportQueue from './components/ReportQueue'
 import { closedReports, openReports } from './model'
 import { useFeedbackReportActions } from './hooks/useFeedbackReportActions'
 import { useFeedbackReports } from './hooks/useFeedbackReports'
+import { iconSize } from '@/theme'
 
 export default function FeedbackPage() {
   const { reports, gitlabEnabled, loading, error, retry } = useFeedbackReports()
@@ -49,10 +50,10 @@ export default function FeedbackPage() {
           every write already performs. */}
       <Tabs defaultValue="queue" keepMounted={false}>
         <Tabs.List mb={20}>
-          <Tabs.Tab value="queue" leftSection={<IconInbox size={14} />}>
+          <Tabs.Tab value="queue" leftSection={<IconInbox size={iconSize.inline} />}>
             Queue ({queue.length})
           </Tabs.Tab>
-          <Tabs.Tab value="history" leftSection={<IconArchive size={14} />}>
+          <Tabs.Tab value="history" leftSection={<IconArchive size={iconSize.inline} />}>
             History ({history.length})
           </Tabs.Tab>
         </Tabs.List>

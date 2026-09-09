@@ -20,6 +20,15 @@ async function fetchGitlabEnabled(): Promise<boolean> {
   }
 }
 
+/**
+ * The bug reports, split into the queue and the history, plus whether GitLab is configured.
+ *
+ * The GitLab flag rides along with the reports because it arrives on the same response. It
+ * decides whether the escalation control exists at all: without it the button is offered and
+ * the endpoint answers `503`.
+ *
+ * @returns the open and closed reports, the loading and error state, and the GitLab flag
+ */
 export function useFeedbackReports() {
   const reports = useQuery({
     queryKey: feedbackKeys.reports(),

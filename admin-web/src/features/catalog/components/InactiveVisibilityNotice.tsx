@@ -1,5 +1,6 @@
 import { Alert } from '@mantine/core'
 import { IconAlertTriangle } from '@tabler/icons-react'
+import { iconSize } from '@/theme'
 
 const noticeStyles = {
   root: {
@@ -19,7 +20,7 @@ const noticeStyles = {
  */
 export default function InactiveVisibilityNotice({ noun }: { noun: 'lecture' | 'professor' }) {
   return (
-    <Alert icon={<IconAlertTriangle size={14} />} color="yellow" radius="md" styles={noticeStyles}>
+    <Alert icon={<IconAlertTriangle size={iconSize.inline} />} color="yellow" radius="md" styles={noticeStyles}>
       Saving this as Inactive removes the {noun} from this panel. The catalogue reads return
       active records only, so it cannot be found or switched back on from here — the change has
       to be undone in the database.

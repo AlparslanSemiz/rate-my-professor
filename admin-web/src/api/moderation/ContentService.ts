@@ -1,4 +1,4 @@
-import { expectArray, type ApiClient, type BasicResponse } from '@/api/client/ApiClient'
+import { expectArray, type HttpTransport, type BasicResponse } from '@/api/client/ApiClient'
 import { HttpService } from '@/api/client/HttpService'
 import type { ContentUpdate } from './contentTypes'
 
@@ -14,7 +14,7 @@ export class ContentService<TItem> extends HttpService {
   /** Both the path segment and the key the list arrives under. */
   private readonly resource: string
 
-  constructor(client: ApiClient, resource: string) {
+  constructor(client: HttpTransport, resource: string) {
     super(client)
     this.resource = resource
   }

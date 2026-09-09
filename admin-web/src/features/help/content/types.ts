@@ -29,5 +29,5 @@ export interface HelpSection {
   icon: HelpIcon
   summary: string
   valueGroups?: HelpValueGroup[]
-  actions?: HelpActionRow[]
+  readonly actions?: readonly HelpActionRow[]
 }

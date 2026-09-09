@@ -7,7 +7,7 @@ import BugReportControls from './BugReportControls'
 import BugReportEditForm from './BugReportEditForm'
 import BugReportIssueControl from './BugReportIssueControl'
 import BugReportSummary from './BugReportSummary'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
 
 const detailsPanelStyle: CSSProperties = {
   background: chrome.surfaceSunken,
@@ -49,7 +49,7 @@ export default function BugReportDetails({
           size="xs"
           variant="light"
           color="blue"
-          leftSection={<IconPencil size={13} />}
+          leftSection={<IconPencil size={iconSize.compact} />}
           onClick={() => setEditing((visible) => !visible)}
         >
           Edit
@@ -64,7 +64,7 @@ export default function BugReportDetails({
           size="xs"
           variant="light"
           color="red"
-          leftSection={<IconTrash size={13} />}
+          leftSection={<IconTrash size={iconSize.compact} />}
           onClick={onDelete}
           style={deleteButtonStyle}
         >

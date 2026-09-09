@@ -1,3 +1,4 @@
+/** Shown under the filter form. Exported so a test asserts the message, not a substring. */
 export const INVALID_DATE_RANGE_MESSAGE = 'The start date must be before or equal to the end date.'
 
 /**

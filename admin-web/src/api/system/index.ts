@@ -1,2 +1,2 @@
 export { SystemStatusService, systemStatusService } from './SystemStatusService'
-export type { SystemStatus, SystemHealth } from './systemStatusTypes'
+export type { SystemStatus, SystemCounts, SystemHealth } from './systemStatusTypes'

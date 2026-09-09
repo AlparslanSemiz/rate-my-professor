@@ -1,17 +1,18 @@
 import { SimpleGrid } from '@mantine/core'
 import { IconShieldCheck, IconUserCheck, IconUsers } from '@tabler/icons-react'
 import StatCard from '@/components/StatCard'
-import { KIT, moduleAccent } from '@/constants/colors'
+import { KIT, accentForRoute } from '@/constants/colors'
 import { statGridCols } from '@/constants/layout'
 import { routes } from '@/constants/routes'
 import type { UserCounts } from '../model'
+import { EMPTY_VALUE } from '@/utils/emptyValue'
 
 const ACTIVE_ACCENT = KIT.green
 const ADMIN_ACCENT = KIT.orange
 
 /** A counter the backend did not report is unknown, not zero. */
 function figure(value: number | null) {
-  return value === null ? '—' : value
+  return value === null ? EMPTY_VALUE : value
 }
 
 /**
@@ -22,7 +23,7 @@ function figure(value: number | null) {
 export default function UsersStats({ counts }: { counts: UserCounts }) {
   return (
     <SimpleGrid cols={statGridCols} spacing={14} mb={28}>
-      <StatCard label="Total users" value={figure(counts.total)} icon={IconUsers} accent={moduleAccent[routes.users]} />
+      <StatCard label="Total users" value={figure(counts.total)} icon={IconUsers} accent={accentForRoute(routes.users)} />
       <StatCard label="Active" value={figure(counts.active)} icon={IconUserCheck} accent={ACTIVE_ACCENT} />
       <StatCard label="Admin accounts" value={figure(counts.admins)} icon={IconShieldCheck} accent={ADMIN_ACCENT} />
     </SimpleGrid>

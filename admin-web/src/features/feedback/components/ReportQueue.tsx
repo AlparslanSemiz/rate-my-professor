@@ -3,7 +3,7 @@ import { IconBug } from '@tabler/icons-react'
 import type { BugReport } from '@/api/feedback'
 import Panel from '@/components/Panel'
 import ReportQueueItem from './ReportQueueItem'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const panelHeaderStyle: CSSProperties = { borderBottom: `1px solid ${chrome.border}` }
@@ -55,7 +55,7 @@ export default function ReportQueue({
 function EmptyReportQueue({ message }: { message: string }) {
   return (
     <Box py={60} style={emptyStateStyle}>
-      <IconBug size={32} color={chrome.iconFaint} style={emptyIconStyle} />
+      <IconBug size={iconSize.emptyState} color={chrome.iconFaint} style={emptyIconStyle} />
       <Text c={chrome.textFaint} size="sm">
         {message}
       </Text>

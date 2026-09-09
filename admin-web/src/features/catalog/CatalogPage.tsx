@@ -7,7 +7,7 @@ import PageHeader from '@/components/PageHeader'
 import PageLoader from '@/components/PageLoader'
 import { useSelectedId } from '@/hooks/useSelectedId'
 import { indexById } from '@/utils/collection'
-import type { CatalogDeletion } from './model'
+import type { CatalogDeleters, CatalogDeletion } from './model'
 import CatalogDeleteModal from './components/CatalogDeleteModal'
 import CatalogStats from './components/CatalogStats'
 import LectureEditModal from './components/LectureEditModal'
@@ -17,6 +17,7 @@ import ProfessorsTable from './components/ProfessorsTable'
 import RatingsTable from './components/RatingsTable'
 import { useCatalog } from './hooks/useCatalog'
 import { useRatings } from './hooks/useRatings'
+import { iconSize } from '@/theme'
 
 const NO_LECTURES: string[] = []
 
@@ -28,6 +29,14 @@ export default function CatalogPage() {
   const lectureEdit = useSelectedId()
   const professorEdit = useSelectedId()
   const [deleting, setDeleting] = useState<CatalogDeletion | null>(null)
+
+  // The three services, handed to the model so that it — and only it — decides which one a
+  // given deletion needs. The page knows how to delete each kind; it does not choose.
+  const deleters: CatalogDeleters = {
+    lecture: actions.deleteLecture,
+    professor: actions.deleteProfessor,
+    rating: ratings.remove,
+  }
 
   const lecturesById = useMemo(() => indexById(lists.lectures), [lists.lectures])
   const professorsById = useMemo(() => indexById(lists.professors), [lists.professors])
@@ -53,13 +62,13 @@ export default function CatalogPage() {
 
       <Tabs defaultValue="lectures" keepMounted={false}>
         <Tabs.List mb={20}>
-          <Tabs.Tab value="lectures" leftSection={<IconSchool size={14} />}>
+          <Tabs.Tab value="lectures" leftSection={<IconSchool size={iconSize.inline} />}>
             Lectures ({lists.lectures.length})
           </Tabs.Tab>
-          <Tabs.Tab value="professors" leftSection={<IconUserStar size={14} />}>
+          <Tabs.Tab value="professors" leftSection={<IconUserStar size={iconSize.inline} />}>
             Professors ({lists.professors.length})
           </Tabs.Tab>
-          <Tabs.Tab value="ratings" leftSection={<IconStar size={14} />}>
+          <Tabs.Tab value="ratings" leftSection={<IconStar size={iconSize.inline} />}>
             Ratings
           </Tabs.Tab>
         </Tabs.List>
@@ -122,16 +131,10 @@ export default function CatalogPage() {
       {deleting && (
         <CatalogDeleteModal
           deletion={deleting}
-          onConfirm={deleteRecord}
+          deleters={deleters}
           onClose={() => setDeleting(null)}
         />
       )}
     </>
   )
-
-  function deleteRecord(deletion: CatalogDeletion) {
-    if (deletion.type === 'lecture') return actions.deleteLecture(deletion.record.id)
-    if (deletion.type === 'professor') return actions.deleteProfessor(deletion.record.id)
-    return ratings.remove(deletion.record.id)
-  }
 }

@@ -3,7 +3,7 @@ import type { AuditLog } from '@/api/logs'
 import { chrome } from '@/theme'
 import { enumLabel } from '@/utils/enumLabel'
 import { formatDate } from '@/utils/formatDate'
-import { auditActionColor } from '../../auditLogModel'
+import { auditActionColor } from '@/constants/colors'
 import { detailCardStyle } from './detailStyles'
 
 /** Who did what, and when — the header of an audit entry's details. */

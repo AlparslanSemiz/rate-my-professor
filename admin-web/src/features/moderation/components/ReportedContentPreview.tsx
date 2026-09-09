@@ -2,8 +2,8 @@ import { Box, Text, Tooltip, type CSSProperties } from '@mantine/core'
 import type { ReportItem } from '../model'
 import { chrome } from '@/theme'
 import { KIT } from '@/constants/colors'
+import { TOOLTIP_THRESHOLD } from './contentRowStyles'
 
-const TOOLTIP_THRESHOLD = 80
 
 const reportTextBoxStyle: CSSProperties = {
   background: 'rgba(239,68,68,0.06)',
@@ -23,7 +23,7 @@ function contentTextStyle(hasTooltip: boolean): CSSProperties {
 }
 
 export default function ReportedContentPreview({ report }: { report: ReportItem }) {
-  const hasTooltip = report.content.length > TOOLTIP_THRESHOLD
+  const hasTooltip = report.content.length > TOOLTIP_THRESHOLD.reportPreview
 
   return (
     <>

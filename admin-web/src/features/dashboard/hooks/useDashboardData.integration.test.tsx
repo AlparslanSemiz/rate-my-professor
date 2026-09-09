@@ -5,6 +5,13 @@ import { usersService, type User } from '@/api/users'
 import { withQueryClient } from '@/test/queryClient'
 import { useDashboardData } from './useDashboardData'
 
+/**
+ * Named `.integration.` because it runs the hook inside a real `QueryClientProvider` over two
+ * services: the units under test are the hook, TanStack Query's client and the derived-state
+ * model together. The two `npm run test:*` scripts filter on the filename, so the name is the
+ * only thing that decides which suite it belongs to.
+ */
+
 vi.mock('@/api/system', () => ({
   systemStatusService: {
     getStatus: vi.fn(),
@@ -37,7 +44,7 @@ const status: SystemStatus = {
   startedAt: '2026-06-01T00:00:00Z',
   uptimeSeconds: 900,
   database: { reachable: true, latencyMs: 3, error: null },
-  counts: { users: 42, activeUsers: 37, admins: 6, openBugReports: 2, comments: 83 },
+  counts: { users: 42, activeUsers: 37, admins: 6, openBugReports: 2 },
   lastWrite: null,
   gitlabEnabled: false,
 }

@@ -1,15 +1,16 @@
-export { AUDIT_ACTIONS, AUDIT_TARGET_TYPES, AuditLogsService, auditLogsService } from './AuditLogsService'
+export { AuditLogsService, auditLogsService } from './AuditLogsService'
+export { AUDIT_ACTIONS, AUDIT_ACTOR_TYPES, AUDIT_TARGET_TYPES } from '@/domain/auditLog'
 export type {
   AuditAction,
   AuditActor,
   AuditActorType,
   AuditChange,
+  AuditEntry,
   AuditLog,
   AuditLogFilters,
-  AuditLogPage,
   AuditMeta,
   AuditTarget,
   AuditTargetType,
   AuditValue,
-  BackendAuditLog,
-} from './AuditLogsService'
+} from '@/domain/auditLog'
+export type { AuditLogPage, BackendAuditLog } from './auditLogTypes'

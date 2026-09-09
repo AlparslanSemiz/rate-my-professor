@@ -1,15 +1,15 @@
-import type { MouseEvent } from 'react'
 import { Badge, Text } from '@mantine/core'
 import UserChip from '@/components/UserChip'
 import { contentStatusColor } from '@/constants/colors'
 import { chrome } from '@/theme'
 import { enumLabel } from '@/utils/enumLabel'
 import { formatDate } from '@/utils/formatDate'
-import { activateOnEnterOrSpace } from '@/utils/keyboard'
 import type { ModeratedItem } from '../model'
 import ContentCell from './ContentCell'
 import ContentRowActions from './ContentRowActions'
 import { cellStyle, contentCellStyle, nowrapCellStyle, rowStyle } from './contentRowStyles'
+import ClickableRow from '@/components/ClickableRow'
+import { keepFromRow } from '@/components/rowActivation'
 
 interface ContentRowProps {
   item: ModeratedItem
@@ -40,19 +40,12 @@ export default function ContentRow({
 
   // Every control sitting inside the row has its own job; without this, pressing Delete or
   // expanding a thread would also open the editor behind the dialog.
-  function keepFromRow(event: MouseEvent) {
-    event.stopPropagation()
-  }
-
   return (
-    <tr
-      className={
-        isReply ? 'row-interactive row-clickable row-reply' : 'row-interactive row-clickable'
-      }
+    <ClickableRow
+      className={isReply ? 'row-reply' : undefined}
       style={rowStyle(isLast)}
-      onClick={openEditor}
-      onKeyDown={(event) => activateOnEnterOrSpace(event, openEditor)}
-      tabIndex={0}
+      onActivate={openEditor}
+      label={`Edit ${item.kind} by ${item.author.name}`}
     >
       <td style={contentCellStyle}>
         <ContentCell
@@ -107,6 +100,6 @@ export default function ContentRow({
           onDelete={onDelete}
         />
       </td>
-    </tr>
+    </ClickableRow>
   )
 }

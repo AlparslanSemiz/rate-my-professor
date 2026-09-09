@@ -1,8 +1,12 @@
 import { Box, Text, UnstyledButton } from '@mantine/core'
-import { DEFAULT_ACCENT, moduleAccent } from '@/constants/colors'
+import { accentForRoute } from '@/constants/colors'
 import { chrome } from '@/theme'
 import type { NavigationItem } from './sidebarItems'
 import { INACTIVE_ICON_COLOR, navButtonStyle, navIconStyle } from './sidebarNavStyles'
+
+/** The nav icon sits between inline text and a card icon. */
+const NAV_ICON_SIZE = 16
+
 
 interface SidebarNavButtonProps {
   item: NavigationItem
@@ -15,7 +19,7 @@ export default function SidebarNavButton({ item, active, onNavigate }: SidebarNa
   const Icon = item.icon
   // The section's own colour, so the sidebar and the dashboard card for the same screen
   // agree. The oversight views are not sections and fall back to the panel's green.
-  const accent = moduleAccent[item.path] ?? DEFAULT_ACCENT
+  const accent = accentForRoute(item.path)
 
   return (
     <UnstyledButton
@@ -25,7 +29,7 @@ export default function SidebarNavButton({ item, active, onNavigate }: SidebarNa
       style={navButtonStyle(active, accent)}
     >
       <Box style={navIconStyle(active, accent)}>
-        <Icon size={16} color={active ? accent : INACTIVE_ICON_COLOR} />
+        <Icon size={NAV_ICON_SIZE} color={active ? accent : INACTIVE_ICON_COLOR} />
       </Box>
       <div>
         <Text

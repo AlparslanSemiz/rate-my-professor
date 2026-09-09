@@ -3,6 +3,10 @@ import type { CSSProperties, ElementType } from 'react'
 import Panel from './Panel'
 import { chrome } from '@/theme'
 
+/** Centred in the card's tinted square, which is `STAT_ICON_SIZE` across. */
+const CARD_ICON_SIZE = 18
+
+
 const STAT_ICON_SIZE = 36
 const STAT_ICON_RADIUS = 8
 const statIconBaseStyle: CSSProperties = {
@@ -30,7 +34,7 @@ function StatIcon({ icon: Icon, accent, floating }: StatIconProps) {
         ...(floating ? { position: 'absolute', top: 16, right: 16 } : {}),
       }}
     >
-      <Icon size={18} color={accent} />
+      <Icon size={CARD_ICON_SIZE} color={accent} />
     </Box>
   )
 }

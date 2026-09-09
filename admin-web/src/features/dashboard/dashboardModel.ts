@@ -1,6 +1,39 @@
-import type { SystemHealth } from '@/api/system'
+import type { SystemCounts, SystemHealth } from '@/api/system'
 import { getErrorMessage } from '@/utils/getErrorMessage'
 
+/**
+ * How many of the newest accounts the dashboard shows.
+ *
+ * One constant, because it is one decision read from two places: the query asks the backend
+ * for exactly this many, and the panel renders exactly this many. They used to be two `4`s in
+ * two files, with the coupling written only as prose in a comment.
+ */
+export const RECENT_MEMBER_COUNT = 4
+
+/**
+ * How often the dashboard re-reads itself while it is on screen.
+ *
+ * Exported because the Help page tells operators this number, and the two must not drift —
+ * it used to be written out as prose in `help/content/dashboard.ts` with nothing tying them
+ * together.
+ */
+export const REFRESH_INTERVAL_MS = 15_000
+
+/**
+ * What the four cards are called.
+ *
+ * Written down once because two files say them: the grid renders them, and the Help page
+ * explains them. They had already drifted — Help described a card called "Not blocked" that
+ * the dashboard has never shown, under a colour the dashboard has never used.
+ */
+export const DASHBOARD_CARDS = Object.freeze({
+  total: 'Total users',
+  active: 'Active accounts',
+  admins: 'Admin accounts',
+  openReports: 'Open reports',
+})
+
+/** The four figures across the top of the dashboard, as the cards read them. */
 export interface DashboardStats {
   total: number
   active: number
@@ -8,19 +41,20 @@ export interface DashboardStats {
   openReports: number
 }
 
-export const EMPTY_DASHBOARD_STATS: DashboardStats = {
+/** Frozen: one object answers every caller that has nothing to show yet. */
+export const EMPTY_DASHBOARD_STATS: DashboardStats = Object.freeze({
   total: 0,
   active: 0,
   admins: 0,
   openReports: 0,
-}
+})
 
 /**
  * The counters the backend keeps, so the dashboard no longer reads every user and every bug
  * report to count them itself. A counter it does not serve reads as zero rather than as a
  * crash; the health status is what says the numbers could not be read at all.
  */
-export function dashboardStatsFromCounts(counts: Record<string, number>): DashboardStats {
+export function dashboardStatsFromCounts(counts: SystemCounts): DashboardStats {
   return {
     total: counts.users ?? 0,
     active: counts.activeUsers ?? 0,
@@ -29,6 +63,11 @@ export function dashboardStatsFromCounts(counts: Record<string, number>): Dashbo
   }
 }
 
+/**
+ * @param stats the figures as read
+ * @returns the share of accounts that are active, as a percentage, or `null` when there is
+ *          no total to divide by — a rate of zero and no reading look identical otherwise
+ */
 export function dashboardActiveRate({ total, active }: DashboardStats) {
   return total ? Math.round((active / total) * 100) : 0
 }
@@ -56,7 +95,7 @@ export const healthDescription: Record<SystemHealth, string> = {
 /** The outcome of one dashboard refresh: two independent reads, either of which may fail. */
 export interface DashboardReading {
   /** The counters the status read carried, or `null` if it carried none. */
-  counts: Record<string, number> | null
+  counts: SystemCounts | null
   countsError: unknown
   usersError: unknown
 }

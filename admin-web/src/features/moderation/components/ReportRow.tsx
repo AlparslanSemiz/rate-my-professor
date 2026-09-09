@@ -8,7 +8,7 @@ import { formatDate } from '@/utils/formatDate'
 import type { ModeratedItem, ReportItem } from '../model'
 import ReportedContentPreview from './ReportedContentPreview'
 import ReportStatusSelect from './ReportStatusSelect'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
 
 const contentCellStyle: CSSProperties = { padding: '16px 20px', maxWidth: 340 }
 const userCellStyle: CSSProperties = { padding: '16px 20px', whiteSpace: 'nowrap' }
@@ -98,7 +98,7 @@ export default function ReportRow({
               aria-label={`Edit the reported ${report.kind} by ${report.reportedUser.name}`}
               onClick={() => content && onEditContent(content)}
             >
-              <IconPencil size={15} />
+              <IconPencil size={iconSize.rowAction} />
             </ActionIcon>
           </Tooltip>
           <Tooltip label={`Delete the reported ${report.kind}`} withArrow>
@@ -110,7 +110,7 @@ export default function ReportRow({
               aria-label={`Delete the reported ${report.kind} by ${report.reportedUser.name}`}
               onClick={() => content && onDeleteContent(content)}
             >
-              <IconTrashX size={15} />
+              <IconTrashX size={iconSize.rowAction} />
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Withdraw this report — the content is left as it is" withArrow>
@@ -122,7 +122,7 @@ export default function ReportRow({
               aria-label={`Withdraw report by ${report.reporter.name}`}
               onClick={() => onWithdraw(report)}
             >
-              <IconTrash size={15} />
+              <IconTrash size={iconSize.rowAction} />
             </ActionIcon>
           </Tooltip>
         </Group>

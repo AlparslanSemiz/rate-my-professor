@@ -11,6 +11,7 @@ import {
 } from './AuditSelectFilters'
 import { DateFilterInput, SearchFilterInput } from './LogFilterInputs'
 import type { DraftSetter } from './auditFilterTypes'
+import { iconSize } from '@/theme'
 
 const panelStyle: CSSProperties = { padding: '16px 20px' }
 
@@ -60,14 +61,14 @@ export default function AuditLogFilters({
             value={draft.to}
             onChange={(to) => onDraftChange((current) => ({ ...current, to }))}
           />
-          <Button type="submit" leftSection={<IconFilter size={15} />} loading={loading}>
+          <Button type="submit" leftSection={<IconFilter size={iconSize.rowAction} />} loading={loading}>
             Apply filters
           </Button>
           <Button
             type="button"
             variant="subtle"
             color="gray"
-            leftSection={<IconRefresh size={15} />}
+            leftSection={<IconRefresh size={iconSize.rowAction} />}
             onClick={onClear}
             disabled={loading}
           >

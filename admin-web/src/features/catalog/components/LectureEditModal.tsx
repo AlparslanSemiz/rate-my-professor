@@ -14,6 +14,7 @@ import {
   professorName,
 } from '../model'
 import CatalogEditModal from './CatalogEditModal'
+import { SEMESTER_YEAR_RANGE } from '../model'
 
 const seasonOptions = SEMESTER_SEASONS.map((season) => ({
   value: season,
@@ -54,8 +55,8 @@ export default function LectureEditModal({
           <Group grow align="flex-start">
             <NumberInput
               label="Semester year"
-              min={1900}
-              max={2999}
+              min={SEMESTER_YEAR_RANGE.min}
+              max={SEMESTER_YEAR_RANGE.max}
               clampBehavior="strict"
               allowDecimal={false}
               value={form.values.semesterYear}

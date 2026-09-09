@@ -1,5 +1,5 @@
 import { Button, Stack, TextInput } from '@mantine/core'
-import type { LoginFormsProps } from './LoginForms'
+import type { LoginFormsProps } from './loginFormsProps'
 import { LOGIN_INPUT_RADIUS, loginInputStyles, submitButtonStyle } from './loginFormStyles'
 
 type EmailStepFormProps = Pick<LoginFormsProps, 'form' | 'loading' | 'onRequestCode'>

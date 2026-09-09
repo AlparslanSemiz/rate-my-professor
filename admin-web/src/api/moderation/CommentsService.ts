@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient } from '@/api/client/ApiClient'
+import { apiClient, type HttpTransport } from '@/api/client/ApiClient'
 import { ModerationService } from './ModerationService'
 import type { ManagedComment, ReportedComment } from './commentTypes'
 
@@ -20,9 +20,10 @@ export type {
  * and this is the one place the two resources genuinely differ in what an operation means.
  */
 export class CommentsService extends ModerationService<ManagedComment, ReportedComment> {
-  constructor(client: ApiClient) {
+  constructor(client: HttpTransport) {
     super(client, 'comments')
   }
 }
 
+/** The panel's comments service, bound to the shared client. */
 export const commentsService = new CommentsService(apiClient)

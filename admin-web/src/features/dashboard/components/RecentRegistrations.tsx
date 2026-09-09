@@ -5,9 +5,9 @@ import Panel from '@/components/Panel'
 import { KIT, roleColor } from '@/constants/colors'
 import { enumLabel } from '@/utils/enumLabel'
 import { chrome } from '@/theme'
+import { RECENT_MEMBER_COUNT } from '../dashboardModel'
 
 const panelStyle: CSSProperties = { padding: '20px 24px' }
-const RECENT_COUNT = 4
 
 /**
  * `/users` promises no ordering, so "newest" has to be established here rather than assumed
@@ -19,8 +19,8 @@ function joinedAt(user: User): number {
   return Number.isNaN(time) ? 0 : time
 }
 
-function newestFirst(users: User[]): User[] {
-  return [...users].sort((left, right) => joinedAt(right) - joinedAt(left)).slice(0, RECENT_COUNT)
+function newestFirst(users: readonly User[]): User[] {
+  return [...users].sort((left, right) => joinedAt(right) - joinedAt(left)).slice(0, RECENT_MEMBER_COUNT)
 }
 
 const rowStyle: CSSProperties = {
@@ -34,7 +34,7 @@ export default function RecentRegistrations({
   users,
   onViewAll,
 }: {
-  users: User[]
+  users: readonly User[]
   onViewAll: () => void
 }) {
   const newest = useMemo(() => newestFirst(users), [users])

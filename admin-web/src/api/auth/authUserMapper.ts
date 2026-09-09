@@ -9,6 +9,18 @@ function readString(value: unknown): string {
  * no usable account. The id decides: it is the value that appears as the actor on audit
  * entries, and an id the backend did not issue must never be sent back to it.
  */
+/**
+ * Maps `/auth/me`'s payload onto the panel's own `AuthUser`.
+ *
+ * Accepts both field spellings the backend has used — `username`/`kitEmail` and
+ * `name`/`email` — because depending on the wrong one signed the operator out on every reload
+ * (`F-002`). Answers `undefined` rather than a half-built user when the payload names no
+ * usable id: an identity the panel invented once reached the backend as the author of a
+ * warning.
+ *
+ * @param payload the `user` object as it arrived, or `undefined`
+ * @returns the account, or `undefined` when the payload named nobody usable
+ */
 export function toAuthUser(payload: SessionUserPayload | undefined): AuthUser | undefined {
   if (!payload) return undefined
 

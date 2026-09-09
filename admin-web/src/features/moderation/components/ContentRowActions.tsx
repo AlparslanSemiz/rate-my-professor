@@ -1,6 +1,7 @@
 import { ActionIcon, Group, Tooltip } from '@mantine/core'
 import { IconPencil, IconTrash } from '@tabler/icons-react'
 import type { ModeratedItem } from '../model'
+import { iconSize } from '@/theme'
 
 interface ContentRowActionsProps {
   item: ModeratedItem
@@ -27,7 +28,7 @@ export default function ContentRowActions({
           aria-label={`Edit content by ${item.author.name}`}
           onClick={() => onEdit(item)}
         >
-          <IconPencil size={15} />
+          <IconPencil size={iconSize.rowAction} />
         </ActionIcon>
       </Tooltip>
       <Tooltip label="Delete permanently" withArrow>
@@ -39,7 +40,7 @@ export default function ContentRowActions({
           aria-label={`Delete content by ${item.author.name}`}
           onClick={() => onDelete(item)}
         >
-          <IconTrash size={15} />
+          <IconTrash size={iconSize.rowAction} />
         </ActionIcon>
       </Tooltip>
     </Group>

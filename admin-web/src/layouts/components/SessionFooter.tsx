@@ -5,6 +5,10 @@ import { KIT } from '@/constants/colors'
 import { withAlpha } from '@/utils/color'
 import { chrome } from '@/theme'
 
+/** The "signed in" dot. Small enough to read as punctuation rather than as an icon. */
+const STATUS_DOT_SIZE = 8
+
+
 const ACTIVE_COLOR = KIT.green
 const BORDER_COLOR = chrome.borderSubtle
 const sessionRowStyle: CSSProperties = {
@@ -43,7 +47,7 @@ export default function SessionFooter({
       <Box px={16} py={14}>
         <div style={sessionRowStyle}>
           <Box style={{ paddingTop: 3 }}>
-            <IconCircleFilled size={8} color={ACTIVE_COLOR} />
+            <IconCircleFilled size={STATUS_DOT_SIZE} color={ACTIVE_COLOR} />
           </Box>
           <div style={sessionInfoStyle}>
             <Text size="xs" c={chrome.textFaint} lh={1.3}>

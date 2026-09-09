@@ -6,7 +6,8 @@ import {
   toContentStatusFilter,
   type ContentStatusFilter,
 } from '../model'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+import { controlWidth } from '@/constants/layout'
 
 const panelStyle: CSSProperties = { padding: '14px 20px' }
 const searchInputStyle: CSSProperties = { flex: 1, minWidth: 200 }
@@ -33,7 +34,7 @@ export default function ContentFilters({
           placeholder="Search by text, author, or lecture..."
           value={search}
           onChange={(event) => onSearchChange(event.currentTarget.value)}
-          leftSection={<IconSearch size={14} color={chrome.textDim} />}
+          leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
           style={searchInputStyle}
           size="sm"
           aria-label={searchLabel}
@@ -44,7 +45,7 @@ export default function ContentFilters({
           data={contentStatusFilterOptions}
           value={status}
           onChange={(value) => onStatusChange(toContentStatusFilter(value))}
-          w={160}
+          w={controlWidth.medium}
           size="sm"
           clearable={false}
         />

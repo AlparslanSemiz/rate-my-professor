@@ -3,11 +3,12 @@ import { IconSearch, IconUserStar } from '@tabler/icons-react'
 import type { Lecture, Professor } from '@/api/catalog'
 import CatalogTablePanel, { CatalogEmptyRow } from './CatalogTablePanel'
 import ProfessorTableRow from './ProfessorTableRow'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+import { searchFieldWidth } from '@/constants/layout'
 
 const TABLE_COLUMNS = ['Professor', 'Lectures', 'Status', 'Average rating', 'Ratings', ''] as const
 
-const searchInputStyle: CSSProperties = { flex: '1 1 240px', maxWidth: 320 }
+const searchInputStyle: CSSProperties = searchFieldWidth
 
 interface ProfessorsTableProps {
   professors: Professor[]
@@ -33,7 +34,7 @@ export default function ProfessorsTable({
   return (
     <CatalogTablePanel
       title="Professors"
-      icon={<IconUserStar size={14} color={chrome.textDim} />}
+      icon={<IconUserStar size={iconSize.inline} color={chrome.textDim} />}
       description={`${professors.length} of ${totalCount} in the catalogue`}
       columns={TABLE_COLUMNS}
       minWidth={860}
@@ -45,7 +46,7 @@ export default function ProfessorsTable({
           style={searchInputStyle}
           size="sm"
           aria-label="Search professors"
-          leftSection={<IconSearch size={14} color={chrome.textDim} />}
+          leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
         />
       }
     >

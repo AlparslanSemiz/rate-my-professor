@@ -1,5 +1,12 @@
 import type { BasicResponse } from '@/api/client/ApiClient'
 
+/**
+ * The signed-in admin, as the panel holds them.
+ *
+ * Flattened from whichever field spelling `/auth/me` used, so nothing downstream has to know
+ * that the backend calls these `username` and `kitEmail` on one endpoint and `name` and
+ * `email` on another. Getting that wrong signed the operator out on every reload (`F-002`).
+ */
 export interface AuthUser {
   id: string
   name: string
@@ -13,6 +20,7 @@ export interface AuthUser {
   isSuperAdmin?: boolean
 }
 
+/** `/auth/login`. `authToken` is promised by the contract and not by the type system. */
 export interface LoginResponse extends BasicResponse {
   authToken: string
 }

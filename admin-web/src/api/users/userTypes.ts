@@ -2,6 +2,12 @@ import type { UserRole, UserStatus } from '@/domain/user'
 
 export type { UserRole, UserStatus }
 
+/**
+ * One warning on a student's record, flattened from what the backend sends.
+ *
+ * The issuer arrives nested under `createdFrom`; it is lifted here so nothing downstream has
+ * to walk into it to answer "who issued this?".
+ */
 export interface Warning {
   /**
    * Address of the warning, needed to correct or withdraw it. Served since the 2026-08-20
@@ -21,6 +27,13 @@ export interface Warning {
   issuedByName: string
 }
 
+/**
+ * An account, student or admin, as every screen in the panel reads it.
+ *
+ * `role` is not always the backend's answer: `withRequiredAdminRole` promotes the six known
+ * admin addresses, so the panel offers their controls even where the backend has not caught
+ * up. The backend still authorises every request itself.
+ */
 export interface User {
   id: string
   username: string
@@ -36,6 +49,7 @@ export interface User {
   credibilityScore: number
 }
 
+/** The two orderings `GET /users` offers. Both are by join date; there is no third. */
 export type UserSort = 'newest' | 'oldest'
 
 /**
@@ -52,8 +66,9 @@ export interface UserQuery {
   sort?: UserSort
 }
 
+/** One page of the listing, with the cursor that fetches the next (see ADR 0006). */
 export interface UserPage {
-  users: User[]
+  readonly users: readonly User[]
   /** Null on the last page, and always null when no `limit` was passed. */
   nextCursor: string | null
 }

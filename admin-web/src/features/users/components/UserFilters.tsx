@@ -11,7 +11,8 @@ import {
   USER_STATUS_FILTERS,
   type UserFilterDraft,
 } from '../model'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+import { controlWidth } from '@/constants/layout'
 
 const panelStyle: CSSProperties = { padding: '16px 20px' }
 const searchFieldStyle: CSSProperties = { flex: '2 1 260px' }
@@ -61,7 +62,7 @@ export default function UserFilters({
               const q = event.currentTarget.value
               onDraftChange((current) => ({ ...current, q }))
             }}
-            leftSection={<IconSearch size={14} color={chrome.textDim} />}
+            leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
             style={searchFieldStyle}
           />
           <Select
@@ -76,7 +77,7 @@ export default function UserFilters({
                 status: isUserStatusFilter(value) ? value : null,
               }))
             }
-            w={150}
+            w={controlWidth.compact}
             clearable
           />
           <Select
@@ -91,7 +92,7 @@ export default function UserFilters({
                 role: isUserRoleFilter(value) ? value : null,
               }))
             }
-            w={150}
+            w={controlWidth.compact}
             clearable
           />
           <Select
@@ -105,17 +106,17 @@ export default function UserFilters({
                 sort: isUserSort(value) ? value : current.sort,
               }))
             }
-            w={150}
+            w={controlWidth.compact}
             clearable={false}
           />
-          <Button type="submit" leftSection={<IconFilter size={15} />} loading={loading}>
+          <Button type="submit" leftSection={<IconFilter size={iconSize.rowAction} />} loading={loading}>
             Apply filters
           </Button>
           <Button
             type="button"
             variant="subtle"
             color="gray"
-            leftSection={<IconRefresh size={15} />}
+            leftSection={<IconRefresh size={iconSize.rowAction} />}
             onClick={onClear}
             disabled={loading}
           >

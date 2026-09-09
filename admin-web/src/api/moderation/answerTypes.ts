@@ -1,6 +1,7 @@
 import type { ContentStatus, ReportReason, ReportStatus } from '@/domain/moderation'
 import type { UserReference } from '@/domain/user'
 
+/** An answer report's status. The same vocabulary every report uses. */
 export type AnswerReportStatus = ReportStatus
 
 /**

@@ -4,6 +4,7 @@ import { formatDate } from '@/utils/formatDate'
 import type { DashboardStats } from '../dashboardModel'
 import { KIT } from '@/constants/colors'
 import { chrome } from '@/theme'
+import { EMPTY_VALUE } from '@/utils/emptyValue'
 
 const heroStyle: CSSProperties = {
   // The only green-tinted surface in the panel: the dashboard's hero. The two stops are
@@ -64,7 +65,7 @@ export default function DashboardHero({
       // the minute makes a working refresh look stuck.
       value: lastUpdated
         ? formatDate(lastUpdated.toISOString(), { withTime: true, withSeconds: true })
-        : '—',
+        : EMPTY_VALUE,
     },
   ]
 

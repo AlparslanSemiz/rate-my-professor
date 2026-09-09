@@ -1,4 +1,4 @@
-import { expectArray, type ApiClient, type BasicResponse } from '@/api/client/ApiClient'
+import { expectArray, type HttpTransport, type BasicResponse } from '@/api/client/ApiClient'
 import { HttpService } from '@/api/client/HttpService'
 import type { ReportStatus } from '@/domain/moderation'
 
@@ -10,11 +10,15 @@ import type { ReportStatus } from '@/domain/moderation'
 export class ReportsService<TReport> extends HttpService {
   private readonly resource: string
 
-  constructor(client: ApiClient, resource: string) {
+  constructor(client: HttpTransport, resource: string) {
     super(client)
     this.resource = resource
   }
 
+  /**
+   * @returns the reports raised against this resource
+   * @throws {ContractError} when the response holds no list under the resource's name
+   */
   async getReported(): Promise<TReport[]> {
     const path = `/${this.resource}/reported`
     const response = await this.client.get<BasicResponse>(path)

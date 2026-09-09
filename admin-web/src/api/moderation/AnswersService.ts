@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient } from '@/api/client/ApiClient'
+import { apiClient, type HttpTransport } from '@/api/client/ApiClient'
 import { ModerationService } from './ModerationService'
 import type { ManagedAnswer, ReportedAnswer } from './answerTypes'
 
@@ -11,9 +11,10 @@ export type { ContentUpdate } from './contentTypes'
  * only that answer.
  */
 export class AnswersService extends ModerationService<ManagedAnswer, ReportedAnswer> {
-  constructor(client: ApiClient) {
+  constructor(client: HttpTransport) {
     super(client, 'answers')
   }
 }
 
+/** The panel's answers service, bound to the shared client. */
 export const answersService = new AnswersService(apiClient)

@@ -6,6 +6,7 @@ interface LecturesResponse extends BasicResponse {
   lectures: Lecture[]
 }
 
+/** Lectures: the public read, and the admin-only writes on the same paths. */
 export class LectureCatalogService extends HttpService {
   /** Public lecture catalogue read, backed by the same `/data` endpoint the student app uses. */
   async getAll(): Promise<Lecture[]> {
@@ -13,6 +14,11 @@ export class LectureCatalogService extends HttpService {
     return expectArray<Lecture>(response, 'lectures', 'GET /data/lectures')
   }
 
+  /**
+   * @param id the lecture to edit
+   * @param update only the fields that changed
+   * @returns the envelope
+   */
   update(id: string, update: LectureUpdate): Promise<BasicResponse> {
     return this.client.patch<BasicResponse>(`/data/lectures/${id}`, update)
   }

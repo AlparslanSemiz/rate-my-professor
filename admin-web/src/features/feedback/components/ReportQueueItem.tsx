@@ -7,6 +7,10 @@ import { formatDate } from '@/utils/formatDate'
 import { reportStatusIcon } from '../model'
 import { chrome } from '@/theme'
 
+/** Inside a badge, so a step below `iconSize.badge`. */
+const STATUS_BADGE_ICON_SIZE = 11
+
+
 const severityBarStyle: CSSProperties = {
   width: 3,
   height: 36,
@@ -62,7 +66,7 @@ export default function ReportQueueItem({
                 color={reportStatusColor[report.status]}
                 variant="filled"
                 size="sm"
-                leftSection={<StatusIcon size={11} />}
+                leftSection={<StatusIcon size={STATUS_BADGE_ICON_SIZE} />}
               >
                 {enumLabel(report.status)}
               </Badge>

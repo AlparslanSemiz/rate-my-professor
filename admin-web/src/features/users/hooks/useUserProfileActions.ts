@@ -2,8 +2,7 @@ import { useCallback } from 'react'
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { usersService, type User, type UserUpdate, type Warning } from '@/api/users'
 import { getStaleAfterWriteMessage } from '@/utils/getErrorMessage'
-import type { UserChange } from '../model'
-import type { LoadedProfile } from './useUserProfile'
+import type { LoadedProfile, UserChange } from '../model'
 
 const RE_READ_ERROR_FALLBACK = 'the account could not be read back'
 

@@ -8,7 +8,8 @@ import {
 } from '@tabler/icons-react'
 import type { User } from '@/api/users'
 import type { UserAccess } from '../model'
-import type { ConfirmAction } from '../model'
+import { USER_ACTION_COLORS, blockToggleAction, type ConfirmAction } from '../model'
+import { iconSize } from '@/theme'
 
 export type { ConfirmAction } from '../model'
 
@@ -29,7 +30,10 @@ export default function ProfileActions({
   onToggleWarning,
   onConfirm,
 }: ProfileActionsProps) {
-  const isBlocked = user.status === 'BLOCKED'
+  // One decision, read four ways: the colour, the icon, the label and the action the button
+  // fires all follow from it. They used to be four ternaries over the same condition.
+  const blockAction = blockToggleAction(user.status)
+  const isBlocked = blockAction === 'unblock'
 
   return (
     <Group gap={8} mb={20}>
@@ -37,7 +41,7 @@ export default function ProfileActions({
         size="xs"
         variant="light"
         color="blue"
-        leftSection={<IconPencil size={13} />}
+        leftSection={<IconPencil size={iconSize.compact} />}
         onClick={onToggleEdit}
       >
         Edit
@@ -48,7 +52,7 @@ export default function ProfileActions({
             size="xs"
             variant="light"
             color="yellow"
-            leftSection={<IconAlertTriangle size={13} />}
+            leftSection={<IconAlertTriangle size={iconSize.compact} />}
             onClick={onToggleWarning}
           >
             Warn
@@ -56,17 +60,23 @@ export default function ProfileActions({
           <Button
             size="xs"
             variant="light"
-            color={isBlocked ? 'green' : 'orange'}
-            leftSection={isBlocked ? <IconShieldCheck size={13} /> : <IconShieldOff size={13} />}
-            onClick={() => onConfirm(isBlocked ? 'unblock' : 'block')}
+            color={USER_ACTION_COLORS[blockAction]}
+            leftSection={
+              isBlocked ? (
+                <IconShieldCheck size={iconSize.compact} />
+              ) : (
+                <IconShieldOff size={iconSize.compact} />
+              )
+            }
+            onClick={() => onConfirm(blockAction)}
           >
             {isBlocked ? 'Unblock' : 'Block'}
           </Button>
           <Button
             size="xs"
             variant="light"
-            color="red"
-            leftSection={<IconTrash size={13} />}
+            color={USER_ACTION_COLORS.delete}
+            leftSection={<IconTrash size={iconSize.compact} />}
             onClick={() => onConfirm('delete')}
             style={deleteButtonStyle}
           >

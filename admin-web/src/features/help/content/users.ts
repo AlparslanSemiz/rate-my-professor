@@ -1,5 +1,6 @@
 import { IconUsers } from '@tabler/icons-react'
 import type { HelpSection } from './types'
+import { roleColor, userStatusColor } from '@/constants/colors'
 
 export const USERS_HELP: HelpSection = {
   id: 'users',
@@ -10,20 +11,20 @@ export const USERS_HELP: HelpSection = {
     {
       heading: 'Status',
       rows: [
-        { value: 'Active', color: 'green', meaning: 'Normal account, nothing restricted.' },
+        { value: 'Active', color: userStatusColor.ACTIVE, meaning: 'Normal account, nothing restricted.' },
         {
           value: 'Inactive',
-          color: 'gray',
+          color: userStatusColor.INACTIVE,
           meaning: 'Defined by the backend, but nothing in this panel sets or checks it.',
         },
         {
           value: 'Blocked',
-          color: 'red',
+          color: userStatusColor.BLOCKED,
           meaning: 'Access blocked by moderation. Set with the Block / Unblock action.',
         },
         {
           value: 'Deleted',
-          color: 'dark',
+          color: userStatusColor.DELETED,
           meaning: 'Not a status you can set — deleting an account removes it outright, and that cannot be undone.',
         },
       ],
@@ -31,10 +32,10 @@ export const USERS_HELP: HelpSection = {
     {
       heading: 'Role',
       rows: [
-        { value: 'Student', color: 'gray', meaning: 'Regular community account.' },
+        { value: 'Student', color: roleColor.STUDENT, meaning: 'Regular community account.' },
         {
           value: 'Admin',
-          color: 'blue',
+          color: roleColor.ADMIN,
           meaning:
             'Full panel access. Non-elevated admins cannot warn, block, delete or change the status of another admin account. Your own account cannot have its status, role or credibility score changed here.',
         },

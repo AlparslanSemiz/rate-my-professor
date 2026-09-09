@@ -5,7 +5,7 @@ import TableHeaderRow from '@/components/TableHeaderRow'
 import type { ReportStatus } from '@/domain/moderation'
 import type { ModeratedItem, ReportItem } from '../model'
 import ReportRow from './ReportRow'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
 
 const TABLE_COLUMNS = [
   'Content & Report',
@@ -49,7 +49,7 @@ export default function ReportsTable({
     <Panel style={panelStyle}>
       <Box px={20} py={14} style={panelHeaderStyle}>
         <Group gap={6}>
-          <IconMessageReport size={14} color={chrome.textDim} />
+          <IconMessageReport size={iconSize.inline} color={chrome.textDim} />
           <Text size="xs" c={chrome.textDim}>
             {reports.length} report{reports.length !== 1 ? 's' : ''} matching filters
           </Text>
@@ -58,7 +58,7 @@ export default function ReportsTable({
 
       {reports.length === 0 ? (
         <Box py={60} style={emptyStateStyle}>
-          <IconMessageReport size={32} color={chrome.iconFaint} style={{ marginBottom: 12 }} />
+          <IconMessageReport size={iconSize.emptyState} color={chrome.iconFaint} style={{ marginBottom: 12 }} />
           <Text c={chrome.textFaint} size="sm">
             Nothing here — no reports match these filters.
           </Text>

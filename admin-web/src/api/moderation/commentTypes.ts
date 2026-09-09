@@ -1,7 +1,9 @@
 import type { ContentStatus, ReportReason, ReportStatus } from '@/domain/moderation'
 import type { UserReference, UserRole, UserStatus } from '@/domain/user'
 
+/** A comment report's status. The same vocabulary every report uses. */
 export type CommentReportStatus = ReportStatus
+/** How a comment names its author. The same reference every screen renders as a chip. */
 export type CommentUserRef = UserReference
 export type { ReportReason, UserRole, UserStatus }
 
@@ -21,6 +23,13 @@ export interface ManagedComment {
   createdAt: string
 }
 
+/**
+ * A report raised against a comment.
+ *
+ * Carries **two** ids and they address different things: `id` is the report, `commentId` is
+ * the comment. Withdrawing a report and hiding a comment are separate endpoints, and using
+ * the wrong id here moderates the wrong record.
+ */
 export interface ReportedComment {
   /** The report's id — what the status and withdrawal routes address. */
   id: string

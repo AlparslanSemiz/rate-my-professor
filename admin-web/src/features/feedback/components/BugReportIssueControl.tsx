@@ -2,6 +2,7 @@ import { Anchor, Button, Group } from '@mantine/core'
 import { IconBrandGitlab, IconExternalLink } from '@tabler/icons-react'
 import type { BugReport } from '@/api/feedback'
 import { KIT } from '@/constants/colors'
+import { iconSize } from '@/theme'
 
 interface BugReportIssueControlProps {
   report: BugReport
@@ -24,7 +25,7 @@ export default function BugReportIssueControl({
     return (
       <Anchor href={report.issueUrl} target="_blank" rel="noreferrer" size="xs" c={KIT.orange}>
         <Group gap={4} wrap="nowrap">
-          <IconExternalLink size={13} />
+          <IconExternalLink size={iconSize.compact} />
           Open issue on GitLab
         </Group>
       </Anchor>
@@ -38,7 +39,7 @@ export default function BugReportIssueControl({
       size="xs"
       variant="light"
       color="orange"
-      leftSection={<IconBrandGitlab size={13} />}
+      leftSection={<IconBrandGitlab size={iconSize.compact} />}
       loading={updating}
       onClick={() => onCreateIssue(report.id)}
     >

@@ -12,6 +12,7 @@ import ContentTab from './components/ContentTab'
 import ReportsTab from './components/ReportsTab'
 import { useModerationPage, type ModerationApi } from './hooks/useModerationPage'
 import type { ModeratedItem, ReportItem } from './model'
+import { iconSize } from '@/theme'
 
 interface ModerationPageProps {
   title: string
@@ -55,10 +56,10 @@ export default function ModerationPage({
 
       <Tabs defaultValue="content" keepMounted={false}>
         <Tabs.List mb={20}>
-          <Tabs.Tab value="content" leftSection={<IconMessage size={14} />}>
+          <Tabs.Tab value="content" leftSection={<IconMessage size={iconSize.inline} />}>
             All {noun}s ({page.content.items.length})
           </Tabs.Tab>
-          <Tabs.Tab value="reports" leftSection={<IconFlag size={14} />}>
+          <Tabs.Tab value="reports" leftSection={<IconFlag size={iconSize.inline} />}>
             Reports ({page.reports.items.length})
           </Tabs.Tab>
         </Tabs.List>

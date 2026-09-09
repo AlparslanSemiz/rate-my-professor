@@ -1,3 +1,4 @@
+import { EMPTY_VALUE } from './emptyValue'
 /**
  * `withSeconds` is opt-in and only means anything alongside `withTime`. It exists for the
  * one place that refreshes faster than a minute — a timestamp that only counts minutes looks
@@ -8,7 +9,7 @@ export function formatDate(
   options?: { withTime?: boolean; withSeconds?: boolean },
 ): string {
   const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return '-'
+  if (Number.isNaN(date.getTime())) return EMPTY_VALUE
 
   return date.toLocaleString('en-GB', {
     day: '2-digit',

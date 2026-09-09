@@ -12,7 +12,7 @@ interface ProfessorEditModalProps {
   professor: Professor | null
   lectures: Lecture[]
   /** Lecture ids the professor currently teaches, derived from the lecture list. */
-  assignedLectureIds: string[]
+  assignedLectureIds: readonly string[]
   onClose: () => void
   onSubmit: (id: string, update: ProfessorUpdate) => Promise<void>
 }
