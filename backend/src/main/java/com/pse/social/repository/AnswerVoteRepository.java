@@ -5,7 +5,6 @@ import com.pse.shared.enums.VoteType;
 import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerVote;
 
-import com.pse.social.model.Comment;
 import com.pse.user.model.Student;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
