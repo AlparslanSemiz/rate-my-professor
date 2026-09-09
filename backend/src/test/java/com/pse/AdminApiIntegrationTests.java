@@ -2918,6 +2918,19 @@ class AdminApiIntegrationTests {
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
 
+        // And an activity-scope entry, because the two above are administrative and land only
+        // in /admin/audit-logs. A real student sign-in is also the single best case for this
+        // test: USER_LOGIN is written through the path that hardcodes changes to an empty map,
+        // so it is the entry a NON_EMPTY inclusion rule would strip first.
+        String student = "audit-shape-student@student.kit.edu";
+        createStudent(student);
+        requestCode(student);
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"%s\",\"loginToken\":\"%s\"}"
+                                .formatted(student, codeDelivery.codeFor(student))))
+                .andExpect(status().isOk());
+
         for (String path : List.of("/admin/audit-logs", "/admin/activity-logs")) {
             String body = mockMvc.perform(get(path)
                             .header("Authorization", bearer(admin.rawToken())))
