@@ -6,12 +6,13 @@ import {
   auditLogsService,
   type AuditLog,
   type AuditMeta,
-} from '../../api/AuditLogsService'
-import { ApiError } from '../../api/ApiClient'
+} from '@/api/logs'
+import { ApiError } from '@/api/client'
+import { withQueryClient } from '@/test/queryClient'
 import AuditLogsPage from './AuditLogsPage'
 
-vi.mock('../../api/AuditLogsService', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../../api/AuditLogsService')>()
+vi.mock('@/api/logs', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/api/logs')>()
   return {
     ...original,
     auditLogsService: {
@@ -84,9 +85,7 @@ const secondLog: AuditLog = {
 
 function renderAuditLogs() {
   return render(
-    <MantineProvider>
-      <AuditLogsPage />
-    </MantineProvider>
+    <MantineProvider>{withQueryClient(<AuditLogsPage />)}</MantineProvider>
   )
 }
 

@@ -1,22 +1,24 @@
 import { Box, Group, Stack, Text, type CSSProperties } from '@mantine/core'
 import { IconArrowRight } from '@tabler/icons-react'
-import type { AuditChange } from '../../../api/AuditLogsService'
-import { enumLabel } from '../../../utils/enumLabel'
-import { formatAuditValue } from '../auditLogModel'
+import type { AuditChange } from '@/api/logs'
+import { enumLabel } from '@/utils/enumLabel'
+import { formatAuditValue } from '../../auditLogModel'
+import { chrome } from '@/theme'
+import { KIT } from '@/constants/colors'
 
 const cardStyle: CSSProperties = {
   padding: '12px 14px',
   borderRadius: 10,
-  background: '#0f1117',
-  border: '1px solid #21262d',
+  background: chrome.surfaceSunken,
+  border: `1px solid ${chrome.border}`,
 }
 const valueStyle: CSSProperties = {
   flex: 1,
   minWidth: 0,
   padding: '9px 10px',
   borderRadius: 8,
-  background: '#0b0d12',
-  border: '1px solid #1c2128',
+  background: chrome.well,
+  border: `1px solid ${chrome.borderSubtle}`,
   wordBreak: 'break-word',
 }
 
@@ -29,7 +31,7 @@ export default function AuditChangeList({
 
   if (entries.length === 0) {
     return (
-      <Text size="sm" c="#4b5563">
+      <Text size="sm" c={chrome.textFaint}>
         No field changes recorded.
       </Text>
     )
@@ -39,15 +41,15 @@ export default function AuditChangeList({
     <Stack gap={8}>
       {entries.map(([field, change]) => (
         <Box key={field} style={cardStyle}>
-          <Text size="xs" fw={600} c="#9ca3af" mb={8}>
+          <Text size="xs" fw={600} c={chrome.textMuted} mb={8}>
             {enumLabel(field)}
           </Text>
           <Group gap={8} wrap="nowrap" align="stretch">
-            <ChangeValue label="Before" color="#fca5a5" value={formatAuditValue(change.before)} />
+            <ChangeValue label="Before" color={KIT.red} value={formatAuditValue(change.before)} />
             <Box style={{ display: 'flex', alignItems: 'center' }}>
-              <IconArrowRight size={15} color="#4b5563" />
+              <IconArrowRight size={15} color={chrome.textFaint} />
             </Box>
-            <ChangeValue label="After" color="#86efac" value={formatAuditValue(change.after)} />
+            <ChangeValue label="After" color={KIT.green} value={formatAuditValue(change.after)} />
           </Group>
         </Box>
       ))}
@@ -58,7 +60,7 @@ export default function AuditChangeList({
 function ChangeValue({ label, color, value }: { label: string; color: string; value: string }) {
   return (
     <Box style={valueStyle}>
-      <Text size="xs" c="#4b5563">
+      <Text size="xs" c={chrome.textFaint}>
         {label}
       </Text>
       <Text size="sm" c={color}>

@@ -1,47 +1,37 @@
 import { useState } from 'react'
-import { auditLogsService, type AuditLog } from '../../api/AuditLogsService'
-import ConfirmModal from '../../components/ConfirmModal'
-import ErrorAlert from '../../components/ErrorAlert'
-import LoadError from '../../components/LoadError'
-import PageHeader from '../../components/PageHeader'
-import PageLoader from '../../components/PageLoader'
-import { getRevertErrorMessage } from './auditLogModel'
-import AuditLogDetails from './components/AuditLogDetails'
+import type { AuditLog } from '@/api/logs'
+import ConfirmModal from '@/components/ConfirmModal'
+import ErrorAlert from '@/components/ErrorAlert'
+import LoadError from '@/components/LoadError'
+import PageHeader from '@/components/PageHeader'
+import PageLoader from '@/components/PageLoader'
+import AuditLogDetails from './components/details/AuditLogDetails'
 import AuditLogFilters from './components/AuditLogFilters'
 import AuditLogsTable from './components/AuditLogsTable'
 import { useAuditLogs } from './hooks/useAuditLogs'
-import { enumLabel } from '../../utils/enumLabel'
+import { useRevertAuditEntry } from './hooks/useRevertAuditEntry'
+import { enumLabel } from '@/utils/enumLabel'
 
 export default function AuditLogsPage() {
   const auditLogs = useAuditLogs()
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
   const [confirmingRevert, setConfirmingRevert] = useState<AuditLog | null>(null)
-  const [reverting, setReverting] = useState(false)
-  const [revertError, setRevertError] = useState('')
+
+  const { revert, reverting, revertError, clearRevertError } = useRevertAuditEntry({
+    onReverted: async () => {
+      setSelectedLog(null)
+      await auditLogs.reload()
+    },
+  })
 
   function openLog(log: AuditLog) {
     setSelectedLog(log)
-    setRevertError('')
+    clearRevertError()
   }
 
-  /**
-   * The revert answers `{success, message}` and nothing else, so the log is re-read rather
-   * than patched: the reversal's own entry is only there, and this entry only starts
-   * reporting `revertedByAuditId` once the backend says so.
-   */
-  async function revert(log: AuditLog) {
+  function confirmRevert(log: AuditLog) {
     setConfirmingRevert(null)
-    setReverting(true)
-    setRevertError('')
-    try {
-      await auditLogsService.revert(log.id)
-      setSelectedLog(null)
-      await auditLogs.reload()
-    } catch (error: unknown) {
-      setRevertError(getRevertErrorMessage(error))
-    } finally {
-      setReverting(false)
-    }
+    revert(log)
   }
 
   if (auditLogs.loading && auditLogs.items.length === 0 && !auditLogs.tableError) {
@@ -74,7 +64,7 @@ export default function AuditLogsPage() {
       <ErrorAlert message={auditLogs.tableError} />
       <AuditLogsTable
         logs={auditLogs.items}
-        nextCursor={auditLogs.nextCursor}
+        hasMore={auditLogs.hasMore}
         loading={auditLogs.loading}
         loadingMore={auditLogs.loadingMore}
         onOpen={openLog}
@@ -94,7 +84,7 @@ export default function AuditLogsPage() {
           description={`Put the fields this ${enumLabel(confirmingRevert.action)} entry changed back to what they were? The undo is recorded as its own audit entry.`}
           confirmLabel="Undo the change"
           confirmColor="orange"
-          onConfirm={() => revert(confirmingRevert)}
+          onConfirm={() => confirmRevert(confirmingRevert)}
           onClose={() => setConfirmingRevert(null)}
         />
       )}

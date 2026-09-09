@@ -1,16 +1,17 @@
 import { Badge, Text, type CSSProperties } from '@mantine/core'
-import type { AuditLog } from '../../../api/AuditLogsService'
-import { enumLabel } from '../../../utils/enumLabel'
-import { formatDate } from '../../../utils/formatDate'
-import { activateOnEnterOrSpace } from '../../../utils/keyboard'
+import type { AuditLog } from '@/api/logs'
+import { enumLabel } from '@/utils/enumLabel'
+import { formatDate } from '@/utils/formatDate'
+import { activateOnEnterOrSpace } from '@/utils/keyboard'
 import { auditActionColor } from '../auditLogModel'
+import { chrome } from '@/theme'
 
 const cellStyle: CSSProperties = { padding: '14px 20px', verticalAlign: 'middle' }
 const nowrapCellStyle: CSSProperties = { ...cellStyle, whiteSpace: 'nowrap' }
 
 function rowStyle(isLast: boolean): CSSProperties {
   return {
-    borderBottom: isLast ? 'none' : '1px solid #1c2128',
+    borderBottom: isLast ? 'none' : `1px solid ${chrome.borderSubtle}`,
   }
 }
 
@@ -34,15 +35,15 @@ export default function AuditLogRow({ log, isLast, onOpen }: AuditLogRowProps) {
       aria-label={`Open audit event ${enumLabel(log.action)} by ${log.actor.name}`}
     >
       <td style={nowrapCellStyle}>
-        <Text size="xs" c="#6b7280">
+        <Text size="xs" c={chrome.textDim}>
           {formatDate(log.createdAt, { withTime: true })}
         </Text>
       </td>
       <td style={cellStyle}>
-        <Text size="sm" fw={600} c="#e2e8f0">
+        <Text size="sm" fw={600} c={chrome.textPrimary}>
           {log.actor.name}
         </Text>
-        <Text size="xs" c="#4b5563">
+        <Text size="xs" c={chrome.textFaint}>
           {log.actor.email}
         </Text>
       </td>
@@ -54,21 +55,21 @@ export default function AuditLogRow({ log, isLast, onOpen }: AuditLogRowProps) {
       <td style={cellStyle}>
         {log.target ? (
           <>
-            <Text size="sm" c="#cbd5e1" lineClamp={1}>
+            <Text size="sm" c={chrome.textSecondary} lineClamp={1}>
               {log.target.label}
             </Text>
-            <Text size="xs" c="#4b5563">
+            <Text size="xs" c={chrome.textFaint}>
               {enumLabel(log.target.type)}
             </Text>
           </>
         ) : (
-          <Text size="xs" c="#4b5563">
+          <Text size="xs" c={chrome.textFaint}>
             —
           </Text>
         )}
       </td>
       <td style={cellStyle}>
-        <Text size="xs" c={changedFields.length > 0 ? '#9ca3af' : '#4b5563'}>
+        <Text size="xs" c={changedFields.length > 0 ? chrome.textMuted : chrome.textFaint}>
           {changedFields.length > 0 ? changedFields.map(enumLabel).join(', ') : 'No field changes'}
         </Text>
       </td>

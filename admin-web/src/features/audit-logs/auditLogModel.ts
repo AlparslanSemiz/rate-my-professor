@@ -1,14 +1,14 @@
-import { ApiError } from '../../api/ApiClient'
+import { ApiError } from '@/api/client'
 import type {
   AuditAction,
   AuditLogFilters,
   AuditMeta,
   AuditTargetType,
   AuditValue,
-} from '../../api/AuditLogsService'
-import { EMPTY_LOG_META, type RevertBlockedReason } from '../../domain/auditLog'
-import { validateDateRange } from '../../utils/dateRange'
-import { getErrorMessage } from '../../utils/getErrorMessage'
+} from '@/api/logs'
+import { EMPTY_LOG_META, type RevertBlockedReason } from '@/domain/auditLog'
+import { validateDateRange } from '@/utils/dateRange'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 
 const AUDIT_API_UNAVAILABLE_MESSAGE =
   'The configured backend does not support audit logs yet. Deploy the audit API endpoints, then try again.'

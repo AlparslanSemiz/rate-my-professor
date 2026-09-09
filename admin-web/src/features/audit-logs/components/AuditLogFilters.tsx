@@ -1,15 +1,15 @@
 import { type FormEvent, type CSSProperties } from 'react'
 import { Button, Group } from '@mantine/core'
 import { IconFilter, IconRefresh } from '@tabler/icons-react'
-import type { AuditMeta } from '../../../api/AuditLogsService'
-import Panel from '../../../components/Panel'
+import type { AuditMeta } from '@/api/logs'
+import Panel from '@/components/Panel'
 import type { FilterDraft } from '../auditLogModel'
 import {
   AuditActionFilter,
   AuditAdminFilter,
   AuditTargetFilter,
 } from './AuditSelectFilters'
-import { DateFilterInput, SearchFilterInput } from '../../../components/LogFilterInputs'
+import { DateFilterInput, SearchFilterInput } from '@/components/LogFilterInputs'
 import type { DraftSetter } from './auditFilterTypes'
 
 const panelStyle: CSSProperties = { padding: '16px 20px' }
@@ -19,7 +19,7 @@ interface AuditLogFiltersProps {
   meta: AuditMeta
   loading: boolean
   onDraftChange: DraftSetter
-  onApply: (draft: FilterDraft) => Promise<void>
+  onApply: (draft: FilterDraft) => void
   onClear: () => void
 }
 
@@ -33,7 +33,7 @@ export default function AuditLogFilters({
 }: AuditLogFiltersProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    void onApply(draft)
+    onApply(draft)
   }
 
   return (

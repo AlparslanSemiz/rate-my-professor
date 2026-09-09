@@ -1,7 +1,6 @@
 import { Select, type CSSProperties } from '@mantine/core'
-import type { AuditMeta } from '../../../api/AuditLogsService'
-import { darkInputStyles } from '../../../constants/inputStyles'
-import { enumLabel } from '../../../utils/enumLabel'
+import type { AuditMeta } from '@/api/logs'
+import { enumLabel } from '@/utils/enumLabel'
 import {
   isAuditAction,
   isAuditTargetType,
@@ -40,7 +39,6 @@ export function AuditAdminFilter({
       searchable
       clearable
       style={filterFieldStyle}
-      styles={darkInputStyles}
     />
   )
 }
@@ -70,7 +68,6 @@ export function AuditActionFilter({
       }}
       clearable
       style={filterFieldStyle}
-      styles={darkInputStyles}
     />
   )
 }
@@ -100,7 +97,6 @@ export function AuditTargetFilter({
       }}
       clearable
       style={filterFieldStyle}
-      styles={darkInputStyles}
     />
   )
 }
