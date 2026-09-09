@@ -107,9 +107,9 @@ public class DomainModelTest {
     @Test
     public void ratingCategoryExposesCorrectDisplayNames() {
         // Verifies that internal categories map to the correct German display strings
-        assertEquals("Raum", RatingCategory.ROOM.getDisplayName());
-        assertEquals("Organisation", RatingCategory.ORGANIZATION.getDisplayName());
-        assertEquals("Tempo", RatingCategory.LECTURE_PACE.getDisplayName());
+        assertEquals("Room", RatingCategory.ROOM.getDisplayName());
+        assertEquals("Organization", RatingCategory.ORGANIZATION.getDisplayName());
+        assertEquals("Pace", RatingCategory.LECTURE_PACE.getDisplayName());
     }
 
     @Test
