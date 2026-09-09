@@ -1,6 +1,7 @@
 package com.pse.social.repository;
 
 
+import com.pse.shared.enums.UserStatus;
 import com.pse.shared.enums.VoteType;
 import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerVote;
@@ -38,6 +39,12 @@ public interface AnswerVoteRepository extends JpaRepository<AnswerVote, UUID> {
      * @return the result
      */
     int countByAnswerAndVote(Answer answer, VoteType vote);
+
+    int countByAnswerAndVoteAndStudentStatus(
+            Answer answer,
+            VoteType vote,
+            UserStatus status
+    );
 
     /**
      * Answer votes are not cascaded from {@code Answer}, so deleting an answer without
