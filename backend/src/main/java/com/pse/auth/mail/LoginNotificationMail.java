@@ -24,6 +24,14 @@ public class LoginNotificationMail implements LoginSuccessDelivery {
     private final LoginLocationService loginLocationService;
     private final LoginMapFragment mapFragment;
 
+    /**
+     * Creates LoginNotificationMail.
+     *
+     * @param mailSender the mailSender
+     * @param templates the templates
+     * @param loginLocationService the loginLocationService
+     * @param mapFragment the mapFragment
+     */
     public LoginNotificationMail(
             HtmlMailSender mailSender,
             MailTemplateService templates,

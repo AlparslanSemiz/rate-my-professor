@@ -58,6 +58,18 @@ public class ContentModerationService {
     private final AdminRepository adminRepository;
     private final AuditWriter auditWriter;
 
+    /**
+     * Creates ContentModerationService.
+     *
+     * @param commentRepository the commentRepository
+     * @param answerRepository the answerRepository
+     * @param commentReportRepository the commentReportRepository
+     * @param answerReportRepository the answerReportRepository
+     * @param answerCleanup the answerCleanup
+     * @param warningRepository the warningRepository
+     * @param adminRepository the adminRepository
+     * @param auditWriter the auditWriter
+     */
     public ContentModerationService(
             CommentRepository commentRepository,
             AnswerRepository answerRepository,
@@ -78,6 +90,11 @@ public class ContentModerationService {
         this.auditWriter = auditWriter;
     }
 
+    /**
+     * Returns getComments.
+     *
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public ManagedCommentsResponse getComments() {
         // Batch queries rather than one per row: the counts and the role lookup would
@@ -105,6 +122,14 @@ public class ContentModerationService {
         return new ManagedCommentsResponse("Successfully found all comments", true, comments);
     }
 
+    /**
+     * Returns updateComment.
+     *
+     * @param principal the principal
+     * @param commentId the commentId
+     * @param request the request
+     * @return the result
+     */
     @Transactional
     public BasicResponse updateComment(
             AuthenticatedUser principal,
@@ -141,6 +166,10 @@ public class ContentModerationService {
     /**
      * Removes a comment and the thread under it. This is a real delete, not a hide: use
      * {@code status = HIDDEN} to take content out of the student app while keeping it.
+     *
+     * @param principal the principal
+     * @param commentId the commentId
+     * @return the result
      */
     @Transactional
     public BasicResponse deleteComment(AuthenticatedUser principal, UUID commentId) {
@@ -170,6 +199,11 @@ public class ContentModerationService {
         return new BasicResponse("Deleted comment successfully", true);
     }
 
+    /**
+     * Returns getAnswers.
+     *
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public ManagedAnswersResponse getAnswers() {
         Set<UUID> adminIds = Set.copyOf(adminRepository.findAllAdminStudentIds());
@@ -194,6 +228,14 @@ public class ContentModerationService {
         return new ManagedAnswersResponse("Successfully found all answers", true, answers);
     }
 
+    /**
+     * Returns updateAnswer.
+     *
+     * @param principal the principal
+     * @param answerId the answerId
+     * @param request the request
+     * @return the result
+     */
     @Transactional
     public BasicResponse updateAnswer(
             AuthenticatedUser principal,
@@ -227,6 +269,13 @@ public class ContentModerationService {
         return new BasicResponse("Updated answer successfully", true);
     }
 
+    /**
+     * Returns deleteAnswer.
+     *
+     * @param principal the principal
+     * @param answerId the answerId
+     * @return the result
+     */
     @Transactional
     public BasicResponse deleteAnswer(AuthenticatedUser principal, UUID answerId) {
         Answer answer = answerRepository.findById(answerId)

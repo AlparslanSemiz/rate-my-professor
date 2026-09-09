@@ -35,6 +35,14 @@ public class CommentService {
     private final SocialResponseMapper mapper;
     private final AuditWriter auditWriter;
 
+    /**
+     * Creates CommentService.
+     *
+     * @param lectureService the lectureService
+     * @param commentRepository the commentRepository
+     * @param mapper the mapper
+     * @param auditWriter the auditWriter
+     */
     public CommentService(
             LectureService lectureService,
             CommentRepository commentRepository,
@@ -47,6 +55,15 @@ public class CommentService {
         this.auditWriter = auditWriter;
     }
 
+    /**
+     * Returns submitComment.
+     *
+     * @param student the student
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse submitComment(Student student, CommentSubmitRequest request) {
 
@@ -78,6 +95,10 @@ public class CommentService {
     /**
      * Only VISIBLE comments reach the student app. A comment is set to HIDDEN when an admin
      * resolves a report against it as ACTION_TAKEN.
+     *
+     * @param lectureId the lectureId
+     * @param student the student
+     * @return the result
      */
     @Transactional(readOnly = true)
     public CommentsResponse getComments(UUID lectureId, Student student) {
@@ -91,7 +112,11 @@ public class CommentService {
         return new CommentsResponse("Found " + comments.size() + " comments", true, comments);
     }
 
-    /** The app's sync route: every visible comment, with nobody's own vote resolved. */
+    /**
+     * The app's sync route: every visible comment, with nobody's own vote resolved.
+     *
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public CommentsResponse getAllComments() {
 

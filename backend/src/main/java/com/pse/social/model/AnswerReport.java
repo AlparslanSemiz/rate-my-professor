@@ -25,6 +25,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Provides AnswerReport.
+ */
 @Entity
 @Table(
     name = "answer_reports",
@@ -32,6 +35,7 @@ import lombok.Setter;
         @UniqueConstraint(columnNames = {"reporter_id", "answer_id"})
     }
 )
+
 @Getter
 @Setter
 @NoArgsConstructor

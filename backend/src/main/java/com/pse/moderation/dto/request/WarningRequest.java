@@ -8,6 +8,8 @@ package com.pse.moderation.dto.request;
  * to. This record used to carry {@code userID} and {@code createdFrom} as well; both were
  * read nowhere, and a caller that trusted them could believe it had attributed a warning to
  * an admin the backend never recorded.
+ *
+ * @param message the message
  */
 public record WarningRequest(
     String message

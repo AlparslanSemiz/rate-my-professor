@@ -25,6 +25,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Provides CommentReport.
+ */
 @Entity
 @Table(
     name = "comment_reports",
@@ -32,6 +35,9 @@ import lombok.Setter;
         @UniqueConstraint(columnNames = {"reporter_id", "comment_id"})
     }
 )
+/**
+ * Creates CommentReport.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

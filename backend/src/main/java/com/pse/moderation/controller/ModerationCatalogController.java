@@ -47,6 +47,14 @@ public class ModerationCatalogController {
     private final LectureService lectureService;
     private final ProfessorService professorService;
 
+    /**
+     * Creates ModerationCatalogController.
+     *
+     * @param lectures the lectures
+     * @param professors the professors
+     * @param lectureService the lectureService
+     * @param professorService the professorService
+     */
     public ModerationCatalogController(
             LectureModerationService lectures,
             ProfessorModerationService professors,
@@ -59,16 +67,34 @@ public class ModerationCatalogController {
         this.professorService = professorService;
     }
 
+    /**
+     * Returns getAllLectures.
+     *
+     * @return the result
+     */
     @GetMapping({"/admin/data/lectures/all", "/data/lectures/all"})
     public LecturesResponse getAllLectures() {
         return lectureService.getAllLectures();
     }
 
+    /**
+     * Returns getAllProfessors.
+     *
+     * @return the result
+     */
     @GetMapping({"/admin/data/professor/all", "/data/professor/all"})
     public ProfessorsResponse getAllProfessors() {
         return professorService.getAllProfessors();
     }
 
+    /**
+     * Returns updateLecture.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @param request the request
+     * @return the result
+     */
     @PatchMapping({"/admin/data/lectures/{id}", "/data/lectures/{id}"})
     public BasicResponse updateLecture(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -78,6 +104,13 @@ public class ModerationCatalogController {
         return lectures.updateLecture(principal, id, request);
     }
 
+    /**
+     * Returns deleteLecture.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
+     */
     @DeleteMapping({"/admin/data/lectures/{id}", "/data/lectures/{id}"})
     public BasicResponse deleteLecture(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -86,6 +119,14 @@ public class ModerationCatalogController {
         return lectures.deleteLecture(principal, id);
     }
 
+    /**
+     * Returns updateProfessor.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @param request the request
+     * @return the result
+     */
     @PatchMapping({"/admin/data/professor/{id}", "/data/professor/{id}"})
     public BasicResponse updateProfessor(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -95,6 +136,13 @@ public class ModerationCatalogController {
         return professors.updateProfessor(principal, id, request);
     }
 
+    /**
+     * Returns deleteProfessor.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
+     */
     @DeleteMapping({"/admin/data/professor/{id}", "/data/professor/{id}"})
     public BasicResponse deleteProfessor(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -107,6 +155,10 @@ public class ModerationCatalogController {
      * The admin API's version of {@code POST /data/lectures}. Same service call; the
      * difference is that a non-administrator is turned down by the security chain with a
      * 403 instead of reaching the handler.
+     *
+     * @param principal the principal
+     * @param request the request
+     * @return the result
      */
     @PostMapping("/admin/data/lectures")
     public BasicResponse addLecture(
@@ -119,6 +171,10 @@ public class ModerationCatalogController {
     /**
      * The admin API's version of {@code POST /data/professor}, which answers a refused
      * caller with {@code 200 {"success": false}}. Here the chain answers 403 first.
+     *
+     * @param principal the principal
+     * @param request the request
+     * @return the result
      */
     @PostMapping("/admin/data/professor")
     public BasicResponse addProfessor(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody ProfessorAddRequest request) {

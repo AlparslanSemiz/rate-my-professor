@@ -26,12 +26,21 @@ public final class ContentRevertHandler {
     private ContentRevertHandler() {
     }
 
+    /**
+     * Provides CommentHandler.
+     */
     @Component
     public static class CommentHandler implements AuditRevertHandler {
 
         private final CommentRepository commentRepository;
         private final ContentModerationService contentService;
 
+        /**
+         * Creates CommentHandler.
+         *
+         * @param commentRepository the commentRepository
+         * @param contentService the contentService
+         */
         public CommentHandler(
                 CommentRepository commentRepository,
                 ContentModerationService contentService
@@ -70,12 +79,21 @@ public final class ContentRevertHandler {
         }
     }
 
+    /**
+     * Provides AnswerHandler.
+     */
     @Component
     public static class AnswerHandler implements AuditRevertHandler {
 
         private final AnswerRepository answerRepository;
         private final ContentModerationService contentService;
 
+        /**
+         * Creates AnswerHandler.
+         *
+         * @param answerRepository the answerRepository
+         * @param contentService the contentService
+         */
         public AnswerHandler(
                 AnswerRepository answerRepository,
                 ContentModerationService contentService

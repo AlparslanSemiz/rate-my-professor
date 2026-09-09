@@ -38,6 +38,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Provides AuditLogService.
+ */
 @Service
 public class AuditLogService {
 
@@ -55,6 +58,13 @@ public class AuditLogService {
     private final AuditCursorCodec cursorCodec;
     private final AuditRevertService revertService;
 
+    /**
+     * Creates AuditLogService.
+     *
+     * @param repository the repository
+     * @param cursorCodec the cursorCodec
+     * @param revertService the revertService
+     */
     public AuditLogService(
             AuditLogRepository repository,
             AuditCursorCodec cursorCodec,
@@ -65,6 +75,22 @@ public class AuditLogService {
         this.revertService = revertService;
     }
 
+    /**
+     * Returns getLogs.
+     *
+     * @param scope the scope
+     * @param rawLimit the rawLimit
+     * @param rawCursor the rawCursor
+     * @param q the q
+     * @param rawActorId the rawActorId
+     * @param rawActorType the rawActorType
+     * @param rawAction the rawAction
+     * @param rawTargetType the rawTargetType
+     * @param rawFrom the rawFrom
+     * @param rawTo the rawTo
+     * @throws ApiException for Invalid audit action
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public AuditLogPageResponse getLogs(
             AuditActionScope scope,
@@ -147,7 +173,6 @@ public class AuditLogService {
                 last -> cursorCodec.encode(last.getCreatedAt(), last.getId()));
         List<AuditLog> page = slice.items();
         String nextCursor = slice.nextCursor();
-
         // One pass for the whole page rather than a check per row: the staleness rule has to
         // read each entry's target, and that is only affordable batched.
         Map<UUID, AuditRevertService.Revertability> verdicts = revertService.describe(page);
@@ -159,6 +184,12 @@ public class AuditLogService {
         );
     }
 
+    /**
+     * Returns getMeta.
+     *
+     * @param scope the scope
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public AuditMetaResponse getMeta(AuditActionScope scope) {
         List<AuditAction> scopeActions = AuditAction.of(scope);

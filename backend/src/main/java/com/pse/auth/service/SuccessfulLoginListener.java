@@ -6,6 +6,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+/**
+ * Provides SuccessfulLoginListener.
+ */
 @Component
 public class SuccessfulLoginListener {
 
@@ -13,10 +16,20 @@ public class SuccessfulLoginListener {
 
     private final LoginSuccessDelivery delivery;
 
+    /**
+     * Creates SuccessfulLoginListener.
+     *
+     * @param delivery the delivery
+     */
     public SuccessfulLoginListener(LoginSuccessDelivery delivery) {
         this.delivery = delivery;
     }
 
+    /**
+     * Executes onSuccessfulLogin.
+     *
+     * @param event the event
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onSuccessfulLogin(SuccessfulLoginEvent event) {
         try {

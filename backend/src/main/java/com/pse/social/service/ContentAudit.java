@@ -15,6 +15,9 @@ public final class ContentAudit {
     /**
      * A preview of submitted text. The full body stays in its own table; the activity
      * log only needs enough to recognise the entry.
+     *
+     * @param content the content
+     * @return the result
      */
     public static Map<String, Object> metadataFor(String content) {
         String text = content == null ? "" : content;

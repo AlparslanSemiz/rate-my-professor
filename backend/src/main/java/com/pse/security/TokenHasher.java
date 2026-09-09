@@ -24,6 +24,14 @@ public final class TokenHasher {
     private TokenHasher() {
     }
 
+    /**
+     * Returns hash.
+     *
+     * @param rawToken the rawToken
+     * @return the result
+     *
+     * @throws IllegalStateException if the operation fails
+     */
     public static String hash(String rawToken) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

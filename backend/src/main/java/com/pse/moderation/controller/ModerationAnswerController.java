@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+/**
+ * Provides ModerationAnswerController.
+ */
 @RestController
 @RequestMapping({"/admin/answers", "/answers"})
 public class ModerationAnswerController {
@@ -26,6 +29,12 @@ public class ModerationAnswerController {
     private final ContentModerationService contentService;
     private final ModerationAnswerReportService reportService;
 
+    /**
+     * Creates ModerationAnswerController.
+     *
+     * @param contentService the contentService
+     * @param reportService the reportService
+     */
     public ModerationAnswerController(
             ContentModerationService contentService,
             ModerationAnswerReportService reportService
@@ -34,16 +43,34 @@ public class ModerationAnswerController {
         this.reportService = reportService;
     }
 
+    /**
+     * Returns getAnswers.
+     *
+     * @return the result
+     */
     @GetMapping
     public ManagedAnswersResponse getAnswers() {
         return contentService.getAnswers();
     }
 
+    /**
+     * Returns getReportedAnswers.
+     *
+     * @return the result
+     */
     @GetMapping("/reported")
     public ReportedAnswersResponse getReportedAnswers() {
         return reportService.getReportedAnswers();
     }
 
+    /**
+     * Returns updateReportStatus.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @param request the request
+     * @return the result
+     */
     @PatchMapping("/reported/{id}")
     public BasicResponse updateReportStatus(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -53,6 +80,13 @@ public class ModerationAnswerController {
         return reportService.updateReportStatus(principal, id, request.status());
     }
 
+    /**
+     * Returns deleteReport.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
+     */
     @DeleteMapping("/reported/{id}")
     public BasicResponse deleteReport(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -61,6 +95,14 @@ public class ModerationAnswerController {
         return reportService.deleteReport(principal, id);
     }
 
+    /**
+     * Returns updateAnswer.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @param request the request
+     * @return the result
+     */
     @PatchMapping("/{id}")
     public BasicResponse updateAnswer(
             @AuthenticationPrincipal AuthenticatedUser principal,
@@ -70,6 +112,13 @@ public class ModerationAnswerController {
         return contentService.updateAnswer(principal, id, request);
     }
 
+    /**
+     * Returns deleteAnswer.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
+     */
     @DeleteMapping("/{id}")
     public BasicResponse deleteAnswer(
             @AuthenticationPrincipal AuthenticatedUser principal,

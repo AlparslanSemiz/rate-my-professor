@@ -25,10 +25,23 @@ public class ModerationRatingController {
 
     private final RatingModerationService contentService;
 
+    /**
+     * Creates ModerationRatingController.
+     *
+     * @param contentService the contentService
+     */
     public ModerationRatingController(RatingModerationService contentService) {
         this.contentService = contentService;
     }
 
+    /**
+     * Returns getRatings.
+     *
+     * @param limit the limit
+     * @param cursor the cursor
+     * @param lectureId the lectureId
+     * @return the result
+     */
     @GetMapping
     public ManagedRatingsResponse getRatings(
             @RequestParam(required = false) String limit,
@@ -38,6 +51,13 @@ public class ModerationRatingController {
         return contentService.getRatings(limit, cursor, lectureId);
     }
 
+    /**
+     * Returns deleteRating.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
+     */
     @DeleteMapping("/{id}")
     public BasicResponse deleteRating(
             @AuthenticationPrincipal AuthenticatedUser principal,

@@ -31,6 +31,13 @@ public class ProfessorModerationService {
     private final LectureRepository lectureRepository;
     private final AuditWriter auditWriter;
 
+    /**
+     * Creates ProfessorModerationService.
+     *
+     * @param professorRepository the professorRepository
+     * @param lectureRepository the lectureRepository
+     * @param auditWriter the auditWriter
+     */
     public ProfessorModerationService(
             ProfessorRepository professorRepository,
             LectureRepository lectureRepository,
@@ -41,6 +48,16 @@ public class ProfessorModerationService {
         this.auditWriter = auditWriter;
     }
 
+    /**
+     * Returns updateProfessor.
+     *
+     * @param principal the principal
+     * @param professorId the professorId
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse updateProfessor(
             AuthenticatedUser principal,
@@ -101,6 +118,10 @@ public class ProfessorModerationService {
     /**
      * Removes a professor. Lectures survive — they are only detached, since a lecture
      * without a listed professor is still a lecture people rated.
+     *
+     * @param principal the principal
+     * @param professorId the professorId
+     * @return the result
      */
     @Transactional
     public BasicResponse deleteProfessor(AuthenticatedUser principal, UUID professorId) {

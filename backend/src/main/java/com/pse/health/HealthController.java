@@ -12,17 +12,33 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Provides HealthController.
+ */
 @RestController
 public class HealthController {
 
     private final JdbcTemplate jdbcTemplate;
     private final Flyway flyway;
 
+    /**
+     * Creates HealthController.
+     *
+     * @param jdbcTemplate the jdbcTemplate
+     * @param flyway the flyway
+     */
     public HealthController(JdbcTemplate jdbcTemplate, Flyway flyway) {
         this.jdbcTemplate = jdbcTemplate;
         this.flyway = flyway;
     }
 
+    /**
+     * Returns health.
+     *
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @GetMapping("/health")
     public BasicResponse health() {
         try {

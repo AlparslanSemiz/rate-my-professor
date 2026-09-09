@@ -14,6 +14,13 @@ import java.util.List;
  * <p>{@code actors} is capped and therefore not exhaustive: every account that ever signed
  * in is an actor in the activity log. Beyond the cap the {@code q} search is what finds an
  * actor.
+ *
+ * @param message the message
+ * @param success the success
+ * @param actors the actors
+ * @param actions the actions
+ * @param targetTypes the targetTypes
+ * @param actorTypes the actorTypes
  */
 public record AuditMetaResponse(
         String message,

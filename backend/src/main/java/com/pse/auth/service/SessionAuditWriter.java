@@ -32,11 +32,24 @@ public class SessionAuditWriter {
 
     private final AuditWriter auditWriter;
 
+    /**
+     * Creates SessionAuditWriter.
+     *
+     * @param auditWriter the auditWriter
+     */
     public SessionAuditWriter(AuditWriter auditWriter) {
         this.auditWriter = auditWriter;
     }
 
-    /** @param asAdmin whether the session that was minted is an administrator session */
+    /**
+     * Records the login.
+     * @param asAdmin whether the session that was minted is an administrator session
+     * @param admin the admin
+     * @param student the student
+     * @param tokenId the tokenId
+     * @param label the label
+     * @param metadata the metadata
+     */
     public void recordLogin(
             boolean asAdmin,
             Admin admin,
@@ -67,7 +80,14 @@ public class SessionAuditWriter {
         }
     }
 
-    /** Administrative when the principal holds an {@code admins} row -- see the class note. */
+    /**
+     * Administrative when the principal holds an {@code admins} row -- see the class note.
+     *
+     * @param principal the principal
+     * @param tokenId the tokenId
+     * @param label the label
+     * @param metadata the metadata
+     */
     public void recordLogout(
             AuthenticatedUser principal,
             UUID tokenId,

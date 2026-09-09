@@ -48,6 +48,15 @@ public class VoteService {
     private final AnswerVoteRepository answerVoteRepository;
     private final AuditWriter auditWriter;
 
+    /**
+     * Creates VoteService.
+     *
+     * @param commentRepository the commentRepository
+     * @param answerRepository the answerRepository
+     * @param commentVoteRepository the commentVoteRepository
+     * @param answerVoteRepository the answerVoteRepository
+     * @param auditWriter the auditWriter
+     */
     public VoteService(
             CommentRepository commentRepository,
             AnswerRepository answerRepository,
@@ -66,6 +75,13 @@ public class VoteService {
      * Transactional so the vote and the audit entry commit together -- {@link AuditWriter}
      * joins the caller's transaction on purpose, and a vote recorded without its entry is
      * exactly the blind spot F-1 describes.
+     *
+     * @param commentId the commentId
+     * @param student the student
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
      */
     @Transactional
     public BasicResponse voteComment(UUID commentId, Student student, VoteCommentRequest request) {
@@ -105,7 +121,16 @@ public class VoteService {
         return new BasicResponse("Comment vote saved successfully", true);
     }
 
-    /** The answer half of {@link #voteComment}, transactional for the same reason. */
+    /**
+     * The answer half of {@link #voteComment}, transactional for the same reason.
+     *
+     * @param answerId the answerId
+     * @param student the student
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse voteAnswer(UUID answerId, Student student, VoteAnswerRequest request) {
 

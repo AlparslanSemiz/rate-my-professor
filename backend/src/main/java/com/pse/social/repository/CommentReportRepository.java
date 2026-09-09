@@ -18,15 +18,32 @@ import java.util.Optional;
 import com.pse.user.model.Student;
 
 
+/**
+ * Defines CommentReportRepository.
+ */
 public interface CommentReportRepository extends JpaRepository<CommentReport, UUID> {
 
+    /**
+     * Returns countByCommentStudent.
+     *
+     * @param student the student
+     * @return the result
+     */
     long countByCommentStudent(Student student);
 
+    /**
+     * Returns countByStatus.
+     *
+     * @param status the status
+     * @return the result
+     */
     long countByStatus(ReportStatus status);
 
     /**
      * Reports received per comment author, as {@code [studentId, count]} rows.
      * The per-row equivalent of {@link #countByCommentStudent(Student)}.
+     *
+     * @return the result
      */
     @Query("""
         SELECT report.comment.student.id AS id, COUNT(report) AS count
@@ -35,7 +52,11 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, UU
     """)
     List<IdCount> countGroupedByCommentStudent();
 
-    /** Reports per comment, as {@code [commentId, count]} rows. */
+    /**
+     * Reports per comment, as {@code [commentId, count]} rows.
+     *
+     * @return the result
+     */
     @Query("""
         SELECT report.comment.id AS id, COUNT(report) AS count
         FROM CommentReport report
@@ -43,9 +64,20 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, UU
     """)
     List<IdCount> countGroupedByComment();
 
+    /**
+     * Returns findAllByOrderByCreatedAtDesc.
+     *
+     * @return the result
+     */
     @EntityGraph(attributePaths = {"comment", "comment.student", "comment.lecture", "reporter"})
     List<CommentReport> findAllByOrderByCreatedAtDesc();
 
+    /**
+     * Returns findByIdForUpdate.
+     *
+     * @param id the id
+     * @return the result
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"comment", "comment.student", "comment.lecture", "reporter"})
     @Query("select report from CommentReport report where report.id = :id")

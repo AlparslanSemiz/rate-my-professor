@@ -21,6 +21,12 @@ public final class ReportOutcome {
     private ReportOutcome() {
     }
 
+    /**
+     * Returns visibilityFor.
+     *
+     * @param status the status
+     * @return the result
+     */
     public static ContentStatus visibilityFor(ReportStatus status) {
         return status == ReportStatus.ACTION_TAKEN ? ContentStatus.HIDDEN : ContentStatus.VISIBLE;
     }

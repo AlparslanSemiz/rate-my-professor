@@ -13,7 +13,12 @@ public final class Coordinates {
     private Coordinates() {
     }
 
-    /** Whether this is a pair of numbers that can be put in a URL. */
+    /**
+     * Whether this is a pair of numbers that can be put in a URL.
+     *
+     * @param coordinates the coordinates
+     * @return the result
+     */
     public static boolean isValid(String coordinates) {
         if (coordinates == null || coordinates.isBlank()) {
             return false;
@@ -21,12 +26,22 @@ public final class Coordinates {
         return coordinates.matches("-?\\d{1,3}(\\.\\d+)?,-?\\d{1,3}(\\.\\d+)?");
     }
 
-    /** Only meaningful when {@link #isValid} said so. */
+    /**
+     * Only meaningful when {@link #isValid} said so.
+     *
+     * @param coordinates the coordinates
+     * @return the result
+     */
     public static String latitude(String coordinates) {
         return coordinates.split(",")[0].trim();
     }
 
-    /** Only meaningful when {@link #isValid} said so. */
+    /**
+     * Only meaningful when {@link #isValid} said so.
+     *
+     * @param coordinates the coordinates
+     * @return the result
+     */
     public static String longitude(String coordinates) {
         return coordinates.split(",")[1].trim();
     }

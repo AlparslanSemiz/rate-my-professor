@@ -21,6 +21,11 @@ public class AdminBootstrapPolicy {
 
     private final Map<String, String> bootstrapAccounts;
 
+    /**
+     * Creates AdminBootstrapPolicy.
+     *
+     * @param configuredEmails the configuredEmails
+     */
     public AdminBootstrapPolicy(@Value("${app.auth.admin-bootstrap-emails:}") String configuredEmails) {
         Map<String, String> accounts = new LinkedHashMap<>();
         Arrays.stream(configuredEmails.split(","))
@@ -39,15 +44,33 @@ public class AdminBootstrapPolicy {
         this.bootstrapAccounts = Map.copyOf(accounts);
     }
 
+    /**
+     * Checks shouldBootstrap.
+     *
+     * @param normalizedEmail the normalizedEmail
+     * @return the result
+     */
     public boolean shouldBootstrap(String normalizedEmail) {
         return bootstrapAccounts.containsKey(normalizedEmail);
     }
 
+    /**
+     * Returns bootstrapEmails.
+     *
+     * @return the result
+     */
     public Set<String> bootstrapEmails() {
         return bootstrapAccounts.keySet();
     }
 
-    /** The configured display name for an email, or empty when none was given. */
+
+
+    /**
+     * The configured display name for an email, or empty when none was given.
+     *
+     * @param normalizedEmail email (normalized)
+     * @return displayName
+     */
     public String displayName(String normalizedEmail) {
         String name = bootstrapAccounts.get(normalizedEmail);
         return name == null ? "" : name;

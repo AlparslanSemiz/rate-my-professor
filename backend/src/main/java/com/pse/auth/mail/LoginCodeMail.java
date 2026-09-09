@@ -23,6 +23,12 @@ public class LoginCodeMail implements LoginCodeDelivery {
     private final HtmlMailSender mailSender;
     private final MailTemplateService templates;
 
+    /**
+     * Creates LoginCodeMail.
+     *
+     * @param mailSender the mailSender
+     * @param templates the templates
+     */
     public LoginCodeMail(HtmlMailSender mailSender, MailTemplateService templates) {
         this.mailSender = mailSender;
         this.templates = templates;

@@ -13,12 +13,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Defines AuditLogRepository.
+ */
 public interface AuditLogRepository
         extends JpaRepository<AuditLog, UUID>, JpaSpecificationExecutor<AuditLog> {
 
     /**
      * The newest recorded event, using the same ordering the paged read uses. This is
      * what tells the system status page whether writes are reaching the database.
+     *
+     * @return the result
      */
     Optional<AuditLog> findFirstByOrderByCreatedAtDescIdDesc();
 
@@ -29,6 +34,10 @@ public interface AuditLogRepository
      * loading every matching event to build it does not scale once the log holds student
      * activity. An actor renamed between two events yields one row per snapshot, so the
      * caller still has to keep the first row per id.
+     *
+     * @param actions the actions
+     * @param pageable the pageable
+     * @return the result
      */
     @Query("""
         SELECT log.actorId, log.actorName, log.actorEmail, log.actorRole
@@ -36,7 +45,7 @@ public interface AuditLogRepository
         WHERE log.action IN :actions
         GROUP BY log.actorId, log.actorName, log.actorEmail, log.actorRole
         ORDER BY MAX(log.createdAt) DESC
-    """)
+        """)
     List<Object[]> findActorSnapshots(
             @Param("actions") Collection<AuditAction> actions,
             Pageable pageable
@@ -46,13 +55,22 @@ public interface AuditLogRepository
      * For each of {@code ids} that a later entry has already reversed, the pair
      * {@code [revertedId, reversalId]}. One query for a whole page rather than one per row,
      * and it carries the reversal's id so reporting who undid what costs nothing extra.
+     *
+     * @param ids the ids
+     * @return the result
      */
     @Query("""
         SELECT log.revertsAuditId, log.id
         FROM AuditLog log
         WHERE log.revertsAuditId IN :ids
-    """)
+        """)
     List<Object[]> findReversalsOf(@Param("ids") Collection<UUID> ids);
 
+    /**
+     * Returns findFirstByRevertsAuditId.
+     *
+     * @param revertsAuditId the revertsAuditId
+     * @return the result
+     */
     Optional<AuditLog> findFirstByRevertsAuditId(UUID revertsAuditId);
 }

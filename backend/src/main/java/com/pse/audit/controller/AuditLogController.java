@@ -28,11 +28,31 @@ public class AuditLogController {
     private final AuditLogService service;
     private final AuditRevertService revertService;
 
+    /**
+     * Creates AuditLogController.
+     *
+     * @param service the service
+     * @param revertService the revertService
+     */
     public AuditLogController(AuditLogService service, AuditRevertService revertService) {
         this.service = service;
         this.revertService = revertService;
     }
 
+    /**
+     * Returns getLogs.
+     *
+     * @param limit the limit
+     * @param cursor the cursor
+     * @param q the q
+     * @param actorId the actorId
+     * @param actorType the actorType
+     * @param action the action
+     * @param targetType the targetType
+     * @param from the from
+     * @param to the to
+     * @return the result
+     */
     @GetMapping
     public AuditLogPageResponse getLogs(
             @RequestParam(required = false) String limit,
@@ -59,6 +79,11 @@ public class AuditLogController {
         );
     }
 
+    /**
+     * Returns getMeta.
+     *
+     * @return the result
+     */
     @GetMapping("/meta")
     public AuditMetaResponse getMeta() {
         return service.getMeta(AuditActionScope.ADMINISTRATIVE);
@@ -71,6 +96,10 @@ public class AuditLogController {
      * revert window, has already been reversed, or whose value has changed since answers
      * {@code 409} with a {@code reason} the caller can branch on. The reversal is written as
      * its own audit event — the entry being reversed is never rewritten.
+     *
+     * @param principal the principal
+     * @param id the id
+     * @return the result
      */
     @PostMapping("/{id}/revert")
     public BasicResponse revert(

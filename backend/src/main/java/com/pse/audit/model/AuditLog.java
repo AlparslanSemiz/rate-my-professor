@@ -22,6 +22,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+
+/**
+ * Provides AuditLog.
+ */
 @Entity
 @Table(name = "audit_logs")
 @Getter

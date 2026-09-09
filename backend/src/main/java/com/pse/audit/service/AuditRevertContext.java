@@ -19,14 +19,27 @@ public final class AuditRevertContext {
     private AuditRevertContext() {
     }
 
+    /**
+     * Executes set.
+     *
+     * @param revertedAuditId the revertedAuditId
+     */
     public static void set(UUID revertedAuditId) {
         CURRENT.set(revertedAuditId);
     }
 
+    /**
+     * Returns get.
+     *
+     * @return the result
+     */
     public static UUID get() {
         return CURRENT.get();
     }
 
+    /**
+     * Executes clear.
+     */
     public static void clear() {
         CURRENT.remove();
     }

@@ -10,6 +10,9 @@ import java.util.UUID;
  *
  * @param id absent for a target that is not a row: a refusal names the endpoint it refused
  *           through {@link AuditTargetType#ENDPOINT} and has no id to carry.
+ *
+ * @param type the type
+ * @param label the label
  */
 public record AuditTargetResponse(
         AuditTargetType type,

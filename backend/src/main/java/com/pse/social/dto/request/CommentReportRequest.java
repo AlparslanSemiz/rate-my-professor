@@ -9,6 +9,9 @@ import jakarta.validation.constraints.NotNull;
  * @param explanation deliberately unconstrained: a reason code is required and the free text
  *                    beside it is not, because a reporter who has nothing to add should not be
  *                    made to invent something.
+ *
+ * @param commentID the commentID
+ * @param reportReason the reportReason
  */
 public record CommentReportRequest(
         @NotBlank String commentID,

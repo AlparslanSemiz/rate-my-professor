@@ -14,6 +14,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Provides AuthRateLimitBucket.
+ */
 @Entity
 @Table(
         name = "auth_rate_limit_buckets",
@@ -22,6 +25,7 @@ import lombok.Setter;
                 columnNames = {"operation", "subject_hash"}
         )
 )
+
 @Getter
 @Setter
 @NoArgsConstructor

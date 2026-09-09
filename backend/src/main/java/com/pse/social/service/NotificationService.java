@@ -25,10 +25,21 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
 
+    /**
+     * Creates NotificationService.
+     *
+     * @param notificationRepository the notificationRepository
+     */
     public NotificationService(NotificationRepository notificationRepository) {
         this.notificationRepository = notificationRepository;
     }
 
+    /**
+     * Returns getNotifications.
+     *
+     * @param student the student
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public NotificationsResponse getNotifications(Student student) {
 
@@ -42,6 +53,15 @@ public class NotificationService {
                 "Found: " + responses.size() + " Notifications", true, responses);
     }
 
+    /**
+     * Returns markNotificationAsSeen.
+     *
+     * @param student the student
+     * @param notificationId the notificationId
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse markNotificationAsSeen(Student student, UUID notificationId) {
 

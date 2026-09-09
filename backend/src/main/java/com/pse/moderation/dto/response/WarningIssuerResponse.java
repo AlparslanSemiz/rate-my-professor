@@ -9,7 +9,9 @@ import java.util.UUID;
  *
  * @param name the issuing admin's display name; a moderation record that cannot say who
  *             warned someone is most of the point of the record missing
+ *
  * @param createdAt the moment the warning was issued, not when the admin account was created
+ * @param id the id
  */
 public record WarningIssuerResponse(
         UUID id,

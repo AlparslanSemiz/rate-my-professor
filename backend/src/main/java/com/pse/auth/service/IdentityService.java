@@ -25,6 +25,12 @@ public class IdentityService {
     private final TokenAuthenticationService tokenAuthenticationService;
     private final AdminSuperuserPolicy superuserPolicy;
 
+    /**
+     * Creates IdentityService.
+     *
+     * @param tokenAuthenticationService the tokenAuthenticationService
+     * @param superuserPolicy the superuserPolicy
+     */
     public IdentityService(
             TokenAuthenticationService tokenAuthenticationService,
             AdminSuperuserPolicy superuserPolicy
@@ -33,6 +39,12 @@ public class IdentityService {
         this.superuserPolicy = superuserPolicy;
     }
 
+    /**
+     * Returns me.
+     *
+     * @param principal the principal
+     * @return the result
+     */
     public AuthMeResponse me(AuthenticatedUser principal) {
         Student student = principal.student();
         return new AuthMeResponse(
@@ -50,6 +62,13 @@ public class IdentityService {
         );
     }
 
+    /**
+     * Returns validate.
+     *
+     * @param authHeader the authHeader
+     * @param request the request
+     * @return the result
+     */
     public BasicResponse validate(String authHeader, ValidateCredentialsRequest request) {
 
         Student student = verifyUser(authHeader);
@@ -70,6 +89,8 @@ public class IdentityService {
      * @return {@code null} when the header is well-formed but the token is not valid
      * @throws InvalidAuthTokenException when there is no bearer token to read at all, which
      *         {@code GlobalExceptionHandler} answers as a 401 rather than a 500
+     *
+     * @param authHeader the authHeader
      */
     public Student verifyUser(String authHeader) {
 

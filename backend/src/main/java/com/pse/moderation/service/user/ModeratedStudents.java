@@ -35,6 +35,14 @@ public class ModeratedStudents {
     private final TokenRepository tokenRepository;
     private final AdminSuperuserPolicy superuserPolicy;
 
+    /**
+     * Creates ModeratedStudents.
+     *
+     * @param studentRepository the studentRepository
+     * @param adminRepository the adminRepository
+     * @param tokenRepository the tokenRepository
+     * @param superuserPolicy the superuserPolicy
+     */
     public ModeratedStudents(
             StudentRepository studentRepository,
             AdminRepository adminRepository,
@@ -47,6 +55,14 @@ public class ModeratedStudents {
         this.superuserPolicy = superuserPolicy;
     }
 
+    /**
+     * Returns findMutable.
+     *
+     * @param id the id
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     public Student findMutable(UUID id) {
         Student target = studentRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
@@ -65,6 +81,11 @@ public class ModeratedStudents {
      * have taken the only self-protection these four endpoints have with it.
      *
      * <p>Both refusals answer 409, the status these endpoints have always refused with.
+     *
+     * @param principal the principal
+     * @param target the target
+     *
+     * @throws ApiException if the operation fails
      */
     public void protectAdministrator(AuthenticatedUser principal, Student target) {
         if (target.getId().equals(principal.student().getId())) {
@@ -79,6 +100,10 @@ public class ModeratedStudents {
      * Marks an entry as an action only an elevated operator could have taken. Recorded in
      * the metadata on purpose: the audit actor keeps reporting the ADMIN role, because
      * elevation is not one and the panel renders that role.
+     *
+     * @param principal the principal
+     * @param targetIsAdmin the targetIsAdmin
+     * @return the result
      */
     public Map<String, Object> elevationMetadata(AuthenticatedUser principal, boolean targetIsAdmin) {
         Map<String, Object> metadata = new LinkedHashMap<>();
@@ -92,12 +117,20 @@ public class ModeratedStudents {
      * An elevated operator: an administrator whose address is configured as a superuser.
      * Elevation is not a role — it lifts the refusals that protect administrator accounts
      * and nothing else, and every response still reports these accounts as ADMIN.
+     *
+     * @param principal the principal
+     * @return the result
      */
     public boolean isElevated(AuthenticatedUser principal) {
         return principal.isAdmin()
                 && superuserPolicy.isSuperuser(principal.student().getKitEmail());
     }
 
+    /**
+     * Executes revokeTokens.
+     *
+     * @param target the target
+     */
     public void revokeTokens(Student target) {
         List<Token> tokens = tokenRepository.findByStudent(target);
         tokens.forEach(token -> token.setRevoked(true));

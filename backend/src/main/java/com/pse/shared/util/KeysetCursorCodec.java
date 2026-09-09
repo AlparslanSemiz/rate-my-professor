@@ -23,6 +23,13 @@ public class KeysetCursorCodec {
 
     private static final String VERSION = "1";
 
+    /**
+     * Returns encode.
+     *
+     * @param createdAt the createdAt
+     * @param id the id
+     * @return the result
+     */
     public String encode(Instant createdAt, UUID id) {
         // Keep the database timestamp precision in the opaque cursor. Public DTOs still
         // use fixed millisecond UTC formatting, but truncating here can skip same-ms rows.
@@ -35,6 +42,10 @@ public class KeysetCursorCodec {
     /**
      * Entities that store a {@code LocalDateTime} rather than an {@code Instant} hold it as
      * UTC, the same assumption {@link UtcDates} makes when formatting one.
+     *
+     * @param createdAt the createdAt
+     * @param id the id
+     * @return the result
      */
     public String encode(LocalDateTime createdAt, UUID id) {
         return encode(createdAt.toInstant(ZoneOffset.UTC), id);
@@ -43,6 +54,8 @@ public class KeysetCursorCodec {
     /**
      * @param errorMessage what a malformed cursor is reported as. Each listing names its own
      *                     so the caller can tell which parameter it got wrong.
+     * @param value the value
+     * @return the result
      */
     public Cursor decode(String value, String errorMessage) {
         if (value == null || value.isBlank() || value.length() > 512) {
@@ -71,9 +84,19 @@ public class KeysetCursorCodec {
         return new ApiException(HttpStatus.BAD_REQUEST, errorMessage);
     }
 
+    /**
+     * Represents Cursor.
+     *
+     * @param createdAt the createdAt
+     * @param id the id
+     */
     public record Cursor(Instant createdAt, UUID id) {
 
-        /** The same instant as a UTC {@code LocalDateTime}, for entities that store one. */
+        /**
+         * The same instant as a UTC {@code LocalDateTime}, for entities that store one.
+         *
+         * @return the result
+         */
         public LocalDateTime createdAtLocal() {
             return LocalDateTime.ofInstant(createdAt, ZoneOffset.UTC);
         }

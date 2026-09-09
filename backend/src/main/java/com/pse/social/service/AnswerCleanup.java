@@ -22,6 +22,12 @@ public class AnswerCleanup {
     private final NotificationRepository notificationRepository;
     private final AnswerVoteRepository answerVoteRepository;
 
+    /**
+     * Creates AnswerCleanup.
+     *
+     * @param notificationRepository the notificationRepository
+     * @param answerVoteRepository the answerVoteRepository
+     */
     public AnswerCleanup(
             NotificationRepository notificationRepository,
             AnswerVoteRepository answerVoteRepository
@@ -30,7 +36,12 @@ public class AnswerCleanup {
         this.answerVoteRepository = answerVoteRepository;
     }
 
-    /** Must run inside the transaction that performs the delete, before the delete. */
+
+    /**
+     * Must run inside the transaction that performs the delete, before the delete.
+     *
+     * @param answerIds Ids of the answers
+     */
     public void clear(Collection<UUID> answerIds) {
         if (answerIds.isEmpty()) {
             return;

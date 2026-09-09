@@ -19,10 +19,19 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 
+/**
+ * Provides RateLimitService.
+ */
 @Service
 public class RateLimitService {
 
+    /**
+     * The REQUEST_CODE.
+     */
     public static final String REQUEST_CODE = "REQUEST_CODE";
+    /**
+     * The LOGIN_FAILURE.
+     */
     public static final String LOGIN_FAILURE = "LOGIN_FAILURE";
 
     private final AuthRateLimitBucketRepository repository;
@@ -31,6 +40,14 @@ public class RateLimitService {
     private final String hmacKey;
     private final TransactionTemplate requiresNew;
 
+    /**
+     * Creates RateLimitService.
+     *
+     * @param repository the repository
+     * @param clock the clock
+     * @param transactionManager the transactionManager
+     * @param properties the properties
+     */
     public RateLimitService(
             AuthRateLimitBucketRepository repository,
             Clock clock,
@@ -52,14 +69,33 @@ public class RateLimitService {
         }
     }
 
+    /**
+     * Returns emailSubject.
+     *
+     * @param normalizedEmail the normalizedEmail
+     * @return the result
+     */
     public String emailSubject(String normalizedEmail) {
         return subjectHash("email:" + normalizedEmail);
     }
 
+    /**
+     * Returns ipSubject.
+     *
+     * @param remoteAddress the remoteAddress
+     * @return the result
+     */
     public String ipSubject(String remoteAddress) {
         return subjectHash("ip:" + (remoteAddress == null ? "unknown" : remoteAddress));
     }
 
+    /**
+     * Executes consume.
+     *
+     * @param operation the operation
+     * @param subjectHash the subjectHash
+     * @param limit the limit
+     */
     public void consume(String operation, String subjectHash, int limit) {
         for (int attempt = 0; attempt < 3; attempt++) {
             try {
@@ -73,6 +109,15 @@ public class RateLimitService {
         }
     }
 
+    /**
+     * Executes ensureAllowed.
+     *
+     * @param operation the operation
+     * @param subjectHash the subjectHash
+     * @param limit the limit
+     *
+     * @throws RateLimitException if the operation fails
+     */
     public void ensureAllowed(String operation, String subjectHash, int limit) {
         requiresNew.executeWithoutResult(status -> {
             LocalDateTime now = LocalDateTime.now(clock);
@@ -85,6 +130,12 @@ public class RateLimitService {
         });
     }
 
+    /**
+     * Executes reset.
+     *
+     * @param operation the operation
+     * @param subjectHash the subjectHash
+     */
     public void reset(String operation, String subjectHash) {
         requiresNew.executeWithoutResult(status ->
                 repository.deleteByOperationAndSubjectHash(operation, subjectHash));

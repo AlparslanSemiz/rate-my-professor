@@ -1,9 +1,24 @@
 package com.pse.shared.enums;
 
+/**
+ * Lists UserStatus.
+ */
 public enum UserStatus {
+    /**
+     * The ACTIVE.
+     */
     ACTIVE,
+    /**
+     * The INACTIVE.
+     */
     INACTIVE,
+    /**
+     * The BLOCKED.
+     */
     BLOCKED,
+    /**
+     * The DELETED.
+     */
     DELETED;
 
     /**
@@ -14,6 +29,8 @@ public enum UserStatus {
      * second keeps a code that was already in flight from being spent. They were two copies
      * of the same {@code != BLOCKED && != DELETED} test, and a status added to this enum
      * would have had to be remembered in both.
+     *
+     * @return the result
      */
     public boolean canLogIn() {
         return this != BLOCKED && this != DELETED;

@@ -23,6 +23,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import com.pse.lecture.model.Lecture;
 
+/**
+ * Provides Notification.
+ */
 @Entity
 @Table(name = "notifications")
 @Getter

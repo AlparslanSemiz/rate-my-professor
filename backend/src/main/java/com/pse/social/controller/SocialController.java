@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * JavaDoc1
+ * Implements the Social Controller.
  */
 @RestController
 @RequestMapping("/social")
@@ -42,6 +42,15 @@ public class SocialController {
     private final ContentReportService contentReportService;
     private final NotificationService notificationService;
 
+    /**
+     * Creates SocialController.
+     *
+     * @param commentService the commentService
+     * @param answerService the answerService
+     * @param voteService the voteService
+     * @param contentReportService the contentReportService
+     * @param notificationService the notificationService
+     */
     public SocialController(
             CommentService commentService,
             AnswerService answerService,
@@ -58,14 +67,27 @@ public class SocialController {
 
 
 
+    /**
+     * Returns getNotifications.
+     *
+     * @param principal the principal
+     * @return the result
+     */
     @GetMapping("/notifications")
-    public NotificationsResponse getNotifications(@AuthenticationPrincipal AuthenticatedUser principal){
+    public NotificationsResponse getNotifications(@AuthenticationPrincipal AuthenticatedUser principal) {
 
         return notificationService.getNotifications(principal.student());
     }
 
+    /**
+     * Returns markNotificationAsSeen.
+     *
+     * @param principal the principal
+     * @param notification_id the notification_id
+     * @return the result
+     */
     @PatchMapping("/notifications/{notification_id}")
-    public BasicResponse markNotificationAsSeen(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID notification_id){
+    public BasicResponse markNotificationAsSeen(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID notification_id) {
 
         return notificationService.markNotificationAsSeen(principal.student(), notification_id);
     }
@@ -73,16 +95,33 @@ public class SocialController {
 
 
 
+    /**
+     * Returns submitComment.
+     *
+     * @param principal the principal
+     * @param request the request
+     * @return the result
+     */
     @PostMapping("/comments")
-    public BasicResponse submitComment(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody CommentSubmitRequest request) {
+    public BasicResponse submitComment(@AuthenticationPrincipal AuthenticatedUser principal,
+                                       @Valid @RequestBody CommentSubmitRequest request) {
 
         return commentService.submitComment(principal.student(), request);
 
     }
 
 
+    /**
+     * Returns voteComment.
+     *
+     * @param comment_id the comment_id
+     * @param principal the principal
+     * @param request the request
+     * @return the result
+     */
     @PostMapping("/comments/vote/comment/{comment_id}")
-    public BasicResponse voteComment(@PathVariable UUID comment_id, @AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody VoteCommentRequest request) {
+    public BasicResponse voteComment(@PathVariable UUID comment_id, @AuthenticationPrincipal AuthenticatedUser principal,
+                                     @Valid @RequestBody VoteCommentRequest request) {
 
         return voteService.voteComment(comment_id, principal.student(), request);
 
@@ -90,8 +129,15 @@ public class SocialController {
 
 
     //Returns both Comments *AND* answers
+    /**
+     * Returns getComments.
+     *
+     * @param principal the principal
+     * @param lecture_id the lecture_id
+     * @return the result
+     */
     @GetMapping("/comments/{lecture_id}")
-    public CommentsResponse getComments(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID lecture_id){
+    public CommentsResponse getComments(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID lecture_id) {
 
         Student student = principal != null ? principal.student() : null;
 
@@ -99,15 +145,32 @@ public class SocialController {
     }
 
 
+    /**
+     * Returns submitAnswer.
+     *
+     * @param principal the principal
+     * @param request the request
+     * @return the result
+     */
     @PostMapping("/answers")
-    public BasicResponse submitAnswer(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody AnswerSubmitRequest request) {
+    public BasicResponse submitAnswer(@AuthenticationPrincipal AuthenticatedUser principal,
+                                      @Valid @RequestBody AnswerSubmitRequest request) {
 
         return answerService.submitAnswer(principal.student(), request);
 
     }
 
+    /**
+     * Returns voteAnswer.
+     *
+     * @param answer_id the answer_id
+     * @param principal the principal
+     * @param request the request
+     * @return the result
+     */
     @PostMapping("/comments/vote/answer/{answer_id}")
-    public BasicResponse voteAnswer(@PathVariable UUID answer_id, @AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody VoteAnswerRequest request) {
+    public BasicResponse voteAnswer(@PathVariable UUID answer_id, @AuthenticationPrincipal AuthenticatedUser principal,
+                                    @Valid @RequestBody VoteAnswerRequest request) {
 
         return voteService.voteAnswer(answer_id, principal.student(), request);
 
@@ -115,23 +178,44 @@ public class SocialController {
 
 
 
+    /**
+     * Returns submitCommentReport.
+     *
+     * @param principal the principal
+     * @param request the request
+     * @return the result
+     */
     @PostMapping("/comments/report")
-    public BasicResponse submitCommentReport(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody CommentReportRequest request) {
+    public BasicResponse submitCommentReport(@AuthenticationPrincipal AuthenticatedUser principal,
+                                             @Valid @RequestBody CommentReportRequest request) {
 
         return contentReportService.submitCommentReport(principal.student(), request);
 
     }
 
+    /**
+     * Returns submitAnswerReport.
+     *
+     * @param principal the principal
+     * @param request the request
+     * @return the result
+     */
     @PostMapping("/answers/report")
-    public BasicResponse submitAnswerReport(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody AnswerReportRequest request) {
+    public BasicResponse submitAnswerReport(@AuthenticationPrincipal AuthenticatedUser principal,
+                                            @Valid @RequestBody AnswerReportRequest request) {
 
         return contentReportService.submitAnswerReport(principal.student(), request);
 
     }
 
     //Returns both Comments *AND* answers
+    /**
+     * Returns getComments.
+     *
+     * @return the result
+     */
     @GetMapping("/sync/comments")
-    public CommentsResponse getComments(){
+    public CommentsResponse getComments() {
 
         return commentService.getAllComments();
     }

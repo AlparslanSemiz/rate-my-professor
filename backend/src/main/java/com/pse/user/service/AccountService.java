@@ -7,6 +7,9 @@ import com.pse.user.dto.StudentProfileResponse;
 import com.pse.user.model.Student;
 import org.springframework.stereotype.Service;
 
+/**
+ * Provides AccountService.
+ */
 @Service
 public class AccountService {
 
@@ -15,20 +18,44 @@ public class AccountService {
     private final StudentService studentService;
 
 
+    /**
+     * Creates AccountService.
+     *
+     * @param sessionRevoker the sessionRevoker
+     * @param studentService the studentService
+     */
     public AccountService(SessionRevoker sessionRevoker, StudentService studentService) {
         this.sessionRevoker = sessionRevoker;
         this.studentService = studentService;
     }
 
 
+    /**
+     * Returns getUserRatings.
+     *
+     * @param student the student
+     * @return the result
+     */
     public UserRatingResponse getUserRatings(Student student) {
         return studentService.getUserRatings(student.getId());
     }
 
+    /**
+     * Returns getUserInformation.
+     *
+     * @param student the student
+     * @return the result
+     */
     public StudentProfileResponse getUserInformation(Student student) {
         return studentService.getUserInformation(student.getId());
     }
 
+    /**
+     * Returns deleteAccount.
+     *
+     * @param student the student
+     * @return the result
+     */
     public BasicResponse deleteAccount(Student student) {
 
         // Since F-5 the failure arrives as a thrown ApiException, so an unsuccessful
@@ -47,6 +74,12 @@ public class AccountService {
         return response;
     }
 
+    /**
+     * Returns requestLogout.
+     *
+     * @param student the student
+     * @return the result
+     */
     public BasicResponse requestLogout(Student student) {
 
 

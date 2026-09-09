@@ -12,6 +12,15 @@ import java.util.UUID;
  * @param id the <em>report's</em> id — what the status and withdrawal routes address
  * @param answerId the reported answer's own id, for acting on the content itself
  * @param commentId the parent comment's id, for opening the thread the answer sits in
+ * @param answerContent the answerContent
+ * @param commentContent the commentContent
+ * @param postContext the postContext
+ * @param reportText the reportText
+ * @param reportedUser the reportedUser
+ * @param reporter the reporter
+ * @param reason the reason
+ * @param status the status
+ * @param date the date
  */
 public record ReportedAnswerResponse(
 

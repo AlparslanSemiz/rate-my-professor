@@ -31,6 +31,11 @@ public final class Uuids {
      *
      * @param errorMessage what the caller is told; name the field, because a request carrying
      *                     two ids gives no clue which one was rejected otherwise
+     *
+     * @param value the value
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
      */
     public static UUID parse(String value, String errorMessage) {
         if (value == null || value.isBlank()) {
@@ -44,6 +49,9 @@ public final class Uuids {
      *
      * @return {@code null} for a null or blank value; never for a malformed one, which is
      *         still a bad request
+     *
+     * @param value the value
+     * @param errorMessage the errorMessage
      */
     public static UUID parseOrNull(String value, String errorMessage) {
         if (value == null || value.isBlank()) {

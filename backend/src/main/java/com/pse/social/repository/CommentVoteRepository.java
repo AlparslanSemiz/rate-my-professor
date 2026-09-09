@@ -10,10 +10,27 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface CommentVoteRepository extends JpaRepository<CommentVote, UUID>{
+/**
+ * Defines CommentVoteRepository.
+ */
+public interface CommentVoteRepository extends JpaRepository<CommentVote, UUID> {
 
 
+    /**
+     * Returns findByStudentAndComment.
+     *
+     * @param student the student
+     * @param comment the comment
+     * @return the result
+     */
     Optional<CommentVote> findByStudentAndComment(Student student, Comment comment);
 
+    /**
+     * Returns countByCommentAndVote.
+     *
+     * @param comment the comment
+     * @param vote the vote
+     * @return the result
+     */
     int countByCommentAndVote(Comment comment, VoteType vote);
 }

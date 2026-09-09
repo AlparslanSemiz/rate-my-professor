@@ -33,6 +33,15 @@ public class StudentLifecycleService {
     private final Clock clock;
     private final ModeratedStudents students;
 
+    /**
+     * Creates StudentLifecycleService.
+     *
+     * @param studentRepository the studentRepository
+     * @param adminRepository the adminRepository
+     * @param auditWriter the auditWriter
+     * @param clock the clock
+     * @param students the students
+     */
     public StudentLifecycleService(
             StudentRepository studentRepository,
             AdminRepository adminRepository,
@@ -47,6 +56,13 @@ public class StudentLifecycleService {
         this.students = students;
     }
 
+    /**
+     * Returns deleteStudent.
+     *
+     * @param principal the principal
+     * @param studentId the studentId
+     * @return the result
+     */
     @Transactional
     public BasicResponse deleteStudent(AuthenticatedUser principal, UUID studentId) {
         Student target = students.findMutable(studentId);
@@ -90,6 +106,13 @@ public class StudentLifecycleService {
         return new BasicResponse("Deleted user successfully", true);
     }
 
+    /**
+     * Returns blockStudent.
+     *
+     * @param principal the principal
+     * @param studentId the studentId
+     * @return the result
+     */
     @Transactional
     public BasicResponse blockStudent(AuthenticatedUser principal, UUID studentId) {
         Student target = students.findMutable(studentId);
@@ -116,6 +139,13 @@ public class StudentLifecycleService {
         return new BasicResponse("Student blocked successfully", true);
     }
 
+    /**
+     * Returns unblockStudent.
+     *
+     * @param principal the principal
+     * @param studentId the studentId
+     * @return the result
+     */
     @Transactional
     public BasicResponse unblockStudent(AuthenticatedUser principal, UUID studentId) {
         Student target = students.findMutable(studentId);

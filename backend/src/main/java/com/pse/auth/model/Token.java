@@ -18,6 +18,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Provides Token.
+ */
 @Entity
 @Table(name = "tokens")
 @Getter

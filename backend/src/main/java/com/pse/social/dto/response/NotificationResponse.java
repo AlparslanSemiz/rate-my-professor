@@ -16,6 +16,15 @@ import java.util.UUID;
  * For {@code WARNING} the reason is in {@code message}, and {@code userName} and
  * {@code content} are null — a warning is not attributed to a person publicly and
  * carries no answer.
+ *
+ * @param notificationID the notificationID
+ * @param type the type
+ * @param lectureResponse the lectureResponse
+ * @param ownCommentID the ownCommentID
+ * @param userName the userName
+ * @param content the content
+ * @param message the message
+ * @param createdAt the createdAt
  */
 public record NotificationResponse(
         UUID notificationID,

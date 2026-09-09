@@ -2,6 +2,9 @@ package com.pse.shared.util;
 
 import org.springframework.web.util.HtmlUtils;
 
+/**
+ * Provides Html.
+ */
 public final class Html {
 
     private Html() {
@@ -17,6 +20,10 @@ public final class Html {
      * a blank value -- {@code ""} against {@code "Unknown"}. A missing map URL should collapse
      * to nothing, a missing city should read as unknown; both are right, and neither is
      * something a reader should have to discover by opening the other class.
+     *
+     * @param value the value
+     * @param fallback the fallback
+     * @return the result
      */
     public static String escape(String value, String fallback) {
         if (value == null || value.isBlank()) {

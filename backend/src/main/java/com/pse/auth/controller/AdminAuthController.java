@@ -35,6 +35,14 @@ public class AdminAuthController {
     private final SessionRevoker sessionRevoker;
     private final IdentityService identityService;
 
+    /**
+     * Creates AdminAuthController.
+     *
+     * @param loginCodeService the loginCodeService
+     * @param sessionIssuer the sessionIssuer
+     * @param sessionRevoker the sessionRevoker
+     * @param identityService the identityService
+     */
     public AdminAuthController(
             LoginCodeService loginCodeService,
             SessionIssuer sessionIssuer,
@@ -47,26 +55,58 @@ public class AdminAuthController {
         this.identityService = identityService;
     }
 
+    /**
+     * Returns requestLogin.
+     *
+     * @param request the request
+     * @param httpRequest the httpRequest
+     * @return the result
+     */
     @PostMapping("/request-login")
     public BasicResponse requestLogin(@Valid @RequestBody OTPRequest request, HttpServletRequest httpRequest) {
         return loginCodeService.requestLogin(request, httpRequest);
     }
 
+    /**
+     * Returns login.
+     *
+     * @param request the request
+     * @param httpRequest the httpRequest
+     * @return the result
+     */
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         return sessionIssuer.adminLogin(request, httpRequest);
     }
 
+    /**
+     * Returns logout.
+     *
+     * @param principal the principal
+     * @return the result
+     */
     @PostMapping("/logout")
     public BasicResponse logout(@AuthenticationPrincipal AuthenticatedUser principal) {
         return sessionRevoker.logout(principal);
     }
 
+    /**
+     * Returns logoutAll.
+     *
+     * @param principal the principal
+     * @return the result
+     */
     @PostMapping("/logout-all")
     public BasicResponse logoutAll(@AuthenticationPrincipal AuthenticatedUser principal) {
         return sessionRevoker.logoutAll(principal);
     }
 
+    /**
+     * Returns me.
+     *
+     * @param principal the principal
+     * @return the result
+     */
     @GetMapping("/me")
     public AuthMeResponse me(@AuthenticationPrincipal AuthenticatedUser principal) {
         return identityService.me(principal);

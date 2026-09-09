@@ -12,16 +12,26 @@ import com.pse.social.model.AnswerReport;
 import com.pse.social.model.Comment;
 import com.pse.social.model.CommentReport;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.pse.shared.enums.UserStatus;
 
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Provides Student.
+ */
 @Entity
 @Table(name = "students")
 @Getter

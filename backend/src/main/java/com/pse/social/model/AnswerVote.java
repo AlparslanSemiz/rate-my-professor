@@ -20,12 +20,16 @@ import jakarta.persistence.Id;
 import java.util.UUID;
 
 
+/**
+ * Provides AnswerVote.
+ */
 @Entity
 @Table(name = "answer_votes",
         uniqueConstraints = @UniqueConstraint(
                 columnNames = {"student_id", "answer_id"}
         )
 )
+
 @Getter
 @Setter
 @NoArgsConstructor

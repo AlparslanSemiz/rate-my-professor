@@ -43,6 +43,16 @@ public class WarningService {
     private final AuditWriter auditWriter;
     private final ModeratedStudents students;
 
+    /**
+     * Creates WarningService.
+     *
+     * @param studentRepository the studentRepository
+     * @param adminRepository the adminRepository
+     * @param warningRepository the warningRepository
+     * @param notificationRepository the notificationRepository
+     * @param auditWriter the auditWriter
+     * @param students the students
+     */
     public WarningService(
             StudentRepository studentRepository,
             AdminRepository adminRepository,
@@ -59,6 +69,16 @@ public class WarningService {
         this.students = students;
     }
 
+    /**
+     * Returns warnStudent.
+     *
+     * @param principal the principal
+     * @param studentId the studentId
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse warnStudent(
             AuthenticatedUser principal,
@@ -102,6 +122,12 @@ public class WarningService {
         return new BasicResponse("Student warned successfully", true);
     }
 
+    /**
+     * Returns getWarningsForStudent.
+     *
+     * @param studentId the studentId
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public WarningHistoryResponse getWarningsForStudent(UUID studentId) {
         Student target = studentRepository
@@ -119,6 +145,17 @@ public class WarningService {
         );
     }
 
+    /**
+     * Returns updateWarning.
+     *
+     * @param principal the principal
+     * @param studentId the studentId
+     * @param warningId the warningId
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse updateWarning(
             AuthenticatedUser principal,
@@ -153,6 +190,14 @@ public class WarningService {
         return new BasicResponse("Updated warning successfully", true);
     }
 
+    /**
+     * Returns deleteWarning.
+     *
+     * @param principal the principal
+     * @param studentId the studentId
+     * @param warningId the warningId
+     * @return the result
+     */
     @Transactional
     public BasicResponse deleteWarning(
             AuthenticatedUser principal,

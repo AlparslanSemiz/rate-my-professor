@@ -36,10 +36,23 @@ public final class OtpHasher {
     private OtpHasher() {
     }
 
+    /**
+     * Returns hash.
+     *
+     * @param code the code
+     * @return the result
+     */
     public static String hash(String code) {
         return ENCODER.encode(code);
     }
 
+    /**
+     * Checks matches.
+     *
+     * @param code the code
+     * @param hash the hash
+     * @return the result
+     */
     public static boolean matches(String code, String hash) {
         return ENCODER.matches(code, hash);
     }

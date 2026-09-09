@@ -10,6 +10,10 @@ import java.util.List;
  *                   one. Only ever non-null when the caller asked for a page by passing
  *                   {@code limit}; an unparameterised read returns every user at once and so
  *                   has no next page.
+ *
+ * @param message the message
+ * @param success the success
+ * @param users the users
  */
 public record UserListResponse(
         String message,

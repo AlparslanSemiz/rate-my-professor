@@ -33,6 +33,11 @@ public class RestClientGitLabClient implements GitLabClient {
     // Explicit, because the class now has a second constructor for the tests: with two
     // candidates and neither marked, the container looks for a default constructor and the
     // bean fails to build.
+    /**
+     * Creates RestClientGitLabClient.
+     *
+     * @param properties the properties
+     */
     @Autowired
     public RestClientGitLabClient(GitLabProperties properties) {
         this(
@@ -48,6 +53,9 @@ public class RestClientGitLabClient implements GitLabClient {
      *
      * @param restClient the client to talk through, or {@code null} when no base URL is
      *                   configured — which is what turns the integration off
+     *
+     * @param projectId the projectId
+     * @param token the token
      */
     RestClientGitLabClient(RestClient restClient, String projectId, String token) {
         this.restClient = restClient;

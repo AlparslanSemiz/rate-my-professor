@@ -8,11 +8,21 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
 
+/**
+ * Provides MailTemplateService.
+ */
 @Service
 public class MailTemplateService {
 
     private static final String TEMPLATE_DIRECTORY =  "static/mail/";
 
+    /**
+     * Returns create.
+     *
+     * @param templateName the templateName
+     * @param values the values
+     * @return the result
+     */
     public String create(
             String templateName,
             Map<String, String> values

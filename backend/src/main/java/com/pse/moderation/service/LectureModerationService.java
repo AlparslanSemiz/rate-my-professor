@@ -35,6 +35,15 @@ public class LectureModerationService {
     private final AnswerCleanup answerCleanup;
     private final AuditWriter auditWriter;
 
+    /**
+     * Creates LectureModerationService.
+     *
+     * @param lectureRepository the lectureRepository
+     * @param professorRepository the professorRepository
+     * @param answerRepository the answerRepository
+     * @param answerCleanup the answerCleanup
+     * @param auditWriter the auditWriter
+     */
     public LectureModerationService(
             LectureRepository lectureRepository,
             ProfessorRepository professorRepository,
@@ -49,6 +58,16 @@ public class LectureModerationService {
         this.auditWriter = auditWriter;
     }
 
+    /**
+     * Returns updateLecture.
+     *
+     * @param principal the principal
+     * @param lectureId the lectureId
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse updateLecture(
             AuthenticatedUser principal,
@@ -152,6 +171,10 @@ public class LectureModerationService {
      * <p>This throws away student contributions, which is rarely what is wanted — setting
      * {@code active = false} takes a lecture out of the app while keeping its history.
      * Deleting is for a lecture that should never have existed.
+     *
+     * @param principal the principal
+     * @param lectureId the lectureId
+     * @return the result
      */
     @Transactional
     public BasicResponse deleteLecture(AuthenticatedUser principal, UUID lectureId) {

@@ -44,6 +44,16 @@ public class UserDirectoryService {
     private final KeysetCursorCodec cursorCodec;
     private final UserResponseMapper mapper;
 
+    /**
+     * Creates UserDirectoryService.
+     *
+     * @param studentRepository the studentRepository
+     * @param adminRepository the adminRepository
+     * @param warningRepository the warningRepository
+     * @param commentReportRepository the commentReportRepository
+     * @param cursorCodec the cursorCodec
+     * @param mapper the mapper
+     */
     public UserDirectoryService(
             StudentRepository studentRepository,
             AdminRepository adminRepository,
@@ -60,6 +70,19 @@ public class UserDirectoryService {
         this.mapper = mapper;
     }
 
+    /**
+     * Returns getStudents.
+     *
+     * @param rawLimit the rawLimit
+     * @param rawCursor the rawCursor
+     * @param q the q
+     * @param rawStatus the rawStatus
+     * @param rawRole the rawRole
+     * @param rawSort the rawSort
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional(readOnly = true)
     public UserListResponse getStudents(
             String rawLimit,
@@ -153,6 +176,12 @@ public class UserDirectoryService {
         return new UserListResponse("Success", true, users, nextCursor);
     }
 
+    /**
+     * Returns getStudent.
+     *
+     * @param studentId the studentId
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public UserResponse getStudent(UUID studentId) {
         Student student = studentRepository

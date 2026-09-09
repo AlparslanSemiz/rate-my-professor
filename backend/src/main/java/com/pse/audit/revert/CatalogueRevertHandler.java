@@ -27,12 +27,21 @@ public final class CatalogueRevertHandler {
     private CatalogueRevertHandler() {
     }
 
+    /**
+ * Provides LectureHandler.
+ */
     @Component
     public static class LectureHandler implements AuditRevertHandler {
 
         private final LectureRepository lectureRepository;
         private final LectureModerationService catalogService;
 
+        /**
+         * Creates LectureHandler.
+         *
+         * @param lectureRepository the lectureRepository
+         * @param catalogService the catalogService
+         */
         public LectureHandler(
                 LectureRepository lectureRepository,
                 LectureModerationService catalogService
@@ -86,12 +95,21 @@ public final class CatalogueRevertHandler {
         }
     }
 
+    /**
+     * Provides ProfessorHandler.
+     */
     @Component
     public static class ProfessorHandler implements AuditRevertHandler {
 
         private final ProfessorRepository professorRepository;
         private final ProfessorModerationService catalogService;
 
+        /**
+         * Creates ProfessorHandler.
+         *
+         * @param professorRepository the professorRepository
+         * @param catalogService the catalogService
+         */
         public ProfessorHandler(
                 ProfessorRepository professorRepository,
                 ProfessorModerationService catalogService

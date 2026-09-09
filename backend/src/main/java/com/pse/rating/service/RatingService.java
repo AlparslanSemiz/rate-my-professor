@@ -29,6 +29,9 @@ import com.pse.rating.dto.request.RatingRequest;
 import com.pse.rating.dto.request.RatingTopicRequest;
 import com.pse.rating.dto.response.TopicAverageResponse;
 
+/**
+ * Provides RatingService.
+ */
 @Service
 public class RatingService {
 
@@ -38,6 +41,13 @@ public class RatingService {
     private final RatingRepository ratingRepository;
     private final AuditWriter auditWriter;
 
+    /**
+     * Creates RatingService.
+     *
+     * @param lectureService the lectureService
+     * @param ratingRepository the ratingRepository
+     * @param auditWriter the auditWriter
+     */
     public RatingService(LectureService lectureService, RatingRepository ratingRepository, AuditWriter auditWriter) {
         this.lectureService = lectureService;
         this.ratingRepository = ratingRepository;
@@ -45,6 +55,15 @@ public class RatingService {
     }
 
 
+    /**
+     * Returns submitRating.
+     *
+     * @param student the student
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse submitRating(Student student, RatingRequest request) {
 
@@ -89,7 +108,6 @@ public class RatingService {
 
         }
 
-        //TODO: idk ob hier ein bug ensteht weil wir das rating objekt noch nicht gespeicehrt haben
         //Add overall Rating
         double overallRating = RatingAverages.weightedScore(rating);
         RatingTopic overallTopic = new RatingTopic();
@@ -118,13 +136,19 @@ public class RatingService {
                 )
         );
 
-        return new BasicResponse("Rating submitted successfully",true);
+        return new BasicResponse("Rating submitted successfully", true);
 
     }
 
 
 
 
+    /**
+     * Returns getRatings.
+     *
+     * @param lectureId the lectureId
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public RatingsAverageResponse getRatings(UUID lectureId) {
 
@@ -161,6 +185,15 @@ public class RatingService {
 
     }
 
+    /**
+     * Returns getOwnRating.
+     *
+     * @param student the student
+     * @param lectureId the lectureId
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public RatingsAverageResponse getOwnRating(Student student, UUID lectureId) {
 
@@ -194,6 +227,14 @@ public class RatingService {
     }
 
 
+    /**
+     * Returns getRatingCategories.
+     *
+     * @param lectureId the lectureId
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     public RatingCategoriesResponse getRatingCategories(UUID lectureId) {
 
         Lecture lecture = lectureService.getById(lectureId);

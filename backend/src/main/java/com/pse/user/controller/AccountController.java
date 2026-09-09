@@ -27,6 +27,11 @@ public class AccountController {
 
     private final AccountService accountService;
 
+    /**
+     * Creates AccountController.
+     *
+     * @param accountService the accountService
+     */
     public AccountController(AccountService accountService) {
         this.accountService = accountService;
     }

@@ -31,6 +31,14 @@ public class UserResponseMapper {
     private final CommentReportRepository commentReportRepository;
     private final Clock clock;
 
+    /**
+     * Creates UserResponseMapper.
+     *
+     * @param adminRepository the adminRepository
+     * @param warningRepository the warningRepository
+     * @param commentReportRepository the commentReportRepository
+     * @param clock the clock
+     */
     public UserResponseMapper(
             AdminRepository adminRepository,
             WarningRepository warningRepository,
@@ -43,6 +51,12 @@ public class UserResponseMapper {
         this.clock = clock;
     }
 
+    /**
+     * Returns toResponse.
+     *
+     * @param student the student
+     * @return the result
+     */
     public UserResponse toResponse(Student student) {
         return toResponse(
                 student,
@@ -52,6 +66,15 @@ public class UserResponseMapper {
         );
     }
 
+    /**
+     * Returns toResponse.
+     *
+     * @param student the student
+     * @param isAdmin the isAdmin
+     * @param warnings the warnings
+     * @param reports the reports
+     * @return the result
+     */
     public UserResponse toResponse(
             Student student,
             boolean isAdmin,
@@ -80,6 +103,12 @@ public class UserResponseMapper {
         );
     }
 
+    /**
+     * Returns toResponse.
+     *
+     * @param warning the warning
+     * @return the result
+     */
     public static WarningResponse toResponse(Warning warning) {
         Admin issuer = warning.getAdmin();
         // createdFrom.createdAt is the moment the warning was issued. It used to
@@ -101,6 +130,12 @@ public class UserResponseMapper {
         );
     }
 
+    /**
+     * Returns label.
+     *
+     * @param student the student
+     * @return the result
+     */
     public static String label(Student student) {
         return student.getUsername() + " (" + student.getKitEmail() + ")";
     }

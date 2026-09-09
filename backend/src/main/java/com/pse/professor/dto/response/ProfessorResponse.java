@@ -11,6 +11,13 @@ import java.util.UUID;
  *                   {@code PATCH /data/professor/{id}}, so reading it back from the professor
  *                   rather than reverse-indexing it from the lecture list is what keeps the
  *                   two directions agreeing once the lecture list is paginated or filtered.
+ *
+ * @param id the id
+ * @param firstName the firstName
+ * @param lastName the lastName
+ * @param active the active
+ * @param averageRating the averageRating
+ * @param ratingCount the ratingCount
  */
 public record ProfessorResponse(
         UUID id,

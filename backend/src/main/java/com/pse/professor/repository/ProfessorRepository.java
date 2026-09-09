@@ -9,6 +9,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.pse.professor.model.Professor;
 
+/**
+ * Defines ProfessorRepository.
+ */
 public interface ProfessorRepository extends JpaRepository<Professor, UUID> {
 
     /**
@@ -16,15 +19,35 @@ public interface ProfessorRepository extends JpaRepository<Professor, UUID> {
      * {@code lectureIds}. {@code Professor.lectures} is the inverse side of the many-to-many
      * and is lazy, and open-in-view is disabled, so without the graph these reads are an N+1
      * at best and a LazyInitializationException at worst.
+     *
+     * @return the result
      */
     @EntityGraph(attributePaths = "lectures")
     Set<Professor> findByActiveTrueOrderByLastNameAscFirstNameAsc();
 
+    /**
+     * Returns findAllByOrderByLastNameAscFirstNameAsc.
+     *
+     * @return the result
+     */
     @EntityGraph(attributePaths = "lectures")
     Set<Professor> findAllByOrderByLastNameAscFirstNameAsc();
 
+    /**
+     * Returns findWithLecturesById.
+     *
+     * @param id the id
+     * @return the result
+     */
     @EntityGraph(attributePaths = "lectures")
     Optional<Professor> findWithLecturesById(UUID id);
 
+    /**
+     * Returns findByFirstNameAndLastName.
+     *
+     * @param firstName the firstName
+     * @param lastName the lastName
+     * @return the result
+     */
     Optional<Professor> findByFirstNameAndLastName(String firstName, String lastName);
 }

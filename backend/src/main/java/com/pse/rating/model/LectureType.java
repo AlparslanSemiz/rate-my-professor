@@ -2,9 +2,15 @@ package com.pse.rating.model;
 
 import java.util.List;
 
+/**
+ * Lists LectureType.
+ */
 public enum LectureType {
 
 
+    /**
+     * The LECTURE_ONLY.
+     */
     LECTURE_ONLY(List.of(
             RatingCategory.ROOM,
             RatingCategory.ORGANIZATION,
@@ -23,6 +29,9 @@ public enum LectureType {
             RatingCategory.PROFESSOR_EXAM_PREPARATION
     )),
 
+    /**
+     * The LECTURE_AND_EXERCISE.
+     */
     LECTURE_AND_EXERCISE(List.of(
             RatingCategory.ROOM,
             RatingCategory.ORGANIZATION,
@@ -59,6 +68,11 @@ public enum LectureType {
         this.defaultCategories = defaultCategories;
     }
 
+    /**
+     * Returns getDefaultCategories.
+     *
+     * @return the result
+     */
     public List<RatingCategory> getDefaultCategories() {
         return defaultCategories;
     }

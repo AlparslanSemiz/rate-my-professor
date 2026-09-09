@@ -15,16 +15,36 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface AnswerVoteRepository extends JpaRepository<AnswerVote, UUID>{
+/**
+ * Defines AnswerVoteRepository.
+ */
+public interface AnswerVoteRepository extends JpaRepository<AnswerVote, UUID> {
 
 
+    /**
+     * Returns findByStudentAndAnswer.
+     *
+     * @param student the student
+     * @param answer the answer
+     * @return the result
+     */
     Optional<AnswerVote> findByStudentAndAnswer(Student student, Answer answer);
 
+    /**
+     * Returns countByAnswerAndVote.
+     *
+     * @param answer the answer
+     * @param vote the vote
+     * @return the result
+     */
     int countByAnswerAndVote(Answer answer, VoteType vote);
 
     /**
      * Answer votes are not cascaded from {@code Answer}, so deleting an answer without
      * clearing these first violates the foreign key.
+     *
+     * @param answerIds the answerIds
+     * @return the result
      */
     @Modifying
     @Query("DELETE FROM AnswerVote vote WHERE vote.answer.id IN :answerIds")

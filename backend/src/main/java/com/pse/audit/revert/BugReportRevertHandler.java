@@ -23,6 +23,12 @@ public class BugReportRevertHandler implements AuditRevertHandler {
     private final BugReportRepository bugReportRepository;
     private final ModerationBugReportService bugReportService;
 
+    /**
+ * Creates BugReportRevertHandler.
+ *
+ * @param bugReportRepository the bugReportRepository
+ * @param bugReportService the bugReportService
+ */
     public BugReportRevertHandler(
             BugReportRepository bugReportRepository,
             ModerationBugReportService bugReportService

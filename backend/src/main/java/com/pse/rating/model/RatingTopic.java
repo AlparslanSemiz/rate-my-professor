@@ -16,6 +16,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Provides RatingTopic.
+ */
 @Entity
 @Table(
     name = "rating_topics",

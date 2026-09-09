@@ -1,7 +1,6 @@
 package com.pse.social.service;
 
 import java.util.Map;
-import java.util.UUID;
 
 import com.pse.shared.util.Uuids;
 import com.pse.audit.model.AuditAction;
@@ -43,6 +42,15 @@ public class ContentReportService {
     private final AnswerReportRepository answerReportRepository;
     private final AuditWriter auditWriter;
 
+    /**
+     * Creates ContentReportService.
+     *
+     * @param commentRepository the commentRepository
+     * @param answerRepository the answerRepository
+     * @param commentReportRepository the commentReportRepository
+     * @param answerReportRepository the answerReportRepository
+     * @param auditWriter the auditWriter
+     */
     public ContentReportService(
             CommentRepository commentRepository,
             AnswerRepository answerRepository,
@@ -57,6 +65,15 @@ public class ContentReportService {
         this.auditWriter = auditWriter;
     }
 
+    /**
+     * Returns submitCommentReport.
+     *
+     * @param student the student
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse submitCommentReport(Student student, CommentReportRequest request) {
 
@@ -88,6 +105,15 @@ public class ContentReportService {
         return new BasicResponse("Comment Report submitted successfully", true);
     }
 
+    /**
+     * Returns submitAnswerReport.
+     *
+     * @param student the student
+     * @param request the request
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     @Transactional
     public BasicResponse submitAnswerReport(Student student, AnswerReportRequest request) {
 

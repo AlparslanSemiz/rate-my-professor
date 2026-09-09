@@ -10,6 +10,12 @@ import java.util.UUID;
  * @param commentId      the comment it answers
  * @param commentPreview enough of that comment to recognise the thread
  * @param postContext    the lecture the thread belongs to, formatted {@code "CODE — Name"}
+ * @param id the id
+ * @param content the content
+ * @param status the status
+ * @param author the author
+ * @param reports the reports
+ * @param createdAt the createdAt
  */
 public record ManagedAnswerResponse(
         UUID id,

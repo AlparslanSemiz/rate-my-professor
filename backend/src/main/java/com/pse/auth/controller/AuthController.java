@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Provides AuthController.
+ */
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -28,6 +31,14 @@ public class AuthController {
     private final SessionRevoker sessionRevoker;
     private final IdentityService identityService;
 
+    /**
+     * Creates AuthController.
+     *
+     * @param loginCodeService the loginCodeService
+     * @param sessionIssuer the sessionIssuer
+     * @param sessionRevoker the sessionRevoker
+     * @param identityService the identityService
+     */
     public AuthController(
             LoginCodeService loginCodeService,
             SessionIssuer sessionIssuer,
@@ -40,29 +51,63 @@ public class AuthController {
         this.identityService = identityService;
     }
 
+    /**
+     * Returns requestLogin.
+     *
+     * @param request the request
+     * @param httpRequest the httpRequest
+     * @return the result
+     */
     @PostMapping("/request-login")
     public BasicResponse requestLogin(@Valid @RequestBody OTPRequest request, HttpServletRequest httpRequest) {
         return loginCodeService.requestLogin(request, httpRequest);
     }
 
+    /**
+     * Returns login.
+     *
+     * @param request the request
+     * @param httpRequest the httpRequest
+     * @return the result
+     */
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         return sessionIssuer.login(request, httpRequest);
     }
 
+    /**
+     * Returns logout.
+     *
+     * @param principal the principal
+     * @return the result
+     */
     @PostMapping("/logout")
     public BasicResponse logout(@AuthenticationPrincipal AuthenticatedUser principal) {
         return sessionRevoker.logout(principal);
     }
 
+    /**
+     * Returns logoutAll.
+     *
+     * @param principal the principal
+     * @return the result
+     */
     @PostMapping("/logout-all")
     public BasicResponse logoutAll(@AuthenticationPrincipal AuthenticatedUser principal) {
         return sessionRevoker.logoutAll(principal);
     }
 
 
+    /**
+     * Returns validate.
+     *
+     * @param authHeader the authHeader
+     * @param request the request
+     * @return the result
+     */
     @PostMapping("/validate")
-    public BasicResponse validate(@RequestHeader("Authorization") String authHeader, @Valid @RequestBody ValidateCredentialsRequest request) {
+    public BasicResponse validate(@RequestHeader("Authorization") String authHeader,
+                                  @Valid @RequestBody ValidateCredentialsRequest request) {
         return identityService.validate(authHeader, request);
     }
 }

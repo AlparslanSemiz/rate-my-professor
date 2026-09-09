@@ -14,6 +14,14 @@ import java.util.UUID;
  * <p>{@code lectureType} decides which rating categories the lecture offers, so changing
  * it changes what future ratings can score. Ratings already submitted are left as they
  * are; they keep the categories they were given.
+ *
+ * @param name the name
+ * @param code the code
+ * @param semesterYear the semesterYear
+ * @param semesterSeason the semesterSeason
+ * @param active the active
+ * @param lectureType the lectureType
+ * @param professorIds the professorIds
  */
 public record LectureUpdateRequest(
         String name,

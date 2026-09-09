@@ -27,6 +27,9 @@ import com.pse.professor.repository.ProfessorRepository;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.error.ApiException;
 
+/**
+ * Provides ProfessorService.
+ */
 @Service
 public class ProfessorService {
 
@@ -36,6 +39,13 @@ public class ProfessorService {
 
 
 
+    /**
+     * Creates ProfessorService.
+     *
+     * @param professorRepository the professorRepository
+     * @param lectureRepository the lectureRepository
+     * @param auditWriter the auditWriter
+     */
     public ProfessorService(ProfessorRepository professorRepository, LectureRepository lectureRepository, AuditWriter auditWriter) {
         this.professorRepository = professorRepository;
         this.lectureRepository = lectureRepository;
@@ -43,6 +53,11 @@ public class ProfessorService {
     }
 
 
+    /**
+     * Returns getProfessors.
+     *
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public ProfessorsResponse getProfessors() {
 
@@ -58,6 +73,11 @@ public class ProfessorService {
     }
 
 
+    /**
+     * Returns getAllProfessors.
+     *
+     * @return the result
+     */
     @Transactional(readOnly = true)
     public ProfessorsResponse getAllProfessors() {
 
@@ -78,6 +98,11 @@ public class ProfessorService {
      * An unknown id is a 404, for the reason {@code LectureService.getLecture} gives: this
      * read and that one were the last two answering {@code 200 {"success": false}} to a
      * question every other read in the catalogue answers with a status code.
+     *
+     * @param professor_id the professor_id
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
      */
     @Transactional(readOnly = true)
     public ProfessorDetailResponse getProfessor(UUID professor_id) {
@@ -96,26 +121,30 @@ public class ProfessorService {
 
     }
 
-
-    @Transactional
     /**
      * Creating a professor is recorded like every other administrative mutation.
      *
      * <p>See {@code LectureService.addLecture} for why this takes the principal and why the
      * entry is a lifecycle event rather than a field diff.
+     *
+     * @param principal the principal
+     * @param request the request
+     * @return the result
+     * @throws ApiException if the operation fails
      */
+    @Transactional
     public BasicResponse addProfessor(AuthenticatedUser principal, ProfessorAddRequest request) {
 
-    if (getProfessorID(request.firstName(), request.lastName()) != null) {
-        throw new ApiException(
+        if (getProfessorID(request.firstName(), request.lastName()) != null) {
+            throw new ApiException(
                 HttpStatus.CONFLICT,
                 "Professor already exists: "
                         + request.firstName()
                         + " "
                         + request.lastName());
-    }
+        }
 
-    List<Lecture> lectures = new ArrayList<>();
+        List<Lecture> lectures = new ArrayList<>();
         if (request.lectureIDs() != null) {
             for (UUID lectureId : request.lectureIDs()) {
 
@@ -157,9 +186,16 @@ public class ProfessorService {
     }
 
 
+    /**
+     * Returns getProfessorID.
+     *
+     * @param firstName the firstName
+     * @param lastName the lastName
+     * @return the result
+     */
     public UUID getProfessorID(String firstName, String lastName) {
         Professor professor = professorRepository.findByFirstNameAndLastName(firstName, lastName).orElse(null);
-        if(professor == null) {
+        if (professor == null) {
             return null;
         }
         return professor.getId();

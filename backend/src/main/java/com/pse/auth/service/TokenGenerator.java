@@ -19,6 +19,8 @@ public final class TokenGenerator {
 
     /**
      * 32 Byte long Token => ~ 43 Chars (Base64)
+     *
+     * @return the result
      */
     public static String generateToken() {
 
@@ -31,7 +33,9 @@ public final class TokenGenerator {
     }
 
     /**
-     * Create 6 Char long One Time Password
+     * Create 6 Char long One Time Password.
+     *
+     * @return the result
      */
     public static String generateOneTimePassword() {
 

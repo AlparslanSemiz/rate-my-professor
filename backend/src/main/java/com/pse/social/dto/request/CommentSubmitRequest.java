@@ -7,8 +7,9 @@ import jakarta.validation.constraints.NotBlank;
  *                  {@code UUID} because that is what the app sends; {@code Uuids.parse}
  *                  converts it, so a malformed one is a 400 rather than the 500 an
  *                  unguarded {@code UUID.fromString} produced.
+ * @param content the content
  */
 public record CommentSubmitRequest(
         @NotBlank String lectureID,
         @NotBlank String content
-) {}
+) { }

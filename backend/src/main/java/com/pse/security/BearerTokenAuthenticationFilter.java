@@ -16,6 +16,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Provides BearerTokenAuthenticationFilter.
+ */
 @Component
 public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
 
@@ -24,6 +27,12 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
     private final TokenAuthenticationService authenticationService;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Creates BearerTokenAuthenticationFilter.
+     *
+     * @param authenticationService the authenticationService
+     * @param objectMapper the objectMapper
+     */
     public BearerTokenAuthenticationFilter(
             TokenAuthenticationService authenticationService,
             ObjectMapper objectMapper
@@ -32,6 +41,15 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Filters the request.
+     *
+     * @param request the request
+     * @param response the response
+     * @param filterChain the filterChain
+     * @throws ServletException if the filter chain fails
+     * @throws IOException if the response cannot be written
+     */
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,

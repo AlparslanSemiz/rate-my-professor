@@ -8,6 +8,11 @@ import java.util.UUID;
  * what a rating gets deleted by id from.
  *
  * @param lectureLabel the lecture it was submitted for, formatted {@code "CODE — Name"}
+ * @param id the id
+ * @param student the student
+ * @param lectureId the lectureId
+ * @param topics the topics
+ * @param createdAt the createdAt
  */
 public record ManagedRatingResponse(
         UUID id,

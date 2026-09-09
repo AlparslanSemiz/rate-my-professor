@@ -1,7 +1,16 @@
 package com.pse.shared.enums;
 
+/**
+ * Lists SemesterSeason.
+ */
 public enum SemesterSeason {
+    /**
+     * The SS.
+     */
     SS,
+    /**
+     * The WS.
+     */
     WS;
 
     /**

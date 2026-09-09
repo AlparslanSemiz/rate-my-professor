@@ -24,11 +24,23 @@ public class SessionRevoker {
     private final TokenRepository tokenRepository;
     private final SessionAuditWriter sessionAudit;
 
+    /**
+     * Creates SessionRevoker.
+     *
+     * @param tokenRepository the tokenRepository
+     * @param sessionAudit the sessionAudit
+     */
     public SessionRevoker(TokenRepository tokenRepository, SessionAuditWriter sessionAudit) {
         this.tokenRepository = tokenRepository;
         this.sessionAudit = sessionAudit;
     }
 
+    /**
+     * Returns logout.
+     *
+     * @param principal the principal
+     * @return the result
+     */
     @Transactional
     public BasicResponse logout(AuthenticatedUser principal) {
         Token token = principal.token();
@@ -46,6 +58,12 @@ public class SessionRevoker {
         return new BasicResponse("Logged out successfully", true);
     }
 
+    /**
+     * Returns logoutAll.
+     *
+     * @param principal the principal
+     * @return the result
+     */
     @Transactional
     public BasicResponse logoutAll(AuthenticatedUser principal) {
         Student student = principal.student();
@@ -71,6 +89,9 @@ public class SessionRevoker {
     /**
      * Revokes every session ever minted for an address, whoever holds them. Used when an
      * account is deleted: the row goes, and so must anything still authenticating as it.
+     *
+     * @param email the email
+     * @return the result
      */
     @Transactional
     public int invalidateAllAuthTokensForEmail(String email) {

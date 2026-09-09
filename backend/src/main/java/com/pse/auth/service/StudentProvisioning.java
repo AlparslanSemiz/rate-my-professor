@@ -23,12 +23,23 @@ public class StudentProvisioning {
     private final StudentRepository studentRepository;
     private final Clock clock;
 
+    /**
+     * Creates StudentProvisioning.
+     *
+     * @param studentRepository the studentRepository
+     * @param clock the clock
+     */
     public StudentProvisioning(StudentRepository studentRepository, Clock clock) {
         this.studentRepository = studentRepository;
         this.clock = clock;
     }
 
-    /** A new account under a generated display name. */
+    /**
+     * A new account under a generated display name.
+     *
+     * @param email the email
+     * @return the result
+     */
     public Student create(String email) {
         return create(email, null);
     }
@@ -39,6 +50,10 @@ public class StudentProvisioning {
      * <p>Falls back to a generated one rather than failing, because {@code username} is
      * unique and a collision must not take the caller down -- for the bootstrap runner that
      * would mean the application not starting.
+     *
+     * @param email the email
+     * @param preferredUsername the preferredUsername
+     * @return the result
      */
     public Student create(String email, String preferredUsername) {
         Student student = new Student();

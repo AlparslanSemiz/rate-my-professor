@@ -33,6 +33,10 @@ import lombok.Setter;
 
 import static com.pse.rating.model.LectureType.LECTURE_ONLY;
 
+
+/**
+ * Provides Lecture.
+ */
 @Entity
 @Table(name = "lectures")
 @Getter

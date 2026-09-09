@@ -12,6 +12,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+/**
+ * Provides CorsConfig.
+ */
 @Configuration
 public class CorsConfig {
 
@@ -30,6 +33,11 @@ public class CorsConfig {
 
     private final List<String> allowedOrigins;
 
+    /**
+     * Creates CorsConfig.
+     *
+     * @param allowedOrigins the allowedOrigins
+     */
     public CorsConfig(@Value("${app.cors.allowed-origins}") String allowedOrigins) {
         this.allowedOrigins = parseOrigins(allowedOrigins);
     }
@@ -40,6 +48,8 @@ public class CorsConfig {
      * authorization, which made every preflight to an admin route fail with 401:
      * {@code OPTIONS} carries no Authorization header, and the role matchers for
      * {@code /users/**} and friends are not restricted by method.
+     *
+     * @return the result
      */
     @Bean
     CorsConfigurationSource corsConfigurationSource() {

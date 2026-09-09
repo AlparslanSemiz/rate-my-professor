@@ -8,6 +8,12 @@ package com.pse.shared.enums;
  * either field.
  */
 public enum NotificationType {
+    /**
+     * The ANSWER.
+     */
     ANSWER,
+    /**
+     * The WARNING.
+     */
     WARNING
 }
