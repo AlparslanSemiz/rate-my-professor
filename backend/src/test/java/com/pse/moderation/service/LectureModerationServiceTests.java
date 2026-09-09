@@ -399,6 +399,40 @@ class LectureModerationServiceTests {
     }
 
 
+    /**
+     * The other half of BUG-3, which its fix did not reach: {@code sameAssignment} sorts
+     * before comparing, so the *decision* is order-insensitive -- but the value written into
+     * the audit entry came from {@code labels()}, which did not sort. The recorded
+     * {@code before} therefore carried the {@code HashSet}'s identity-hash order straight
+     * into the {@code jsonb} column, which preserves array order, and out again through
+     * {@code GET /admin/audit-logs}. Two servers answering the same request could disagree
+     * about the order of a list nobody changed. F-21's shape, on the audit record.
+     *
+     * <p>Deterministic for the same reason the test above is: a {@code LinkedHashSet} in a
+     * known-wrong order rather than a real {@code HashSet}.
+     */
+    @Test
+    void updateLecture_recordsTheProfessorAssignmentInAStableOrder() {
+        Professor kept = professor(UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+                "Dorothea", "Wagner");
+        Professor dropped = professor(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                "Peter", "Sanders");
+
+        Lecture lecture = lecture();
+        // Held in descending id order, which is the order a HashSet is free to produce.
+        lecture.setProfessors(new LinkedHashSet<>(List.of(kept, dropped)));
+        givenLecture(lecture);
+
+        List<UUID> requested = List.of(kept.getId());
+        when(professorRepository.findAllById(requested)).thenReturn(List.of(kept));
+
+        service().updateLecture(principal(), LECTURE_ID,
+                new LectureUpdateRequest(null, null, null, null, null, null, requested));
+
+        assertThat(before(changesWritten(), "professors")).isEqualTo(List.of(
+                dropped.getId().toString(), kept.getId().toString()));
+    }
+
     @Test
     void updateLecture_changedFields_areSavedAndAuditedAsOneLectureUpdatedEntry() {
         Lecture lecture = lecture();

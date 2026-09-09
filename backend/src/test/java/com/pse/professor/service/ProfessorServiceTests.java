@@ -28,10 +28,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
-import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import java.util.Map;
@@ -89,7 +88,7 @@ class ProfessorServiceTests {
                 true
         );
 
-        Set<Professor> professors = new LinkedHashSet<>();
+        List<Professor> professors = new ArrayList<>();
         professors.add(professor1);
         professors.add(professor2);
 
@@ -113,7 +112,7 @@ class ProfessorServiceTests {
     void getProfessorsReturnsEmptyListWhenNoActiveProfessorExists() {
 
         when(professorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc())
-                .thenReturn(Set.of());
+                .thenReturn(List.of());
 
 
         ProfessorsResponse response = professorService.getProfessors();
@@ -141,7 +140,7 @@ class ProfessorServiceTests {
                 false
         );
 
-        Set<Professor> professors = new LinkedHashSet<>();
+        List<Professor> professors = new ArrayList<>();
         professors.add(activeProfessor);
         professors.add(inactiveProfessor);
 

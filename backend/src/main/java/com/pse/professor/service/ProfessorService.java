@@ -4,7 +4,6 @@ package com.pse.professor.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import com.pse.professor.mapper.ProfessorResponseMapper;
@@ -46,7 +45,7 @@ public class ProfessorService {
     @Transactional(readOnly = true)
     public ProfessorsResponse getProfessors() {
 
-        Set<Professor> professors = professorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc();
+        List<Professor> professors = professorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc();
 
         List<ProfessorResponse> responses = new ArrayList<>();
 
@@ -61,7 +60,7 @@ public class ProfessorService {
     @Transactional(readOnly = true)
     public ProfessorsResponse getAllProfessors() {
 
-        Set<Professor> professors = professorRepository.findAllByOrderByLastNameAscFirstNameAsc();
+        List<Professor> professors = professorRepository.findAllByOrderByLastNameAscFirstNameAsc();
 
         List<ProfessorResponse> responses = new ArrayList<>();
 

@@ -83,7 +83,7 @@ public class CommentService {
     public CommentsResponse getComments(UUID lectureId, Student student) {
 
         List<CommentResponse> comments = commentRepository
-                .findAllByLectureIdAndStatus(lectureId, ContentStatus.VISIBLE)
+                .findAllByLectureIdAndStatusOrderByCreatedAtDesc(lectureId, ContentStatus.VISIBLE)
                 .stream()
                 .map(comment -> mapper.toResponse(comment, student))
                 .toList();
@@ -96,7 +96,7 @@ public class CommentService {
     public CommentsResponse getAllComments() {
 
         List<CommentResponse> comments = commentRepository
-                .findAllByStatus(ContentStatus.VISIBLE)
+                .findAllByStatusOrderByCreatedAtDesc(ContentStatus.VISIBLE)
                 .stream()
                 .map(comment -> mapper.toResponse(comment, null))
                 .toList();

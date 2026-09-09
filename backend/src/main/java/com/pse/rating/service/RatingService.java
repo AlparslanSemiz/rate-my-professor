@@ -1,6 +1,7 @@
 package com.pse.rating.service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -184,11 +185,15 @@ public class RatingService {
                     "Error, couldn't find rating for Lecture: " + lectureId, false, List.of());
         }
 
-        List<TopicAverageResponse> topics = new ArrayList<>();
-
-        for (RatingTopic topic : rating.getTopics()) {
-            topics.add(new TopicAverageResponse(topic.getCategory(), topic.getValue()));
-        }
+        // Sorted by category, which for an enum is declaration order. Rating.topics is a JPA
+        // bag with no @OrderBy, so this list arrived in whatever order the database returned
+        // and the field reshuffled between requests -- the same defect getRatings above was
+        // given an EnumMap for (F-27), on the route beside it. One response field cannot have
+        // two orders.
+        List<TopicAverageResponse> topics = rating.getTopics().stream()
+                .sorted(Comparator.comparing(RatingTopic::getCategory))
+                .map(topic -> new TopicAverageResponse(topic.getCategory(), topic.getValue()))
+                .toList();
 
         return new RatingsAverageResponse("Success, found " + topics.size() + " ratings", true, topics);
     }

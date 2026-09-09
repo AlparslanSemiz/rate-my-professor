@@ -1050,7 +1050,7 @@ class SocialApiIntegrationTests {
 
     /**
      * A moderated comment must not come back through the sync route either. The filter is
-     * {@code findAllByStatus(VISIBLE)}, so the answer to this is structural rather than a
+     * {@code findAllByStatusOrderByCreatedAtDesc(VISIBLE)}, so the answer to this is structural rather than a
      * per-row check -- which is exactly why it is worth stating: a later rewrite that pages or
      * joins this query has to keep it.
      */
@@ -1339,5 +1339,55 @@ class SocialApiIntegrationTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value("Invalid request"));
+    }
+
+    /**
+     * Both app-tier comment listings carried no ORDER BY while the admin listing beside them
+     * did, and {@code Comment.answers} was a JPA bag with no {@code @OrderBy}. So the order a
+     * reader saw was the database's choice on three lists at once, free to differ between two
+     * requests for the same lecture -- F-21's defect, unswept.
+     *
+     * <p>Comments newest first, matching the admin listing; answers oldest first, because a
+     * thread under a question reads forwards.
+     */
+    @Test
+    void commentsComeBackNewestFirstAndTheirAnswersOldestFirst() throws Exception {
+        Session author = createSession("ordering-author@student.kit.edu");
+        Lecture lecture = createLecture();
+
+        Comment older = new Comment();
+        older.setContent("Asked first");
+        older.setStudent(author.student());
+        older.setLecture(lecture);
+        older.setCreatedAt(LocalDateTime.of(2026, 1, 1, 10, 0));
+        older = commentRepository.saveAndFlush(older);
+
+        Comment newer = new Comment();
+        newer.setContent("Asked second");
+        newer.setStudent(author.student());
+        newer.setLecture(lecture);
+        newer.setCreatedAt(LocalDateTime.of(2026, 1, 2, 10, 0));
+        commentRepository.saveAndFlush(newer);
+
+        Answer firstAnswer = new Answer();
+        firstAnswer.setContent("Answered first");
+        firstAnswer.setStudent(author.student());
+        firstAnswer.setComment(older);
+        firstAnswer.setCreatedAt(LocalDateTime.of(2026, 1, 3, 10, 0));
+        answerRepository.saveAndFlush(firstAnswer);
+
+        Answer secondAnswer = new Answer();
+        secondAnswer.setContent("Answered second");
+        secondAnswer.setStudent(author.student());
+        secondAnswer.setComment(older);
+        secondAnswer.setCreatedAt(LocalDateTime.of(2026, 1, 4, 10, 0));
+        answerRepository.saveAndFlush(secondAnswer);
+
+        mockMvc.perform(get("/social/comments/{lectureId}", lecture.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments[0].content").value("Asked second"))
+                .andExpect(jsonPath("$.comments[1].content").value("Asked first"))
+                .andExpect(jsonPath("$.comments[1].answers[0].content").value("Answered first"))
+                .andExpect(jsonPath("$.comments[1].answers[1].content").value("Answered second"));
     }
 }

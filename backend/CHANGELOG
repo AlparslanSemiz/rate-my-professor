@@ -763,3 +763,44 @@ clears them again.
 Panel: an administrator who only ever worked the bug queue can no longer be demoted. Strip the
 attribution first, or leave the account an administrator -- the same choice that already
 applied to warnings.
+
+
+///// 9.09 (11)
+
+
+Four more lists that had no defined order now have one. Same defect as F-21 and F-27, in the
+places those two fixes did not reach.
+
+    GET /ratings/own/{lectureId}
+    GET /admin/ratings
+
+Was: "ratings" / "topics" in whatever order the database returned them
+Now: RatingCategory declaration order -- OVERALL, ROOM, ORGANIZATION, MATERIALS, WORKLOAD,
+     LECTURE_*, PROFESSOR_*, EXERCISE_*, TUTOR_*
+
+The same order "GET /ratings/{lectureId}" has had since 9.09 (6). One response field cannot
+have two orders, and these two were reading a JPA collection with no ORDER BY while the third
+had been given an EnumMap.
+
+    GET /social/comments/{lecture_id}
+    GET /social/sync/comments
+
+Was: "comments" unordered, and "answers" under each comment unordered
+Now: comments newest first, answers oldest first
+
+Both listings had no ORDER BY at all, while the admin listing beside them always had one. The
+answers are oldest first because a thread under a question reads forwards; the comments are
+newest first, matching "GET /admin/comments".
+
+    GET /admin/audit-logs
+    GET /admin/activity-logs
+
+Was: "changes.professors" and "changes.lectures" recorded the id list in the order the
+     in-memory Set produced, which can differ between two runs of the same code
+Now: sorted
+
+Only the recorded value moved. Whether an assignment counts as changed was already
+order-insensitive -- that half was BUG-3's fix; this is the half it did not reach.
+
+Nothing to change if you sort or look up by key. If you render any of these lists in the order
+they arrive, they will stop reshuffling.

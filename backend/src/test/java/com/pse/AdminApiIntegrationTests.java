@@ -1509,8 +1509,14 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.ratings[0].lectureId").value(lecture.getId().toString()))
                 .andExpect(jsonPath("$.ratings[0].student.name").value("rater"))
                 .andExpect(jsonPath("$.ratings[0].topics", hasSize(2)))
-                .andExpect(jsonPath("$.ratings[0].topics[0].category").value("ORGANIZATION"))
-                .andExpect(jsonPath("$.ratings[0].topics[0].value").value(4.0));
+                // Inverted, not deleted. This read topics[0] == ORGANIZATION, which was the
+                // order the rows happened to be inserted in -- Rating.topics is a JPA bag and
+                // the listing walked it unordered, so the panel's column order was the
+                // database's choice. Sorted by category now, which for an enum is declaration
+                // order, and OVERALL is declared first. Same order as the two app-tier reads.
+                .andExpect(jsonPath("$.ratings[0].topics[0].category").value("OVERALL"))
+                .andExpect(jsonPath("$.ratings[0].topics[1].category").value("ORGANIZATION"))
+                .andExpect(jsonPath("$.ratings[0].topics[1].value").value(4.0));
     }
 
     @Test

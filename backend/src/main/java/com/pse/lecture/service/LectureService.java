@@ -191,7 +191,7 @@ public class LectureService {
 
     private LecturesResponse getLectures(boolean includeInactive){
 
-        Set<Lecture> lectures;
+        List<Lecture> lectures;
 
         if(includeInactive){
             lectures = lectureRepository.findAllByOrderByNameAsc();

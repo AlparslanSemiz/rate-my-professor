@@ -27,9 +27,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
-import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -126,7 +125,7 @@ class LectureServiceTests {
 
         Lecture lecture = mock(Lecture.class, RETURNS_DEEP_STUBS);
 
-        when(lectureRepository.findByActiveTrueOrderByNameAsc()).thenReturn(Set.of(lecture));
+        when(lectureRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(lecture));
 
         LecturesResponse response = lectureService.getLectures();
 
@@ -147,7 +146,7 @@ class LectureServiceTests {
         Lecture secondLecture = mock(Lecture.class, RETURNS_DEEP_STUBS);
 
 
-        when(lectureRepository.findAllByOrderByNameAsc()).thenReturn(Set.of(firstLecture, secondLecture));
+        when(lectureRepository.findAllByOrderByNameAsc()).thenReturn(List.of(firstLecture, secondLecture));
 
         LecturesResponse response = lectureService.getAllLectures();
 
