@@ -396,17 +396,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                         return;
                     }
                     updateLocalRatingsFromResponse(ratings);
-
-                    executorService.execute(() -> {
-                        List<Rating> storedUserRatings = searchService.getLectureRatings(lecture.id, Rater.USER);
-                        List<TopicAverageResponse> userRatings = new ArrayList<>();
-                        for (Rating rating : storedUserRatings) {
-                            if (!rating.category.equals(RatingCategory.OVERALL)) {
-                                userRatings.add(new TopicAverageResponse(rating.category, rating.score));
-                            }
-                        }
-                        runOnUiThread(() -> showRatings(ratings, formatUserRatings(ratings, userRatings)));
-                    });
+                    loadOwnRatings(ratings);
                 }
 
                 @Override
@@ -418,10 +408,96 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         }
     }
 
+
+    private void loadOwnRatings(List<TopicAverageResponse> averageRatings) {
+        String token = LoginSession.from(requireContext()).bearerToken();
+
+        apiService.getOwnRatings(token, lecture.id)
+                .enqueue(new Callback<RatingAverageResponse>() {
+                    @Override
+                    public void onResponse(
+                            Call<RatingAverageResponse> call,
+                            Response<RatingAverageResponse> response
+                    ) {
+                        RatingAverageResponse body = response.body();
+
+                        if (!response.isSuccessful()
+                                || body == null
+                                || body.ratings() == null) {
+                            loadCachedUserRatings(averageRatings);
+                            return;
+                        }
+
+                        List<TopicAverageResponse> ownRatings =
+                                new ArrayList<>(body.ratings());
+
+                        ownRatings.removeIf(rating ->
+                                rating.category() == null
+                                        || rating.category() == RatingCategory.OVERALL
+                        );
+
+                        updateLocalUserRatings(ownRatings);
+
+                        runOnUiThread(() ->
+                                showRatings(
+                                        averageRatings,
+                                        formatUserRatings(averageRatings, ownRatings)
+                                )
+                        );
+                    }
+
+                    @Override
+                    public void onFailure(
+                            Call<RatingAverageResponse> call,
+                            Throwable throwable
+                    ) {
+                        loadCachedUserRatings(averageRatings);
+                    }
+                });
+    }
+
+    /**
+     * Is used to load the users own local ratings for each category
+     * @param averageRatings
+     */
+    private void loadCachedUserRatings(
+            List<TopicAverageResponse> averageRatings
+    ) {
+        SearchService searchService =
+                Database.getInstance(requireContext()).searchService();
+
+        executorService.execute(() -> {
+            List<Rating> storedRatings =
+                    searchService.getLectureRatings(lecture.id, Rater.USER);
+
+            List<TopicAverageResponse> ownRatings = new ArrayList<>();
+
+            for (Rating rating : storedRatings) {
+                if (rating.category != RatingCategory.OVERALL) {
+                    ownRatings.add(new TopicAverageResponse(
+                            rating.category,
+                            rating.score
+                    ));
+                }
+            }
+
+            runOnUiThread(() -> {
+                if (ownRatings.isEmpty()) {
+                    showRatings(averageRatings, null);
+                } else {
+                    showRatings(
+                            averageRatings,
+                            formatUserRatings(averageRatings, ownRatings)
+                    );
+                }
+            });
+        });
+    }
+
     private void loadCachedRatings(SearchService searchService, Lecture lecture) {
         executorService.execute(() -> {
             List<Rating> storedAverages = searchService.getLectureRatings(lecture.id, Rater.AVERAGE);
-            List<Rating> storedUserRatings = searchService.getLectureRatings(lecture.id, Rater.AVERAGE);
+            List<Rating> storedUserRatings = searchService.getLectureRatings(lecture.id, Rater.USER);
             List<TopicAverageResponse> average = new ArrayList<>();
             List<TopicAverageResponse> userRatings = new ArrayList<>();
 
@@ -441,6 +517,27 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             }
 
 
+        });
+    }
+    /**
+     * Is used to update the local user database with the user ratings per category
+     * @param ratingResponses
+     */
+    private void updateLocalUserRatings(
+            List<TopicAverageResponse> ratingResponses
+    ) {
+        SearchService searchService =
+                Database.getInstance(requireContext()).searchService();
+
+        executorService.execute(() -> {
+            for (TopicAverageResponse response : ratingResponses) {
+                searchService.upsertRating(new Rating(
+                        lecture.id,
+                        response.category(),
+                        response.value(),
+                        Rater.USER
+                ));
+            }
         });
     }
 

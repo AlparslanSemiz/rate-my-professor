@@ -276,5 +276,9 @@ public interface APIService {
             @Body BugReportRequest request
     );
 
+    @GET("/ratings/own/{lectureId}")
+    Call<RatingAverageResponse> getOwnRatings(
+            @Header("Authorization") String token,
+            @Path("lectureId") String lectureId);
 
 }
