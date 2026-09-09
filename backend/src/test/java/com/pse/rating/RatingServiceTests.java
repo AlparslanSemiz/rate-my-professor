@@ -480,9 +480,10 @@ class RatingServiceTests {
 
         UUID lectureId = UUID.randomUUID();
 
-        when(ratingRepository.findByLectureId(lectureId))
-                .thenReturn(List.of());
-
+        when(ratingRepository.findByLectureIdAndStudentStatus(
+                lectureId,
+                UserStatus.ACTIVE
+        )).thenReturn(List.of());
 
         RatingsAverageResponse response = ratingService.getRatings(lectureId);
 
