@@ -193,30 +193,36 @@ rediscovered as bugs:
 
 # H. Notice, not a request
 
-## H1. The panel no longer calls `/activity-logs`
+## H1. The panel calls `/activity-logs` again — **withdrawn 2026-09-10**
 
-**Nothing is asked for here.** This is recorded only so the endpoint is not
-assumed to have a client in this repository.
+**Still nothing asked for, and now the opposite of what this said.**
 
-As of 2026-09-09 the admin panel has no Activity Log screen. It no longer calls
-`GET /activity-logs` or `GET /activity-logs/meta`, and its copy of the student
-action vocabulary (`USER_LOGIN`, `COMMENT_CREATED`, `RATING_SUBMITTED`,
-`LOGIN_REFUSED`, `ACCESS_REFUSED`, …) is gone with it.
+This entry recorded, on 2026-09-09, that the panel had deleted its Activity Log
+screen and no longer called `GET /activity-logs` or `GET /activity-logs/meta`.
+That decision was reversed the next day and the screen is back
+([ADR 0016](adr/0016-the-activity-log-screen-returns.md)). The panel is a client
+of both endpoints again, and of the full student action vocabulary —
+`USER_LOGIN`, `USER_LOGOUT`, `COMMENT_CREATED`, `ANSWER_CREATED`,
+`RATING_SUBMITTED`, `COMMENT_REPORT_CREATED`, `ANSWER_REPORT_CREATED`,
+`BUG_REPORT_CREATED`, `LOGIN_REFUSED`, `ACCESS_REFUSED`.
 
-**Please do not remove or change those endpoints on our account.** They are
-still written to, they remain the record of what students did, and the Android
-client or a future panel screen may want them. The audit half — `/audit-logs`,
-`/audit-logs/meta` and `/audit-logs/:id/revert` — is unaffected and is still the
-panel's only log source.
+**The line that mattered mattered more than we knew.** This entry asked you not
+to remove those endpoints on our account, on the grounds that a future panel
+screen might want them. It was a day, and the endpoints being untouched is why
+bringing the screen back cost a rebuild rather than a negotiation. Thank you for
+not acting on it.
 
-One consequence worth knowing: `/audit-logs/meta` may still report actor type
-`USER` and target types such as `USER_SESSION` and `ENDPOINT`. The panel keeps
-accepting all of them and renders whatever it is given, so nothing needs
-filtering on the backend side.
+Nothing changes for the backend either way. The panel reads both logs with the
+same parameters, pages them on the same cursor and reverts only on the audit
+half, which is the only half `POST /…/revert` is offered on.
 
-`docs/admin-api.md` still lists `/activity-logs/**` in its path-migration table,
-which is correct and is not a contradiction of the above: the endpoints move under
-`/admin` like everything else, and the panel simply is not one of their clients.
+The rest of the original entry still holds and is still worth knowing:
+`/audit-logs/meta` may report actor type `USER` and target types such as
+`USER_SESSION` and `ENDPOINT`, and the panel renders whatever it is given rather
+than narrowing your vocabulary to its own. `docs/admin-api.md` lists
+`/activity-logs/**` in its path-migration table, which is correct — those
+endpoints move under `/admin` with everything else, and the panel is now one of
+their clients when they do.
 
 ## H2. The panel has not moved to the `/admin` path prefix
 
@@ -236,3 +242,26 @@ Dropping the legacy routes today breaks the panel completely — every screen, n
 feature. **Please tell us before they go**, and we will move first.
 
 Tracked as `F-005` in `docs/testfindings.md`.
+
+
+---
+
+# I. Deleted accounts
+
+## I1. Showing and restoring a deleted account — asked for on the other page
+
+**The request itself lives in
+[`adminweb-tasks-from-backend.md` §6](adminweb-tasks-from-backend.md), not here.**
+It is written back onto the page the two teams already pass between them, so the
+question sits next to the answers it depends on. This entry exists so that a
+reader of *this* file is not left thinking nobody asked.
+
+In one line: an operator wants `DELETED` accounts listed and restorable, and the
+panel cannot do any part of it alone. Four separate refusals in `admin-api.md`
+stand in the way — `status=DELETED` is a `400`, soft-deleted rows are excluded
+from both reads regardless of parameters, `PATCH` cannot set `DELETED` back, and
+`USER_DELETED` is neither revertible nor carries any `before` value to restore
+from. The one that has to be settled first is whether anonymisation is reversible
+at all: if it is not, what is being asked for is "reactivate an anonymised
+account" rather than "undo the delete", and it needs to be named that way before
+anybody builds it.

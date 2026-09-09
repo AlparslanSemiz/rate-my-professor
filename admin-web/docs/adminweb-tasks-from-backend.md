@@ -323,3 +323,77 @@ Which is a signal that cannot arrive while tasks 1 and 2 are blocked, and that i
 legacy root paths are not going anywhere.** They are what carries the panel in production today.
 Nothing is deleted until the deployment routing is decided, the migration is shipped and this
 entry stops appearing — in that order.
+
+---
+
+## 6. From the panel: showing and restoring a deleted account needs four things
+
+**This section is the panel writing back, not the backend writing.** It is here rather than in
+`backend-tasks.md` so the question sits on the page the two teams are already passing between
+them; `backend-tasks.md` points at it.
+
+**The ask, in one line:** an operator wants deleted accounts to appear in the user listing and
+to be restorable. **The panel cannot do any part of this on its own**, and the reason is not
+that it has not been built — it is that this API refuses all four of the things it would need.
+Measured against `admin-api.md` as it stands on 10 September, not inferred:
+
+1. **`GET /users` refuses the filter.** `status` takes `ACTIVE`, `INACTIVE` or `BLOCKED`;
+   `DELETED` is a `400` with `Deleted users are not listed`.
+2. **Lifting the filter alone would change nothing.** "Soft-deleted accounts are excluded from
+   both reads" — they leave the listing and `404` by id, independently of any parameter. So the
+   exclusion and the filter are two separate refusals and both would have to move.
+3. **There is no restore, and `PATCH` cannot become one.** `status` accepts `ACTIVE` and
+   `BLOCKED`; `DELETED` is a `400`, and the document states the consequence directly: "a deleted
+   account cannot be restored — its identifying fields are already scrubbed."
+4. **The audit log is not a way back in, and we checked before asking.** The obvious idea is to
+   reach a deleted account through the revert machinery the panel already has. It does not
+   reach: `USER_DELETED` is not on the eleven-action revertible whitelist, so a revert is refused
+   with `ACTION_NOT_REVERTIBLE` before the `TARGET_MISSING` case is ever evaluated. And the
+   entry carries nothing to restore *from* — "nothing in the log carries the removed data".
+   `changes` is empty for a deletion; there are no `before` values.
+
+### The part that has to be said plainly before anyone builds this
+
+**Soft-delete anonymises, so a restored account's username and e-mail are gone.** Whatever is
+built here, the row that comes back is not the account that was deleted: it is that account's
+id, warnings and history attached to scrubbed identifying fields. That is a different feature
+from "undo the delete", and it should be named differently to whoever asked for it. If we are
+wrong about that — if the original values are retained somewhere and only hidden — that single
+answer changes the shape of everything below, which is why it is question 6.4 and not a
+footnote.
+
+### What is asked for
+
+- [ ] **6.1 — Accept `status=DELETED` on `GET /admin/users`.** Today a `400`. Nothing else about
+      the parameter needs to change.
+- [ ] **6.2 — Stop excluding soft-deleted rows from that one read, when and only when that
+      filter is present.** This is the one with a trap in it, so it is worth being explicit:
+      **the default listing must keep excluding them, and `counts.users` must keep excluding
+      them.** `admin-api.md` says that counter exists so a "total users" figure does not
+      over-report the platform, and the panel's dashboard, its Users stat cards and its
+      pagination all read those numbers. A change that widened the default would silently inflate
+      every count the panel shows.
+- [ ] **6.3 — A way to restore one.** A `POST /admin/users/{id}/restore` would suit the panel
+      better than teaching `PATCH` a third status, because restoring is not a field edit and the
+      document already gives that as the reason `PATCH` refuses `DELETED`. Whatever shape it
+      takes, it needs to say what it does to the anonymised fields and to the revoked sessions.
+- [ ] **6.4 — Say whether anonymisation is reversible at all.** If it is not, 6.3 is "reactivate
+      an anonymised account" and the panel will say so in the confirmation dialog, in those
+      words. If it is, say what comes back and what does not.
+- [ ] **6.5 — Say what the audit trail should look like.** A restore is an administrative action
+      and the panel would expect it in `/audit-logs`; there is no action for it in the meta
+      vocabulary today.
+
+### What the panel would then do, and what it costs
+
+Roughly **half a day**, none of it startable before 6.1–6.4 are answered: a `DELETED` option in
+`USER_STATUS_FILTERS` and its guard (both currently `Exclude<UserStatus, 'DELETED'>` with the
+refusal quoted in their doc comments), a restore action and mutation with a confirmation that
+states plainly what does not come back, the cache invalidation, a Help legend row, MSW handlers,
+and rows in the call-surface sweep and the resilience matrix.
+
+Two things the panel will fix on its own regardless of the answer, both recorded as findings:
+opening the edit form on a `DELETED` account maps it to `ACTIVE` and would then send
+`status: 'ACTIVE'` on save — unreachable today only because the listing excludes such accounts —
+and the panel's own copy calls the delete "permanent" and "cannot be undone" while this API
+calls it a soft delete plus anonymisation.
