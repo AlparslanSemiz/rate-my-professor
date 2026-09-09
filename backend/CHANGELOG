@@ -736,3 +736,30 @@ near-duplicate rows, that no longer works -- which was the point.
 One side effect worth knowing: a lecture created with a padded name used to record a bogus
 "name" change in the audit log on its first admin edit, because the PATCH path trims before
 comparing and the stored value did not. New lectures cannot get into that state.
+
+
+///// 9.09 (10)
+
+
+"PATCH /admin/users/{id}" refuses to demote an administrator who has dispositioned a bug
+report.
+
+Was: 200, the administrator was demoted and the bug reports it had dealt with lost their
+     attribution silently
+Now: 409 {"message": "Administrator has moderation history and cannot be demoted",
+          "success": false}
+
+No new rule -- this is the rule that was already documented, applied to the third of its three
+sources. Demotion has always been refused for an administrator who issued a warning or
+reviewed a comment or answer report. Bug reports were meant to count too and could not:
+"resolved_by_admin_id" existed with a foreign key and nothing in the application had ever
+written it.
+
+"PATCH /admin/reports/{id}" now records who changed a bug report's status, and when, the same
+way the comment and answer report endpoints have always recorded it. Neither field appears in
+any response, so the only thing a client sees is the 409 above. Moving a report back to OPEN
+clears them again.
+
+Panel: an administrator who only ever worked the bug queue can no longer be demoted. Strip the
+attribution first, or leave the account an administrator -- the same choice that already
+applied to warnings.

@@ -30,6 +30,10 @@ import org.springframework.http.HttpStatus;
 
 import java.util.Map;
 import java.util.Optional;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -57,6 +61,9 @@ import static org.mockito.Mockito.when;
 class ModerationBugReportServiceTests {
 
     private static final UUID REPORT_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
+    /** Fixed, per the house rule, so resolvedAt is an assertable value rather than "now". */
+    private static final Clock CLOCK =
+            Clock.fixed(Instant.parse("2026-09-09T12:00:00Z"), ZoneOffset.UTC);
     private static final String AUTH_HEADER = "Bearer token";
 
     @Mock private BugReportRepository repository;
@@ -67,7 +74,7 @@ class ModerationBugReportServiceTests {
 
     private ModerationBugReportService service() {
         return new ModerationBugReportService(
-                repository, identityService, auditWriter, gitLabClient, issueTransactions);
+                repository, identityService, auditWriter, gitLabClient, issueTransactions, CLOCK);
     }
 
     private static AuthenticatedUser principal() {
@@ -225,6 +232,43 @@ class ModerationBugReportServiceTests {
                 .extractingByKey("status")
                 .isEqualTo(Map.of("before", "OPEN", "after", "ACTION_TAKEN"));
         verify(repository).save(report);
+    }
+
+    /**
+     * The columns existed with a foreign key and nothing ever wrote them, so the BugReport
+     * clause of {@code AdminRepository.hasModerationHistory} could never be true. The two
+     * report services beside this one have always recorded the equivalent pair.
+     */
+    @Test
+    void updateBugReport_statusChanged_recordsWhoDealtWithItAndWhen() {
+        BugReport report = report();
+        reportExists(report);
+        AuthenticatedUser principal = principal();
+
+        service().updateBugReport(principal, REPORT_ID,
+                new BugReportUpdateRequest(ReportStatus.ACTION_TAKEN, null, null, null));
+
+        assertThat(report.getResolvedBy()).isSameAs(principal.admin());
+        assertThat(report.getResolvedAt()).isEqualTo(LocalDateTime.now(CLOCK));
+    }
+
+    /**
+     * OPEN is the one status that is not a disposition. Reopening has to clear the pair --
+     * leaving a name on an open report would say somebody dealt with it when nobody has.
+     */
+    @Test
+    void updateBugReport_reopened_clearsWhoDealtWithItAndWhen() {
+        BugReport report = report();
+        report.setStatus(ReportStatus.ACTION_TAKEN);
+        report.setResolvedBy(new Admin());
+        report.setResolvedAt(LocalDateTime.now(CLOCK).minusDays(1));
+        reportExists(report);
+
+        service().updateBugReport(principal(), REPORT_ID,
+                new BugReportUpdateRequest(ReportStatus.OPEN, null, null, null));
+
+        assertThat(report.getResolvedBy()).isNull();
+        assertThat(report.getResolvedAt()).isNull();
     }
 
     @Test

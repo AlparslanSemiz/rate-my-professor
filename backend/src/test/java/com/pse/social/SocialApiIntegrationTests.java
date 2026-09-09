@@ -1315,4 +1315,29 @@ class SocialApiIntegrationTests {
         assertThat(commentRepository.count()).isZero();
         assertThat(answerRepository.count()).isZero();
     }
+
+    /**
+     * Characterization of a half-built feature, found by the read-but-never-written sweep.
+     *
+     * <p>{@code SecurityConfig} declares {@code PATCH /social/notifications/all} as an
+     * authenticated route and {@code NotificationRepository.markAllAsSeen} is written and
+     * indexed -- but no controller maps it. So {@code /all} falls into
+     * {@code PATCH /social/notifications/{notification_id}}, fails to bind as a UUID, and
+     * answers 400. The security matcher and the query are the only evidence anyone intended
+     * a "mark everything read" action.
+     *
+     * <p>Pinned rather than fixed: writing the handler would be adding a feature, and
+     * deleting the query would throw away the record that one was planned. The choice is in
+     * docs/worklog.md. Whichever way it goes, this test is the one to invert.
+     */
+    @Test
+    void markingAllNotificationsAsSeenIsNotAnEndpointDespiteBeingDeclared() throws Exception {
+        Session student = createSession("notify-all@student.kit.edu");
+
+        mockMvc.perform(patch("/social/notifications/all")
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Invalid request"));
+    }
 }

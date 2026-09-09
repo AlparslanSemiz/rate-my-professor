@@ -2137,6 +2137,50 @@ class AdminApiIntegrationTests {
                 .isEqualTo(10);
     }
 
+    /**
+     * The third clause of {@code AdminRepository.hasModerationHistory} reads
+     * {@code BugReport.resolvedBy}, and nothing in the application ever wrote it -- no setter
+     * call in {@code src/main}, no default, no trigger. So an administrator whose entire
+     * moderation history is bug reports could be demoted, taking the attribution with it,
+     * while the same administrator could not be demoted over a single warning.
+     *
+     * <p>The comment and answer report services beside it both record {@code reviewedBy} and
+     * {@code reviewedAt} on every status change; the bug report service recorded neither.
+     * {@code docs/admin-api.md} already promised this: "Demoting is 409 once the account has
+     * moderation history -- a warning it issued or a report it reviewed".
+     */
+    @Test
+    void demotingAnAdministratorWhoResolvedABugReportIsRefused() throws Exception {
+        Session acting = createSession("admin@student.kit.edu", true);
+        Session other = createSession("bug-resolver@student.kit.edu", true);
+
+        BugReport report = new BugReport();
+        report.setTitle("Upload fails");
+        report.setDescription("broken");
+        report.setSeverity(BugSeverity.LOW);
+        report.setReporter(createStudent("bug-reporter@student.kit.edu"));
+        report = bugReportRepository.saveAndFlush(report);
+
+        mockMvc.perform(patch("/reports/{id}", report.getId())
+                        .header("Authorization", bearer(other.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"ACTION_TAKEN\"}"))
+                .andExpect(status().isOk());
+
+        // Who dealt with it, and when, are recorded the way the two report twins record them.
+        BugReport resolved = bugReportRepository.findById(report.getId()).orElseThrow();
+        assertThat(resolved.getResolvedBy()).isNotNull();
+        assertThat(resolved.getResolvedAt()).isNotNull();
+
+        mockMvc.perform(patch("/users/{id}", other.student().getId())
+                        .header("Authorization", bearer(acting.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"STUDENT\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("Administrator has moderation history and cannot be demoted"));
+    }
+
     @Test
     void demotingAnAdministratorWithModerationHistoryIsRefused() throws Exception {
         Session acting = createSession("admin@student.kit.edu", true);

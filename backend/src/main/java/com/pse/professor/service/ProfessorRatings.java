@@ -12,9 +12,14 @@ import com.pse.rating.service.RatingAverages;
  * teach.
  *
  * <p>Named because two unrelated places need the same walk and must not disagree about it.
- * {@code RatingService} recomputes the figure when a rating is submitted and stores it on the
- * row; the professor response recomputes it on read, so a rating removed by an administrator
- * is reflected without anyone having to remember to refresh the stored copy.
+ * Both recompute on read, so a rating an administrator removes is reflected without anyone
+ * having to remember to refresh a stored copy.
+ *
+ * <p>This paragraph used to say that {@code RatingService} recomputes the figure on submission
+ * and stores it on the row. It does not, and never did: {@code professors.average_rating} and
+ * {@code professors.rating_count} are written by nothing but the entity's field initialisers
+ * and read by nothing at all -- which is how {@code ratingCount} came to answer 0 for every
+ * professor (F-26). Both columns are dead and want dropping; see docs/worklog.md.
  */
 public final class ProfessorRatings {
 
