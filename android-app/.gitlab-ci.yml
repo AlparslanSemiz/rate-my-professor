@@ -6,6 +6,7 @@ workflow:
 stages:
   - check
   - test
+  - sonar
   - build
   - package
 
@@ -85,6 +86,23 @@ android:instrumentation-test:
     paths:
       - app/build/reports/androidTests/
       - app/build/outputs/androidTest-results/
+
+android:sonarcloud:
+  extends: .android-gradle
+  stage: sonar
+  script:
+    - >
+      ./gradlew
+      app:debugUnitTestCoverage
+      sonar
+      --no-daemon
+      -Dsonar.host.url="${SONAR_HOST_URL:-https://sonarcloud.io}"
+      -Dsonar.projectKey="$SONAR_PROJECT_KEY"
+      -Dsonar.organization="$SONAR_ORGANIZATION"
+      -Dsonar.coverage.jacoco.xmlReportPaths="app/build/reports/jacoco/**/*.xml"
+  rules:
+    - if: '$SONAR_TOKEN'
+
 
 android:build:
   extends: .android-gradle
