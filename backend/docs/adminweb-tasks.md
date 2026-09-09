@@ -179,6 +179,41 @@ worked example above, since the endpoint existed. Both are now pinned in
 so when you fix the mapper and update your contract document, our build goes red and the entry
 gets deleted. That is deliberate: it is how we find out.
 
+## 2b. Deactivating a lecture or professor hides it from your only list — F-42
+
+Not a backend defect, and not a field name this time: it is which of two routes you read.
+
+`GET /data/lectures` and `GET /data/professor` filter to `active = true`. That is what they
+are for — the app must not show a retired lecture. **The panel reads only those two**, so when
+an administrator sets `active: false` from the catalogue form the row leaves the list and there
+is no screen left that can see it. The `PATCH` that would set it back needs the id, and the id
+is only on the row that has just disappeared.
+
+The pair that exists for exactly this already answers:
+
+- [ ] Read `GET /data/lectures/all` and `GET /data/professor/all` on the catalogue screen —
+      `/admin/data/lectures/all` and `/admin/data/professor/all` once task 2 is done. They
+      return active and inactive rows, and every row carries `active`.
+- [ ] Add an **All / Active / Inactive** filter over that list, defaulting to Active so the
+      screen looks the way it does today. Inactive is the view that does not exist yet, and it
+      is the one that makes `PATCH {"active": true}` reachable.
+
+Nothing is lost when a row is deactivated, which is worth being precise about: the row keeps its
+id, its ratings and its comments, and `PATCH {"active": true}` restores it. The problem is only
+that the id is no longer on any screen you have, so there is nothing to aim the `PATCH` at.
+
+Your own contract document records `/data/lectures/all` and `/data/professor/all` as **"Not
+called. The panel deliberately reads the active-only public endpoints instead."** That was a
+reasonable choice while nothing could deactivate a row; the catalogue form is what changed it.
+Neither side is wrong on its own — this is a gap between two sensible decisions, which is why no
+test on either side sees it.
+
+**Until this is done, treat the `active` switch as one-way in the panel.** The backend can
+reverse it, but only through a request the panel does not currently make.
+
+**Scheduling:** this is agreed for the admin panel's deferred list, to be picked up **after
+submission**. Until then it is a known limitation rather than an open bug.
+
 ## 3. Handle a session that ends during the day
 
 Admin sessions are **one day** by default, not a year.

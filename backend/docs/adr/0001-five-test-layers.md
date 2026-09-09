@@ -1,8 +1,8 @@
-# 0001 — Four test layers, and the question each one answers
+# 0001 — Five test layers, and the question each one answers
 
 ## Decision
 
-Tests are organised into four layers plus a concurrency class, and each layer is defined by the
+Tests are organised into five layers plus a concurrency class, and each layer is defined by the
 **question it answers** rather than by the tool it uses:
 
 | Layer | The question |
@@ -30,7 +30,7 @@ holding a unit target at 100% coverage while *nothing stated what the unit was s
 `ModerationBugReportService` was the clearest case — 3 missed lines, 15 missed branches, because
 one valid submission in an integration test covers a six-armed refusal with one arm.
 
-**Unit tests only.** Cannot answer four of the six questions above. F-14 to F-17 were each wrong
+**Unit tests only.** Cannot answer five of the six questions above. F-14 to F-17 were each wrong
 on *every* route at once and invisible from any single class; BUG-1's cursor question needed a
 real column type; F-20's missing audit entry needed a real write path.
 

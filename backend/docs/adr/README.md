@@ -1,7 +1,8 @@
 # Architecture Decision Records
 
 One file per decision, in the form **Decision / Context / Alternatives considered / Rationale /
-Consequences**.
+Consequences**, each closing with a **Sources** section naming where the reasoning already
+lived.
 
 **Every record here is extracted, not invented.** The reasoning already existed — in
 `CHANGELOG` entries, in [test-findings.md](../test-findings.md), in
@@ -13,11 +14,11 @@ instead; a plausible-sounding reconstruction is worse than an admission.
 
 | # | Decision |
 |---|---|
-| [0001](0001-four-test-layers.md) | Four test layers, and the question each one answers |
+| [0001](0001-five-test-layers.md) | Five test layers, and the question each one answers |
 | [0002](0002-two-tier-coverage-gate.md) | A two-tier coverage gate: 0.90 mandatory, 0.95 advisory |
 | [0003](0003-gitlab-service-over-testcontainers.md) | A GitLab CI service instead of Testcontainers |
 | [0004](0004-twin-database-baselines.md) | Twin H2 and PostgreSQL baselines, differing in two lines |
-| [0005](0005-mutation-testing-scope.md) | Mutation testing scoped to eighteen context-free classes |
+| [0005](0005-mutation-testing-scope.md) | Mutation testing scoped to the context-free packages |
 | [0006](0006-lombok-not-filtered-from-coverage.md) | Lombok is not filtered out of the coverage report |
 | [0007](0007-characterization-and-inversion.md) | Characterization tests, inverted rather than deleted |
 | [0008](0008-single-responsibility-refactor.md) | A single-responsibility refactor that changed no interface |
@@ -26,3 +27,4 @@ instead; a plausible-sounding reconstruction is worse than an admission.
 | [0011](0011-narrow-exception-handlers.md) | Narrow `@ExceptionHandler`s over `ResponseEntityExceptionHandler` |
 | [0012](0012-documentation-under-test.md) | The admin API document is tested against the code |
 | [0013](0013-consumer-expectations-in-the-backend-repo.md) | Consumer expectations live here, as a generated list under test |
+| [0014](0014-legacy-auth-me-alias.md) | `GET /auth/me` restored as a time-boxed legacy alias |

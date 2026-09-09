@@ -14,6 +14,20 @@ not their fields.
 
 Arrows read **depends on** (`-->`) unless labelled. `..|>` is *implements*.
 
+**Package separation** is one diagram per package: the heading names the package, and every box
+without a stereotype belongs to it. A box carrying a package name as a stereotype —
+`<<com.pse.audit>>` on `AuditWriter` in diagram 2, for instance — is a class from **another**
+package, drawn because something in this one cannot be built without it. Those five boxes are
+where the package boundaries are actually crossed, and they are the arrows worth arguing about.
+
+**These diagrams have not been rendered.** There is no Mermaid renderer on the machine they were
+written on and no CI job that renders them, so what has been checked is structural: six balanced
+```mermaid``` fences, every arrow endpoint a declared class, and **all 99 class names verified to
+resolve to a file under `src/main`** (9 September). Syntax is limited on purpose to what the rest
+of this file already uses — `class`, `-->`, `..|>` and `<<stereotype>>` — rather than
+`namespace` blocks, so that a renderer that handles one diagram handles all six.
+**A look at the GitLab preview is still needed** before this goes in front of anyone.
+
 One diagram per area rather than one whole-application picture: the whole thing is 256 classes
 and a single graph of it is a picture of nothing.
 
@@ -131,7 +145,9 @@ classDiagram
     class SocialResponseMapper
     class ContentAudit
     class AnswerCleanup
-    class AuditWriter
+    class AuditWriter {
+        <<com.pse.audit>>
+    }
 
     SocialController --> CommentService
     SocialController --> AnswerService
@@ -247,7 +263,9 @@ classDiagram
     class AuditLogService
     class AuditWriter
     class AuditCursorCodec
-    class KeysetCursorCodec
+    class KeysetCursorCodec {
+        <<com.pse.shared>>
+    }
     class AuditRevertService
     class RevertValues
     class AuditRevertContext
@@ -332,6 +350,9 @@ classDiagram
     class Rating {
         +List~RatingTopic~ topics
     }
+    class RatingCategory {
+        <<enumeration>>
+    }
     class RatingTopic {
         +RatingCategory category
     }
@@ -371,7 +392,9 @@ every lecture a professor teaches — and must not disagree about it.
 classDiagram
     direction LR
 
-    class SecurityConfig
+    class SecurityConfig {
+        <<com.pse.config>>
+    }
     class BearerTokenAuthenticationFilter
     class TokenAuthenticationService
     class AuthenticatedUser {
@@ -382,7 +405,12 @@ classDiagram
     }
     class AccessRefusalAuditor
     class TokenHasher
-    class OtpHasher
+    class OtpHasher {
+        <<com.pse.auth>>
+    }
+    class AuditWriter {
+        <<com.pse.audit>>
+    }
 
     class GlobalExceptionHandler
     class ApiException

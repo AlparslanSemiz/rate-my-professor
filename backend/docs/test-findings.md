@@ -105,7 +105,7 @@ defect; it found a different kind.
 | [P-7](#p-7--a-surviving-mutant-is-not-a-finding) | A surviving mutant is not a finding | Process — how to read the mutation report | **Closed — recorded as a reading rule** |
 | [F-14](#f-14--500-when-a-required-query-parameter-is-missing) | 500 when a required query parameter is missing | Medium — wrong HTTP code | **Fixed** |
 | [F-15](#f-15--500-for-the-category-list-of-an-unknown-lecture) | 500 for the category list of an unknown lecture | Medium — wrong HTTP code | **Fixed** |
-| [F-16](#f-16--the-wrong-http-method-returns-404-instead-of-405) | The wrong HTTP method returns 404 instead of 405 | Medium — wrong HTTP code, on all 122 routes | **Fixed** |
+| [F-16](#f-16--the-wrong-http-method-returns-404-instead-of-405) | The wrong HTTP method returns 404 instead of 405 | Medium — wrong HTTP code, on every mapped route (122 at the time; see `docs/TODO.md` item 28) | **Fixed** |
 | [F-17](#f-17--an-unsupported-media-type-returns-500-instead-of-415) | An unsupported media type returns 500 instead of 415 | Medium — wrong HTTP code, on every route that reads a body | **Fixed** |
 | [F-18](#f-18--the-project-id-reaches-gitlab-encoded-twice) | The GitLab project id reaches the tracker encoded twice | High — the integration is dead for a path-shaped id | **Fixed** |
 | [F-19](#f-19--two-audit-response-fields-are-null-by-design-and-the-schema-said-otherwise) | Three audit response fields are null by design, declared non-nullable | Medium — the API contradicts its own schema | **Fixed** |
@@ -118,7 +118,7 @@ defect; it found a different kind.
 | [F-26](#f-26--ratingcount-on-a-professor-is-always-0) | `ratingCount` on a professor is always 0 | Medium — a field that has never been right | **Fixed** |
 | [F-27](#f-27--the-rating-categories-come-back-in-a-different-order-each-run) | `GET /ratings/{lectureId}` orders its categories by identity hash | Medium — F-21's shape, on a public read | **Fixed** |
 | [F-28](#f-28--submitting-a-rating-for-an-unknown-lecture-answers-200) | `POST /ratings/rate` answers 200 for an unknown lecture | Low — the last route on the old convention | **Fixed** |
-| [F-29](#f-29--three-more-leaked-credentials-nobody-had-found) | Three more leaked credentials, in commits the rotation list did not name | High — unrotated, and one is in a document | **Open — needs rotation** |
+| [F-29](#f-29--three-more-leaked-credentials-nobody-had-found) | Three more leaked credentials, in commits the rotation list did not name | High — unrotated, and one is in a document | **Open — needs a rotation at the provider, not a commit** |
 | [F-30](#f-30--a-rate-limiter-that-is-only-correct-because-a-clock-in-another-file-is-utc) | The rate limiter is correct only because `TimeConfig` is UTC | Low today — a landmine under an unrelated change | **Documented** |
 | [P-1](#p-1--the-coverage-baseline-number-was-wrong) | The coverage baseline number was wrong | Process | **Fixed** (re-measured) |
 | [P-2](#p-2--integration-tests-hide-unit-targets) | Integration tests hide unit targets | Process | **Fixed** (method changed) |
@@ -138,6 +138,10 @@ defect; it found a different kind.
 | [F-41](#f-41--get-accountratings-served-its-ratings-in-no-defined-order) | `GET /account/ratings` served its ratings in no defined order | Medium — F-21's shape, on the list its sweep missed | **Fixed** |
 | [P-8](#p-8--admin-apimd-drifted-four-times-and-nothing-noticed) | `admin-api.md` drifted from the code four times with no mechanism | Process | **Fixed** (under test) |
 | [P-6](#p-6--a-sweep-asserted-not-refused-which-a-404-also-satisfies) | A sweep asserted "not refused", which a `404` also satisfies | Process | **Fixed** |
+
+**F-42 has a number but is not one of the fifty.** It is a defect in the admin panel that this
+API cannot pin with a test, recorded [at the end of the findings](#f-42--deactivating-a-catalogue-row-hides-it-from-the-only-list-the-panel-reads)
+with the reason it is not an entry.
 
 **Two entries are open: F-29, which no commit can close, and F-34, which is a product
 decision rather than a defect.** Everything else is fixed or closed by a recorded decision.
@@ -1134,7 +1138,9 @@ out from under it — and only an assertion strict enough will say so.
 **Where.** The `pitest` profile in `pom.xml`, and how its report is read.
 
 **What happened.** Mutation testing was added on 8 September and its first run scored 67%:
-1194 mutants, 797 killed, 73 survived, 324 with no coverage. One survivor read as serious --
+1194 mutants, 797 killed, 73 survived, 324 with no coverage. (Re-measured 9 September: **1134
+mutants, 840 killed — 74% — 72 survived, 222 with no coverage.** The figures in this paragraph
+are the first run's, kept because the rest of the entry is about what that run taught.) One survivor read as serious --
 `removed call to protectAdministrator` in `ModerationUserService.warnStudent`, which is an
 authorization guard with two rules ("you cannot moderate your own account", and an ordinary
 administrator cannot modify an administrator account). A guard whose deletion no test notices
@@ -1866,6 +1872,43 @@ now. A fixture that cannot express the disorder it is testing for is a test that
 
 ---
 
+### F-42 — deactivating a catalogue row hides it from the only list the panel reads
+
+**Not counted in the fifty above, and deliberately not written up as a finding here**, because
+nothing in this repository pins it and nothing in this repository can. It has a number so the
+number is not reused, and so the trail from the demo note and the board leads somewhere.
+
+**What.** `GET /data/lectures` and `GET /data/professor` filter to `active = true`, which is
+what they are for. The panel reads only those two; `GET /data/lectures/all` and
+`GET /data/professor/all` — which exist precisely so a deactivated row stays reachable, per
+`ModerationCatalogController:38-40` — are recorded in the panel's own contract as *"Not
+called"*. So an administrator setting `active: false` from the catalogue form removes the row
+from every screen the panel has, and the `PATCH {"active": true}` that would undo it needs an id
+that is no longer displayed anywhere.
+
+**Why it is not an entry with a test.** The defect is in the panel repository: this API serves
+both the filtered list and the unfiltered one, and reversing the flag works. A test here would
+assert that `/data/lectures/all` returns inactive rows — which
+`ConsumerContractSweepTests` already covers as a served route — and would say nothing about the
+client that does not call it. The rule this repository works to is that
+[a finding is only really recorded if a test pins it](#at-a-glance); this one cannot be, so what
+is recorded instead is **why**.
+
+**Nothing is lost, which is the part to state precisely.** The row keeps its id, its ratings and
+its comments, and `PATCH {"active": true}` restores it — `active = false` is what the API offers
+*instead* of deleting. The defect is that the id is no longer on any screen the panel has, so
+there is nothing to aim the `PATCH` at. It is one-way from the panel, not one-way in the system.
+
+**Where it lives.** `docs/adminweb-tasks.md` task 2b (the work, agreed for the panel's deferred
+list after submission), `docs/TODO.md` item 32 (the board, with how it was measured and the
+estimate), and `docs/coursework/demo-notes.md` (do not touch the switch during the demo).
+
+**Found by** reading the two catalogue services against the panel's called-route list while
+writing the delivery documents — the same method that produced F-39 and F-40, applied to a
+route pair rather than to a route.
+
+---
+
 ## Negative results
 
 A sweep that finds nothing is only worth something if what it covered is written down.
@@ -2370,6 +2413,44 @@ number is only worth what the conditions it was measured under are.
 **Status. Fixed** — every figure in both documents is now a `clean verify` figure, and the
 sentence saying so sits next to them in test-plan.md. Quote no coverage number that did not
 come from `./mvnw clean verify`.
+
+### P-9 — A cache is not an input
+
+**What happened.** The first CI run of `dependency:scan` failed with `FATAL Error remote Maven
+repository returned 429 Too Many Requests for
+https://repo.maven.apache.org/maven2/org/springframework/integration/spring-integration-bom/7.0.6/spring-integration-bom-7.0.6.pom.
+Retry-After: 1800.` The job's own comment named a different suspect — Trivy's vulnerability
+database being rate-limited from a shared runner IP — and that download had finished four
+seconds earlier, in the same log.
+
+**Why.** Trivy reads `pom.xml` and resolves the parent-pom chain itself. With a warm `~/.m2` it
+resolves locally and fetches nothing, which is how it was verified before the job was written,
+and the job was built to guarantee that warm repository two ways: it caches `.m2/repository`,
+and `needs: server:test` orders it after the job that fills the cache. Neither guarantees
+anything. `needs:` orders two jobs; it does not put them on one machine. And the runner log says
+`No URL provided, cache will not be downloaded from shared cache server` — there is no
+distributed cache here, so a cache exists only on the Kubernetes node that wrote it.
+`server:test` warmed one node, the scan started on `runner.example.org` with `Cache file does
+not exist`, and a cold resolution went to an IP the whole runner cluster shares.
+
+**Why it matters beyond this job.** A cache is allowed to miss — that is what makes it a cache
+rather than an input. Anything a job needs in order to be *correct* has to arrive by a route
+that cannot silently be empty, and in GitLab that route is an artifact. The tell was in the job
+comment all along: it explained why the cache would be warm. A comment that argues an
+optimisation will always be there is describing a dependency.
+
+**Status. Fixed** — `server:test` writes the resolved tree to
+`target/classes/META-INF/sbom/application.cdx.json` (cyclonedx-maven-plugin, version managed by
+`spring-boot-starter-parent`) and publishes it as an artifact; `dependency:scan` runs
+`trivy sbom` on it and resolves no Maven coordinate at all. Checked locally in both directions,
+because a scan that looks at less and a scan that cannot fail both read as a pass: the SBOM
+scan's package list is identical to the old `trivy fs .` list except that it adds
+`org.projectlombok:lombok`, which Trivy's pom parser dropped (107 packages, 0 findings, the same
+0); and rebuilding the SBOM against `spring-boot-starter-parent` 4.0.6 — the version 4.0.8
+replaced — still exits 1, on 13 HIGH. **Unverified in CI**, like everything here: no token.
+Item 10 in [TODO.md](TODO.md).
+
+---
 
 ---
 

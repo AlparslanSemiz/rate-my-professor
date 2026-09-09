@@ -55,7 +55,8 @@ red and reading the message.
 
 ## Sources
 
-`pom.xml` (the `check` execution comments); `.gitlab-ci.yml:26-30`;
+`pom.xml` (the `check` execution comments); `.gitlab-ci.yml`, the `COVERAGE_LINE_MIN` and
+`COVERAGE_LINE_TARGET` variables and the `coverage:line-target` job that reads them;
 [test-plan.md](../test-plan.md) — *Three different coverage numbers*;
 [P-1](../test-findings.md#p-1--the-coverage-baseline-number-was-wrong),
 [P-5](../test-findings.md#p-5--coverage-measured-without-clean-is-not-the-coverage-ci-measures).

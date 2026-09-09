@@ -18,7 +18,9 @@ the size limit). Extending the base class is the first fix that comes to mind fo
 ## Alternatives considered
 
 **Extend `ResponseEntityExceptionHandler`.** Tried, measured, and wrong for three separate
-reasons — verified against this project's Spring Framework 7.0.7:
+reasons — verified against this project's Spring Framework 7.0.9 (resolved by
+`spring-boot-starter-parent` 4.0.8; the reasons were first checked against 7.0.7 and re-checked
+after the bump):
 
 1. **The application does not start.** The context fails with
    `IllegalStateException: Ambiguous @ExceptionHandler method mapped for …

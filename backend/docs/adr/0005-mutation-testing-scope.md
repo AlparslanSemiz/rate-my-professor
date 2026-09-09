@@ -1,10 +1,16 @@
-# 0005 — Mutation testing scoped to eighteen context-free classes
+# 0005 — Mutation testing scoped to the context-free packages
 
 ## Decision
 
 PIT runs in a Maven **profile** so it never runs in the ordinary build, and it is pointed at
-the service, mapper, mail, page, revert and security packages — **eighteen test classes**, all
-plain JUnit with no Spring context. There is deliberately **no `mutationThreshold`**.
+the service, mapper, mail, page, revert and security packages — the classes whose tests are
+plain JUnit with **no Spring context**. There is deliberately **no `mutationThreshold`**.
+
+The scope is written as package globs, not a list of classes, which is why it survived the
+single-responsibility refactor without being touched. It was **eighteen** test classes when
+this record was written; the same globs now match **50 test classes over 77 mutated classes**,
+because the refactor split large services into small ones. The decision did not change — the
+number it produces is not part of it.
 
 Run it with:
 `./mvnw -Ppitest test-compile org.pitest:pitest-maven:mutationCoverage`
@@ -29,7 +35,10 @@ setting once the report has been triaged — the same order the coverage floors 
 ## Rationale
 
 The house rule is that unit tests use no Spring context, which is precisely what makes this
-subset cheap to re-run per mutant. 1194 mutants, 67% killed, in under two minutes.
+subset cheap to re-run per mutant. **1134 mutants, 840 killed (74%), 72 survived, 222 with no
+coverage, in under two minutes** — measured 9 September, `target/pit-reports/`. The first run,
+on 8 September, was 1194 mutants and 67% killed; the score moved on tests written since, not on
+a change to the scope.
 
 The four mail classes are **excluded** rather than left to fail: they are recorded under
 *Deliberately uncovered* and have no unit tests at all, so every mutant survives. That is not
@@ -38,14 +47,15 @@ findings that would bury the real ones.
 
 ## Consequences
 
-- **`SURVIVED` means "these eighteen classes do not kill it", not "the suite misses it".** The
+- **`SURVIVED` means "the classes in this profile do not kill it", not "the suite misses it".** The
   first report's most alarming survivor turned out to be covered by two `AdminApiIntegrationTests`
   all along. A survivor is a candidate to investigate, not a finding —
   [P-7](../test-findings.md#p-7--a-surviving-mutant-is-not-a-finding) records this as a reading
   rule.
-- 222 mutants have no coverage because the profile targets classes whose tests it does not run.
-  Fixing the `targetTests` scope, **then** setting a threshold, is `docs/TODO.md` item 12, in
-  that order.
+- **222 mutants have no coverage** because the profile targets classes whose tests it does not
+  run. Fixing the `targetTests` scope, **then** setting a threshold, is `docs/TODO.md` item 12,
+  in that order. Read this number from `target/pit-reports/` rather than from here: the first
+  run reported 324, and the two are different runs rather than a contradiction.
 - The `targetTests` globs had to be widened once already: a narrower pattern silently dropped a
   class the moment a collaborator was split out under a name like `RatingAverages` — it stayed
   in `targetClasses`, its tests matched nothing, and every mutant survived for want of anything

@@ -11,12 +11,13 @@ Testcontainers question — turned out not to be a blocker at all; see
 
 ### Where it stands
 
-**1001 tests, 0 failures**, 31 skipped locally (the `@Disabled` `DemoApplicationTests`, the
+**1019 tests, 0 failures**, 31 skipped locally (the `@Disabled` `DemoApplicationTests`, the
 twenty-four PostgreSQL integration tests and the six end-to-end journeys, all of which run in
 CI).
-Bundle **96.67% LINE** (3363/3479), **93.16% BRANCH** (1022/1097) at the time of writing. Line
-coverage is gated in two tiers — **90% mandatory, 95% target** — and BRANCH has a single floor,
-ratcheted to 0.88 now that batch 7 has cleared it.
+Bundle **96.70% LINE** (3371/3486), **93.16% BRANCH** (1022/1097) — read from
+`target/site/jacoco/jacoco.csv` after `./mvnw clean verify` on **9 September**, exit code 0.
+Line coverage is gated in two tiers — **90% mandatory, 95% target** — and BRANCH has a single
+floor, ratcheted to 0.88 now that batch 7 has cleared it.
 
 > **Do not quote these two numbers from here.** They are a snapshot; the artefact is
 > `target/site/jacoco/jacoco.csv` after `./mvnw clean verify`, which is what CI reads and what
@@ -24,6 +25,13 @@ ratcheted to 0.88 now that batch 7 has cleared it.
 > day it is quoted is a figure that was true once — which is
 > [P-5](test-findings.md#p-5--coverage-measured-without-clean-is-not-the-coverage-ci-measures)
 > and [P-1](test-findings.md#p-1--the-coverage-baseline-number-was-wrong) both.
+>
+> **And read the build's exit code from the build, not from the line after it.** A previous
+> pass reported this suite green on an `exit 0` that came from an `echo` at the end of the
+> command rather than from Maven: the shell reports the status of the *last* command in a
+> list, so `./mvnw verify; echo done` is always 0. Capture `$?` immediately, or let Maven be
+> the last thing that runs. Every number on this page was re-measured on 9 September because
+> that one was not checkable.
 
 Both figures moved on the refactor rather than on new coverage work: the denominators fell as
 duplicated code was collapsed, and the classes that came out of the split are small enough to
@@ -76,11 +84,20 @@ still needs no Docker. Its first result was ruling out the BUG-1 timestamp hypot
 [The integration layer](#the-integration-layer).
 
 The spread between LINE and BRANCH was 15 points before batch 4, 9.7 after it, 8.9 after batch
-5, and is **6.2** after batch 6. 125 branches and 154 lines are left in the whole module. The
-largest remaining branch gaps are `ModerationUserService` (27), `SocialService` (13),
-`ModerationContentService` (12) and `AuditLogService` (11) — and a growing share of what is
-left is not unit-testable at all: Criteria predicates, specification lambdas, and the two mail
-classes under *Deliberately uncovered*. See the note at the end of the batch 6 section.
+5, and 6.2 after batch 6; it is **3.5** today. **75 branches and 115 lines** are left in the
+whole module (9 September, `jacoco.csv`).
+
+The four classes this paragraph used to name as the largest branch gaps —
+`ModerationUserService` (27), `SocialService` (13), `ModerationContentService` (12) and
+`AuditLogService` (11) — **are batch-6 figures and three of those classes no longer exist**;
+the single-responsibility refactor split them, and the counts went with the pieces. What the
+report shows now is a long flat tail rather than a few large holes: the biggest is
+`UserListQuery` at 6 missed branches, then `AuditRevertService` at 5 and
+`BugReportIssueTransactions` at 4, and nothing else is above 3. The line side is still
+concentrated, and still where *Deliberately uncovered* says it is: `HtmlMailSender` (19),
+`LoginNotificationMail` (15), `MailTemplateService` (12) and `LoginCodeMail` (8) are 54 of the
+115. A growing share of the rest is not unit-testable at all — Criteria predicates and
+specification lambdas. See the note at the end of the batch 6 section.
 
 ### The metric
 
@@ -182,7 +199,7 @@ To keep them apart: these numbers measure different things; this is not an incon
   `coverage:line-target` job — `allow_failure: true` — turns the same condition into a
   visible yellow mark on the pipeline while letting it pass. It is where the suite is
   trying to be, not a gate.
-- **The BRANCH floor, `0.87`,** in the pom only. A floor, not a target: without it a
+- **The BRANCH floor, `0.88`,** in the pom only. A floor, not a target: without it a
   heavily branched method can arrive with one happy-path test and pull branch coverage down
   without failing anything. Batch 4 was chosen by this counter rather than by LINE, because
   every class it touched was already above 82% LINE and a line target would never have
@@ -435,9 +452,12 @@ expected minimum is 0.92", and green at `0.87`.
 
 ### Where the unit layer stops
 
-124 branches and 154 lines are left in the module, and the composition has changed: 46 lines
-are `MailService` and 12 are `MailTemplateService`, both decisions recorded under
-*Deliberately uncovered*; a large share of the rest is Criteria predicates and specification
+**As batch 6 left it:** 124 branches and 154 lines were left in the module, and the composition
+had changed: 46 lines were `MailService` and 12 `MailTemplateService`, both decisions recorded
+under *Deliberately uncovered*. `MailService` has since been split into `HtmlMailSender`,
+`LoginCodeMail` and `LoginNotificationMail` — the name in this paragraph is the one the class
+had at the time, kept for the same reason the findings keep theirs, and the current figures are
+in *Where it stands*. A large share of the rest is Criteria predicates and specification
 lambdas, which build a query rather than compute an answer. Chasing those with mocks would
 assert the shape of a query nobody runs.
 
@@ -545,7 +565,9 @@ F-17, and **all four are fixed** — three of them after the batch, in the pass 
 findings document:
 
 - **F-16** — a path that exists, called with a verb it does not map, answered **404 instead of
-  405**, on all 122 routes. It was pinned rather than fixed here, as a contract change with two
+  405**, on every mapped route — 122 of them when the finding was written, a count that has
+  since drifted and is not re-derived here (`docs/TODO.md` item 28). It was pinned rather than
+  fixed here, as a contract change with two
   documented dependents. Both turned out to be documentation *of* the defect rather than uses
   of it, so it was fixed: 405 with an `Allow` header naming the verbs that do map.
 - **F-17** — a body in a media type no converter can read answered **500 instead of 415** on
@@ -995,13 +1017,15 @@ expected until the rotations are done and an expected red must not be able to bl
 
 **Mutation testing (`mutation:nightly`).** Coverage says every line ran. It says nothing about
 whether any assertion would have failed had the line been wrong, and that gap has been found by
-hand here more than once — P-6 most clearly. PIT answers it mechanically: 1194 mutants, 67%
-killed, in under two minutes.
+hand here more than once — P-6 most clearly. PIT answers it mechanically: **1134 mutants, 840
+killed (74%), 72 survived, 222 with no coverage**, in under two minutes — 9 September, read
+from `target/pit-reports/`. The first run, 8 September, was 1194 mutants at 67%.
 
 Read its report with the caveat [P-7](test-findings.md#p-7--a-surviving-mutant-is-not-a-finding)
-records. The profile runs only the eighteen context-free service unit test classes, because
-pointing PIT at the whole suite would start a Spring context per mutant. So `SURVIVED` means
-"these eighteen classes do not kill it", not "the suite misses it" — the first report's most
+records. The profile runs only the context-free service unit test classes — 50 of them today, over 77
+mutated classes — because pointing PIT at the whole suite would start a Spring context per
+mutant. So `SURVIVED` means "the classes in this profile do not kill it", not "the suite misses
+it" — the first report's most
 alarming survivor turned out to be covered by two `AdminApiIntegrationTests` all along. A
 survivor is a candidate to investigate, not a finding.
 
@@ -1091,6 +1115,9 @@ and while `POST /answers/report` answered 405 to every report the Android app ha
 ([F-40](test-findings.md#f-40--post-answersreport-was-never-served-and-every-report-from-the-app-failed-silently)).
 Correct behaviour on the routes that exist says nothing about the routes a client calls.
 
+The suite went 1001 → **1019** tests over this layer and the three fixes it produced (F-39,
+F-40, F-41); LINE 96.67% → 96.70%, BRANCH unchanged at 93.16%.
+
 ### What it reads
 
 Two documents in `docs/`, each an audit written **in the consumer's own repository** against its
@@ -1147,9 +1174,10 @@ and one new `RatingCategory` would crash the app's rating screen.
 
 ## Where the suite stops
 
-*Deliberately uncovered* below names two **classes** nobody tests and why. This section names
-four **questions** nobody tests, which is the larger and less visible gap: absence is not a
-defect, but an *unwritten* absence is — it reads as an oversight to anyone auditing this, and
+*Deliberately uncovered* below names the **classes** nobody tests and why. This section names
+six **questions** nobody tests — four the suite was drawn around, one a sweep's own filter, and
+one that is about where the tests run rather than what they cover. That is the larger and less
+visible gap: absence is not a defect, but an *unwritten* absence is — it reads as an oversight to anyone auditing this, and
 the next person either re-derives the reasoning or, worse, assumes the question was answered.
 
 Each of these is a boundary the suite was drawn to, not a hole in it. Written so that crossing
@@ -1251,11 +1279,75 @@ down the first two; the sweep found three more:
 The last one is the same shape as F-30 and is recorded here for the same reason: it is true,
 nothing states it, and the file that would have to change is not the file that would break.
 
+
+### The documentation drift sweep only looks at `/admin` in one direction
+
+`AdminApiDocumentationDriftTests` checks `docs/admin-api.md` against the code **both ways**, and
+the two ways do not cover the same surface.
+
+- **Document → code** covers every row in the contract table, whatever its path.
+- **Code → document** — `everyAdministrativeRouteTheApplicationMapsIsInTheDocument` — filters on
+  `route.contains(" /admin")`.
+
+So the reverse direction sees only the `/admin`-prefixed surface, and **the entire legacy surface
+the panel actually calls today is outside it**: `/data/**`, `/auth/**`, `/users/**` and the rest
+of the unprefixed routes. A route added there can be undocumented without this test noticing.
+The document→code direction still catches a row that documents something the code does not serve,
+so the gap is one-sided: **undocumented legacy routes, specifically.**
+
+This is a scope limit and not a defect to fix here. The filter is what makes the assertion mean
+"the admin API is documented" rather than "every route in the application is in the admin API
+document", which is not true and is not meant to be. It stops mattering when
+`docs/TODO.md` item 23 lands and the legacy surface is deleted; until then, the thing to know is
+that this sweep is not what would catch a new undocumented `/data` route.
+
+Recorded against the same filter in
+[test-findings.md](test-findings.md#p-8--admin-apimd-drifted-four-times-and-nothing-noticed).
+
+### Four layers do not run on a developer machine, and CI status cannot be read from here
+
+`./mvnw clean verify` runs the unit, API/role and contract layers and nothing else. The rest
+either skips itself or lives only in the pipeline, which means **a green local build is not a
+green project** and the difference should not have to be rediscovered.
+
+| Layer / job | Trigger | In CI | Locally |
+|---|---|---|---|
+| `server:test` — unit, API/role, contract, JaCoCo, `COVERAGE_LINE_MIN=90` | push + MR, never on schedule | runs, **blocking** | runs |
+| `coverage:line-target` — the `COVERAGE_LINE_TARGET=95` tier, `--fail-on-target` | push + MR | runs, **`allow_failure`** — yellow, never red | the same script runs inside `verify`, without the gate |
+| `server:postgres-integration`, first invocation — the six PostgreSQL classes, 24 tests | push + MR | runs, **blocking** | **does not run** — the tests skip themselves unless `POSTGRES_SMOKE_JDBC_URL` is set, which is what keeps the local build Docker-free |
+| `server:postgres-integration`, second invocation — `EndToEndJourneyTests`, six journeys | push + MR | runs, **blocking** | **does not run**, same reason |
+| `secrets:new` — gitleaks over the new commit range | push + MR | runs, **blocking** | **does not run** — gitleaks is not installed here |
+| `secrets:history` — gitleaks over the whole history | **schedule only** | **`allow_failure`**, and expected red until the rotations are done | does not run |
+| `mutation:nightly` — PIT | **schedule only** | **`allow_failure`** | runs on demand: `./mvnw -Ppitest test-compile org.pitest:pitest-maven:mutationCoverage` |
+| `dependency:scan` — Trivy over the SBOM `server:test` publishes | push + MR | runs, **blocking** | does not run |
+| `sonarcloud` | push + MR, **and only if `$SONAR_TOKEN` exists** | `allow_failure`; with no token it does not run at all | does not run |
+| `health:check`, `backup:offsite` | **schedule only** | run against the deployment | do not run |
+| `server:package` / `server:deploy:staging` | `main`, non-schedule / the same plus `when: manual` | run / by hand | do not run |
+| Mermaid rendering for `class-diagrams.md` | — | **there is no such job** | no renderer here |
+
+Two things that are easy to misread from the job list:
+
+- **E2E has no job of its own.** It is the second Maven invocation inside
+  `server:postgres-integration`, sharing one PostgreSQL service with the integration classes.
+  Each invocation asserts it started **exactly one** Spring context, by counting
+  `PostgresTestDatabase: resetting the public schema` in its own log — two contexts would mean
+  two classes resetting the schema under each other, and everything above the check would have
+  proved nothing.
+- **`secrets:history` is expected to be red.** All twelve fingerprints in `.gitleaksignore` are
+  still commented out, because a line is uncommented only after that credential is rotated at
+  its provider. It is `allow_failure` for exactly that reason — see F-29 and the rotation table
+  in `docs/TODO.md`.
+
+**Pipeline status cannot be checked from this repository.** CI is a private GitLab and there is
+no token on this machine, so nothing here has seen a job result: the table above is read from
+`.gitlab-ci.yml`, and it says what *should* run, not what *did*. **No claim is made that the
+last pipeline was green.** Job output has to be pasted in by somebody who can open it.
+
 ---
 
 ## Deliberately uncovered
 
-Two classes are visibly low and neither is an oversight. Saying so here is the point: an
+Four classes are visibly low and none of them is an oversight. Saying so here is the point: an
 unexplained 0% reads as neglect, and the next person re-derives the reason or, worse, writes a
 test that pins an adapter's plumbing. The table had a third row until batch 5 —
 `RestClientGitLabClient`, described there as debt rather than as a decision. It is covered now,
@@ -1264,12 +1356,16 @@ readable: everything still in it is a decision.
 
 | Class | LINE | Why |
 |---|---|---|
-| `MailService` | **0.0%** (0/46) | An SMTP adapter behind `LoginCodeDelivery` / `LoginSuccessDelivery`. Every test substitutes `CapturingLoginCodeDelivery` through `TestDeliveryConfig`, so the real class is never constructed. Testing it means mocking `JavaMailSender` and asserting on a `MimeMessageHelper` — that is, asserting that the adapter calls the library the way the library documents. Its logic worth testing (the location lookup, the template fill) already lives in `LoginLocationService` and `MailTemplateService`. |
+| `HtmlMailSender` | **24.0%** (6/25) | The SMTP adapter itself, behind `LoginCodeDelivery` / `LoginSuccessDelivery`. Every test substitutes `CapturingLoginCodeDelivery` through `TestDeliveryConfig`, so the real class is never constructed. Testing it means mocking `JavaMailSender` and asserting on a `MimeMessageHelper` — that is, asserting that the adapter calls the library the way the library documents. |
+| `LoginNotificationMail` | **0.0%** (0/15) | Template fill for the login-notification mail. Reached only through `HtmlMailSender`, and its logic worth testing — the location lookup and the map fragment — already lives in `LoginLocationService` and `LoginMapFragment`, both of which are tested. |
+| `LoginCodeMail` | **0.0%** (0/8) | Template fill for the one-time-code mail. Same seam and the same reason. |
 | `MailTemplateService` | **7.7%** (1/13) | Its entire job is reading template files from `static/mail/` off the classpath and substituting `{{placeholders}}`. The house rule for unit tests is no file system; a test here would either break that rule or assert over its own fixture. It is a candidate for the integration layer, not this one. |
 
-`MailService` stays out of reach of the suite by construction: the `LoginCodeDelivery` /
-`LoginSuccessDelivery` seam is substituted in every context, so no test can reach the real SMTP
-adapter by accident. `MailTemplateService` is the one to revisit when the integration layer
+**Two classes became four**, which is why this table has more rows than it used to and not more
+uncovered code: the single-responsibility refactor split `MailService` (194 lines) into
+`HtmlMailSender`, `LoginCodeMail` and `LoginNotificationMail`. The decision did not change with
+the split, and neither did the seam — `LoginCodeDelivery` / `LoginSuccessDelivery` is
+substituted in every context, so no test can reach the real SMTP adapter by accident. `MailTemplateService` is the one to revisit when the integration layer
 starts — a real classpath and a real template file is exactly what it needs, and exactly what a
 unit test is not allowed to give it.
 
