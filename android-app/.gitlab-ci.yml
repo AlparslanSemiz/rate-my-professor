@@ -90,19 +90,35 @@ android:instrumentation-test:
 android:sonarcloud:
   extends: .android-gradle
   stage: sonar
+  variables:
+    GIT_DEPTH: "0"
+
   script:
-    - >
-      ./gradlew
-      app:debugUnitTestCoverage
-      sonar
-      --no-daemon
-      -Dsonar.host.url="${SONAR_HOST_URL:-https://sonarcloud.io}"
-      -Dsonar.projectKey="$SONAR_PROJECT_KEY"
-      -Dsonar.organization="$SONAR_ORGANIZATION"
-      -Dsonar.coverage.jacoco.xmlReportPaths="app/build/reports/jacoco/**/*.xml"
+    - ./gradlew app:debugUnitTestCoverage --no-daemon
+
+    - |
+      echo "JaCoCo XML reports:"
+      find app/build/reports/jacoco -type f -name "*.xml" -print || true
+
+    - |
+      JACOCO_REPORTS="$(find app/build/reports/jacoco -type f -name "*.xml" -print | paste -sd, -)"
+
+      if [ -z "$JACOCO_REPORTS" ]; then
+        echo "No JaCoCo XML coverage report found."
+        exit 1
+      fi
+
+      echo "Using JaCoCo reports: $JACOCO_REPORTS"
+
+      ./gradlew sonar \
+        --no-daemon \
+        -Dsonar.host.url="${SONAR_HOST_URL:-https://sonarcloud.io}" \
+        -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
+        -Dsonar.organization="$SONAR_ORGANIZATION" \
+        -Dsonar.coverage.jacoco.xmlReportPaths="$JACOCO_REPORTS"
+
   rules:
     - if: '$SONAR_TOKEN'
-
 
 android:build:
   extends: .android-gradle
