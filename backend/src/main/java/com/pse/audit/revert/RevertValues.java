@@ -1,10 +1,15 @@
 package com.pse.audit.revert;
 
+import com.pse.shared.error.ApiException;
+
+import org.springframework.http.HttpStatus;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Reading the {@code before}/{@code after} halves of an audit entry back out.
@@ -83,7 +88,7 @@ public final class RevertValues {
         if (value instanceof Number number) {
             return number.intValue();
         }
-        return Integer.valueOf(String.valueOf(value).trim());
+        return parsed(field, () -> Integer.valueOf(String.valueOf(value).trim()));
     }
 
     /**
@@ -119,7 +124,10 @@ public final class RevertValues {
             Class<E> type
     ) {
         String value = asString(before, field);
-        return value == null ? null : Enum.valueOf(type, value.trim().toUpperCase(Locale.ROOT));
+        if (value == null) {
+            return null;
+        }
+        return parsed(field, () -> Enum.valueOf(type, value.trim().toUpperCase(Locale.ROOT)));
     }
 
     /**
@@ -135,6 +143,36 @@ public final class RevertValues {
         if (!(value instanceof Collection<?> values)) {
             return null;
         }
-        return values.stream().map(entry -> UUID.fromString(String.valueOf(entry))).toList();
+        return parsed(field, () -> values.stream()
+                .map(entry -> UUID.fromString(String.valueOf(entry)))
+                .toList());
+    }
+
+    /**
+     * Reads a recorded value, turning a malformed one into a refusal instead of a crash.
+     *
+     * <p>These three readers each guarded {@code null} and none of them guarded a value that
+     * is present but unreadable, which is F-24's lesson landing on the other side: an NPE
+     * guard is not an {@code IllegalArgumentException} guard. The values come from the audit
+     * entry's {@code jsonb} column rather than from the request, so today's rows are all
+     * well-formed -- but the column outlives the code that wrote it. Remove or rename an enum
+     * constant, or narrow a column, and the old rows still name the old value; the revert
+     * button on the panel then answered <b>500</b>, which is exactly the shape F-23 was.
+     *
+     * <p>409 with {@code ACTION_NOT_REVERTIBLE} rather than a new refusal reason: the five
+     * reasons are a documented, client-visible vocabulary the panel branches on, and "the
+     * recorded value cannot be read back" is a true instance of "this entry cannot be
+     * reversed". A sixth constant would be a contract change for a case nobody can act on
+     * differently.
+     */
+    private static <T> T parsed(String field, Supplier<T> read) {
+        try {
+            return read.get();
+        } catch (IllegalArgumentException malformed) {
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "The recorded value for '" + field + "' cannot be read back",
+                    AuditRevertRefusal.ACTION_NOT_REVERTIBLE.name());
+        }
     }
 }

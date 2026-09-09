@@ -22,6 +22,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -59,7 +60,15 @@ public class Comment {
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CommentVote> votes = new ArrayList<>();
 
+    /**
+     * Oldest first, because this is a conversation and the client renders it as one.
+     *
+     * <p>The {@code @OrderBy} is not decoration. A JPA bag has no defined order, so without it
+     * the answers under a comment came back in whatever order the database returned and could
+     * differ between two requests for the same comment -- F-21's defect on a nested list.
+     */
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC")
     private List<Answer> answers = new ArrayList<>();
 
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)

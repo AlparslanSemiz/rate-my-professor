@@ -75,7 +75,16 @@ public class Student {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    /**
+     * The account's ratings, newest first.
+     *
+     * <p>The {@code @OrderBy} is load-bearing. This bag is what {@code GET /account/ratings}
+     * serialises, and without it the array came back in whatever order the database chose --
+     * F-21's defect on the one list the sweep behind F-35 did not reach. The id breaks a tie
+     * so two ratings written in the same instant still come out the same way twice.
+     */
     @OneToMany(mappedBy = "student")
+    @OrderBy("createdAt DESC, id ASC")
     private List<Rating> ratings = new ArrayList<>();
 
     @OneToMany(mappedBy = "student")

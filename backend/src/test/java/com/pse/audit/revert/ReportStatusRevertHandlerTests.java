@@ -5,7 +5,10 @@ import com.pse.moderation.service.ModerationAnswerReportService;
 import com.pse.moderation.service.ModerationCommentService;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.enums.ReportStatus;
+import com.pse.shared.enums.ContentStatus;
+import com.pse.social.model.Answer;
 import com.pse.social.model.AnswerReport;
+import com.pse.social.model.Comment;
 import com.pse.social.model.CommentReport;
 import com.pse.social.repository.AnswerReportRepository;
 import com.pse.social.repository.CommentReportRepository;
@@ -64,6 +67,9 @@ class ReportStatusRevertHandlerTests {
         CommentReport report = new CommentReport();
         report.setId(id);
         report.setStatus(ReportStatus.ACTION_TAKEN);
+        Comment comment = new Comment();
+        comment.setStatus(ContentStatus.HIDDEN);
+        report.setComment(comment);
         return report;
     }
 
@@ -71,6 +77,9 @@ class ReportStatusRevertHandlerTests {
         AnswerReport report = new AnswerReport();
         report.setId(id);
         report.setStatus(ReportStatus.ACTION_TAKEN);
+        Answer answer = new Answer();
+        answer.setStatus(ContentStatus.HIDDEN);
+        report.setAnswer(answer);
         return report;
     }
 
@@ -89,8 +98,14 @@ class ReportStatusRevertHandlerTests {
                 .isEqualTo(AuditTargetType.COMMENT_REPORT);
     }
 
+    /**
+     * This read {@code containsExactly(entry("status", ...))} and pinned the defect: the map
+     * offered one key while {@code ModerationCommentService} records two, so every
+     * {@code ACTION_TAKEN} transition came back {@code ACTION_NOT_REVERTIBLE}. Inverted
+     * rather than deleted when it was fixed.
+     */
     @Test
-    void commentReportHandler_currentValues_mapsOnlyTheStatus() {
+    void commentReportHandler_currentValues_mapsTheStatusAndTheCommentVisibility() {
         // Given
         when(commentReportRepository.findAllById(List.of(FIRST)))
                 .thenReturn(List.of(commentReport(FIRST)));
@@ -99,9 +114,10 @@ class ReportStatusRevertHandlerTests {
         Map<UUID, Map<String, Object>> values =
                 commentReportHandler().currentValues(List.of(FIRST));
 
-        // Then -- the enum by name, because that is how it survived the JSON column
+        // Then -- both enums by name, because that is how they survived the JSON column
         assertThat(values).containsOnlyKeys(FIRST);
-        assertThat(values.get(FIRST)).containsExactly(entry("status", "ACTION_TAKEN"));
+        assertThat(values.get(FIRST)).containsExactly(
+                entry("status", "ACTION_TAKEN"), entry("commentStatus", "HIDDEN"));
     }
 
     /** An id with no surviving row is how {@code TARGET_MISSING} is detected upstream. */
@@ -162,7 +178,7 @@ class ReportStatusRevertHandlerTests {
     }
 
     @Test
-    void answerReportHandler_currentValues_mapsOnlyTheStatus() {
+    void answerReportHandler_currentValues_mapsTheStatusAndTheAnswerVisibility() {
         // Given
         when(answerReportRepository.findAllById(List.of(FIRST)))
                 .thenReturn(List.of(answerReport(FIRST)));
@@ -171,9 +187,10 @@ class ReportStatusRevertHandlerTests {
         Map<UUID, Map<String, Object>> values =
                 answerReportHandler().currentValues(List.of(FIRST));
 
-        // Then
+        // Then -- the answer-side mirror; inverted with its comment-side twin
         assertThat(values).containsOnlyKeys(FIRST);
-        assertThat(values.get(FIRST)).containsExactly(entry("status", "ACTION_TAKEN"));
+        assertThat(values.get(FIRST)).containsExactly(
+                entry("status", "ACTION_TAKEN"), entry("answerStatus", "HIDDEN"));
     }
 
     @Test

@@ -39,6 +39,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -1050,7 +1051,7 @@ class SocialApiIntegrationTests {
 
     /**
      * A moderated comment must not come back through the sync route either. The filter is
-     * {@code findAllByStatus(VISIBLE)}, so the answer to this is structural rather than a
+     * {@code findAllByStatusOrderByCreatedAtDesc(VISIBLE)}, so the answer to this is structural rather than a
      * per-row check -- which is exactly why it is worth stating: a later rewrite that pages or
      * joins this query has to keep it.
      */
@@ -1105,6 +1106,71 @@ class SocialApiIntegrationTests {
                 .andExpect(jsonPath("$.comments[0].answers[0].content").value("Agreed"));
     }
 
+
+    /**
+     * The unprefixed report path the Android client actually calls.
+     *
+     * <p>Every other route the app uses on this controller carries the {@code /social}
+     * prefix; the client's own audit records this one as the exception
+     * (docs/frontend-consumer-findings.md, F-3.8) and treats it as a naming inconsistency.
+     * It was not: the path was never mapped. It matched {@code /answers/&#123;id&#125;} on the
+     * moderation controller, which maps PATCH and DELETE and no POST, so the request was
+     * answered 405 by {@code handleWrongMethod}.
+     *
+     * <p>Nobody saw it because the client dismisses the dialog and shows "report submitted"
+     * immediately after {@code enqueue}, before the response arrives -- so reporting an
+     * answer from the app has never worked and has always looked like it did.
+     *
+     * <p>Asserted against {@code /social/answers/report} rather than a literal so the alias
+     * and the real path cannot drift. Deleted with the mapping when the app has migrated.
+     */
+    @Test
+    void answerReportsAreAlsoServedOnTheUnprefixedPathTheAppCalls() throws Exception {
+        Session author = createSession("unprefixed-author@student.kit.edu");
+        Session reporter = createSession("unprefixed-reporter@student.kit.edu");
+        Lecture lecture = createLecture();
+        Comment comment = createComment(author.student(), lecture, "Root");
+        Answer answer = createAnswer(author.student(), comment, "Bad answer");
+
+        mockMvc.perform(post("/answers/report")
+                        .header("Authorization", bearer(reporter.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answerID":"%s",
+                                  "reportReason":"HARASSMENT",
+                                  "explanation":"Also rude"
+                                }
+                                """.formatted(answer.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        assertThat(answerReportRepository.count()).isEqualTo(1);
+    }
+
+    /**
+     * The alias carries the same session guard as the prefixed path.
+     *
+     * <p>{@code SecurityConfig} matches PATCH and DELETE on {@code /answers/**} for
+     * administrators and nothing else, so a POST there falls through to the chain's closing
+     * {@code anyRequest().permitAll()} unless a matcher says otherwise -- which would let an
+     * anonymous caller file reports.
+     */
+    @Test
+    void theUnprefixedAnswerReportPathRefusesAnAnonymousCaller() throws Exception {
+        mockMvc.perform(post("/answers/report")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answerID":"%s",
+                                  "reportReason":"SPAM",
+                                  "explanation":"x"
+                                }
+                                """.formatted(UUID.randomUUID())))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(answerReportRepository.count()).isZero();
+    }
 
     private Session createSession(String email) {
 
@@ -1314,5 +1380,80 @@ class SocialApiIntegrationTests {
 
         assertThat(commentRepository.count()).isZero();
         assertThat(answerRepository.count()).isZero();
+    }
+
+    /**
+     * Characterization of a half-built feature, found by the read-but-never-written sweep.
+     *
+     * <p>{@code SecurityConfig} declares {@code PATCH /social/notifications/all} as an
+     * authenticated route and {@code NotificationRepository.markAllAsSeen} is written and
+     * indexed -- but no controller maps it. So {@code /all} falls into
+     * {@code PATCH /social/notifications/{notification_id}}, fails to bind as a UUID, and
+     * answers 400. The security matcher and the query are the only evidence anyone intended
+     * a "mark everything read" action.
+     *
+     * <p>Pinned rather than fixed: writing the handler would be adding a feature, and
+     * deleting the query would throw away the record that one was planned. The choice is in
+     * docs/worklog.md. Whichever way it goes, this test is the one to invert.
+     */
+    @Test
+    void markingAllNotificationsAsSeenIsNotAnEndpointDespiteBeingDeclared() throws Exception {
+        Session student = createSession("notify-all@student.kit.edu");
+
+        mockMvc.perform(patch("/social/notifications/all")
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Invalid request"));
+    }
+
+    /**
+     * Both app-tier comment listings carried no ORDER BY while the admin listing beside them
+     * did, and {@code Comment.answers} was a JPA bag with no {@code @OrderBy}. So the order a
+     * reader saw was the database's choice on three lists at once, free to differ between two
+     * requests for the same lecture -- F-21's defect, unswept.
+     *
+     * <p>Comments newest first, matching the admin listing; answers oldest first, because a
+     * thread under a question reads forwards.
+     */
+    @Test
+    void commentsComeBackNewestFirstAndTheirAnswersOldestFirst() throws Exception {
+        Session author = createSession("ordering-author@student.kit.edu");
+        Lecture lecture = createLecture();
+
+        Comment older = new Comment();
+        older.setContent("Asked first");
+        older.setStudent(author.student());
+        older.setLecture(lecture);
+        older.setCreatedAt(LocalDateTime.of(2026, 1, 1, 10, 0));
+        older = commentRepository.saveAndFlush(older);
+
+        Comment newer = new Comment();
+        newer.setContent("Asked second");
+        newer.setStudent(author.student());
+        newer.setLecture(lecture);
+        newer.setCreatedAt(LocalDateTime.of(2026, 1, 2, 10, 0));
+        commentRepository.saveAndFlush(newer);
+
+        Answer firstAnswer = new Answer();
+        firstAnswer.setContent("Answered first");
+        firstAnswer.setStudent(author.student());
+        firstAnswer.setComment(older);
+        firstAnswer.setCreatedAt(LocalDateTime.of(2026, 1, 3, 10, 0));
+        answerRepository.saveAndFlush(firstAnswer);
+
+        Answer secondAnswer = new Answer();
+        secondAnswer.setContent("Answered second");
+        secondAnswer.setStudent(author.student());
+        secondAnswer.setComment(older);
+        secondAnswer.setCreatedAt(LocalDateTime.of(2026, 1, 4, 10, 0));
+        answerRepository.saveAndFlush(secondAnswer);
+
+        mockMvc.perform(get("/social/comments/{lectureId}", lecture.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments[0].content").value("Asked second"))
+                .andExpect(jsonPath("$.comments[1].content").value("Asked first"))
+                .andExpect(jsonPath("$.comments[1].answers[0].content").value("Answered first"))
+                .andExpect(jsonPath("$.comments[1].answers[1].content").value("Answered second"));
     }
 }

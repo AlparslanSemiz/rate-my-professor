@@ -22,6 +22,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,7 @@ public class ModerationBugReportService {
     private final AuditWriter auditWriter;
     private final GitLabClient gitLabClient;
     private final BugReportIssueTransactions issueTransactions;
+    private final Clock clock;
 
     /**
      * Creates ModerationBugReportService.
@@ -53,13 +56,15 @@ public class ModerationBugReportService {
             IdentityService identityService,
             AuditWriter auditWriter,
             GitLabClient gitLabClient,
-            BugReportIssueTransactions issueTransactions
+            BugReportIssueTransactions issueTransactions,
+            Clock clock
     ) {
         this.repository = repository;
         this.identityService = identityService;
         this.auditWriter = auditWriter;
         this.gitLabClient = gitLabClient;
         this.issueTransactions = issueTransactions;
+        this.clock = clock;
     }
 
     /**
@@ -108,6 +113,17 @@ public class ModerationBugReportService {
         if (request.status() != null && report.getStatus() != request.status()) {
             changes.put("status", AuditWriter.value(report.getStatus().name(), request.status().name()));
             report.setStatus(request.status());
+            // Who dealt with it and when. The two report services beside this one have always
+            // recorded reviewedBy/reviewedAt on a status change; these two columns existed
+            // with a foreign key and nothing ever wrote them, so
+            // AdminRepository.hasModerationHistory read a clause that could never be true and
+            // an administrator whose whole history was bug reports could be demoted out from
+            // under the attribution. OPEN is the one status that is not a disposition, so
+            // moving back to it clears the pair rather than leaving a stale name on an open
+            // report.
+            boolean dispositioned = request.status() != ReportStatus.OPEN;
+            report.setResolvedBy(dispositioned ? principal.admin() : null);
+            report.setResolvedAt(dispositioned ? LocalDateTime.now(clock) : null);
         }
         if (request.severity() != null && report.getSeverity() != request.severity()) {
             changes.put("severity", AuditWriter.value(report.getSeverity().name(), request.severity().name()));

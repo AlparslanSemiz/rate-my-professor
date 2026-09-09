@@ -187,6 +187,32 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<!--
+				Writes the resolved dependency tree to
+				target/classes/META-INF/sbom/application.cdx.json during `package`, which is
+				what the dependency:scan CI job scans.
+
+				It is here because that job cannot read a pom. Trivy resolves the parent-pom
+				chain itself, over the network whenever the local repository is cold, and the
+				first CI run of the scan died on a 429 from repo.maven.apache.org with
+				Retry-After: 1800: a shared runner IP, blocked for half an hour. The build
+				that has just downloaded the whole tree is the one place where writing it
+				down costs nothing. See the comment on dependency:scan in .gitlab-ci.yml for
+				why the Maven cache could not be relied on to make this unnecessary.
+
+				No version and no configuration. spring-boot-starter-parent manages both the
+				version (2.9.3) and an execution that puts the file where Spring Boot's
+				own SBOM support expects it. Declaring an execution here instead produced a
+				second one and a warning about attaching the artifact twice.
+
+				It does log two warnings per build, "Unknown keyword meta:enum" and
+				"Unknown keyword deprecated". They come from the plugin validating its own
+				output against the CycloneDX 1.6 schema; the goal exposes no switch for it.
+			-->
+			<plugin>
+				<groupId>org.cyclonedx</groupId>
+				<artifactId>cyclonedx-maven-plugin</artifactId>
+			</plugin>
 			<plugin>
 				<groupId>org.sonarsource.scanner.maven</groupId>
 				<artifactId>sonar-maven-plugin</artifactId>

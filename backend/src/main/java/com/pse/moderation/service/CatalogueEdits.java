@@ -53,8 +53,22 @@ final class CatalogueEdits {
         return name;
     }
 
+    /**
+     * The ids as strings, in a stable order.
+     *
+     * <p>Sorted, and that is the whole point. One side of every assignment is read from a
+     * {@code Set} whose iteration order is the JVM's business -- {@code Professor} and
+     * {@code Lecture} override neither {@code equals} nor {@code hashCode}, so it can differ
+     * per run. This value is written into the audit entry's {@code changes}, stored in a
+     * {@code jsonb} column that preserves array order, and served by
+     * {@code GET /admin/audit-logs}, so an unsorted list means two servers can answer the
+     * same request with the professor list in different orders. F-21 on the audit record.
+     *
+     * <p>{@link #sameAssignment} uses this too, so the order a change is *decided* by and the
+     * order it is *recorded* in are the same one rather than two that have to be kept in step.
+     */
     static List<String> labels(List<UUID> ids) {
-        return ids.stream().map(UUID::toString).toList();
+        return ids.stream().map(UUID::toString).sorted().toList();
     }
 
     /**
@@ -67,10 +81,6 @@ final class CatalogueEdits {
      * @return the result
      */
     static boolean sameAssignment(List<UUID> before, List<UUID> after) {
-        return sorted(before).equals(sorted(after));
-    }
-
-    private static List<String> sorted(List<UUID> ids) {
-        return ids.stream().map(UUID::toString).sorted().toList();
+        return labels(before).equals(labels(after));
     }
 }

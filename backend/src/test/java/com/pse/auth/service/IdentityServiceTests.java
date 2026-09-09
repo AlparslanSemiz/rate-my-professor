@@ -1,5 +1,7 @@
 package com.pse.auth.service;
 
+import org.springframework.http.HttpStatus;
+import com.pse.shared.error.ApiException;
 import com.pse.config.properties.RateLimitProperties;
 import com.pse.config.properties.AuthProperties;
 import com.pse.auth.dto.request.ValidateCredentialsRequest;
@@ -146,12 +148,14 @@ class IdentityServiceTests {
                 );
 
 
-        BasicResponse response = identityService.validate("Bearer secret-token", request);
-
-
-        assertThat(response.success()).isFalse();
-
-        assertThat(response.message()).isEqualTo("Error, wrong email for auth Token");
+        // Inverted, not deleted. This read 200 {"success": false} -- F-5's shape. An address
+        // that is not this token's owner is an authorization failure, and the method three
+        // lines above it has always answered 401 for a header with no token at all.
+        assertThatThrownBy(() -> identityService.validate("Bearer secret-token", request))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Not logged in")
+                .extracting(thrown -> ((ApiException) thrown).getStatus())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
 
@@ -203,30 +207,42 @@ class IdentityServiceTests {
     }
 
 
+    /**
+     * Inverted, not deleted. A malformed header throws and answers 401; a well-formed one
+     * carrying a token nobody holds came back as {@code null} and answered
+     * {@code 200 {"success": false}}. The two are the same fact to a caller, and now the same
+     * answer.
+     */
     @Test
-    void validate_wellFormedHeaderThatResolvesToNobody_reportsTheTokenAsWrong() {
-        // A malformed header throws; a well-formed one carrying a token nobody holds comes
-        // back as null, and validate has to answer rather than propagate that difference.
+    void validate_wellFormedHeaderThatResolvesToNobody_isRefusedWithUnauthorized() {
         when(tokenAuthenticationService.authenticate("gone")).thenReturn(Optional.empty());
 
-        BasicResponse response = identityService.validate(
-                "Bearer gone", new ValidateCredentialsRequest("student@student.kit.edu"));
-
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, wrong Auth-Token");
+        assertThatThrownBy(() -> identityService.validate(
+                "Bearer gone", new ValidateCredentialsRequest("student@student.kit.edu")))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Not logged in")
+                .extracting(thrown -> ((ApiException) thrown).getStatus())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
 
+    /**
+     * Inverted, not deleted, and split from its neighbour: a missing {@code email} is a
+     * malformed body, not an authorization failure. It used to be merged with the
+     * wrong-address case under one 200, so a client could not tell "you sent no address" from
+     * "that is not your address".
+     */
     @Test
-    void validate_requestWithoutAnEmail_reportsTheEmailAsWrongRatherThanThrowing() {
+    void validate_requestWithoutAnEmail_isABadRequestRatherThanAnAuthorizationFailure() {
         Student student = activeStudent("student@student.kit.edu");
         when(tokenAuthenticationService.authenticate("token"))
                 .thenReturn(Optional.of(new AuthenticatedUser(student, new Token(), null)));
 
-        BasicResponse response =
-                identityService.validate("Bearer token", new ValidateCredentialsRequest(null));
-
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Error, wrong email for auth Token");
+        assertThatThrownBy(() ->
+                identityService.validate("Bearer token", new ValidateCredentialsRequest(null)))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Invalid request")
+                .extracting(thrown -> ((ApiException) thrown).getStatus())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
     }
 }

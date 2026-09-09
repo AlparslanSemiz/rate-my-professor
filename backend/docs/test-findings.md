@@ -17,11 +17,17 @@ really recorded if it lives in a test.
 
 ## At a glance
 
-**38 findings. 33 fixed, 2 closed as a recorded decision (P-3, P-7), 1 an existing protection
-put under test (F-13), 1 documented rather than changed (F-30), 1 open (F-29, which needs a
-rotation rather than a commit).** Two of them — F-7 and F-8, both behind the "approximate
-location does not work" report — are the ones a *user* reported. The other thirty-six nobody
-had seen.
+**50 findings. 44 fixed, 2 closed as a recorded decision (P-3, P-7), 1 an existing protection
+put under test (F-13), 1 documented rather than changed (F-30), 2 open — F-29, which needs a
+rotation rather than a commit, and F-34, which needs a product decision.** Two of them — F-7
+and F-8, both behind the "approximate location does not work" report — are the ones a *user*
+reported. The other forty-eight nobody had seen.
+
+**Two of the last three had been shipped and broken for the whole life of the product**, and
+neither produced a signal anywhere: F-39 left the admin panel unable to sign anybody in, and F-40
+meant every answer report the Android app ever filed was refused while the user was told it had
+been sent. Both were found by reading the two consumer repositories' audits against this code,
+with the suite green the entire time. That gap is what the consumer contract layer now covers.
 
 Which kind of work turned each one up, because that is the part worth knowing when deciding
 what to write next:
@@ -35,12 +41,24 @@ what to write next:
 | **End-to-end layer** (real HTTP, real database) | 1 | F-20 |
 | **Reading the code while writing the tests** — no test run found these | 4 | F-4, F-6, F-8, F-21 |
 | **Reading the code against a list of known defect shapes** — the 9 September pass | 7 | F-22, F-23, F-24, F-25, F-26, F-27, F-28 |
+| **Sweeping those same shapes to the end** — the Kontrollphase pass | 7 | F-31, F-32, F-33, F-34, F-35, F-36, F-37 |
+| **Measuring a gap an earlier finding had parked** | 1 | F-38 |
+| **Consumer contract audit** — the two client repositories' contracts, read against this code | 3 | F-39, F-40, F-41 |
 | **Secret scanning, once the rules matched this project** | 1 | F-29 |
 | **Static analysis, run for the first time** | 1 | F-30 |
 | **Concurrency layer** (two requests at once, real PostgreSQL) | 0 | — see [Negative results](#negative-results) |
-| **Doing the measuring** — process findings about the suite itself, and about its own assertions | 6 | P-1, P-2, P-3, P-4, P-6, P-7 |
+| **Doing the measuring** — process findings about the suite itself, its own assertions, and its documentation | 7 | P-1, P-2, P-3, P-4, P-6, P-7, P-8 |
 
-The row of seven is the 9 September pass and it was not a new test layer: two of the seven were
+**The two rows of seven are the same method run twice.** The first was the 9 September pass;
+the second finished it. Every one of the five shapes had been found once and searched in one
+place — F-23 in a single class, F-26 on a single field, F-21 and F-27 in two spots each — and
+sweeping each one across the module turned up seven more defects and closed two shapes for
+good. The parse shape came back **nearly clean** (11 of 15 sites already guarded both failure
+modes) and the `200 {"success": false}` shape came back down to one reachable instance, which
+is the result worth having: a shape is finished when its coverage is written down, not when
+somebody stops looking.
+
+The row of seven above is the 9 September pass and it was not a new test layer: two of the seven were
 already written down in the backlog, and the other five were found by taking each one's *shape*
 — a status code that disagrees with its neighbours, an unguarded parse of caller input, a
 collection with no order — and looking for the same shape elsewhere. F-23 and F-26 are the two
@@ -87,7 +105,7 @@ defect; it found a different kind.
 | [P-7](#p-7--a-surviving-mutant-is-not-a-finding) | A surviving mutant is not a finding | Process — how to read the mutation report | **Closed — recorded as a reading rule** |
 | [F-14](#f-14--500-when-a-required-query-parameter-is-missing) | 500 when a required query parameter is missing | Medium — wrong HTTP code | **Fixed** |
 | [F-15](#f-15--500-for-the-category-list-of-an-unknown-lecture) | 500 for the category list of an unknown lecture | Medium — wrong HTTP code | **Fixed** |
-| [F-16](#f-16--the-wrong-http-method-returns-404-instead-of-405) | The wrong HTTP method returns 404 instead of 405 | Medium — wrong HTTP code, on all 122 routes | **Fixed** |
+| [F-16](#f-16--the-wrong-http-method-returns-404-instead-of-405) | The wrong HTTP method returns 404 instead of 405 | Medium — wrong HTTP code, on every mapped route (122 at the time; see `docs/TODO.md` item 28) | **Fixed** |
 | [F-17](#f-17--an-unsupported-media-type-returns-500-instead-of-415) | An unsupported media type returns 500 instead of 415 | Medium — wrong HTTP code, on every route that reads a body | **Fixed** |
 | [F-18](#f-18--the-project-id-reaches-gitlab-encoded-twice) | The GitLab project id reaches the tracker encoded twice | High — the integration is dead for a path-shaped id | **Fixed** |
 | [F-19](#f-19--two-audit-response-fields-are-null-by-design-and-the-schema-said-otherwise) | Three audit response fields are null by design, declared non-nullable | Medium — the API contradicts its own schema | **Fixed** |
@@ -100,16 +118,34 @@ defect; it found a different kind.
 | [F-26](#f-26--ratingcount-on-a-professor-is-always-0) | `ratingCount` on a professor is always 0 | Medium — a field that has never been right | **Fixed** |
 | [F-27](#f-27--the-rating-categories-come-back-in-a-different-order-each-run) | `GET /ratings/{lectureId}` orders its categories by identity hash | Medium — F-21's shape, on a public read | **Fixed** |
 | [F-28](#f-28--submitting-a-rating-for-an-unknown-lecture-answers-200) | `POST /ratings/rate` answers 200 for an unknown lecture | Low — the last route on the old convention | **Fixed** |
-| [F-29](#f-29--three-more-leaked-credentials-nobody-had-found) | Three more leaked credentials, in commits the rotation list did not name | High — unrotated, and one is in a document | **Open — needs rotation** |
+| [F-29](#f-29--three-more-leaked-credentials-nobody-had-found) | Three more leaked credentials, in commits the rotation list did not name | High — unrotated, and one is in a document | **Open — needs a rotation at the provider, not a commit** |
 | [F-30](#f-30--a-rate-limiter-that-is-only-correct-because-a-clock-in-another-file-is-utc) | The rate limiter is correct only because `TimeConfig` is UTC | Low today — a landmine under an unrelated change | **Documented** |
 | [P-1](#p-1--the-coverage-baseline-number-was-wrong) | The coverage baseline number was wrong | Process | **Fixed** (re-measured) |
 | [P-2](#p-2--integration-tests-hide-unit-targets) | Integration tests hide unit targets | Process | **Fixed** (method changed) |
 | [P-3](#p-3--lombok-is-not-filtered-in-jacoco) | Lombok is not filtered in JaCoCo | Process | **Closed — decided against** |
 | [P-4](#p-4--a-moved-test-file-was-copied-not-moved) | A "moved" test file was copied, not moved | Process | **Fixed** (duplicates deleted) |
 | [P-5](#p-5--coverage-measured-without-clean-is-not-the-coverage-ci-measures) | Coverage measured without `clean` is inflated by the previous run | Process | **Fixed** (figures re-measured) |
+| [F-31](#f-31--reverting-a-report-status-is-impossible-on-exactly-the-changes-worth-reverting) | Report-status reverts refused on every `ACTION_TAKEN` transition | High — the revert button cannot work where it matters | **Fixed** |
+| [F-32](#f-32--each-catalogue-create-path-had-one-half-of-trim-then-check-then-store) | Each catalogue create path had one half of "trim, then check, then store" | Medium — a 409 one space away from being bypassed | **Fixed** |
+| [F-33](#f-33--nobody-records-who-dealt-with-a-bug-report-and-a-guard-reads-that-column) | Nobody records who dealt with a bug report, and a guard reads that column | Medium — F-26's shape; a demotion guard one third blind | **Fixed** |
+| [F-34](#f-34--a-route-the-security-chain-declares-and-no-controller-implements) | `PATCH /social/notifications/all` is declared and not implemented | Low — a half-built feature | **Open — a product decision** |
+| [F-35](#f-35--four-more-lists-reaching-the-client-with-no-defined-order) | Four more lists reaching the client with no defined order | Medium — F-21/F-27's shape, unswept | **Fixed** |
+| [F-36](#f-36--an-audit-value-the-code-no-longer-understands-crashes-the-revert) | An unreadable audit value answers 500 on revert | Medium — F-23's failure, one refactor away | **Fixed** |
+| [F-37](#f-37--post-authvalidate-reported-an-authorization-failure-with-200) | `POST /auth/validate` reported an authorization failure with 200 | Medium — F-5's last instance | **Fixed** |
+| [F-38](#f-38--a-body-over-the-upload-size-limit-answered-500) | A body over the upload size limit answered 500 | Medium — wrong status, seen in production logs | **Fixed** |
+| [F-39](#f-39--get-authme-was-unmapped-and-the-admin-panel-could-not-sign-anybody-in) | `GET /auth/me` was unmapped; the admin panel could not sign anybody in | **Blocker** — a shipped client locked out, silently | **Fixed** |
+| [F-40](#f-40--post-answersreport-was-never-served-and-every-report-from-the-app-failed-silently) | `POST /answers/report` was never served; every report from the app failed silently | **High** — a feature that has never worked on any release | **Fixed** |
+| [F-41](#f-41--get-accountratings-served-its-ratings-in-no-defined-order) | `GET /account/ratings` served its ratings in no defined order | Medium — F-21's shape, on the list its sweep missed | **Fixed** |
+| [P-8](#p-8--admin-apimd-drifted-four-times-and-nothing-noticed) | `admin-api.md` drifted from the code four times with no mechanism | Process | **Fixed** (under test) |
 | [P-6](#p-6--a-sweep-asserted-not-refused-which-a-404-also-satisfies) | A sweep asserted "not refused", which a `404` also satisfies | Process | **Fixed** |
 
-**Nothing in this document is open.** Twelve were closed in one pass; P-5 came later from the
+**F-42 has a number but is not one of the fifty.** It is a defect in the admin panel that this
+API cannot pin with a test, recorded [at the end of the findings](#f-42--deactivating-a-catalogue-row-hides-it-from-the-only-list-the-panel-reads)
+with the reason it is not an entry.
+
+**Two entries are open: F-29, which no commit can close, and F-34, which is a product
+decision rather than a defect.** Everything else is fixed or closed by a recorded decision.
+Twelve were closed in one pass; P-5 came later from the
 integration layer, F-19 and F-20 later still from the end-to-end work, and F-21 and P-6 last of
 all — neither from a test run: one from asking what a still-open feature request would
 actually need, the other from reading a sweep back against the routes it walks. What each one's
@@ -1102,7 +1138,9 @@ out from under it — and only an assertion strict enough will say so.
 **Where.** The `pitest` profile in `pom.xml`, and how its report is read.
 
 **What happened.** Mutation testing was added on 8 September and its first run scored 67%:
-1194 mutants, 797 killed, 73 survived, 324 with no coverage. One survivor read as serious --
+1194 mutants, 797 killed, 73 survived, 324 with no coverage. (Re-measured 9 September: **1134
+mutants, 840 killed — 74% — 72 survived, 222 with no coverage.** The figures in this paragraph
+are the first run's, kept because the rest of the entry is about what that run taught.) One survivor read as serious --
 `removed call to protectAdministrator` in `ModerationUserService.warnStudent`, which is an
 authorization guard with two rules ("you cannot moderate your own account", and an ordinary
 administrator cannot modify an administrator account). A guard whose deletion no test notices
@@ -1399,10 +1437,602 @@ this shape before anyone had run it.
 
 ---
 
+### F-31 — Reverting a report status is impossible on exactly the changes worth reverting
+
+**Where.** `ReportStatusRevertHandler.CommentReportHandler.currentValues` and its answer-side
+twin, against `ModerationCommentService.updateReportStatus` / `ModerationAnswerReportService`.
+
+**What happens.** `updateReportStatus` records **two** changed fields whenever the new status
+changes the content's visibility — `status` and `commentStatus` (or `answerStatus`). The
+handler's `currentValues` offered only `status`, and `AuditRevertService.evaluate` refuses any
+entry carrying a key the handler does not know. So every transition into or out of
+`ACTION_TAKEN` came back `revertible: false`, `ACTION_NOT_REVERTIBLE` — and those are the only
+transitions the handler's own javadoc says it exists for: *"moving a report to `ACTION_TAKEN`
+hides the content it is about, so a status set by mistake takes a post down with it."*
+
+**Why it matters.** A moderator hides a student's comment by mistake and the one control built
+to undo it is greyed out, for the whole revert window, with a reason that says the action is
+not reversible. The listing and the button agreed with each other, so nothing looked broken.
+
+**How it was found.** The Shape-1 sweep — the F-23 shape, "a guard in one twin and not its
+neighbour" — extended past `AuditRevertService` to every copy-paste pair in the module. This
+pair's *guards* mirror perfectly; what did not mirror was the handler against the service it
+inverts.
+
+**Test.** `AdminApiIntegrationTests.anActionTakenReportStatusIsRevertibleThroughTheAuditEntry`,
+which presses the button over the whole path and asserts the comment becomes visible again. The
+red run's evidence was the response body itself, carrying both change keys next to
+`"revertible":false`. `ReportStatusRevertHandlerTests.commentReportHandler_currentValues_mapsOnlyTheStatus`
+had pinned the defect with `containsExactly(entry("status", …))` and was **inverted rather than
+deleted**, with its answer-side twin.
+
+Worth recording beside it: `AdminApiIntegrationTests.actionTakenHidesTheCommentAndRevertingRestoresIt`
+already existed and is *named* for this. It never calls the revert endpoint — it toggles the
+report back with a second PATCH. A green test claiming more than it asserts, which is
+[P-6](#p-6--a-sweep-asserted-not-refused-which-a-404-also-satisfies) again.
+
+**Status. Fixed** — both handlers publish the visibility key. `applyInverse` is unchanged,
+because `updateReportStatus` derives visibility from the status. What the second key buys
+beyond making the entry revertible at all is the *check*: if somebody moved the content in the
+meantime the revert is now refused as `VALUE_CHANGED` rather than quietly overwriting them.
+
+---
+
+### F-32 — Each catalogue create path had one half of "trim, then check, then store"
+
+**Where.** `LectureService.addLecture` and `ProfessorService.addProfessor`.
+
+**What happens.** Two twins, two different halves of the same rule missing:
+
+- `addProfessor` stored `firstName().trim()` / `lastName().trim()` but ran its uniqueness
+  check on the **raw** strings. So `{" Stefan", "Kuehnlein "}` walked past the 409 and created
+  a second professor row holding exactly the name the first one holds.
+- `addLecture` was at least self-consistent — raw check, raw store — but trimmed **neither**.
+  `@NotBlank` passes `"  Algorithmen 1  "`, so the padding reached the column.
+
+**Why it matters.** The first is a uniqueness constraint one space away from being bypassed, on
+a catalogue the whole app reads. The second has a knock-on nobody would trace back:
+`LectureModerationService` trims the incoming PATCH name before comparing it to the stored one,
+so the **first admin edit** of a padded lecture records a `name` change nobody made and writes
+a `LECTURE_UPDATED` audit entry for it.
+
+**How it was found.** The Shape-1 sweep, comparing the two create paths line by line.
+
+**Test.** `ProfessorServiceTests.addProfessorRefusesANameThatDiffersFromAnExistingOneOnlyByWhitespace`,
+`LectureServiceTests.addLectureStoresTheNameAndCodeTrimmed` and
+`…RefusesANameThatDiffersFromAnExistingOneOnlyByWhitespace`. The best of the three reds was
+Mockito's, not an assertion's: `PotentialStubbingProblem`, because the stub was on
+`findByName("Lineare Algebra 1")` and the code asked for `findByName("  Lineare Algebra 1  ")`.
+
+**Status. Fixed** — both trim once and use that value for the check and the store.
+
+---
+
+### F-33 — Nobody records who dealt with a bug report, and a guard reads that column
+
+**Where.** `ModerationBugReportService.updateBugReport`, `BugReport.resolvedBy` /
+`resolvedAt`, and `AdminRepository.hasModerationHistory`.
+
+**What happens.** `setResolvedBy(` appears **zero** times in `src/main` and `src/test`.
+`resolvedAt` is the same. Yet `hasModerationHistory` reads one of them:
+
+```sql
+OR EXISTS (SELECT report FROM BugReport report WHERE report.resolvedBy = admin)
+```
+
+So one of that guard's three clauses could never evaluate true.
+
+**Why it matters.** It is F-26's shape — a live query reading a column nothing writes — but the
+cost is different. `admin-api.md` promises *"Demoting is 409 once the account has moderation
+history — a warning it issued or a report it reviewed"*, and an administrator whose entire
+history was bug reports could be demoted anyway, taking the attribution with them. What makes
+it stand out is the neighbours: the same query reads two sibling columns
+(`CommentReport.reviewedBy`, `AnswerReport.reviewedBy`) and **those are written** — by the two
+services sitting either side of this one.
+
+**How it was found.** The Shape-2 sweep: every persistent field on all 21 entities classified
+as written/read, using JPQL as well as getters — eight fields have no getter call anywhere and
+are read only by a query, so a getter-only grep would have called them dead.
+
+**Test.** `AdminApiIntegrationTests.demotingAnAdministratorWhoResolvedABugReportIsRefused`
+(red: `Expecting actual not to be null` on `getResolvedBy()`), plus
+`ModerationBugReportServiceTests.updateBugReport_statusChanged_recordsWhoDealtWithItAndWhen` and
+`…_reopened_clearsWhoDealtWithItAndWhen`.
+
+**Status. Fixed** — both columns are written on a status change, mirroring the two report
+services. `OPEN` is the one status that is not a disposition, so reopening clears the pair
+rather than leaving a name on an open report. `ModerationBugReportService` gained a `Clock`,
+injected and fixed in tests per the house rule.
+
+---
+
+### F-34 — A route the security chain declares and no controller implements
+
+**Where.** `SecurityConfig:90` declares `PATCH /social/notifications/all` as authenticated;
+`SocialController` maps only `/notifications/{notification_id}`;
+`NotificationRepository.markAllAsSeen` is written, `@Modifying`, and has **zero callers**.
+
+**What happens.** `/all` falls into the single-notification handler, fails to bind as a `UUID`,
+and answers **400 `"Invalid request"`**.
+
+**Why it matters.** Three artefacts of a "mark everything read" feature exist — the query, the
+security rule, the intent — and the handler does not. Anyone reading `SecurityConfig` or the
+repository would reasonably believe the endpoint is there.
+
+**How it was found.** The Shape-2 sweep, in the pass over queries with no callers.
+
+**Test.** `SocialApiIntegrationTests.markingAllNotificationsAsSeenIsNotAnEndpointDespiteBeingDeclared`.
+
+**Status. Pinned, and open as a product question.** Writing the handler is adding a feature,
+which the 9 September and Kontrollphase passes are explicitly not for; deleting the query
+throws away the record that somebody planned one. **Finish it or remove both halves** — the
+decision is the team's, and the test is what makes either one deliberate.
+
+---
+
+### F-35 — Four more lists reaching the client with no defined order
+
+**Where.** `CatalogueEdits.labels` (via `LectureModerationService` /
+`ProfessorModerationService`), `Rating.topics`, `Comment.answers`, and the two app-tier comment
+listings in `CommentRepository`.
+
+**What happens.** F-21 and F-27 each fixed one instance and neither shape was swept. Four more:
+
+1. **BUG-3's other half.** `sameAssignment` sorts before comparing, so *deciding* whether an
+   assignment changed is order-insensitive — but the value **recorded** came from `labels()`,
+   which did not sort. So the `before` list written into `changes.professors` carried the
+   `HashSet`'s identity-hash order into a `jsonb` column, which **preserves array order**, and
+   out through `GET /admin/audit-logs`. `Professor` overrides neither `equals` nor `hashCode`,
+   so that order can differ per run and between two instances.
+2. **F-27's own surface.** `RatingService.getRatings` was given an `EnumMap` so the public read
+   returns declaration order. `getOwnRating`, **two methods below it**, builds the same
+   `RatingsAverageResponse.ratings` field by walking `rating.getTopics()` — a JPA bag with no
+   `@OrderBy`. The admin `GET /admin/ratings` walks the same bag.
+3. `Comment.answers`, a bag with no `@OrderBy`, reaching `CommentResponse.answers`.
+4. Both app-tier comment listings had no `ORDER BY` at all, while the admin listing beside them
+   always had one.
+
+**Why it matters.** F-21's argument, unchanged: invisible while it is a list in a payload, and
+a defect the moment a client renders it. One response field cannot have two orders, and
+`GET /ratings/{lectureId}` and `GET /ratings/own/{lectureId}` are the same field.
+
+**How it was found.** The Shape-3 sweep: five mappers, **all 76 DTO records** (exactly one
+declares a `Map`/`Set` field), every `*Response`-building method, all 15 repositories.
+
+**Test.** `LectureModerationServiceTests.updateLecture_recordsTheProfessorAssignmentInAStableOrder`
+(deterministic `LinkedHashSet`, per BUG-3's rule),
+`RatingServiceTests.getOwnRatingReturnsTheCategoriesInDeclarationOrder`, and
+`SocialApiIntegrationTests.commentsComeBackNewestFirstAndTheirAnswersOldestFirst` — which was
+written **after** the fix and therefore checked against a defect: inverting the comment order
+and then only the answer order made each half fail in turn.
+`AdminApiIntegrationTests.ratingsListingIsAdminOnlyAndReturnsTheManagedShape` had pinned
+insertion order and was **inverted rather than deleted**.
+
+**Status. Fixed.** Sorted by category (declaration order, matching what the F-27 CHANGELOG
+already promised the sibling route), comments newest first, answers oldest first, recorded id
+lists sorted. `labels()` and `sameAssignment` are now defined in terms of each other, so the
+order a change is decided by and the order it is recorded in are one thing.
+
+Two related notes kept rather than fixed:
+`LectureRepository` and `ProfessorRepository` declared **`Set`** returns on four queries
+carrying an `ORDER BY` — order survived only because Spring Data materialises a
+`LinkedHashSet`, which is a fact about the framework and not a guarantee. Changed to `List`.
+And about **fifty `Map.of` call sites** build audit `changes`/`metadata`; `Map.of` iteration
+order is randomised per JVM run and they are safe **only** because `jsonb` normalises object
+keys — a column type, not the code, and the H2 baseline uses `json`, which does not. That is
+[F-30](#f-30--a-rate-limiter-that-is-only-correct-because-a-clock-in-another-file-is-utc)'s
+category and is written up under *Where the suite stops* in [test-plan.md](test-plan.md).
+
+---
+
+### F-36 — An audit value the code no longer understands crashes the revert
+
+**Where.** `RevertValues.asInteger`, `asEnum` and `asIds`.
+
+**What happens.** All three guard `null` and none guarded a value that is **present but
+unreadable**: `Integer.valueOf` throws `NumberFormatException`, `Enum.valueOf` and
+`UUID.fromString` throw `IllegalArgumentException`, and all three escaped to the catch-all.
+`POST /admin/audit-logs/{id}/revert` answered **500**.
+
+**Why it matters.** This is F-24's lesson landing on the other side of the same class — *an NPE
+guard is not an `IllegalArgumentException` guard* — and F-23's failure mode, one indirection
+away. The values come from the `jsonb` column rather than from a request, so every row written
+today is well formed. **But the column outlives the code that wrote it.** Rename or remove a
+constant of `UserStatus`, `SemesterSeason`, `LectureType`, `ReportStatus` or `BugSeverity` — an
+ordinary refactor — and every audit row naming the old one still names it. `evaluate()`
+compares recorded values as **strings**, so it happily marks such an entry revertible; the
+panel draws the button, and pressing it reports a backend failure.
+
+**How it was found.** The Shape-4 sweep. Fifteen parse sites in `src/main`; eleven guard both
+failure modes, and all four misses are in this one class.
+
+**Test.** `RevertValuesTests.asInteger_nonNumericString_isRefusedRatherThanCrashing` and its
+two neighbours — the three existing characterizations asserting the raw exceptions, **inverted
+rather than deleted**, and checked against the un-fixed code to confirm the inversion
+discriminates.
+
+**Status. Fixed** — one `parsed(field, supplier)` helper turns `IllegalArgumentException`
+(which `NumberFormatException` extends) into **409** with `ACTION_NOT_REVERTIBLE`, naming the
+field. **Deliberately not a sixth `AuditRevertRefusal` constant:** the five reasons are a
+documented vocabulary the panel branches on, and "the recorded value cannot be read back" is a
+true instance of "this entry cannot be reversed".
+
+---
+
+### F-37 — `POST /auth/validate` reported an authorization failure with 200
+
+**Where.** `IdentityService.validate`.
+
+**What happens.** Three failure branches, all answering `200 {"success": false}`, while the
+failure three lines away — a header that is not a bearer token at all — has always thrown
+`InvalidAuthTokenException` and answered **401**. One method, and "no token" got the stricter
+answer than "wrong token".
+
+**Why it matters.** F-5's shape, and the last instance of it worth changing. A client cannot
+branch on a status that never varies.
+
+**How it was found.** The Shape-5 sweep over every `BasicResponse(..., false)` in `src/main` —
+fourteen sites, eleven of them correct.
+
+**And two of the three branches are unreachable**, which the sweep established by probing
+rather than reading: `BearerTokenAuthenticationFilter` answers 401 for any present-but-invalid
+`Authorization` header before the controller runs, and `@NotBlank` on `email` makes a missing
+address a 400 from Bean Validation. Only *a valid token with an address that is not its
+owner's* is observable, and the `CHANGELOG` describes only that.
+
+**Test.** `AuthApiIntegrationTests.validatingAnAddressThatIsNotTheTokenOwnersIsRefusedRatherThanReported`
+— the API-level test this route never had — plus three inverted unit characterizations.
+
+**Status. Fixed.** 401 for an address that is not the token owner's; 400, split out, for a
+missing one; 401 for an invalid token, agreeing with the filter in front of it rather than
+contradicting it.
+
+---
+
+### F-38 — A body over the upload size limit answered 500
+
+**Where.** `GlobalExceptionHandler` — a missing handler, the half of
+[F-17](#f-17--an-unsupported-media-type-returns-500-instead-of-415) its own writeup parked as
+*"still to be measured separately"*.
+
+**What happens.** `MaxUploadSizeExceededException` fell to
+`@ExceptionHandler(Exception.class)` and answered **500 "Unexpected backend error"** where the
+request was simply too big.
+
+**Why it matters.** The same shape as F-14/F-15/F-17: the right thing happens with the wrong
+status, and it tells the caller the backend broke when nothing did. It appears in this
+project's production logs, which is why F-17 recorded it in the first place.
+
+**How it was found — and what it cost to find it honestly.** The plan was to extend
+`ApiProtocolContractTests` the way F-17 did. **That would have been worthless.** MockMvc is
+Spring's dispatcher without a server: no connector, no Tomcat, **no multipart parsing**, so
+neither exception can be raised there. Probed first: a 2 MB `multipart/form-data` body through
+MockMvc answers **415**, from content negotiation, because it never reaches a parser. A sweep
+built on it would have gone green against a broken handler — this repository's recurring
+failure mode, in a new place.
+
+**Test.** `TransportLimitTests`, which drives a **real servlet container**
+(`webEnvironment = RANDOM_PORT`). Measured: oversized → **500**, malformed envelope → **415**.
+Only the first was wrong. A third test asserts the **body** as well as the status, so replacing
+the narrow handler with `ResponseEntityExceptionHandler` — which would keep the status and
+switch the body to `ProblemDetail` — fails.
+
+**Status. Fixed** — one narrow `@ExceptionHandler(MaxUploadSizeExceededException.class)`
+answering **413** with the project's `BasicResponse` body. 413 rather than 400 because the
+request is well formed and the server is refusing it for size.
+
+**No general `MultipartException` handler was added, deliberately.** Every route here reads a
+JSON `@RequestBody`, so a malformed envelope is refused by content negotiation with 415 before
+any parser runs — the right answer. There is no request that reaches the general case, and a
+handler for a state nothing can produce is a claim this suite cannot check. Both answers are
+pinned, so adding a multipart endpoint later has to be deliberate. The cost is stated too:
+`RANDOM_PORT` forks a second Spring context, one extra application start in `server:test`.
+
+---
+
+### P-8 — `admin-api.md` drifted four times and nothing noticed
+
+**What happened.** The document the panel team treats as authoritative has fallen behind the
+code four times: [F-5](#f-5--failures-come-back-with-http-200) (a status that had changed),
+[F-16](#f-16--the-wrong-http-method-returns-404-instead-of-405) (a 404 that had become a 405),
+[F-22](#f-22--the-two-catalogue-detail-reads-answer-200-for-a-row-that-is-not-there) (a body
+that no longer existed), [F-26](#f-26--ratingcount-on-a-professor-is-always-0) (a field that had
+never been right). Each was corrected by hand. Nothing prevented the next one, and F-5's own
+writeup says the drift is what made parking that fix the wrong call.
+
+**Why it is a process finding rather than a defect.** Nothing in the code is wrong. What was
+missing is the same thing missing from a hand-maintained route list: a mechanism. This
+repository already refuses hand-kept lists in its sweeps for exactly this reason, and had not
+applied the rule to its own documentation.
+
+**Why the obvious mechanism does not work.** The generated OpenAPI schema cannot check a status
+claim: the controllers declare **no** `@ApiResponse`, `@Operation` or `@ResponseStatus` across
+all 80 mappings, so springdoc emits only the default `200`. `OpenApiContractTests` can check
+that a route *exists* and nothing more. Annotating all 80 mappings was considered and rejected
+— ~80 edits for a documentation property, the contract stated twice, and springdoc still would
+not know which *condition* produces which status, which is the half of the document worth
+having.
+
+**Fixed.** An additive appendix in `admin-api.md` between `contract-table` markers — 53 rows of
+`(METHOD, path) -> statuses` — and `AdminApiDocumentationDriftTests`, which checks it **both
+ways** (a claimed route that is not mapped, and a mapped `/admin/**` route that is not claimed)
+and provokes the statuses that can be provoked without a route's fixtures. The prose is
+untouched and stays the authority on *why*; a table cannot say that the `409` on
+`PATCH /admin/users/{id}` is about not locking anyone out of an API with no recovery path.
+
+**It found a documentation error on its first run** — `POST /admin/auth/login` was recorded as
+claiming `401`/`403` for the caller's session, when those are answers about the *credentials in
+the body*; the document's own preamble draws that line and the table had flattened it.
+
+**What it does not catch**, found by trying to make it fail: the `404` probe needs an id to
+invent, so a `404` claimed on a route with no path variable is carried and never checked. 88
+claimed statuses are unprovoked here — `200`, `400`, `409`, `429`, `502`, `503` — and that
+number is itself asserted so it cannot grow quietly.
+
+---
+
+### F-39 — `GET /auth/me` was unmapped, and the admin panel could not sign anybody in
+
+**Where.** `AuthController`. A route that had been removed on the assumption its only caller had
+migrated.
+
+**What happens.** `AuthController` maps five POSTs and no `/me`; `GET /me` exists only on
+`AdminAuthController` under `/admin/auth`. `SecurityConfig` ends in `anyRequest().permitAll()`,
+so `GET /auth/me` was not a `401` — it was an unmapped path answering **404 `Not found`**.
+
+The panel calls it in two places. On page load the `404` is ignored, because only `401` is acted
+on, and the stored session simply stops refreshing. **After a login it is fatal:**
+`authenticateAdmin.ts:32-42` bare-catches it, `null` reaches `resolveAdminUser`, and that raises
+`IdentityUnavailableError`, which fails the entire sign-in with "Signed in, but your admin
+account could not be read." The code was accepted, the token was minted, and the operator could
+not get in.
+
+**Why nobody saw it.** Two documents in this repository disagreed and each was believed by the
+side it suited. `docs/adminweb-tasks.md:81-83` said the path was gone — correct about the code —
+and the panel's own copy of an older findings file said nothing was broken. Neither statement was
+attached to a test, so both survived. **This is the case for the consumer contract layer**: the
+suite was fully green throughout.
+
+**Status. Fixed.** `AuthController.me` is a legacy alias delegating to the same
+`IdentityService.me` its twin calls, with `SecurityConfig` matching `GET /auth/me` as
+`hasRole("ADMIN")` so it carries the admin guard rather than the surrounding `permitAll()`.
+`CHANGELOG` 9.09 (15).
+
+**Test.** `AdminApiPathSplitTests.theLegacyIdentityPathAnswersWhatTheAdminPathAnswers`, which
+asserts the alias against the admin path's own response rather than a literal so the two cannot
+drift, and `theLegacyIdentityPathRefusesAnAnonymousCallerAndAStudent`. Both were watched fail
+with `404 {"message":"Not found","success":false}` before the mapping existed. The guard was
+proved separately by deleting the matcher and watching
+`ApiAuthorizationMatrixTests.everyRouteIsEitherDeclaredPublicOrRefusesAnonymousCallers` name
+`GET /auth/me -> 500`.
+
+---
+
+### F-40 — `POST /answers/report` was never served, and every report from the app failed silently
+
+**Where.** `SocialController` maps `/answers/report` under a class-level `/social`. The Android
+client has always sent it unprefixed.
+
+**What happens.** `POST /answers/report` matched `/answers/{id}` on `ModerationAnswerController`,
+which maps `PATCH` and `DELETE` and no `POST`, so it was answered **405 `Method not allowed`**
+with `Allow: DELETE, PATCH`. **Reporting an answer from the Android app has never worked**, on
+any release.
+
+**Why nobody saw it, on either side.** `logic/CommentHelper.java:86-88` shows "report submitted"
+and dismisses the dialog immediately after `enqueue`, before the response arrives; the real
+outcome only ever reached logcat. And from this side it looked like a naming inconsistency
+rather than a dead route — the client's own audit files it under F-3.8 as "the only social route
+without the `/social` prefix", which reads as cosmetic. `git log -S` settles it: commit `4f1d807`
+introduced the mapping already prefixed, so the path the client calls never existed.
+
+**How it was found.** Not by the sweep. It fell out of a full route inventory taken while writing
+the consumer contract layer, by reading the client's route table against this application's
+mapping — which is precisely what `ConsumerContractSweepTests` now does mechanically, and would
+have caught on any run.
+
+**Status. Fixed.** `LegacyAnswerReportController`, one handler and no class-level mapping,
+delegating to the same `ContentReportService.submitAnswerReport`. Its own class because a method
+path is relative to its class prefix, and widening `SocialController` to serve an unprefixed
+path would alias `/comments`, `/answers` and `/notifications` onto the moderation controllers
+that already map them. `SecurityConfig` matches `POST /answers/report` as authenticated — the
+`/answers/**` matchers cover only `PATCH` and `DELETE`, so it would otherwise have been
+anonymous. `CHANGELOG` 9.09 (16).
+
+**Test.** `SocialApiIntegrationTests.answerReportsAreAlsoServedOnTheUnprefixedPathTheAppCalls`
+and `theUnprefixedAnswerReportPathRefusesAnAnonymousCaller`. Both watched fail at **405** with
+`Allow: DELETE, PATCH` first, which is the evidence for the diagnosis and not just for the fix.
+
+---
+
+### F-41 — `GET /account/ratings` served its ratings in no defined order
+
+**Where.** `Student.ratings`, an unannotated JPA bag, serialised straight out by
+`StudentService.getUserRatings`.
+
+**What happens.** F-21's defect, on the one list the F-35 sweep did not reach. That sweep covered
+`Rating.topics`, `Comment.answers` and the comment listings; `Student.ratings` is the same shape
+and was missed. The nested `lecture.professors` inside each entry **was** already correct — it
+maps through `LectureResponseMapper`, which carries F-21's own comparator — so the item was
+ordered inside and unordered outside.
+
+**Status. Fixed.** `@OrderBy("createdAt DESC, id ASC")`, following the shape commit `6269ed5`
+used for `Comment.answers` rather than sorting in the mapper. Newest first to match the comment
+listings; the id breaks a tie so two ratings written in the same instant come out the same way
+twice. `CHANGELOG` 9.09 (17).
+
+**Test.** `AccountApiIntegrationTests.userRatingsComeBackNewestFirstRatherThanInWhateverOrderTheDatabaseChose`,
+watched fail with `Oldest` where `Newest` was expected, and watched fail again with the
+`@OrderBy` removed.
+
+**One thing the fixture got wrong first, worth recording.** The first version set `createdAt` on
+the managed entity after insert. `@CreationTimestamp` maps the column as non-updatable, so the
+write was dropped without an error and all three rows kept their insertion instants — which
+would have made the test pass on an unordered bag. The timestamps are written with `jdbcTemplate`
+now. A fixture that cannot express the disorder it is testing for is a test that asserts nothing.
+
+---
+
+### F-42 — deactivating a catalogue row hides it from the only list the panel reads
+
+**Not counted in the fifty above, and deliberately not written up as a finding here**, because
+nothing in this repository pins it and nothing in this repository can. It has a number so the
+number is not reused, and so the trail from the demo note and the board leads somewhere.
+
+**What.** `GET /data/lectures` and `GET /data/professor` filter to `active = true`, which is
+what they are for. The panel reads only those two; `GET /data/lectures/all` and
+`GET /data/professor/all` — which exist precisely so a deactivated row stays reachable, per
+`ModerationCatalogController:38-40` — are recorded in the panel's own contract as *"Not
+called"*. So an administrator setting `active: false` from the catalogue form removes the row
+from every screen the panel has, and the `PATCH {"active": true}` that would undo it needs an id
+that is no longer displayed anywhere.
+
+**Why it is not an entry with a test.** The defect is in the panel repository: this API serves
+both the filtered list and the unfiltered one, and reversing the flag works. A test here would
+assert that `/data/lectures/all` returns inactive rows — which
+`ConsumerContractSweepTests` already covers as a served route — and would say nothing about the
+client that does not call it. The rule this repository works to is that
+[a finding is only really recorded if a test pins it](#at-a-glance); this one cannot be, so what
+is recorded instead is **why**.
+
+**Nothing is lost, which is the part to state precisely.** The row keeps its id, its ratings and
+its comments, and `PATCH {"active": true}` restores it — `active = false` is what the API offers
+*instead* of deleting. The defect is that the id is no longer on any screen the panel has, so
+there is nothing to aim the `PATCH` at. It is one-way from the panel, not one-way in the system.
+
+**Where it lives.** `docs/adminweb-tasks.md` task 2b (the work, agreed for the panel's deferred
+list after submission), `docs/TODO.md` item 32 (the board, with how it was measured and the
+estimate), and `docs/coursework/demo-notes.md` (do not touch the switch during the demo).
+
+**Found by** reading the two catalogue services against the panel's called-route list while
+writing the delivery documents — the same method that produced F-39 and F-40, applied to a
+route pair rather than to a route.
+
+---
+
 ## Negative results
 
 A sweep that finds nothing is only worth something if what it covered is written down.
 Otherwise the next person repeats it, or worse, assumes it was never done.
+
+### The consumer contract audit — what came back clean, and how far each check looked
+
+Three real breaks came out of reading the two consumer audits against this code
+([F-39](#f-39--get-authme-was-unmapped-and-the-admin-panel-could-not-sign-anybody-in),
+[F-40](#f-40--post-answersreport-was-never-served-and-every-report-from-the-app-failed-silently),
+[F-41](#f-41--get-accountratings-served-its-ratings-in-no-defined-order)). Everything else both
+clients raised as a risk was checked and is fine. Each is written with what was looked at,
+because that is the half that makes a clean result worth anything.
+
+**Bodyless writes are accepted with no `Content-Type` header.** Both audits asked this, and it
+was the highest-count risk either raised: five panel calls and three app calls send no
+`Content-Type`, because both clients build the header only when there is a body. If F-17's 415
+caught them, eight client calls break at once — and `POST /auth/logout` fails *silently*, since
+the panel swallows its failures, leaving a live token behind an operator who believes they signed
+out.
+
+It does not, and the reason is structural rather than lucky: Spring raises
+`HttpMediaTypeNotSupportedException` only when something has to read the body, which needs a
+`@RequestBody` or a `consumes`, and **no mapping in this application declares `consumes` at all**
+(`grep -rn "consumes\s*=" src/main/java` returns nothing). Scope: all **35** mapped non-GET
+routes that declare no `@RequestBody`, generated as the complement of `bodyReadingRoutes()` so a
+new one arrives on its own —
+`ApiProtocolContractTests.everyRouteThatReadsNoBodyIsAnsweredWithoutAContentTypeHeader`.
+
+Why nothing pinned this before is worth stating: `ApiProtocolContractTests`,
+`ApiErrorMessageContractTests` and `AdminApiDocumentationDriftTests` all gate on
+`readsBody(handler)`, so these 35 routes were skipped by all three **by construction**.
+
+*Proved it can fail, and the first attempt could not.* With `consumes` added to two routes the
+sweep named only one, because the loop authenticated as a single admin and
+`PATCH /account/deleteAccount` answers 200 and deletes that account — after which every remaining
+route answers 401, which is not 415. It now mints a fresh account per route and names both. A
+sweep whose own fixture destroys its session is looking at a fraction of its subject and reading,
+from outside, exactly like one that checked everything.
+
+**Audit entries always carry `changes`, `metadata` and `actor`.** The panel enumerates `changes`
+with `Object.keys` on every row of the audit table and reads `actor.name` unguarded, so an absent
+key blanks the screen rather than spoiling one row. Three layers guarantee presence: field
+initialisers on `AuditLog`, `AuditWriter.persist` normalising null to `{}`, and `jsonb NOT NULL`
+columns. Jackson's default inclusion is `ALWAYS` — there is no `spring.jackson.*` key anywhere
+and the only `@JsonInclude` in `src/main` is on `ApiErrorResponse`. Scope: every entry returned
+by both `/admin/audit-logs` and `/admin/activity-logs`, asserted as **key presence** rather than
+non-nullness, because `jsonPath` cannot tell a null from a key that was never written —
+`AdminApiIntegrationTests.everyAuditEntryCarriesChangesMetadataAndAnActor`. Proved it can fail by
+putting `NON_EMPTY` inclusion on `AuditLogResponse`, which dropped `metadata` from the
+`USER_DELETED` entry exactly as predicted.
+
+**`actor` cannot be null, and there is no system-originated entry.** Five `NOT NULL` actor
+columns, one persistence path (`AuditWriter.persist`, the only place an `AuditLog` is saved
+outside the revert service), and `AuditActorType` declares only `ADMIN` and `USER` — there is no
+`SYSTEM`. Both refusal writers return early when there is no known account:
+`AccessRefusalAuditor` when the principal is not an `AuthenticatedUser`, and
+`SessionIssuer.auditLoginRefusal` on an unknown address. The rule is stated in `AuditAction`'s
+own comment: an anonymous 401 has no actor and would let anyone fill the table.
+
+**No comment, answer or report can arrive without an author.** Deletion anonymises in place —
+`StudentLifecycleService` scrubs the username to `"Deleted user <8-hex>"`, sets the address to an
+`@invalid.local` form and the status to `DELETED`, and keeps the row so every foreign key stays
+valid. The app-tier comment and answer DTOs carry no author object at all, only a flat
+`studentUsername`, behind `@ManyToOne(optional = false)`. Scope: the four moderation DTOs that do
+nest a `UserReferenceResponse`, plus an end-to-end check that a comment survives its author's
+deletion with a renderable author —
+`AdminApiIntegrationTests.contentOfADeletedAccountStillCarriesAnAuthor`. The two genuine nulls in
+this area are elsewhere and both are already handled by the panel: `WarningResponse.createdFrom`,
+which is nullable by design, and `BugReport.reporter`, which the mapper turns into `"Unknown"`.
+
+**A 2xx login always carries `authToken`.** There is exactly one `new LoginResponse(...)` in
+`src/main`, at `SessionIssuer:192`, and every other exit from the login path throws
+`ApiException`. Already pinned before this pass by `AuthApiIntegrationTests`, which asserts
+`$.authToken` `.isString()` — recorded here rather than duplicated, because the panel raises
+`ContractError` without it and the app writes `null` and then sends `Bearer null` on every
+later request.
+
+**`own` is not captured as a lecture id.** `/ratings/own/{lectureId}` is three segments and
+`/ratings/{lectureId}` is two; they cannot collide. The neighbour that can is real and already
+recorded — `GET /ratings/rate` falls into `/ratings/{lectureId}` and answers 400 — which is why
+this is pinned rather than argued: `ApiProtocolContractTests.theOwnRatingsSegmentIsNotCapturedAsALectureId`
+asserts the two reachable handlers by their different answers, and that the two-segment form
+`/ratings/own` is refused for not being a UUID.
+
+**An empty trailing path segment is not a route.** Both clients can produce one — the app sends
+`PATCH /social/notifications/` when a notification id is missing, and the panel interpolates ids
+without escaping, so an empty id gives `/users/`. Both answer **404 `Not found`**, not 500 and
+not the collection route; the collection paths themselves answer 405 for those verbs, so the two
+mechanisms stay distinguishable from the response.
+`ApiProtocolContractTests.anEmptyTrailingSegmentIsNotFoundRatherThanTheCollectionRoute`.
+
+**`POST /social/comments` and `POST /ratings/rate` have no `200 {"success": false}` path left.**
+Both throw `ApiException(NOT_FOUND)` for an unknown lecture (F-28's fix, and the same shape one
+service over). This matters more than it looks: the app reads neither response body, so a failure
+that answered 2xx would show the user "Your comment is sent." The only `BasicResponse(..., false)`
+returned from a controller in `src/main` is `AdminService`'s, behind `GET /admins/validate`, and
+it is unreachable — the chain answers 403 first, pinned by `AdminApiPathSplitTests`.
+
+**Every list key both clients bind to is served under that name**, including the three that do
+not match their path: `GET /reports` → `bugReports`, `GET /comments/reported` → `comments`,
+`GET /answers/reported` → `answers`. So are the three the app binds with `@SerializedName` —
+`notificationID`, `ownCommentID` and `lectureResponse` — and the two spellings its profile
+payload depends on, `ratingsCount` and `commentsWritten`. These are not separate tests: they are
+consumer-read fields, so `ConsumerContractSweepTests` covers them along with the other 300-odd,
+and a rename of any one of them names it. Two keys neither client listed are served and worth
+knowing about: `activityLogs` (the activity endpoint re-wraps specifically to rename the array)
+and `actorTypes`, a fourth key on `/audit-logs/meta`.
+
+**What the sweep found that reading had not:** two fields the admin panel reads from
+`GET /ratings` that this API has never served — `author` (the field is `student`) and `scores`
+(the field is `topics`). Both reads are optional-chained on the panel side, so they degrade
+rather than fail: the author column shows "Unknown" on every row and the scores column is empty
+on every row. `docs/admin-api.md` has documented `student` and `topics`, with a worked example,
+since the endpoint existed, so this is the panel's to fix; it is reported in
+`docs/adminweb-tasks.md` and held in `READ_BUT_NOT_SERVED`, which is asserted as an exact set so
+the entry has to be deleted when the panel moves.
+
+**One scope limit found while doing this, not a finding but worth knowing.**
+`AdminApiDocumentationDriftTests.everyAdministrativeRouteTheApplicationMapsIsInTheDocument`
+filters on `route.contains(" /admin")`. Its reverse direction therefore covers only
+`/admin`-prefixed routes — the entire legacy surface the panel actually calls is outside it. That
+is why adding `GET /auth/me` did not make it red, and it is part of the case for the consumer
+sweep covering the legacy paths by name.
 
 ### Batch 6 raised no finding
 
@@ -1610,6 +2240,68 @@ already open, and this sweep is a second place it hurts — a client cannot dist
 
 ---
 
+### The five defect shapes, swept to the end
+
+The 9 September pass found seven defects by taking five known defect *shapes* and looking for
+the same shape elsewhere. None of the five was swept exhaustively. This is what each sweep
+covered and what was left after it — the coverage matters as much as the findings, because an
+unrecorded sweep gets repeated or, worse, assumed.
+
+| Shape | Scanned | Found |
+|---|---|---|
+| A guard in one twin and not its neighbour (F-23) | 13 twin pairs, line by line | F-31, F-32, plus one documented-and-deliberate asymmetry |
+| A field read but never written, or written but never read (F-26) | every persistent field on all 21 entities, cross-checked against both Flyway baselines | F-33, F-34, plus 8 dead-data fields recorded |
+| An order-undefined collection reaching the client (F-21, F-27) | 5 mappers, **all 76 DTO records**, every `*Response`-building method, all 15 repositories | F-35 (four instances) |
+| An unguarded parse of caller input (F-24, F-25) | every `UUID.fromString`, `Integer`/`Long` parse, `Enum.valueOf`, `*.parse` and Base64 decode in `src/main` — **15 sites** | F-36, in one class; **11 of the 15 already guard both failure modes** |
+| A failure answered `200 {"success": false}` (F-5, F-22, F-28) | **every** `BasicResponse(..., false)` in `src/main` — 14 sites | F-37; 11 were already correct, and 2 of the remaining 3 turned out to be unreachable |
+
+Two of these are worth reading as negative results in their own right.
+
+**The parse sweep is nearly clean, and the detail is the point.** `Uuids` guards null/blank
+explicitly *and* catches `IllegalArgumentException`. `KeysetCursorCodec` catches
+`RuntimeException` **deliberately broadly**, and its own comment records why: a
+`DateTimeParseException` is not an `IllegalArgumentException`, so a narrower catch would have
+missed it. `KeysetPage`, `AuditLogService` and `UserListQuery` each pair a null/blank guard
+with a typed catch. Every `@PathVariable UUID` is converted by Spring and every
+`@RequestBody` enum by Jackson, both answering 400. The migration F-24 started really was
+finished on the request path; the four misses are all behind the audit column, not the request.
+
+**The `200 {"success": false}` shape is effectively closed.** After F-37, one reachable
+instance remains in the whole application — `GET /ratings/own/{lectureId}` — pinned with the
+reason it was left. The other two a reader would flag cannot be reached at all, and that is
+now recorded in tests rather than in nobody's head.
+
+### Every error body in the API is the shape the clients expect
+
+`ApiErrorMessageContractTests` is a fifth sweep, after "does it work", "who may call it", "what
+status does it answer" and "does it describe itself correctly": **what does it say when it
+refuses?** The messages are what the panel puts in front of an operator and the object they
+arrive in is what the Android client parses, and neither was audited.
+
+Route list from `MappedRoutes`, as the house rule requires. It provokes the four refusals that
+need no per-route fixture — anonymous, a verb the path does not map, a body in a media type
+nothing reads, malformed JSON in the right one — and asserts over every response: the body is a
+JSON object carrying `message` and `success`, `success` is `false`, **no field outside**
+`{message, success, reason}`, and the message follows the house style (non-blank, opening
+capital, no trailing full stop, ASCII, no unfilled placeholder, under 200 characters).
+
+**Result: 189 refusals provoked, and every one conforms.** Nothing to fix. What the sweep
+protects is a property that was true by luck: all 49 distinct `ApiException` messages are
+string literals with no concatenation or `String.format`, and there are **no custom Bean
+Validation messages at all** — every validation failure collapses to the single literal
+`"Invalid request"`, so Hibernate Validator's locale-dependent defaults ("must not be blank")
+never reach a client.
+
+**Checked against a defect rather than trusted for being green:** `"Method not allowed"` was
+temporarily changed to `"method not allowed."` and the sweep named it and its origin. The floor
+assertion was checked the same way — raising it reports the real count, 189 — so the sweep
+cannot go quiet if the handler mapping stops resolving.
+
+What it deliberately does not cover: the statuses needing a route's own fixture — a 409 on a
+duplicate name, a 502 from the tracker, a 429 from the limiter. Four of the eight statuses in
+`admin-api.md`'s preamble are provoked here, and a sweep claiming the other four would be
+asserting against its own setup.
+
 ## Process findings
 
 ### P-1 — The coverage baseline number was wrong
@@ -1722,6 +2414,44 @@ number is only worth what the conditions it was measured under are.
 sentence saying so sits next to them in test-plan.md. Quote no coverage number that did not
 come from `./mvnw clean verify`.
 
+### P-9 — A cache is not an input
+
+**What happened.** The first CI run of `dependency:scan` failed with `FATAL Error remote Maven
+repository returned 429 Too Many Requests for
+https://repo.maven.apache.org/maven2/org/springframework/integration/spring-integration-bom/7.0.6/spring-integration-bom-7.0.6.pom.
+Retry-After: 1800.` The job's own comment named a different suspect — Trivy's vulnerability
+database being rate-limited from a shared runner IP — and that download had finished four
+seconds earlier, in the same log.
+
+**Why.** Trivy reads `pom.xml` and resolves the parent-pom chain itself. With a warm `~/.m2` it
+resolves locally and fetches nothing, which is how it was verified before the job was written,
+and the job was built to guarantee that warm repository two ways: it caches `.m2/repository`,
+and `needs: server:test` orders it after the job that fills the cache. Neither guarantees
+anything. `needs:` orders two jobs; it does not put them on one machine. And the runner log says
+`No URL provided, cache will not be downloaded from shared cache server` — there is no
+distributed cache here, so a cache exists only on the Kubernetes node that wrote it.
+`server:test` warmed one node, the scan started on `runner.example.org` with `Cache file does
+not exist`, and a cold resolution went to an IP the whole runner cluster shares.
+
+**Why it matters beyond this job.** A cache is allowed to miss — that is what makes it a cache
+rather than an input. Anything a job needs in order to be *correct* has to arrive by a route
+that cannot silently be empty, and in GitLab that route is an artifact. The tell was in the job
+comment all along: it explained why the cache would be warm. A comment that argues an
+optimisation will always be there is describing a dependency.
+
+**Status. Fixed** — `server:test` writes the resolved tree to
+`target/classes/META-INF/sbom/application.cdx.json` (cyclonedx-maven-plugin, version managed by
+`spring-boot-starter-parent`) and publishes it as an artifact; `dependency:scan` runs
+`trivy sbom` on it and resolves no Maven coordinate at all. Checked locally in both directions,
+because a scan that looks at less and a scan that cannot fail both read as a pass: the SBOM
+scan's package list is identical to the old `trivy fs .` list except that it adds
+`org.projectlombok:lombok`, which Trivy's pom parser dropped (107 packages, 0 findings, the same
+0); and rebuilding the SBOM against `spring-boot-starter-parent` 4.0.6 — the version 4.0.8
+replaced — still exits 1, on 13 HIGH. **Unverified in CI**, like everything here: no token.
+Item 10 in [TODO.md](TODO.md).
+
+---
+
 ---
 
 ## Unreachable states deliberately not tested
@@ -1737,3 +2467,7 @@ writing them down here shows the decision was deliberate.
 | `CatalogueRevertHandler` — `getLectureType().name()` with no null guard | the column is `nullable = false`, and there is a `LECTURE_ONLY` default on the Java side |
 | `AccountService` — a `student == null` NPE | the principal comes from the security chain and cannot be null |
 | Private constructors of static-only classes | JaCoCo has filtered them since 0.8.0; a reflection test would be fake coverage |
+| `AdminService.validateAdmin` — the `"Is Not Admin"` body | `SecurityConfig` matches `/admins/**` with `hasRole("ADMIN")`, so a caller without the role is refused **403** by the chain and an invalid token **401** by the filter, both before the controller runs. The same dead second answer `LectureService.addLecture` carries a comment about. Pinned at 403 by `AdminApiPathSplitTests` — the test was written expecting 200 and went red, which is how the branch was shown to be unreachable |
+| `IdentityService.validate` — the invalid-token and missing-email branches | `BearerTokenAuthenticationFilter` answers 401 for any present-but-invalid `Authorization` header, and `@NotBlank` + `@Valid` make a missing address a 400, both ahead of the method. Corrected anyway under F-37 so the method agrees with the layer in front of it, but only the wrong-address branch is observable |
+| `ReportStatusRevertHandler` — a `report.getComment()` / `getAnswer()` NPE | `comment_id` and `answer_id` are `NOT NULL` in both baselines; a report row without its content cannot exist |
+| A general `MultipartException` other than the size one | every route reads a JSON `@RequestBody`, so content negotiation answers 415 before any multipart parser runs. Measured over a real servlet container in `TransportLimitTests`, not assumed — which is also why no handler claims it (F-38) |

@@ -1,7 +1,7 @@
 package com.pse.professor.repository;
 
 import java.util.Optional;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -23,7 +23,14 @@ public interface ProfessorRepository extends JpaRepository<Professor, UUID> {
      * @return the result
      */
     @EntityGraph(attributePaths = "lectures")
-    Set<Professor> findByActiveTrueOrderByLastNameAscFirstNameAsc();
+    /*
+     * List, not Set. These queries carry an ORDER BY, and the order is what the catalogue
+     * listing serves to the client -- but a Set declares no order, so the contract said the
+     * opposite of what the query means. It worked only because Spring Data happens to
+     * materialise a LinkedHashSet, which is a fact about the framework rather than a
+     * guarantee anybody wrote down. F-21's shape at the type level.
+     */
+    List<Professor> findByActiveTrueOrderByLastNameAscFirstNameAsc();
 
     /**
      * Returns findAllByOrderByLastNameAscFirstNameAsc.
@@ -31,7 +38,7 @@ public interface ProfessorRepository extends JpaRepository<Professor, UUID> {
      * @return the result
      */
     @EntityGraph(attributePaths = "lectures")
-    Set<Professor> findAllByOrderByLastNameAscFirstNameAsc();
+    List<Professor> findAllByOrderByLastNameAscFirstNameAsc();
 
     /**
      * Returns findWithLecturesById.

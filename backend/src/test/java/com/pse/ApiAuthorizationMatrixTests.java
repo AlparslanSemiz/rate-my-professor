@@ -33,7 +33,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -80,6 +83,12 @@ class ApiAuthorizationMatrixTests {
      * {@code POST /data/professor} was open by accident until the chain was given a rule
      * for it.
      */
+    /**
+     * The Android client's route inventory, extracted from its own call sites and held to
+     * this application by {@code ConsumerContractSweepTests}.
+     */
+    private static final Path ANDROID_CONTRACT = Path.of("docs/frontend-consumer-contract.md");
+
     private static final Set<String> PUBLIC_ROUTES = Set.of(
             "POST /auth/request-login",
             "POST /auth/login",
@@ -287,28 +296,78 @@ class ApiAuthorizationMatrixTests {
      *
      * <p>It asserts {@code 200} rather than "was not refused" -- P-6. The older form,
      * {@code status != 401 && status != 403}, is also satisfied by a {@code 404}, so a route
-     * deleted from this list's subject matter would keep the loop green. Unlike every other
-     * sweep in this suite the route list here is hand-written, and it has to be: the question
-     * is which routes the *app* depends on, and Spring cannot answer that. So the list does
-     * not go stale -- the application does, and only an assertion strict enough notices.
+     * deleted from this list's subject matter would keep the loop green.
+     *
+     * <p><b>The list used to be hand-written, and the javadoc here used to argue that it had
+     * to be:</b> the question is which routes the app depends on, and Spring cannot answer
+     * that. The first half is still true and the conclusion no longer is. The app's routes are
+     * now inventoried in {@code docs/frontend-consumer-contract.md}, extracted from that
+     * client's own call sites, and {@code ConsumerContractSweepTests} holds that document to
+     * the application. Reading it here instead means a route the app starts calling arrives in
+     * this loop rather than waiting for somebody to remember this file -- which is the same
+     * argument the rest of the suite makes for reading the route list from Spring.
+     *
+     * <p>Restricted to what a bare session can reach: authenticated {@code GET}s with no path
+     * variable. A placeholder would need that route's fixture, and this class has no
+     * business inventing one -- the ownership and integration suites cover those. The three
+     * session-ending calls are excluded by the same filter, since all three are writes; they
+     * are named anyway, because "no writes" is a choice and not an accident.
      */
     @Test
     void studentSessionReachesTheEndpointsTheAppNeeds() throws Exception {
         String token = studentSession();
 
-        // Reads only. logout, logout-all and deleteAccount are left out on purpose: they
-        // would end the session under the rest of the loop.
-        List<String> routes = List.of(
-                "GET /account/information",
-                "GET /account/ratings",
-                "GET /social/notifications"
-        );
+        List<String> routes = appRoutesAStudentSessionShouldReach();
+
+        // Reads only. POST /auth/logout, POST /auth/logout-all and PATCH
+        // /account/deleteAccount are app routes too, and each would end the session under the
+        // rest of the loop.
+        assertThat(routes)
+                .as("the app's contract stopped naming any authenticated read this loop can "
+                        + "reach without a fixture, which would leave it asserting nothing")
+                .isNotEmpty();
 
         for (String route : routes) {
             assertThat(statusOf(route, token))
                     .as(route + " did not answer a student session with 200")
                     .isEqualTo(200);
         }
+    }
+
+    /**
+     * The app's authenticated reads, from the Android client's own contract document.
+     *
+     * @return {@code "GET /account/information"} and the like, placeholder-free
+     * @throws IOException if the contract document cannot be read
+     */
+    private static List<String> appRoutesAStudentSessionShouldReach() throws IOException {
+        List<String> routes = new ArrayList<>();
+        boolean inside = false;
+
+        for (String line : Files.readAllLines(ANDROID_CONTRACT)) {
+            if (line.contains("consumer-contract:start")) {
+                inside = true;
+                continue;
+            }
+            if (line.contains("consumer-contract:end")) {
+                break;
+            }
+            if (!inside || !line.startsWith("|") || line.contains("---")
+                    || line.contains("| Verb |")) {
+                continue;
+            }
+
+            String[] cells = line.split("\\|");
+            String verb = cells[1].trim();
+            String path = cells[2].trim();
+            String auth = cells[3].trim();
+
+            if (verb.equals("GET") && auth.equals("bearer") && !path.contains("{")) {
+                routes.add(verb + " " + path);
+            }
+        }
+
+        return routes;
     }
 
     /**

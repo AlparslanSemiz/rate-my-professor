@@ -18,6 +18,10 @@ import com.pse.social.repository.AnswerVoteRepository;
 import com.pse.social.repository.CommentReportRepository;
 import com.pse.social.repository.CommentRepository;
 import com.pse.social.repository.NotificationRepository;
+import com.pse.auth.model.Token;
+import com.pse.user.model.Student;
+import java.time.LocalDateTime;
+import com.pse.support.AdminSessions;
 import com.pse.support.ApiContract;
 import com.pse.support.TestDeliveryConfig;
 import com.pse.support.TestDeliveryConfig.CapturingLoginCodeDelivery;
@@ -257,6 +261,72 @@ class ApiProtocolContractTests {
     }
 
     /**
+     * The other half of the write surface: every route that takes no body at all, called the
+     * way both clients call it -- with no {@code Content-Type} header.
+     *
+     * <p><b>Why this is not covered by the sweep above.</b> That one iterates
+     * {@code bodyReadingRoutes()}, and so do {@code ApiErrorMessageContractTests} and
+     * {@code AdminApiDocumentationDriftTests}. All three gate on {@code readsBody}, so the
+     * routes here are skipped by construction -- eight of them are called by a shipped client
+     * and none was ever probed. This is the complement of that filter, generated the same way
+     * so a bodyless route added later arrives here on its own.
+     *
+     * <p><b>What both consumer audits asked.</b> The admin panel sends no
+     * {@code Content-Type} on five calls and the Android client on three, because both build
+     * the header only when there is a body. Both asked whether F-17's 415 now catches them --
+     * the panel noting that {@code POST /auth/logout} swallows its failures, so a 415 there
+     * would leave a live token behind an operator who believes they signed out.
+     *
+     * <p><b>The answer is no, and the reason is structural rather than lucky.</b> Spring
+     * raises {@code HttpMediaTypeNotSupportedException} only when something has to read the
+     * body, which needs a {@code @RequestBody} or a {@code consumes} -- and no mapping in this
+     * application declares {@code consumes} at all. So F-17's handler cannot reach these
+     * routes. That is worth an assertion rather than a paragraph: the day someone adds
+     * {@code consumes} to one of them, eight client calls start answering 415 and this is what
+     * says so.
+     */
+    @Test
+    void everyRouteThatReadsNoBodyIsAnsweredWithoutAContentTypeHeader() throws Exception {
+        // A fresh account per route, not merely a fresh token. Four routes in this loop are
+        // logout and account-deletion, and they succeed: PATCH /account/deleteAccount answers
+        // 200 and deletes the very account the loop is authenticating as, after which every
+        // remaining route answers 401 -- which is not 415, so the sweep would pass while
+        // looking at whatever happened to be probed first. Found by making it fail on purpose
+        // and watching it name one of the two routes it should have named.
+        Map<String, String> bodylessRoutes = bodylessWriteRoutes();
+
+        assertThat(bodylessRoutes.size() >= 8)
+                .as("expected the bodyless write surface, found only " + bodylessRoutes.size()
+                        + " routes -- the complement filter stopped matching")
+                .isTrue();
+
+        List<String> refused = new ArrayList<>();
+
+        for (Map.Entry<String, String> route : bodylessRoutes.entrySet()) {
+            String verb = route.getValue();
+            String path = route.getKey();
+
+            // No .contentType(...) and no .content(...) -- exactly what an empty-bodied
+            // fetch() and a Retrofit method with no @Body put on the wire.
+            MockHttpServletRequestBuilder request = requestFor(verb, concrete(path))
+                    .header("Authorization", bearer(AdminSessions.createAdmin(
+                            ADMIN_EMAIL, studentRepository, adminRepository, tokenRepository)));
+
+            int status = mockMvc.perform(request).andReturn().getResponse().getStatus();
+            if (status == UNSUPPORTED_MEDIA_TYPE_STATUS) {
+                refused.add(verb + " " + path);
+            }
+        }
+
+        assertThat(refused.isEmpty())
+                .as("these routes take no body and answered " + UNSUPPORTED_MEDIA_TYPE_STATUS
+                        + " to a request that carried none. Both shipped clients send these "
+                        + "calls with no Content-Type header, so each one here is a client "
+                        + "call that has started failing: " + refused)
+                .isTrue();
+    }
+
+    /**
      * Every handler that reads a {@code @RequestBody}, handed a body it cannot parse.
      *
      * <p>The handler set is read from the mapping rather than listed, because the failure
@@ -391,6 +461,97 @@ class ApiProtocolContractTests {
 
         for (MappedRoutes.Route route : MappedRoutes.application(handlerMapping)) {
             if (route.verb() == null || !readsBody(route.handler())) {
+                continue;
+            }
+            routes.put(route.pattern(), route.verb());
+        }
+
+        return routes;
+    }
+
+    /**
+     * {@code own} is a path segment, not a lecture id.
+     *
+     * <p>The Android audit flags {@code GET /ratings/own/{lectureId}} and
+     * {@code GET /ratings/{lectureId}} as colliding in shape and records that it cannot tell
+     * from its side which one the router picks. They cannot collide -- one is three segments
+     * and the other two -- and the pin is here rather than a sentence in a document because
+     * the neighbour that *can* shadow is real: {@code GET /ratings/rate} falls into
+     * {@code GET /ratings/{lectureId}} and is answered 400, and the two mappings differ by a
+     * literal in exactly the same position.
+     *
+     * <p>Asserted on the answers rather than on the mapping, because two handlers reached is
+     * what the client actually depends on: the owner read refuses an unknown lecture, the
+     * public read answers an empty average for one.
+     */
+    @Test
+    void theOwnRatingsSegmentIsNotCapturedAsALectureId() throws Exception {
+        String token = AdminSessions.createAdmin(
+                ADMIN_EMAIL, studentRepository, adminRepository, tokenRepository);
+        String lectureId = UUID.randomUUID().toString();
+
+        mockMvc.perform(get("/ratings/own/" + lectureId).header("Authorization", bearer(token)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Lecture not found"));
+
+        mockMvc.perform(get("/ratings/" + lectureId).header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ratings").isArray());
+
+        // And the two-segment form, which is what a collision would look like: "own" reaches
+        // the public read as a lecture id and is refused for not being one.
+        mockMvc.perform(get("/ratings/own").header("Authorization", bearer(token)))
+                .andExpect(status().isBadRequest());
+    }
+
+    /**
+     * An empty trailing path segment is not a route.
+     *
+     * <p>Both consumer audits arrive at this from different directions and neither could
+     * answer it. The Android client builds a notification id with a fallback to the empty
+     * string and can send {@code PATCH /social/notifications/} before its own emptiness guard
+     * runs; the admin panel interpolates ids into paths without escaping them, so an empty id
+     * would produce {@code GET /users/} rather than {@code /users//}. The question in both
+     * cases is whether the truncated path quietly reaches a <em>different</em> route.
+     *
+     * <p>It does not, and the distinction the assertions draw is the point: the empty-segment
+     * form is 404 {@code Not found} -- no such path -- while the collection path itself is
+     * 405, meaning the path exists and does not take that verb. Two different mechanisms, and
+     * a client that saw one status for both would have no way to tell them apart.
+     */
+    @Test
+    void anEmptyTrailingSegmentIsNotFoundRatherThanTheCollectionRoute() throws Exception {
+        String token = AdminSessions.createAdmin(
+                ADMIN_EMAIL, studentRepository, adminRepository, tokenRepository);
+
+        mockMvc.perform(patch("/social/notifications/").header("Authorization", bearer(token)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Not found"));
+
+        mockMvc.perform(patch("/social/notifications").header("Authorization", bearer(token)))
+                .andExpect(status().isMethodNotAllowed());
+
+        mockMvc.perform(get("/users/").header("Authorization", bearer(token)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Not found"));
+
+        // The listing the panel would have reached had the empty id collapsed the path.
+        mockMvc.perform(get("/users").header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users").isArray());
+    }
+
+    /**
+     * The complement of {@link #bodyReadingRoutes()}: mapped writes that declare no
+     * {@code @RequestBody}, and so never run content negotiation.
+     *
+     * @return pattern to verb, {@code GET} and verb-less mappings excluded
+     */
+    private Map<String, String> bodylessWriteRoutes() {
+        Map<String, String> routes = new LinkedHashMap<>();
+
+        for (MappedRoutes.Route route : MappedRoutes.application(handlerMapping)) {
+            if (route.verb() == null || "GET".equals(route.verb()) || readsBody(route.handler())) {
                 continue;
             }
             routes.put(route.pattern(), route.verb());

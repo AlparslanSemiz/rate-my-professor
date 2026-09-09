@@ -516,6 +516,55 @@ class RatingServiceTests {
     }
 
 
+    /**
+     * F-27's surface, on the route beside the one that was fixed. {@code getRatings} was given
+     * an {@code EnumMap} so the public read returns categories in declaration order; this
+     * method, two below it, builds the same {@code RatingsAverageResponse.ratings} field by
+     * walking {@code rating.getTopics()} -- a JPA bag with no {@code @OrderBy} -- so the same
+     * field came back in whatever order the database happened to return.
+     *
+     * <p>Declaration order rather than alphabetical, because that is what the CHANGELOG
+     * already promised for the sibling route and one field cannot have two orders.
+     */
+    @Test
+    void getOwnRatingReturnsTheCategoriesInDeclarationOrder() {
+
+        Student student = mock(Student.class);
+        Lecture lecture = mock(Lecture.class);
+
+        UUID studentId = UUID.randomUUID();
+        UUID lectureId = UUID.randomUUID();
+
+        Rating rating = new Rating();
+        // Stored in reverse declaration order, which an unordered bag is free to return.
+        rating.setTopics(new ArrayList<>(List.of(
+                topic(rating, RatingCategory.WORKLOAD, 4.0),
+                topic(rating, RatingCategory.ORGANIZATION, 3.0),
+                topic(rating, RatingCategory.ROOM, 2.0))));
+
+        when(student.getId()).thenReturn(studentId);
+        when(lectureService.getById(lectureId)).thenReturn(lecture);
+        when(ratingRepository.findByStudentIdAndLectureId(studentId, lectureId))
+                .thenReturn(Optional.of(rating));
+
+        RatingsAverageResponse response = ratingService.getOwnRating(student, lectureId);
+
+        assertThat(response.ratings())
+                .extracting(TopicAverageResponse::category)
+                .containsExactly(
+                        RatingCategory.ROOM,
+                        RatingCategory.ORGANIZATION,
+                        RatingCategory.WORKLOAD);
+    }
+
+    private static RatingTopic topic(Rating rating, RatingCategory category, double value) {
+        RatingTopic topic = new RatingTopic();
+        topic.setRating(rating);
+        topic.setCategory(category);
+        topic.setValue(value);
+        return topic;
+    }
+
     @Test
     void getOwnRatingWithNoRatingYetReturnsAnEmptyListRatherThanNull() {
 

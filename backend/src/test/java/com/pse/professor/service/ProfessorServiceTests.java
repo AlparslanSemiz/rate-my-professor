@@ -28,10 +28,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
-import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import java.util.Map;
@@ -89,7 +88,7 @@ class ProfessorServiceTests {
                 true
         );
 
-        Set<Professor> professors = new LinkedHashSet<>();
+        List<Professor> professors = new ArrayList<>();
         professors.add(professor1);
         professors.add(professor2);
 
@@ -113,7 +112,7 @@ class ProfessorServiceTests {
     void getProfessorsReturnsEmptyListWhenNoActiveProfessorExists() {
 
         when(professorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc())
-                .thenReturn(Set.of());
+                .thenReturn(List.of());
 
 
         ProfessorsResponse response = professorService.getProfessors();
@@ -141,7 +140,7 @@ class ProfessorServiceTests {
                 false
         );
 
-        Set<Professor> professors = new LinkedHashSet<>();
+        List<Professor> professors = new ArrayList<>();
         professors.add(activeProfessor);
         professors.add(inactiveProfessor);
 
@@ -249,6 +248,36 @@ class ProfessorServiceTests {
 
         verify(professorRepository, never()).save(any());
         verifyNoInteractions(lectureRepository);
+    }
+
+
+    /**
+     * The mirror of {@code addLectureStoresTheNameAndCodeTrimmed}: this side already stored
+     * the trimmed name but ran its uniqueness check on the raw one, so {@code " Stefan"} /
+     * {@code "Kuehnlein "} walked past the 409 and created a second row holding exactly the
+     * name the first one holds. Each twin had one half of "trim, then check, then store".
+     */
+    @Test
+    void addProfessorRefusesANameThatDiffersFromAnExistingOneOnlyByWhitespace() {
+
+        Professor existingProfessor = createProfessor("Stefan", "Kuehnlein", true);
+        existingProfessor.setId(UUID.randomUUID());
+
+        ProfessorAddRequest request = new ProfessorAddRequest(
+                " Stefan",
+                "Kuehnlein ",
+                null
+        );
+
+        when(professorRepository.findByFirstNameAndLastName("Stefan", "Kuehnlein"))
+                .thenReturn(Optional.of(existingProfessor));
+
+        assertThatThrownBy(() -> professorService.addProfessor(principal, request))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getStatus())
+                .isEqualTo(HttpStatus.CONFLICT);
+
+        verify(professorRepository, never()).save(any());
     }
 
 

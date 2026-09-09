@@ -686,3 +686,233 @@ depending on which of the three it called.
 
 The message text changed, so anything matching on it has to change. A successful submission is
 untouched.
+
+
+///// 9.09 (8)
+
+
+"POST /admin/audit-logs/{id}/revert" now works on a report status change that hid content.
+
+Was: 409 {"message": "COMMENT_REPORT_STATUS_CHANGED cannot be reversed",
+          "success": false, "reason": "ACTION_NOT_REVERTIBLE"}
+Now: 200 -- the report goes back to its previous status and the comment or answer it hid
+     becomes visible again
+
+The listing said so too: "revertible" was false on those entries and "revertBlockedReason"
+read ACTION_NOT_REVERTIBLE, so a panel drawing the button from that flag correctly did not
+draw it. Both now report revertible: true.
+
+Only the entries that changed visibility were affected -- that is, every transition into or
+out of ACTION_TAKEN, which is the whole reason the revert exists for this action. Those
+entries record two changed fields ("status" and "commentStatus"/"answerStatus") and the
+revert handler published only the first, so the service refused the entry as carrying a
+field it could not restore.
+
+Panel: entries you were hiding the revert button on will now offer it. Nothing to change if
+you read "revertible" from the response, which is what it is there for.
+
+
+///// 9.09 (9)
+
+
+"POST /admin/data/lectures" stores the name and code trimmed, and refuses a duplicate that
+differs only by whitespace.
+
+Was: "  Algorithmen 1  " stored with its padding, and accepted alongside an existing
+     "Algorithmen 1"
+Now: stored as "Algorithmen 1", and the second one answers
+     409 {"message": "Lecture already exists: Algorithmen 1", "success": false}
+
+"POST /admin/data/professor" already stored the trimmed name but ran its uniqueness check on
+the untrimmed one, so " Stefan" / "Kuehnlein " walked past the 409 and created a second
+professor holding exactly the name the first one holds. It now checks what it stores.
+
+Was: 200, a duplicate professor row
+Now: 409 {"message": "Professor already exists: Stefan Kuehnlein", "success": false}
+
+Nothing to change if you already trim in the form. If you were relying on padding to create
+near-duplicate rows, that no longer works -- which was the point.
+
+One side effect worth knowing: a lecture created with a padded name used to record a bogus
+"name" change in the audit log on its first admin edit, because the PATCH path trims before
+comparing and the stored value did not. New lectures cannot get into that state.
+
+
+///// 9.09 (10)
+
+
+"PATCH /admin/users/{id}" refuses to demote an administrator who has dispositioned a bug
+report.
+
+Was: 200, the administrator was demoted and the bug reports it had dealt with lost their
+     attribution silently
+Now: 409 {"message": "Administrator has moderation history and cannot be demoted",
+          "success": false}
+
+No new rule -- this is the rule that was already documented, applied to the third of its three
+sources. Demotion has always been refused for an administrator who issued a warning or
+reviewed a comment or answer report. Bug reports were meant to count too and could not:
+"resolved_by_admin_id" existed with a foreign key and nothing in the application had ever
+written it.
+
+"PATCH /admin/reports/{id}" now records who changed a bug report's status, and when, the same
+way the comment and answer report endpoints have always recorded it. Neither field appears in
+any response, so the only thing a client sees is the 409 above. Moving a report back to OPEN
+clears them again.
+
+Panel: an administrator who only ever worked the bug queue can no longer be demoted. Strip the
+attribution first, or leave the account an administrator -- the same choice that already
+applied to warnings.
+
+
+///// 9.09 (11)
+
+
+Four more lists that had no defined order now have one. Same defect as F-21 and F-27, in the
+places those two fixes did not reach.
+
+    GET /ratings/own/{lectureId}
+    GET /admin/ratings
+
+Was: "ratings" / "topics" in whatever order the database returned them
+Now: RatingCategory declaration order -- OVERALL, ROOM, ORGANIZATION, MATERIALS, WORKLOAD,
+     LECTURE_*, PROFESSOR_*, EXERCISE_*, TUTOR_*
+
+The same order "GET /ratings/{lectureId}" has had since 9.09 (6). One response field cannot
+have two orders, and these two were reading a JPA collection with no ORDER BY while the third
+had been given an EnumMap.
+
+    GET /social/comments/{lecture_id}
+    GET /social/sync/comments
+
+Was: "comments" unordered, and "answers" under each comment unordered
+Now: comments newest first, answers oldest first
+
+Both listings had no ORDER BY at all, while the admin listing beside them always had one. The
+answers are oldest first because a thread under a question reads forwards; the comments are
+newest first, matching "GET /admin/comments".
+
+    GET /admin/audit-logs
+    GET /admin/activity-logs
+
+Was: "changes.professors" and "changes.lectures" recorded the id list in the order the
+     in-memory Set produced, which can differ between two runs of the same code
+Now: sorted
+
+Only the recorded value moved. Whether an assignment counts as changed was already
+order-insensitive -- that half was BUG-3's fix; this is the half it did not reach.
+
+Nothing to change if you sort or look up by key. If you render any of these lists in the order
+they arrive, they will stop reshuffling.
+
+
+///// 9.09 (12)
+
+
+"POST /admin/audit-logs/{id}/revert" refuses an entry whose recorded value cannot be read back,
+instead of answering 500.
+
+Was: 500 {"message": "Unexpected backend error", "success": false}
+Now: 409 {"message": "The recorded value for '<field>' cannot be read back",
+          "success": false, "reason": "ACTION_NOT_REVERTIBLE"}
+
+No new "reason" value -- ACTION_NOT_REVERTIBLE already covers it, so nothing branching on the
+five documented reasons has to change.
+
+This cannot be triggered by anything a client sends. It happens when an audit entry names a
+value the current code no longer understands: an enum constant that has since been renamed or
+removed, or a number that no longer parses. The entry still reports revertible: true, because
+revertibility is decided by comparing recorded values as text, so the panel draws the button
+and pressing it used to report a backend failure for what is really an unreversible entry.
+
+
+///// 9.09 (13)
+
+
+"POST /auth/validate" refuses an address that is not the token owner's.
+
+Was: 200 {"message": "Error, wrong email for auth Token", "success": false}
+Now: 401 {"message": "Not logged in", "success": false}
+
+The last route still reporting an authorization failure with 200. Everything else about the
+endpoint is unchanged: a matching address still answers
+200 {"message": "Correct auth-Token for email: ...", "success": true}.
+
+The message text changed, so anything matching on it has to change. If you were branching on
+"success" you now get a 401 for the same case, which is the same answer this endpoint already
+gave when the Authorization header was missing entirely.
+
+
+///// 9.09 (14)
+
+
+A request body over the upload size limit answers 413 instead of 500.
+
+Was: 500 {"message": "Unexpected backend error", "success": false}
+Now: 413 {"message": "Payload too large", "success": false}
+
+No endpoint here accepts a file upload, so this is only reachable by sending a
+"multipart/form-data" body to a route that reads JSON. It appears in the production logs, which
+is why it is being answered properly rather than left to the catch-all.
+
+A malformed multipart body is unchanged: it still answers 415, because no route in this API can
+read that media type. Nothing to change unless you were treating the 500 as a backend outage --
+it never was one.
+
+
+///// 9.09 (15)
+
+
+"GET /auth/me" is served again. It answers exactly what "GET /admin/auth/me" answers.
+
+Was: 404 {"message": "Not found", "success": false}
+Now: 200 {"message": "Authenticated", "success": true, "user": {...}}
+
+The path was removed on the assumption that the panel had already moved to
+"GET /admin/auth/me". It had not, and the failure did not look like one from either side: the
+panel bare-catches this call after a successful login, turns the 404 into a null identity and
+raises "your admin account could not be read", which fails the whole sign-in. The code was
+accepted, the token was minted, and nobody could get in.
+
+Requires an admin session, the same as its twin -- an account without one gets 403, not 200.
+
+Nothing to change. If you are already on "GET /admin/auth/me", stay there: this path exists
+only until the panel confirms it has migrated, and then it goes again.
+
+
+///// 9.09 (16)
+
+
+"POST /answers/report" is served. It answers exactly what "POST /social/answers/report"
+answers.
+
+Was: 405 {"message": "Method not allowed", "success": false}, Allow: DELETE, PATCH
+Now: 200 {"message": "...", "success": true}
+
+This is not a new feature, it is a route that was never there. The app has always sent
+"/answers/report" while the API has only ever served "/social/answers/report", so the request
+matched "/answers/{id}" on the moderation controller -- which maps PATCH and DELETE and no
+POST -- and was refused. Reporting an answer from the app has never worked. It looked like it
+did because the app tells the user the report was submitted before the response arrives.
+
+Requires a session, the same as its "/social" twin.
+
+Nothing to change to get it working; an installed app starts filing reports as soon as this
+ships. New work only if you want it on one path: move to "POST /social/answers/report", which
+is where every other social route already is, and tell us so this one can go.
+
+
+///// 9.09 (17)
+
+
+"GET /account/ratings" returns its ratings in a defined order.
+
+Was: "ratings" in whatever order the database returned them
+Now: newest first, ties broken by id
+
+The same defect as F-21, F-27 and 9.09 (11), on the one list those sweeps did not reach. The
+lecture inside each entry was already ordered -- "lecture.professors" has been sorted by name
+since F-21 -- so the item was ordered inside and unordered outside.
+
+Nothing to change if you sort client-side. If you render the array in the order it arrives, it
+will stop reshuffling between two requests for the same account.

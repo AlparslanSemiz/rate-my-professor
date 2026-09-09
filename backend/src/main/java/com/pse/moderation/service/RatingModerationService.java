@@ -11,6 +11,7 @@ import com.pse.moderation.dto.response.ManagedRatingsResponse;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.WarningRepository;
 import com.pse.rating.model.Rating;
+import com.pse.rating.model.RatingTopic;
 import com.pse.rating.repository.RatingRepository;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.dto.BasicResponse;
@@ -21,6 +22,7 @@ import com.pse.shared.util.KeysetCursorCodec;
 import com.pse.shared.util.UtcDates;
 import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -134,7 +136,10 @@ public class RatingModerationService {
                         UserReferenceMapper.toReference(rating.getStudent(), adminIds, warningCounts),
                         LectureLabels.of(rating.getLecture()),
                         rating.getLecture().getId(),
+                        // Declaration order, like the two app-tier reads. The bag has no
+                        // @OrderBy, so without this the admin list reshuffles too -- F-27.
                         rating.getTopics().stream()
+                                .sorted(Comparator.comparing(RatingTopic::getCategory))
                                 .map(topic -> new ManagedRatingTopicResponse(
                                         topic.getCategory(),
                                         topic.getValue()

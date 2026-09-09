@@ -1,5 +1,7 @@
 package com.pse;
 
+import com.jayway.jsonpath.JsonPath;
+
 import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditActionScope;
 import com.pse.audit.model.AuditActorType;
@@ -63,10 +65,12 @@ import com.pse.social.model.AnswerReport;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -1509,8 +1513,14 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.ratings[0].lectureId").value(lecture.getId().toString()))
                 .andExpect(jsonPath("$.ratings[0].student.name").value("rater"))
                 .andExpect(jsonPath("$.ratings[0].topics", hasSize(2)))
-                .andExpect(jsonPath("$.ratings[0].topics[0].category").value("ORGANIZATION"))
-                .andExpect(jsonPath("$.ratings[0].topics[0].value").value(4.0));
+                // Inverted, not deleted. This read topics[0] == ORGANIZATION, which was the
+                // order the rows happened to be inserted in -- Rating.topics is a JPA bag and
+                // the listing walked it unordered, so the panel's column order was the
+                // database's choice. Sorted by category now, which for an enum is declaration
+                // order, and OVERALL is declared first. Same order as the two app-tier reads.
+                .andExpect(jsonPath("$.ratings[0].topics[0].category").value("OVERALL"))
+                .andExpect(jsonPath("$.ratings[0].topics[1].category").value("ORGANIZATION"))
+                .andExpect(jsonPath("$.ratings[0].topics[1].value").value(4.0));
     }
 
     @Test
@@ -1960,6 +1970,72 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.comments", hasSize(1)));
     }
 
+    /**
+     * The test above is named for reverting and does not use the revert endpoint -- it toggles
+     * the report back with a second PATCH. This is the one that presses the button the panel
+     * shows, on the transition the handler's own javadoc calls the reason it exists.
+     *
+     * <p>{@code updateReportStatus} records two changed fields whenever visibility flips --
+     * {@code status} and {@code commentStatus} -- while the handler's {@code currentValues}
+     * offered only {@code status}, and {@code AuditRevertService} refuses an entry carrying a
+     * key the handler does not know. So every {@code ACTION_TAKEN} transition, which is
+     * exactly the set worth reverting, was permanently unrevertible.
+     */
+    @Test
+    void anActionTakenReportStatusIsRevertibleThroughTheAuditEntry() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Student reported = createStudent("revert-author@student.kit.edu");
+        Student reporter = createStudent("revert-reporter@student.kit.edu");
+        Lecture lecture = createLecture();
+        Comment comment = new Comment();
+        comment.setContent("Offending content");
+        comment.setStudent(reported);
+        comment.setLecture(lecture);
+        comment = commentRepository.saveAndFlush(comment);
+        CommentReport report = new CommentReport();
+        report.setComment(comment);
+        report.setReporter(reporter);
+        report.setReason(ReportReason.HARASSMENT);
+        report = commentReportRepository.saveAndFlush(report);
+
+        mockMvc.perform(patch("/comments/reported/{id}", report.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"ACTION_TAKEN\"}"))
+                .andExpect(status().isOk());
+        assertThat(commentRepository.findById(comment.getId()).orElseThrow().getStatus())
+                .isEqualTo(ContentStatus.HIDDEN);
+
+        AuditLog audit = auditLogRepository.findAll().stream()
+                .filter(log -> log.getAction() == AuditAction.COMMENT_REPORT_STATUS_CHANGED)
+                .findFirst()
+                .orElseThrow();
+        assertThat(audit.getChanges()).containsKeys("status", "commentStatus");
+
+        // The panel decides whether to draw the button from this flag, so it has to agree
+        // with what the button does.
+        mockMvc.perform(get("/audit-logs")
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.auditLogs[?(@.action == 'COMMENT_REPORT_STATUS_CHANGED')].revertible")
+                        .value(hasItem(true)));
+
+        mockMvc.perform(post("/audit-logs/{id}/revert", audit.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+
+        // Restoring the report status has to restore the visibility it took away, because
+        // that is the damage the operator is undoing.
+        assertThat(commentReportRepository.findById(report.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReportStatus.OPEN);
+        assertThat(commentRepository.findById(comment.getId()).orElseThrow().getStatus())
+                .isEqualTo(ContentStatus.VISIBLE);
+        mockMvc.perform(get("/social/comments/{id}", lecture.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments", hasSize(1)));
+    }
+
     @Test
     void deleteAnonymizesTheAccountButKeepsContentAndAuditHistory() throws Exception {
         Session admin = createSession("admin@student.kit.edu", true);
@@ -2069,6 +2145,50 @@ class AdminApiIntegrationTests {
         assertThat(refusals)
                 .as("login refusals must stop at the per-email failure limit")
                 .isEqualTo(10);
+    }
+
+    /**
+     * The third clause of {@code AdminRepository.hasModerationHistory} reads
+     * {@code BugReport.resolvedBy}, and nothing in the application ever wrote it -- no setter
+     * call in {@code src/main}, no default, no trigger. So an administrator whose entire
+     * moderation history is bug reports could be demoted, taking the attribution with it,
+     * while the same administrator could not be demoted over a single warning.
+     *
+     * <p>The comment and answer report services beside it both record {@code reviewedBy} and
+     * {@code reviewedAt} on every status change; the bug report service recorded neither.
+     * {@code docs/admin-api.md} already promised this: "Demoting is 409 once the account has
+     * moderation history -- a warning it issued or a report it reviewed".
+     */
+    @Test
+    void demotingAnAdministratorWhoResolvedABugReportIsRefused() throws Exception {
+        Session acting = createSession("admin@student.kit.edu", true);
+        Session other = createSession("bug-resolver@student.kit.edu", true);
+
+        BugReport report = new BugReport();
+        report.setTitle("Upload fails");
+        report.setDescription("broken");
+        report.setSeverity(BugSeverity.LOW);
+        report.setReporter(createStudent("bug-reporter@student.kit.edu"));
+        report = bugReportRepository.saveAndFlush(report);
+
+        mockMvc.perform(patch("/reports/{id}", report.getId())
+                        .header("Authorization", bearer(other.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"ACTION_TAKEN\"}"))
+                .andExpect(status().isOk());
+
+        // Who dealt with it, and when, are recorded the way the two report twins record them.
+        BugReport resolved = bugReportRepository.findById(report.getId()).orElseThrow();
+        assertThat(resolved.getResolvedBy()).isNotNull();
+        assertThat(resolved.getResolvedAt()).isNotNull();
+
+        mockMvc.perform(patch("/users/{id}", other.student().getId())
+                        .header("Authorization", bearer(acting.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"STUDENT\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("Administrator has moderation history and cannot be demoted"));
     }
 
     @Test
@@ -2763,6 +2883,116 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.issueState").value("CREATED"));
     }
 
+    /**
+     * Every audit entry carries {@code changes}, {@code metadata} and {@code actor}, present
+     * as keys and not merely non-null.
+     *
+     * <p>The distinction between "null" and "absent" is the whole finding. The admin panel
+     * enumerates {@code changes} with {@code Object.keys(log.changes)} on <em>every row of the
+     * audit table</em> and its mapper assigns no default, so a missing key is a TypeError that
+     * blanks the screen rather than one bad row. It reads {@code log.actor.name} and
+     * {@code .email} unguarded in the same place.
+     *
+     * <p>Which is why the fixture is what it is: the entries most likely to be omitted by a
+     * serializer are the ones with nothing to say. A student sign-in and a content report
+     * both record {@code changes: {}}, and roughly a dozen administrative actions record
+     * {@code metadata: {}}. Those empty maps are exactly the shape a {@code NON_EMPTY}
+     * inclusion rule would drop, and nothing today declares one -- this is what would notice
+     * if something did.
+     *
+     * <p>Read as a map rather than through jsonPath because {@code jsonPath("$..changes")}
+     * cannot tell a null from a key that was never written.
+     */
+    @Test
+    void everyAuditEntryCarriesChangesMetadataAndAnActor() throws Exception {
+        Session admin = createSession("audit-shape-admin@student.kit.edu", true);
+
+        // An administrative action with a field diff, and one without: USER_BLOCKED records a
+        // change, and the panel's own list of entry types with neither is sign-ins and
+        // deletions.
+        Student target = createStudent("audit-shape-target@student.kit.edu");
+        mockMvc.perform(patch("/admin/users/{id}/block", target.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete("/admin/users/{id}", target.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+
+        // And an activity-scope entry, because the two above are administrative and land only
+        // in /admin/audit-logs. A real student sign-in is also the single best case for this
+        // test: USER_LOGIN is written through the path that hardcodes changes to an empty map,
+        // so it is the entry a NON_EMPTY inclusion rule would strip first.
+        String student = "audit-shape-student@student.kit.edu";
+        createStudent(student);
+        requestCode(student);
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"%s\",\"loginToken\":\"%s\"}"
+                                .formatted(student, codeDelivery.codeFor(student))))
+                .andExpect(status().isOk());
+
+        for (String path : List.of("/admin/audit-logs", "/admin/activity-logs")) {
+            String body = mockMvc.perform(get(path)
+                            .header("Authorization", bearer(admin.rawToken())))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+
+            String key = path.endsWith("audit-logs") ? "auditLogs" : "activityLogs";
+            List<Map<String, Object>> entries = JsonPath.read(body, "$." + key);
+
+            assertThat(entries)
+                    .as(path + " returned no entries, so the loop below asserts nothing")
+                    .isNotEmpty();
+
+            for (Map<String, Object> entry : entries) {
+                assertThat(entry)
+                        .as(path + " served an entry without one of the three keys the panel "
+                                + "reads unguarded on every row: " + entry)
+                        .containsKeys("changes", "metadata", "actor");
+
+                assertThat(entry.get("changes")).as(path + " changes was null").isNotNull();
+                assertThat(entry.get("metadata")).as(path + " metadata was null").isNotNull();
+                assertThat(entry.get("actor")).as(path + " actor was null").isNotNull();
+            }
+        }
+    }
+
+    /**
+     * Deleting an account does not leave its content authorless.
+     *
+     * <p>The panel reads {@code item.author.name} with no null check, so the question its
+     * audit asks -- can {@code author} ever be null? -- decides whether the Comments table
+     * survives a deleted account. It cannot: deletion anonymises the row in place rather than
+     * removing it, precisely so that every comment, answer, vote and report keeps a valid
+     * foreign key.
+     *
+     * <p>What the panel gets instead is a real author object whose name is a scrubbed literal
+     * and whose status is {@code DELETED} -- renderable, and distinguishable.
+     */
+    @Test
+    void contentOfADeletedAccountStillCarriesAnAuthor() throws Exception {
+        Session admin = createSession("author-shape-admin@student.kit.edu", true);
+        Student author = createStudent("author-shape-author@student.kit.edu");
+
+        Comment comment = new Comment();
+        comment.setContent("Written before the account went");
+        comment.setStudent(author);
+        comment.setLecture(createLecture());
+        commentRepository.saveAndFlush(comment);
+
+        mockMvc.perform(delete("/admin/users/{id}", author.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/admin/comments")
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments[0].author").exists())
+                .andExpect(jsonPath("$.comments[0].author.name")
+                        .value(startsWith("Deleted user ")))
+                .andExpect(jsonPath("$.comments[0].author.status").value("DELETED"));
+    }
+
     private void saveRating(Student student, Lecture lecture) {
         Rating rating = new Rating();
         rating.setStudent(student);
@@ -2822,6 +3052,56 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.auditLogs[0].revertible").value(false))
                 .andExpect(jsonPath("$.auditLogs[0].revertBlockedReason")
                         .value("ACTION_NOT_REVERTIBLE"));
+    }
+
+    /**
+     * Characterization, not a defect. {@code UserResponse.reports} is built from
+     * {@code CommentReportRepository.countByCommentStudent} alone, and
+     * {@code AnswerReportRepository} has no per-author count at all -- neither the scalar nor
+     * the grouped one its comment-side twin carries.
+     *
+     * <p>The asymmetry turned up in the twin-pair sweep and is **documented**:
+     * {@code docs/admin-api.md} says "reports counts reports against comments authored by the
+     * user". So the code matches its contract and the field is narrower than its name, which
+     * is a product question rather than a bug. Pinned here so that widening it later is a
+     * deliberate act with a test to invert, not a silent change to a number the panel shows.
+     */
+    @Test
+    void theUserReportCountCountsCommentReportsAndNotAnswerReports() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session author = createSession("counted-author@student.kit.edu", false);
+        Session reporter = createSession("counted-reporter@student.kit.edu", false);
+        Lecture lecture = createLecture();
+
+        Comment comment = new Comment();
+        comment.setContent("Reported comment");
+        comment.setStudent(author.student());
+        comment.setLecture(lecture);
+        comment = commentRepository.saveAndFlush(comment);
+
+        CommentReport commentReport = new CommentReport();
+        commentReport.setComment(comment);
+        commentReport.setReporter(reporter.student());
+        commentReport.setReason(ReportReason.SPAM);
+        commentReportRepository.saveAndFlush(commentReport);
+
+        // Two reports on this author's answer, and none of them is counted.
+        Answer answer = new Answer();
+        answer.setContent("Reported answer");
+        answer.setStudent(author.student());
+        answer.setComment(comment);
+        answer = answerRepository.saveAndFlush(answer);
+
+        AnswerReport answerReport = new AnswerReport();
+        answerReport.setAnswer(answer);
+        answerReport.setReporter(reporter.student());
+        answerReport.setReason(ReportReason.SPAM);
+        answerReportRepository.saveAndFlush(answerReport);
+
+        mockMvc.perform(get("/users/{id}", author.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reports").value(1));
     }
 
     private Session createSession(String email, boolean adminRole) {

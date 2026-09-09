@@ -18,6 +18,7 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -137,6 +138,29 @@ public class GlobalExceptionHandler {
     ResponseEntity<BasicResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException exception) {
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                 .body(new BasicResponse("Unsupported media type", false));
+    }
+
+    /**
+     * A body past the configured multipart size limit -- the half of F-17 that its own writeup
+     * parked as "still to be measured separately". It was reaching
+     * {@link #handleUnexpected} and answering 500, telling the caller the backend broke when
+     * the request was simply too big.
+     *
+     * <p>413 rather than 400: the request is well formed and the server is refusing it for
+     * size, which is what RFC 9110 gives this code for.
+     *
+     * <p><b>Narrow on purpose, twice over.</b> Not by extending
+     * {@code ResponseEntityExceptionHandler}, for the reasons on
+     * {@link #handleUnsupportedMediaType}. And not on the parent {@code MultipartException}
+     * either: no request against this application can produce the general case, because every
+     * route reads a JSON body and content negotiation answers 415 before any parser runs.
+     * {@code TransportLimitTests} measures both -- and has to drive a real servlet container
+     * to do it, since MockMvc has no multipart parsing and cannot raise either exception.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<BasicResponse> handlePayloadTooLarge(MaxUploadSizeExceededException exception) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new BasicResponse("Payload too large", false));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

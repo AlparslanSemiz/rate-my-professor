@@ -39,7 +39,7 @@ the panel can move at its own pace, and they are removed once it has.
 
 | Old | New |
 | --- | --- |
-| `/auth/request-login`, `/auth/login`, `/auth/logout`, `/auth/logout-all` | `/admin/auth/...` |
+| `/auth/request-login`, `/auth/login`, `/auth/logout`, `/auth/logout-all`, `/auth/me` | `/admin/auth/...` |
 | `/users/**` | `/admin/users/**` |
 | `/comments/**`, `/answers/**` | `/admin/comments/**`, `/admin/answers/**` |
 | `GET /ratings`, `DELETE /ratings/{id}` | `/admin/ratings...` |
@@ -1040,3 +1040,92 @@ Deployments should point the backend at the target PostgreSQL database with
 a database backup. Existing non-empty databases from the pre-Flyway period are
 baselined at version `1` on first startup; after every persistent environment has
 that history table, set `SPRING_FLYWAY_BASELINE_ON_MIGRATE=false`.
+
+## The contract, as a table
+
+Everything above is the description a person reads: what each endpoint does, and **why** it
+answers what it answers. This section is the same claims in a shape a test can read, and it
+exists because this document has fallen behind the code four times — F-5 (a status that had
+changed), F-16 (a 404 that had become a 405), F-22 (a body that no longer existed), F-26 (a
+field that had never been right). Each was corrected by hand and nothing stopped the next one.
+
+`AdminApiDocumentationDriftTests` reads the table between the markers below and checks it
+**both ways**: a route claimed here that the application does not map is a failure, and an
+`/admin/**` route the application maps that is missing here is a failure too. It then provokes
+the statuses that can be provoked without knowing a route's fixtures — `401` anonymous, `403`
+as a non-administrator, `415` for a body in a media type the route cannot read, and `404` for
+an id that names nothing — and compares them with what each row claims.
+
+**The prose above stays the authority on _why_.** This table cannot say that a `409` on
+`PATCH /admin/users/{id}` is about not locking anyone out of an API with no other recovery
+path; the section that owns the endpoint does, and it should be read first. What the table adds
+is that neither half can drift without something going red.
+
+Statuses only a route's own fixture can produce — a `409` on a duplicate name, a `502` from the
+tracker, a `429` from the rate limiter — are listed here but **not** provoked by the test, and
+the test says so rather than passing quietly.
+
+`GET /admins/validate` is deliberately absent: it is legacy, undocumented above, and being
+retired in favour of `GET /admin/auth/me`. The test carries it as a named exemption with that
+reason, the way `PUBLIC_ROUTES` carries its own.
+
+<!-- contract-table:start -->
+
+| Method and path | Statuses |
+| --- | --- |
+| `POST /admin/auth/request-login` | 200, 400, 415, 429 |
+| `POST /admin/auth/login` | 200, 400, 401, 403, 415, 429 |
+| `POST /admin/auth/logout` | 200, 401 |
+| `POST /admin/auth/logout-all` | 200, 401 |
+| `GET /admin/auth/me` | 200, 401 |
+| `GET /auth/me` | 200, 401, 403 |
+| `GET /admin/users` | 200, 400, 401, 403 |
+| `GET /admin/users/{id}` | 200, 401, 403, 404 |
+| `PATCH /admin/users/{id}` | 200, 400, 401, 403, 404, 409, 415 |
+| `DELETE /admin/users/{id}` | 200, 401, 403, 404, 409 |
+| `PATCH /admin/users/{id}/block` | 200, 401, 403, 404, 409 |
+| `PATCH /admin/users/{id}/unblock` | 200, 401, 403, 404, 409 |
+| `POST /admin/users/{id}/warnings` | 200, 400, 401, 403, 404, 409, 415 |
+| `GET /admin/users/{id}/warnings` | 200, 401, 403, 404 |
+| `PATCH /admin/users/{id}/warnings/{warningId}` | 200, 400, 401, 403, 404, 415 |
+| `DELETE /admin/users/{id}/warnings/{warningId}` | 200, 401, 403, 404 |
+| `GET /admin/comments` | 200, 401, 403 |
+| `PATCH /admin/comments/{id}` | 200, 400, 401, 403, 404, 415 |
+| `DELETE /admin/comments/{id}` | 200, 401, 403, 404 |
+| `GET /admin/comments/reported` | 200, 401, 403 |
+| `PATCH /admin/comments/reported/{id}` | 200, 400, 401, 403, 404, 415 |
+| `DELETE /admin/comments/reported/{id}` | 200, 401, 403, 404 |
+| `GET /admin/answers` | 200, 401, 403 |
+| `PATCH /admin/answers/{id}` | 200, 400, 401, 403, 404, 415 |
+| `DELETE /admin/answers/{id}` | 200, 401, 403, 404 |
+| `GET /admin/answers/reported` | 200, 401, 403 |
+| `PATCH /admin/answers/reported/{id}` | 200, 400, 401, 403, 404, 415 |
+| `DELETE /admin/answers/reported/{id}` | 200, 401, 403, 404 |
+| `GET /admin/ratings` | 200, 400, 401, 403 |
+| `DELETE /admin/ratings/{id}` | 200, 401, 403, 404 |
+| `GET /admin/data/lectures/all` | 200, 401, 403 |
+| `POST /admin/data/lectures` | 200, 400, 401, 403, 404, 409, 415 |
+| `PATCH /admin/data/lectures/{id}` | 200, 400, 401, 403, 404, 409, 415 |
+| `DELETE /admin/data/lectures/{id}` | 200, 401, 403, 404 |
+| `GET /admin/data/professor/all` | 200, 401, 403 |
+| `POST /admin/data/professor` | 200, 400, 401, 403, 404, 409, 415 |
+| `PATCH /admin/data/professor/{id}` | 200, 400, 401, 403, 404, 409, 415 |
+| `DELETE /admin/data/professor/{id}` | 200, 401, 403, 404 |
+| `GET /admin/reports` | 200, 401, 403 |
+| `PATCH /admin/reports/{id}` | 200, 400, 401, 403, 404, 415 |
+| `DELETE /admin/reports/{id}` | 200, 401, 403, 404 |
+| `POST /admin/reports/{id}/gitlab-issue` | 200, 401, 403, 404, 502, 503 |
+| `GET /admin/audit-logs` | 200, 400, 401, 403 |
+| `GET /admin/audit-logs/meta` | 200, 401, 403 |
+| `POST /admin/audit-logs/{id}/revert` | 200, 401, 403, 404, 409 |
+| `GET /admin/activity-logs` | 200, 400, 401, 403 |
+| `GET /admin/activity-logs/meta` | 200, 401, 403 |
+| `GET /admin/system/status` | 200, 401, 403 |
+| `GET /health` | 200, 503 |
+| `GET /data/lectures` | 200 |
+| `GET /data/lectures/{lecture_id}` | 200, 404 |
+| `GET /data/professor` | 200 |
+| `GET /data/professor/{professor_id}` | 200, 404 |
+| `GET /data/professor/id` | 200, 400 |
+
+<!-- contract-table:end -->
