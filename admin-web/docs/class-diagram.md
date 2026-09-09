@@ -190,17 +190,32 @@ classDiagram
 
     class useCatalog {
       <<hook>>
+      +lists
+      +actions
+    }
+
+    class useCatalogLists {
+      <<hook>>
       +lectures
       +professors
+      +filteredLectures
+      +filteredProfessors
+    }
+
+    class useCatalogActions {
+      <<hook>>
       +updateLecture()
+      +deleteLecture()
       +updateProfessor()
+      +deleteProfessor()
     }
 
     class useRatings {
       <<hook>>
       +ratings
+      +filterByLecture()
       +loadMore()
-      +deleteRating()
+      +remove()
     }
 
     class useModerationPage {
@@ -218,6 +233,13 @@ classDiagram
       +deleteContent()
       +updateReportStatus()
       +deleteReport()
+    }
+
+    class useFeedbackReports {
+      <<hook>>
+      +reports
+      +gitlabEnabled
+      +retry()
     }
 
     class useFeedbackReportActions {
@@ -367,6 +389,7 @@ classDiagram
   CatalogPage --> useRatings
   CommentsPage --> ModerationPage
   ModerationPage --> useModerationPage
+  FeedbackPage --> useFeedbackReports
   FeedbackPage --> useFeedbackReportActions
   AuditLogsPage --> useAuditLogs
 
@@ -374,9 +397,13 @@ classDiagram
   useDashboardData --> UsersService
   useUsersPage --> UsersService
   useUserProfile --> UsersService
-  useCatalog --> CatalogService
+  useCatalog --> useCatalogLists
+  useCatalog --> useCatalogActions
+  useCatalogLists --> CatalogService
+  useCatalogActions --> CatalogService
   useRatings --> RatingsService
   useModerationPage --> ModerationApi
+  useFeedbackReports --> FeedbackService
   useFeedbackReportActions --> FeedbackService
   useAuditLogs --> AuditLogsService
 
@@ -413,8 +440,14 @@ classDiagram
 - `CommentsService` and `AnswersService` are the same generic `ModerationService`
   with their noun filled in; comments and answers are the same endpoints under a
   different resource name.
-- Data loading is TanStack Query on the audit log, users and moderation screens.
-  The dashboard, catalogue and feedback still use the hand-rolled `useAsyncData`.
+- Data loading is TanStack Query on **every** screen. Reads are `useQuery` or, where
+  the backend pages on a cursor, `useInfiniteQuery`; every write is its own
+  `useMutation` that invalidates what it changed. The hand-rolled `useAsyncData`,
+  `useCursorLogPage` and `useVisibleInterval` are all gone, and `src/hooks/` holds
+  only `useSearch` and `useSelectedId`.
+- A feature's hooks are split by responsibility rather than by screen: `useCatalog`
+  and `useModerationPage` each compose a read hook and a write hook and return them
+  grouped, so a page passes one object to the part that needs it.
 - `Hooks` contain stateful page logic. Most feature pages delegate data loading and mutation
   flows to these hooks.
 - `Features` are the top-level screens and reusable page components.

@@ -203,14 +203,14 @@ src/
 ├── features/     Feature-owned pages, components, hooks, model and tests
 │   ├── audit-logs/
 │   ├── auth/
-│   ├── catalog/
+│   ├── catalog/      model/ — display, edit and deletion rules
 │   ├── comments/
 │   ├── dashboard/
-│   ├── feedback/
-│   ├── help/
+│   ├── feedback/     model/ — the queue split and the edit rules
+│   ├── help/         content/ — one file per documented screen
 │   ├── moderation/   Content and report screens shared by comments and answers
 │   └── users/
-├── hooks/        Reusable hooks without feature ownership
+├── hooks/        useSearch and useSelectedId — the two without feature ownership
 ├── layouts/      Authenticated application shell and navigation
 ├── test/         Shared test setup, HTTP stubs and the query-client helper
 ├── theme/        Mantine theme: KIT palette, neutral chrome, component defaults

@@ -32,6 +32,9 @@ the newest first. A finding is closed only when the fix is described in
 | 2026-09-09 | `npm run test:coverage` — baseline before the refactor | 88.56% statements, 81.24% branches, 84.27% functions, 91.63% lines. Per directory below. |
 | 2026-09-09 | `npm run check`, `npm test`, `npm run build` after refactor steps 0–7 | Pass — 36 test files, 260 tests, no lint or type errors, production build clean. |
 | 2026-09-09 | `npm run test:coverage` after refactor steps 0–7 | **89.58% / 83.14% / 86.48% / 92.12%** — up on every axis against the baseline. |
+| 2026-09-09 | `npm test` after `npm install` | **Fail to import** — 5 files could not resolve `@tanstack/react-query`; `node_modules` predated the step 3–4 dependency additions, and `src/api/logs/index.ts` had never been committed because `.gitignore` hid the directory. Both fixed; see the changelog. |
+| 2026-09-09 | `npm run check`, `npm test`, `npm run build` after refactor steps 8–11 | Pass — 37 test files, 273 tests, no lint or type errors, production build clean. |
+| 2026-09-09 | `npm run test:coverage` after the whole refactor | **91.23% statements / 84.16% branches / 89.03% functions / 93.49% lines** — up on every axis against the baseline. |
 
 ## Coverage baseline
 
