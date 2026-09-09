@@ -1,9 +1,10 @@
-import { http } from 'msw'
+import { http, type HttpHandler } from 'msw'
 import { setupWorker } from 'msw/browser'
 import { apiUrl } from './apiUrl'
 import { seedDb } from './db'
 import { DEMO_ADMIN, demoBackend } from './demoData'
-import { failure } from './envelope'
+import { db } from './db'
+import { failure, ok } from './envelope'
 import { handlers } from './handlers'
 import { setSessionUser } from './handlers/auth'
 
@@ -18,36 +19,103 @@ import { setSessionUser } from './handlers/auth'
  * Test-only. This module is imported behind a compile-time constant and is absent from a
  * production build, along with the rest of the mock backend.
  */
-const FAULTS: Record<string, () => ReturnType<typeof http.get>> = {
+/**
+ * The longest thing a column can be asked to hold.
+ *
+ * Real German course prose rather than a repeated character, because a run of `x` wraps
+ * differently from a word and it is wrapping that breaks a layout.
+ */
+const LONG_TEXT =
+  'Die Vorlesung Grundlagen der Programmierung mit begleitendem Tutorium und Rechnerübung ' +
+  'behandelt Datenstrukturen, Algorithmen und Softwaretechnik im Wintersemester und wird ' +
+  'gemeinsam von mehreren Lehrstühlen des KIT angeboten, weshalb die Beschreibung so lang ist.'
+const LONG_NAME = 'Maximiliane Charlotte von Brandenburger-Hohenzollern'
+
+const FAULTS: Record<string, () => HttpHandler[]> = {
   /** The legacy `/auth/me` gone — the session notice this exists to show (`F-013`). */
-  'session-check': () => http.get(apiUrl('/auth/me'), () => failure(404, 'No handler for GET /auth/me')),
+  'session-check': () => [http.get(apiUrl('/auth/me'), () => failure(404, 'No handler for GET /auth/me'))],
   /** A counter read failing while the rest of the dashboard arrives — a page-level error. */
-  'system-status': () =>
+  'system-status': () => [
     http.get(apiUrl('/system/status'), () => failure(500, 'Counters are unavailable.')),
+  ],
   /**
    * A refused *filter* on the users table. Deliberately only when `q` is present: the table has
    * to load once before `tableError` can render at all, so a handler that always failed would
    * show the whole-page `LoadError` instead and never reach the state being looked at.
    */
-  'users-filter': () =>
+  'users-filter': () => [
     http.get(apiUrl('/users'), ({ request }) =>
       new URL(request.url).searchParams.get('q')
         ? failure(400, 'Invalid user status')
         : undefined,
     ),
+  ],
+  /**
+   * The longest content every column can be handed at once.
+   *
+   * A layout breaks on its worst case, and the worst case is not in the demo data — that is
+   * chosen to look like a real backend at the Abnahme. Measuring against it would report the
+   * width of the fixture rather than the width of the column.
+   */
+  'long-content': () => [
+    http.get(apiUrl('/users'), () =>
+      ok({
+        users: db.users.map((user) => ({ ...user, username: LONG_NAME, biography: LONG_TEXT })),
+        nextCursor: null,
+      }),
+    ),
+    http.get(apiUrl('/comments'), () =>
+      ok({
+        comments: db.comments.map((comment) => ({
+          ...comment,
+          content: LONG_TEXT,
+          postContext: LONG_TEXT.slice(0, 90),
+          author: { ...comment.author, name: LONG_NAME },
+        })),
+      }),
+    ),
+    http.get(apiUrl('/data/lectures'), () =>
+      ok({
+        lectures: db.lectures.map((lecture) => ({ ...lecture, name: LONG_TEXT.slice(0, 120) })),
+      }),
+    ),
+  ],
+  /**
+   * The backend refusing a block.
+   *
+   * `409` is the status it answers when the target may not be moderated by this operator — an
+   * administrator account, or the operator's own. The panel hides those controls itself, so the
+   * refusal is unreachable by clicking; this makes it reachable, which is the only way to see
+   * what the operator is actually told when the two disagree.
+   */
+  'block-refused': () => [
+    http.patch(apiUrl('/users/:id/block'), () =>
+      failure(409, 'Administrator accounts cannot be blocked.'),
+    ),
+  ],
+  /**
+   * The GitLab integration switched off, which is how most deployments run: the backend has no
+   * credentials, reports `gitlabEnabled: false`, and answers the escalation endpoint `503`.
+   */
+  'gitlab-disabled': () => [
+    http.get(apiUrl('/system/status'), () =>
+      ok({ ...(db.systemStatus ?? {}), gitlabEnabled: false }),
+    ),
+    http.get(apiUrl('/reports'), () => ok({ bugReports: db.bugReports, gitlabEnabled: false })),
+  ],
 }
 
 /**
  * @returns the overrides named by `?fault=a,b`, ignoring any name that is not a known fault
  */
-function requestedFaults(): ReturnType<typeof http.get>[] {
+function requestedFaults(): HttpHandler[] {
   const requested = new URLSearchParams(window.location.search).get('fault')
   if (!requested) return []
   return requested
     .split(',')
     .map((name) => FAULTS[name.trim()])
     .filter((fault) => fault !== undefined)
-    .map((fault) => fault())
+    .flatMap((fault) => fault())
 }
 
 /**
