@@ -3,6 +3,7 @@ package com.pse.social.service;
 import java.util.List;
 import java.util.UUID;
 
+import com.pse.shared.util.Uuids;
 import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
@@ -49,7 +50,8 @@ public class CommentService {
     @Transactional
     public BasicResponse submitComment(Student student, CommentSubmitRequest request) {
 
-        Lecture lecture = lectureService.getById(UUID.fromString(request.lectureID()));
+        Lecture lecture = lectureService.getById(
+                Uuids.parse(request.lectureID(), "Invalid lecture id"));
         if (lecture == null) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Lecture not found");
         }

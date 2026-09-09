@@ -31,6 +31,8 @@ import com.pse.user.repository.StudentRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -1204,5 +1206,113 @@ class SocialApiIntegrationTests {
             Token token,
             String rawToken
     ) {
+    }
+
+    /**
+     * The four submit routes take their id as a String in the body and used to hand it
+     * straight to {@code UUID.fromString}. A malformed one threw IllegalArgumentException and
+     * an omitted one threw NullPointerException; GlobalExceptionHandler maps neither, so both
+     * became 500 "Unexpected backend error" on a request the caller got wrong.
+     *
+     * <p>The third value is the one worth keeping: it is UUID-shaped and truncated, so a
+     * length-or-dashes check waves it through and only a real parse rejects it.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"not-a-uuid", "1234", "11111111-1111-1111-1111"})
+    void submittingACommentWithAMalformedLectureIdIsABadRequestRatherThanAServerError(
+            String malformed
+    ) throws Exception {
+        Session student = createSession("malformed@student.kit.edu");
+
+        mockMvc.perform(post("/social/comments")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"lectureID\":\"" + malformed + "\",\"content\":\"hello\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        assertThat(commentRepository.count()).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"not-a-uuid", "1234", "11111111-1111-1111-1111"})
+    void submittingAnAnswerWithAMalformedCommentIdIsABadRequestRatherThanAServerError(
+            String malformed
+    ) throws Exception {
+        Session student = createSession("malformed-answer@student.kit.edu");
+
+        mockMvc.perform(post("/social/answers")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"commentID\":\"" + malformed + "\",\"content\":\"hello\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        assertThat(answerRepository.count()).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"not-a-uuid", "1234", "11111111-1111-1111-1111"})
+    void reportingWithAMalformedIdIsABadRequestRatherThanAServerError(String malformed)
+            throws Exception {
+        Session student = createSession("malformed-report@student.kit.edu");
+
+        mockMvc.perform(post("/social/comments/report")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"commentID\":\"" + malformed
+                                + "\",\"reportReason\":\"SPAM\",\"explanation\":\"x\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(post("/social/answers/report")
+                        .header("Authorization", bearer(student.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"answerID\":\"" + malformed
+                                + "\",\"reportReason\":\"SPAM\",\"explanation\":\"x\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    /**
+     * The half the backlog did not name. {@code UUID.fromString(null)} throws NPE rather than
+     * IllegalArgumentException, so a body that simply leaves the id out was a 500 too -- and
+     * a fix that caught only IllegalArgumentException would have left this behind.
+     */
+    @Test
+    void submittingWithNoIdAtAllIsABadRequestRatherThanAServerError() throws Exception {
+        Session student = createSession("missing-id@student.kit.edu");
+        String token = bearer(student.rawToken());
+
+        mockMvc.perform(post("/social/comments")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"no lecture id\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(post("/social/answers")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"no comment id\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(post("/social/comments/report")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reportReason\":\"SPAM\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(post("/social/answers/report")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reportReason\":\"SPAM\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        assertThat(commentRepository.count()).isZero();
+        assertThat(answerRepository.count()).isZero();
     }
 }

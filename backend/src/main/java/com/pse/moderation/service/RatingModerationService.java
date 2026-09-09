@@ -1,5 +1,6 @@
 package com.pse.moderation.service;
 
+import com.pse.shared.util.Uuids;
 import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
@@ -133,14 +134,11 @@ public class RatingModerationService {
     }
 
     private static UUID parseLectureId(String rawLectureId) {
-        if (rawLectureId == null || rawLectureId.isBlank()) {
-            return null;
-        }
-        try {
-            return UUID.fromString(rawLectureId.trim());
-        } catch (IllegalArgumentException exception) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid lecture id");
-        }
+        // Trimmed at the call site rather than inside the helper: this route has always
+        // accepted a padded id and the others have always refused one, and quietly making
+        // them agree would change an answer nobody asked about.
+        return Uuids.parseOrNull(
+                rawLectureId == null ? null : rawLectureId.trim(), "Invalid lecture id");
     }
 
     /**

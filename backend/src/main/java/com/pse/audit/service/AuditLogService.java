@@ -1,5 +1,6 @@
 package com.pse.audit.service;
 
+import com.pse.shared.util.Uuids;
 import com.pse.audit.dto.AuditActorMetaResponse;
 import com.pse.audit.dto.AuditActorResponse;
 import com.pse.audit.dto.AuditLogPageResponse;
@@ -215,14 +216,7 @@ public class AuditLogService {
 
 
     private UUID parseUuid(String value, String message) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            return UUID.fromString(value);
-        } catch (IllegalArgumentException exception) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, message);
-        }
+        return Uuids.parseOrNull(value, message);
     }
 
     private Instant parseDate(String value) {

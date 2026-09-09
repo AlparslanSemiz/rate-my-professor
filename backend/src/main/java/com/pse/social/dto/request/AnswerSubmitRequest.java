@@ -1,7 +1,9 @@
 package com.pse.social.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record AnswerSubmitRequest(
-        String commentID,
-        String content
+        @NotBlank String commentID,
+        @NotBlank String content
 ) {
 }

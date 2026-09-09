@@ -574,3 +574,32 @@ nothing to show them. Nothing to change if you read "revertible" from the list; 
 special-cased the 500, that can go.
 
 Every other revert answer is unchanged.
+
+
+///// 9.09 (3)
+
+
+The four "/social" submit routes answer 400 for a bad id instead of 500.
+
+    POST /social/comments          "lectureID"
+    POST /social/answers           "commentID"
+    POST /social/comments/report   "commentID"
+    POST /social/answers/report    "answerID"
+
+Was: 500 {"message": "Unexpected backend error", "success": false}
+Now: 400 {"message": "Invalid lecture id", "success": false}          (malformed)
+Now: 400 {"message": "Invalid request", "success": false}             (missing)
+
+Two cases, and the second is the one worth reading twice: an id that is MISSING was a 500 as
+well, not only a malformed one. The routes now also require "content" on the two submits and
+"reportReason" on the two reports, which were unvalidated and could reach the database as
+null. "explanation" stays optional.
+
+Was: 500 for {"lectureID":"not-a-uuid","content":"x"}
+Was: 500 for {"content":"x"}                            -- no lectureID at all
+Was: 500 for {"lectureID":"<valid>"}                     -- no content
+Now: 400 for all three.
+
+Nothing changes for a well-formed request. If you were treating a 500 from these routes as
+"retry later", that retry was never going to work -- the request was the problem, and it now
+says so.

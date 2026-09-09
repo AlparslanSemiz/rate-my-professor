@@ -75,7 +75,7 @@ public class SocialController {
 
 
     @PostMapping("/comments")
-    public BasicResponse submitComment(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody CommentSubmitRequest request) {
+    public BasicResponse submitComment(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody CommentSubmitRequest request) {
 
         return commentService.submitComment(principal.student(), request);
 
@@ -101,7 +101,7 @@ public class SocialController {
 
 
     @PostMapping("/answers")
-    public BasicResponse submitAnswer(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody AnswerSubmitRequest request) {
+    public BasicResponse submitAnswer(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody AnswerSubmitRequest request) {
 
         return answerService.submitAnswer(principal.student(), request);
 
@@ -117,14 +117,14 @@ public class SocialController {
 
 
     @PostMapping("/comments/report")
-    public BasicResponse submitCommentReport(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody CommentReportRequest request) {
+    public BasicResponse submitCommentReport(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody CommentReportRequest request) {
 
         return contentReportService.submitCommentReport(principal.student(), request);
 
     }
 
     @PostMapping("/answers/report")
-    public BasicResponse submitAnswerReport(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody AnswerReportRequest request) {
+    public BasicResponse submitAnswerReport(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody AnswerReportRequest request) {
 
         return contentReportService.submitAnswerReport(principal.student(), request);
 

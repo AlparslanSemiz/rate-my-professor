@@ -2,6 +2,7 @@ package com.pse.social.service;
 
 import java.util.UUID;
 
+import com.pse.shared.util.Uuids;
 import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
@@ -48,7 +49,7 @@ public class AnswerService {
     public BasicResponse submitAnswer(Student student, AnswerSubmitRequest request) {
 
         Comment comment = commentRepository
-                .findById(UUID.fromString(request.commentID()))
+                .findById(Uuids.parse(request.commentID(), "Invalid comment id"))
                 .orElse(null);
         if (comment == null) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Comment not found");

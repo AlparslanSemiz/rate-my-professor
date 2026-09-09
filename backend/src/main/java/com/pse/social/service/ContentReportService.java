@@ -3,6 +3,7 @@ package com.pse.social.service;
 import java.util.Map;
 import java.util.UUID;
 
+import com.pse.shared.util.Uuids;
 import com.pse.audit.model.AuditAction;
 import com.pse.audit.model.AuditTargetType;
 import com.pse.audit.service.AuditWriter;
@@ -60,7 +61,7 @@ public class ContentReportService {
     public BasicResponse submitCommentReport(Student student, CommentReportRequest request) {
 
         Comment comment = commentRepository
-                .findById(UUID.fromString(request.commentID()))
+                .findById(Uuids.parse(request.commentID(), "Invalid comment id"))
                 .orElse(null);
         if (comment == null) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Comment not found");
@@ -91,7 +92,7 @@ public class ContentReportService {
     public BasicResponse submitAnswerReport(Student student, AnswerReportRequest request) {
 
         Answer answer = answerRepository
-                .findById(UUID.fromString(request.answerID()))
+                .findById(Uuids.parse(request.answerID(), "Invalid answer id"))
                 .orElse(null);
         if (answer == null) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Answer not found");
