@@ -448,6 +448,61 @@ secrets:history:
       - gitleaks.json
     expire_in: 1 month
 
+# The dependency half of the security work, which docs/TODO.md carried as open for as long as
+# it did because neither tool could be made to work: Trivy resolves the Maven parent-pom chain
+# over the network and was rate-limited (429, Retry-After: 1800) from a shared IP, and OWASP
+# dependency-check needs an NVD_API_KEY nobody has created.
+#
+# What changed is that the rate limit was never really about Trivy. It is about a COLD Maven
+# cache: with a warm ~/.m2 the parent chain resolves locally and nothing is fetched. Verified
+# on 9 September against a warm cache -- it read pom.xml and reported 57 vulnerabilities, 7 of
+# them CRITICAL. This job caches .m2/repository like every other job here, and `needs:
+# server:test` puts it after a job that has just populated it.
+#
+# Deliberately NOT allow_failure and NOT schedule-only, unlike secrets:history and pitest.
+# Those two are expected to be red; this one starts GREEN -- the same 9 September pass took the
+# count to 0 (parent 4.0.8, plus a tomcat override and a bouncycastle bump). A gate that is
+# green on the day it lands is a gate whose red means something, and the argument this file
+# already makes about health:check applies: an expected red teaches people to ignore it.
+#
+# --exit-code 1 with --severity HIGH,CRITICAL: a MEDIUM does not stop a merge request, and the
+# full report is in the artifact either way.
+dependency:scan:
+  stage: test
+  image:
+    name: docker.io/aquasec/trivy:latest
+    entrypoint: [""]
+  needs:
+    - job: server:test
+      artifacts: false
+  cache:
+    key: "maven-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - .m2/repository/
+    policy: pull
+  variables:
+    TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivycache"
+  script:
+    # The vulnerability database is Trivy's own and is fetched per run. If THAT is what gets
+    # rate-limited on a shared runner IP, the failure is a database download and not a finding
+    # -- read the job log before believing a red here.
+    - trivy --version
+    - >
+      trivy fs --scanners vuln --skip-dirs target
+      --format json --output trivy-report.json .
+    - >
+      trivy fs --scanners vuln --skip-dirs target
+      --severity HIGH,CRITICAL --exit-code 1 .
+  artifacts:
+    when: always
+    paths:
+      - trivy-report.json
+    expire_in: 1 month
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
+
 # Mutation testing. Schedule-only and allow_failure, like every job here whose red is
 # expected rather than new.
 #
