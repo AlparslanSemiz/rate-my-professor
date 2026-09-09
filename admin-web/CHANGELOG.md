@@ -2,6 +2,720 @@
 
 ## [Unreleased]
 
+### Making the documents true — the delivery pass
+
+No code, except one `package.json` script. The work was reconciling what the documents
+claim with what the repository does, because several of them had been overtaken by the
+two packages before this one and a document that is confidently wrong is worse than a
+missing one.
+
+**`docs/TODO.md` gains *Known, measured, deliberately deferred*.** Nine items, each
+with four things: what it is, how it was measured, why it was not fixed, and roughly
+what fixing it costs. The estimate is the load-bearing part — it is what separates a
+decision from a backlog, and it is the list most worth reading at delivery.
+
+The swallowed `415` on sign-out is given its own heading, because it is not the same
+kind of item as the others. Everything else there degrades the panel visibly; that one
+**tells the operator something false** — they believe they signed out while the token
+stays live on the backend. It is deliberate, the reasoning still holds, and changing it
+was offered and declined for this round. Written down at that severity rather than
+filed among the rest.
+
+**Coverage figures are generated now, not transcribed.** Every previous per-directory
+table in `docs/testfindings.md` was typed out of the terminal reporter — which omits a
+directory whose files are all fully covered, so seven directories at 100% were silently
+missing and anyone reading it as a list of everything drew the wrong conclusion. The
+table is aggregated from `coverage/coverage-summary.json`; the omission and the
+transcription error go together.
+
+**`docs/testplan.md` §2 names both lists.** Which eight files touch HTTP and what each
+proves that only a real request could; which five still replace their service and what
+each therefore cannot show. "Some of them" is how a claim like this rots.
+
+**§7 states what the end-to-end layer does not establish, first and plainly.** It has
+**never** run against the real backend — a passing flow is evidence the panel agrees
+with this repository's description of the backend, and where that description is wrong
+both are wrong together, which is `F-002`'s shape one layer down. It runs in Chromium
+only, and at desktop widths only: the panel is in fact unusable below 768px and no
+end-to-end test noticed, because none looks there.
+
+**§6.4 no longer claims "no page test touches HTTP."** It said so while eight files
+did, having been written before `P2`. Two entries were added that a percentage cannot
+show: nothing is tested below 768px, and nothing anywhere asserts accessibility.
+
+**`docs/class-diagram.md` §2 was two ADRs behind.** `ApiError` was still drawn as one
+concrete class with a `status`, and `HttpService` still held an `ApiClient`. Redrawn
+with the eleven-class hierarchy, `transient` as an abstract member, and the
+`HttpTransport` seam — which is the edge worth pointing at in a design review, because
+it is the difference between a service that *may not* revoke the session and one that
+*cannot*. The acyclicity claim carries the current figures (276 files, 899 edges) and
+says the check was verified by introducing a cycle.
+
+**ADR 0013 gained a worked example rather than a tick.** The record is written
+abstractly and an abstract principle is worth what its first real use is worth: the
+session notice decides what to report by asking `error.transient`, so no status appears
+in the feature layer and no list had to be maintained. The same round produced the
+counter-example — a bare `catch` that discarded the type and left
+`getLoginErrorMessage` unable to recover an answer it already knew.
+
+**ADR 0008 says what is missing, and does not claim otherwise.** `openapi.json` is
+still not here, so nothing downstream of it exists, and the status stays
+`Accepted — not yet implemented`. It also records a constraint found while preparing
+the ground: `openapi-typescript` peer-requires TypeScript 5 and this project is on 6,
+so `npm i -D` does not resolve. Rather than force an unsupported pairing into the
+lockfile, `npm run schema:types` runs the generator through `npx`. **Whether its output
+type-checks under TypeScript 6 is genuinely unknown** and is written down as unknown —
+it can only be found out with a real schema in hand.
+
+**ADR 0009 gained a second amendment**, naming the two files that moved and, more
+usefully, the rule's limit: `bodylessWrites` is a test of the client that corresponds
+to no user-facing flow, because the GitLab escalation's page still replaces its service
+and there was nowhere else the request could be observed. A feature staying on
+`vi.mock` does not only leave its screen untested — it can make a contract fact
+unobservable from anywhere.
+
+**`README.md` and `wiki.md`, changed together.** The Playwright cache path moves out of
+`TODO.md` and into Prerequisites, where somebody setting up will look. It was wrong
+twice: it gave the macOS path as though it were the only one, and it named
+`chromium-1234` when Playwright 1.63 requires **1243** — read out of
+`playwright-core/browsers.json` rather than from either guess. Both directories exist
+on this machine, which is exactly how the wrong one came to be written down. Also a
+paragraph on refreshing the schema, and the fact that the test suites need no backend
+at all.
+
+**`docs/TODO.md`'s handed-over specs are reconciled with what shipped.** `P2` and `P3`
+landed; the specifications are kept **unedited**, each with a note saying what actually
+happened, because reading the spec against the outcome is where the difference stays
+visible. One prediction is recorded as not having held: `P2` was supposed to follow
+`P1` so its fixtures could be typed against the schema. It ran first, so they are typed
+against the panel's own types — a fixture cannot drift from what the panel believes,
+and both can be wrong together.
+
+### Unchanged on purpose
+
+- **No code changed.** The single exception is the `schema:types` script, which was
+  agreed as part of preparing for a schema arriving the same evening.
+- **`F-019`, `F-020`, `F-012`, the `ErrorAlert` divergences and `F-022` are all still
+  open**, each now with a measurement and a cost. The list they are on is the
+  deliverable; fixing them the day before delivery is not.
+
+**The gate.** 43 files, 348 tests, 11 Playwright tests, coverage
+**92.55 / 85.62 / 90.77 / 94.43**. `npm run check` clean over 276 files and 899 edges.
+Production build clean.
+
+### What the wire actually carries — `P0b`
+
+Three things the consumer reading of this client raised, handled three different ways
+on purpose: one guarantee pinned, one crash fixed, one risk measured and written down
+rather than fixed on the last day before delivery.
+
+**`F-023` — the five bodyless writes, pinned.** `ApiRequestBuilder` sets
+`Content-Type` only when `init.body !== undefined`, and `JSON.stringify(undefined)` is
+`undefined`, so `POST /auth/logout`, `POST /audit-logs/{id}/revert`,
+`POST /reports/{id}/gitlab-issue`, `PATCH /users/{id}/block` and
+`PATCH /users/{id}/unblock` go out with the header **absent** rather than empty. That
+was asked of the backend in `docs/consumer-findings.md` C-03 and answered in a
+paragraph, which is a place nothing can contradict.
+
+The request recorder captures `Content-Type` now, and ten tests assert the header is
+absent on all five and that a `415` on each surfaces the backend's own sentence rather
+than a `TypeError` from an unparsed body. Nothing changed in the client — the
+behaviour was already right. What changed is that it can no longer change quietly.
+
+**Verified as a tripwire, not assumed.** These pin correct behaviour, so there was no
+defect to see them go red on. Making the client set the header unconditionally turns
+six of them red; restoring it turns them green. The same check `scripts/check-cycles.mjs`
+got when it was introduced, for the same reason: a test that has never failed has not
+been shown to work.
+
+**Pinned, not fixed — a `415` on sign-out is swallowed.** `AuthContext.logout` catches
+everything on purpose, because signing out locally is safer than staying signed in
+when the backend cannot be reached. The cost is that a refusal is indistinguishable
+from an outage: the panel forgets the token and the backend goes on accepting it, so
+the operator believes they signed out while the session is live. `consumer-findings`
+§3.4 names this as the one place the `500`-to-`415` change could bite, and there is
+now a test that says what "bite" looks like. Left as it is deliberately.
+
+**Fixed — `F-021`: an audit entry with no `changes` took down every row of the table.**
+`changes` and `metadata` are open maps the panel walks with `Object.keys` and
+`Object.entries`, and `toAuditLog` filled in the three revert fields and stopped there.
+`Object.keys(undefined)` throws, and it throws in `AuditLogRow` — which counts an
+entry's changed fields to label the row — so this was never a detail-view problem. One
+such entry blanked the whole screen.
+
+Both default to `{}` now: the same `?? {}` `ratingMapper` already uses for `scores`,
+rather than a second pattern for the same problem. `BackendAuditLog` declares them
+optional, the way `BackendWarning` is already honest about `createdFrom`. An empty map
+and an absent key render identically, so nothing downstream tests for absence. An
+entry type that legitimately has neither — a sign-in, a deletion — is exactly what a
+serializer omits, which is why C-08 asks the backend to send both even when empty.
+
+**Measured and deliberately not fixed — `F-022`: `actor: null` and `author: null`.**
+`AuditEntry.actor` is non-null and read without a guard in four places, while `target`
+— nested identically, in the same interface — is nullable and guarded at both of its.
+`ModeratedItem.author` is the same shape while `ratingMapper` and `userWarningMapper`
+both defend theirs. That asymmetry is the sharpest thing in C-07.
+
+Two tests now record what happens rather than assert what should: the row never
+arrives at all, because both row components read the name into their accessible label
+and throw before anything is painted. This is not a missing cell.
+
+The backend has since confirmed the actor columns are five `NOT NULL`s, so it is a
+**recorded risk, not a live defect** — and the fix is a nullable domain type whose
+`tsc` consequences reach every read site, which is not a change to make the day before
+delivery. `docs/TODO.md` carries it under *Known, measured, deliberately deferred*,
+and the tests are written so that whoever does make the type nullable is told exactly
+what they changed.
+
+**`src/test/msw/wire.ts` (new).** `db.ts` is typed with the panel's own types, which
+is what keeps the ordinary fixtures honest and what makes a response *missing* a
+declared field unrepresentable there. Those are wire concerns, so `without(value, key)`
+lets a test write the wire — a key genuinely absent, not set to `undefined`, which is
+what a serializer that drops an empty field actually sends.
+
+### Unchanged on purpose
+
+- **The domain types stay non-null.** See `F-022` above. Scope discipline, not an
+  oversight: the reach of the change and the day it would land on are the argument.
+- **`F-019` and `F-020` are untouched**, both found by the previous package. The first
+  is a responsive-behaviour decision; the second touches the query-key logic that every
+  table's loading path runs through, and a mistake there empties tables at the Abnahme.
+- **No `415` row is added to `responseErrorFor`.** It arrives as a plain `ResponseError`
+  carrying the backend's message, which is what every call site renders anyway. A row
+  would only earn its place if some caller branched on it, and none does.
+
+### Tests
+
+- 15 new tests. The `F-021` pair reproduced the exact `TypeError` before the guard;
+  the `F-023` ten were shown to fail against a deliberately broken client; the `F-022`
+  two are characterisations of a defect that is staying.
+- `bodylessWrites.integration.test.ts` exercises the five at the **service** layer, not
+  through the screens. The header is a property of the request the client builds rather
+  than of any one page — and the GitLab escalation's own page still replaces its service
+  module, so no screen test could produce that request at all.
+
+**The gate.** 43 files, 348 tests, up from 333. `npm run check` clean over 276 files
+and 899 edges, 11 Playwright tests green, production build clean.
+
+### The shell says it — `P0a`, the visible half
+
+`F-013` is closed. `AdminLayout` renders the unconfirmed-session notice inside the
+content gutters, above the routed page. `docs/DESIGN.md` §Method ran first: a written
+style note with the measurements and the tokens, two directions, one picked, then the
+code — and then a look at it in Chromium, which found two things reading it had not.
+
+**Chosen: inside the content column, dismissible.** The alternative was a band across
+the whole window, above the sidebar as well. It has the cleaner argument — an
+unconfirmed session is a property of the panel, not of the page — and it was rejected
+on cost: it restructures the `AppShell` every end-to-end spec measures against, days
+before delivery, and the sidebar is how an operator leaves a screen that is
+misbehaving. Moving the navigation to report a problem with the navigation's own
+session is the wrong trade.
+
+**Yellow, not red.** Red in this panel means *a thing did not happen*. The operator
+here is signed in, the panel works, and what they are looking at may be stale — so it
+gets `KIT.yellow`, which `constants/colors.ts` already describes as pulled down to
+read as a warning rather than a highlighter. Spending red on "carry on, but be aware"
+spends the one colour that should stop somebody.
+
+**`role` follows the level, not the component.** Mantine's `Alert` defaults to
+`role="alert"`, which is assertive and interrupts a screen reader mid-sentence. That
+is right for a failed action the operator just triggered and wrong for a notice that
+arrives unprompted during a page load, so the warning level is `role="status"`.
+
+**Dismissing gives focus back to the page.** The close button unmounts itself, and
+focus would otherwise fall to `document.body` — a keyboard user loses their place in
+the document entirely. It moves to the `main` landmark first. `F-008` came out of this
+same area in the previous pass; this is the assertion that stops the second.
+
+**Dismiss clears the message rather than setting a flag.** So the same failure does
+not return within a page load, a *different* one does, and a reload shows it again if
+it is still failing. Nothing is persisted and nothing can suppress a later problem —
+which is what makes a dismissible notice honest rather than a way to hide a true state.
+
+**`?fault=<name>` — states you cannot reach by clicking.** `docs/DESIGN.md` says a
+style change is not finished until it has been looked at, and an alert region has to
+be seen while it is *showing*. Getting there meant editing a handler, screenshotting,
+and editing it back, which is how a state gets signed off unseen. Three named faults
+now live in `src/test/msw/browser.ts` behind the existing `VITE_MOCK_BACKEND`
+constant, so they are absent from a production build with the rest of the mock backend.
+
+**Fixed by the critique — the dismiss button was a 20x20 target.** Mantine's default,
+and below the 24x24 that WCAG 2.2 SC 2.5.8 asks for. It is the only control the panel
+offers inside an alert, so it is the one that has to clear it. Found by measuring the
+rendered button, not by reading the markup.
+
+**Found by the critique, and not fixed — `F-019`: the panel is unusable below `sm`.**
+The `AppShell` navbar has a breakpoint and no `collapsed` configuration and no burger,
+so under 768px it takes the full width and covers everything. Two of the three widths
+this change was asked to be checked at are widths where there is nothing to check.
+The notice is fine at both and cannot be seen at either. Recorded as not checked
+rather than as passing; the fix is a decision about what the navigation becomes on a
+narrow screen.
+
+**Found by the critique, and not fixed — `F-020`: a refused filter empties the users
+table.** `UsersPage`'s own comment says a `400` belongs "above the rows that are still
+the last good answer"; `hasLoaded` reads the current query's data, applying a filter
+changes the query key, and the rows are gone before the message renders. Prose stating
+one intent while the code does the opposite, which is the shape of `F-007` and `C-14`.
+
+### Unchanged on purpose
+
+- **`ErrorAlert`'s red stays a hand-written `rgba(239,68,68,…)`**, and Mantine goes on
+  colouring the message `#ffffff` against the "no pure white" rule. Both are one-line
+  changes that restyle **seventeen** call sites at once, which is a visual change of
+  its own and not one to fold in here. The `warning` level added for the notice goes
+  through `withAlpha(KIT.yellow, …)`, so the new half follows the rule and the old half
+  is now written down in `docs/DESIGN.md` and `docs/TODO.md` rather than quietly
+  matched.
+- **A page's own errors are still rendered by the page.** One *component* serves both
+  needs, not one region collecting messages from everywhere: a shell that reached into
+  the routed page for its errors would need every page publishing upward, which buys a
+  worse coupling than it removes. When both show they stack, session first, and the
+  page header sits between them — which reads correctly, because the yellow one belongs
+  to the shell and the red one to the screen.
+
+### Tests
+
+- `src/layouts` has its first test. It had none, and coverage of it was 55% of
+  functions — which is how a shell with nothing to say about a failed session went
+  unnoticed. Four tests, exercised through `App` rather than by mounting `AdminLayout`
+  alone, so the notice is proven to survive the routing, the provider and the protected
+  route.
+- Measured in Chromium at 1440px rather than asserted: the notice is 55.7px, 135.4px
+  with a page-level error under it, no horizontal overflow at any width, and the
+  message contrasts 14.41:1 against its own translucent background over the page.
+
+**The gate.** 42 files, 333 tests, up from 329. `npm run check` clean over 275 files
+and 899 edges, 11 Playwright tests green, production build clean.
+
+### The session path — `P0a`
+
+The backend restored legacy `GET /auth/me` as an alias, so the panel needs no change.
+Confirming that is the easy half. The hard half is that the code path which *would*
+have told us it was gone says nothing at all, and would have said nothing on the day
+it went — `docs/consumer-findings.md` C-01 opens with two documents in this
+repository contradicting each other about whether the endpoint still exists, which is
+what "verified by reading" is worth.
+
+**The handler already serves it.** `src/test/msw/handlers/auth.ts:59` answers
+`/auth/me` with a tri-state session and a one-shot `401`. What it had no fixture for
+was a failure that is neither a refusal nor a success, which is exactly the case
+below. `failSessionCheck(status, message)` is new and is the missing third override.
+
+**`F-013` — a session check that fails without being refused is silent.**
+`AuthContext` acts only on `UnauthorizedError`. A `404`, a `403` or a payload the
+panel cannot read all flip `checking` to false and leave the operator working against
+the account copy captured at sign-in, with nothing on screen and nothing in state.
+Keeping the session is a decision and it stays; the silence was the absence of one.
+
+The provider now carries `sessionCheckError` beside `sessionExpired` — three states
+where the panel used to have two, because "we do not know yet", "the backend refused"
+and "the backend answered, but not usefully" each owe the operator a different answer.
+
+**Which failures are worth saying out loud is decided by `transient`, not by a
+status.** A 500 and an unreachable host can pass on a retry; a `404`, a `403` and a
+`ContractError` cannot. `ApiError` already answers that question for itself, so the
+provider asks it rather than comparing numbers — ADR 0013's own criterion, met by a
+later change. Warning about a blip that heals itself is how a warning that matters
+gets ignored.
+
+**Fixed — `F-014`: four sign-in failures collapsed into one sentence, and three of
+them were wrong.** `readSessionUser` wrapped `/auth/me` in a bare `catch` returning
+`null`, which became "Signed in, but your admin account could not be read. Try again
+in a moment." A `403` means the account is readable and the backend refuses it the
+panel. A `404` means the address the panel asks at is gone, and no retry helps. A
+`401` means the token minted seconds earlier is already refused, so waiting a moment
+is the single piece of advice that cannot work.
+
+The bare `catch` discarded the **type** along with the message, which is the part
+that could not be recovered downstream: `getLoginErrorMessage` already knows a
+`ForbiddenError` means "not authorized", and by the time it saw the failure the
+`ForbiddenError` was gone. It is passed on untouched now, so the function that owns
+that wording still decides it; the other two get a sentence that is true; everything
+else keeps the original message.
+
+**Fixed — `F-015`: a sign-in reported as failed left a live bearer token installed.**
+The token has to reach `ApiClient` before `/auth/me` can be asked with it, so
+`authenticateAdmin` set it and only then resolved the identity. When that read failed
+the login screen said so and the client went on sending the token on every request
+afterwards. It is cleared before the rethrow now. Found by reading the ordering while
+fixing `F-014`, not by a failing test — and it is the reason `F-014` was worth
+opening the file for.
+
+### Tests
+
+- Eight new tests, every one seen red before the fix. Four on the provider — the
+  `404`, an unreadable payload, the transient case that must stay quiet, and the
+  success case that must report nothing — and four on `authenticateAdmin`, one per
+  discriminated failure plus the token clearing.
+- Two of the four `authenticateAdmin` tests passed *vacuously* when first written,
+  because `toThrow(undefined)` matches any throw and the message constants did not
+  exist yet. The constants were added first so the assertions could actually fail.
+  A test that has never been red has not been tested either.
+
+### Unchanged on purpose
+
+- **A `401` still ends the session and nothing else does.** The change adds a second
+  thing the panel *says*, not a second thing it does to the session.
+- **The message is fixed prose, not the backend's own.** For the case this exists for
+  the backend's message is "Request to /auth/me failed with status 404", which tells
+  the operator nothing they can act on. What they need is the consequence.
+- **Nothing renders `sessionCheckError` yet.** The alert region is a visual change and
+  is following `docs/DESIGN.md` §Method, which asks for the written note and the
+  approval before the code. `F-013` stays open until it lands.
+
+**The gate.** 41 files, 329 tests, up from 321. `npm run check` clean over 275 files
+and 893 edges, 11 Playwright tests green, production build clean.
+
+
+### The request layer and the end-to-end layer — `P2` and `P3`
+
+Six features test against real requests now, and there is a Playwright suite that
+drives the panel in a browser with no backend behind it. Both run on one set of
+handlers, which is the part that made the second affordable.
+
+**`src/test/msw/` (new) — one description of the contract**
+
+- `handlers/` implements it rather than returning fixed blobs: the
+  `{ success, message, … }` envelope on everything, cursor paging that **really
+  slices** and refuses a cursor sent without a limit, `q` / `status` / `role` /
+  `sort` actually applied, and the error paths — `400` with a usable message, `401`,
+  `403`, `404`, `409` carrying a `reason`, `429` with `Retry-After`, `503` for
+  `gitlabEnabled: false`.
+- `db.ts` is a store, not a fixture. The behaviours worth testing span two requests —
+  a write and the read that should show it, a report whose status hides the content
+  it names — and a constant response proves none of them. Two files already had
+  hand-written backends for this reason; this is that, somewhere every test can use.
+- `requests.ts` records what went out. This is the whole point of the exercise: a
+  mocked service can record that `update('comment-1', …)` was called, and cannot
+  record the path, the method, the query string, the body or the header, because
+  with the service replaced none of them was ever produced.
+- `envelope.ts` holds the envelope and the paging, so a handler cannot get them
+  subtly wrong in one place and right in another.
+
+**Migrated — six modules, and the rule that chose them**
+
+`docs/adr/0009` says a module being worked on moves. The Entwurf pass rewrote how
+every one of these reports failure, so each was being worked on:
+
+- **`comments`** — the reference slice, per the ADR. `vi.mock('@/api/moderation')`
+  is gone and every mutation is asserted as a request. It also gained the half of
+  `ACTION_TAKEN` nothing had ever tested: **every other status restores the
+  content**, which can only be checked by reading what the next request returns.
+- **`App`** — the session behaviours. "The identity comes from `/auth/me` and
+  nowhere else" used to be "a function was not called"; it is now "no request was
+  addressed to the user list". The unreachable-backend case is a real transport
+  failure now, not a rejected double.
+- **`auth/LoginPage`** — the admin-team check exists to stop a code being
+  *requested*. Only a real request layer can show that none went out.
+- **`context/AuthContext`** — and renamed `.integration.`, which is what it was.
+- **`audit-logs`** — the one screen that filters server-side, so what a test could
+  prove about filtering was entirely about a query string a mock never built.
+- **`users`** — it already had a mutable array, a `list` that applied three filters
+  and `block`/`unblock` writing back to it. That was these handlers, in one file,
+  without the request.
+
+**Fixed — the warning mapper was never exercised.** The store holds warnings in the
+shape a screen reads; the handler has to put them back on the wire with the issuer
+nested under `createdFrom`, which is how they arrive. Serving the flat shape skipped
+`toWarning` entirely — the same class of gap as `F-002`, in the same mapper layer,
+and it only became visible once a real response had to be parsed.
+
+**Two fixtures were describing the mock rather than the panel.** The stored session
+had no `isSuperAdmin` in the expectation, because the mock handed back the panel's
+own object and the mapping never ran; and a `comments` counter the panel does not
+read was being passed to `/system/status`. Neither compiles now.
+
+**`e2e/` (new) — four flows, 11 tests, no backend**
+
+Login → comment moderation → bug report triage → undoing a field edit, each written
+as state / action / expected response, because these are also the scenarios walked
+by hand at the Abnahme. `VITE_MOCK_BACKEND=true` serves the panel from the same
+handlers in a real browser. Pinning them to a deployment would make them fail for
+reasons that have nothing to do with the panel at the one moment they are being
+demonstrated.
+
+The import in `src/main.tsx` is dynamic and behind a compile-time constant, so a
+production build folds it away: `grep` finds no MSW and none of the fixtures in
+`dist/`, and the bundle is unchanged.
+
+**`src/test/msw/demoData.ts` (new) — real KIT content.** Actual lecture titles,
+German names, comments written the way students write them. The old fixtures were
+role labels — `'Reported text'`, `'Hidden already'` — short enough that nothing ever
+exercised the two-line clamp, the 90-character tooltip threshold or a long German
+compound. `docs/DESIGN.md` bans lorem ipsum; this is the other reason.
+
+**Verified by looking, not by reasoning.** The report-reason filter that used to clip
+"Inappropriate content" was measured in Chromium with the longest option selected:
+`scrollWidth === clientWidth`, 218 = 218. Doing that needed a signed-in moderation
+screen, which is exactly what the browser-mode handlers made reachable.
+
+### Tests
+
+- **Four files renamed `.unit.` → `.integration.`**: `AuthContext`,
+  `useDashboardData`, `theme` and `ErrorBoundary` each render a React tree and drive
+  it. `npm run test:unit` and `test:integration` filter on the filename, so the name
+  was the only thing deciding which suite they were in. The split moved from
+  **207 / 113 to 178 / 143**, which is what it should always have said.
+- `authenticateAdmin.unit.test.ts` and `users/model/userEdit.unit.test.ts` are left
+  alone. Both reach into a second module, but both are still tests of one function,
+  and renaming them would say something untrue in the other direction.
+- `npm run test:e2e` is new. In CI it is its own job with `allow_failure: true` — a
+  flaky browser must not be able to block a merge — and it uploads its report only
+  on failure, which is the only time anybody reads it.
+- **`web:check` now runs `npm run check`** rather than `lint` and `typecheck`
+  separately, so the no-cycles and documentation checks are actually enforced in the
+  pipeline. They were added in the previous entry and CI was skipping both.
+
+### Unchanged on purpose
+
+- **Five files still replace their service module.** Catalogue, feedback and the
+  dashboard were not touched by this work, and the two `vi.mock`s left in unit tests
+  isolate a single unit, which is what a unit test is for. ADR 0009 predicted this
+  state and defends it.
+- **`onUnhandledRequest: 'error'` stays per-file.** Setting it globally would fail
+  every unmigrated test on a request that legitimately never happens.
+- **One browser.** The panel is an internal tool used on a desktop, and a
+  cross-browser matrix would buy coverage of a problem nobody has reported at the
+  cost of a suite nobody runs.
+
+**The gate.** 41 files, 321 tests, coverage **92.27 / 85.10 / 90.50 / 94.18** — up
+again on every axis. Plus 11 Playwright tests, green. Zero warnings, clean build,
+and MSW absent from it.
+
+### Design principles and the API documentation — the Entwurf pass
+
+The panel was already refactored; what was left was the set of things a design
+review reads rather than a user notices. Six packages, each kept `npm run check`
+and `npm test` green before the next started.
+
+Two of them found real defects rather than only tidying, and those are called out
+below: a keyboard trap on every clickable row, and a delete dispatcher that would
+have deleted the wrong kind of record.
+
+**Errors are types now, not status codes — `src/api/client/apiErrors.ts` (new)**
+
+`ApiError` was one class doing four jobs, and `status: 0` stood in for three
+unrelated failures: an unreachable host, a body that was not JSON, and a response
+whose shape the panel did not recognise. Callers then asked `error.status === 409`,
+which put the meaning of a number into six files across four layers.
+
+- `ApiError` is now abstract, with `NetworkError`, `ContractError` and
+  `ResponseError` under it, and `BadRequestError`, `UnauthorizedError`,
+  `ForbiddenError`, `NotFoundError`, `ConflictError`, `RateLimitedError` and
+  `RefusedError` under that. `responseErrorFor` is a **table**, and the only place
+  in the codebase that turns a status into a meaning.
+- Every failure answers `transient` for itself, so `src/query.ts`'s retry
+  predicate no longer compares statuses at all.
+- The seven `instanceof ApiError && error.status === N` sites are gone, and with
+  them nine raw status literals.
+- `cause` is kept. The `TypeError` from `fetch` and the `SyntaxError` from
+  `JSON.parse` used to be discarded at the boundary.
+- `RateLimitedError` carries `Retry-After`, which nothing read before.
+
+**Fixed — a schema mismatch was retried twice for nothing.** `status: 0` is not a
+4xx, so the retry predicate read it as worth repeating. Two extra round-trips that
+could not have succeeded, delaying the message the operator needed. `ContractError`
+is not transient and stops immediately.
+
+`authenticateAdmin`'s two refusals were bare `Error`s and are now `NotAnAdminError`
+and `IdentityUnavailableError` (`src/features/auth/loginErrors.ts`, new).
+
+**Assertions — `src/utils/assert.ts` (new)**
+
+There were none. `assert` and `assertNever` are for invariants this codebase owns,
+as opposed to anything the backend or the operator can produce. First three users:
+`useAuth`'s missing-provider check, `getCatalogDeletion`'s previously absent
+`default`, and `withAlpha`, which produced `rgba(NaN, …)` on a malformed hex and
+left a surface with no background and nothing in the console.
+
+`AssertionError` is in `getErrorMessage`'s internal list, so a broken invariant
+reaches the console rather than an alert the operator can do nothing about.
+
+**Nothing mutable leaves a module**
+
+- **`src/api/client/httpTransport.ts` (new).** Services were handed the whole
+  `ApiClient`, which publicly exposes `setToken` — so `BugReportsService` could
+  revoke the operator's session, and nothing but convention stopped it. They now
+  receive `HttpTransport`: four verbs, no session. This is the change worth
+  pointing at in the Entwurf.
+- **`EMPTY_LOG_META` was a shared mutable object.** `const` binds the reference,
+  not the four arrays inside it, and `auditLogModel.ts` re-exported the same
+  reference under a second name. Frozen, along with `EMPTY_AUTH_STATE`,
+  `EMPTY_USER_COUNTS`, `EMPTY_DASHBOARD_STATS`, `EMPTY_FILTERS`,
+  `EMPTY_USER_FILTERS`, `NO_USER_QUERY` and the three user filter lists.
+- Public collections are `readonly` — `AuditMeta`, `UserPage`, `RatingPage`,
+  `AuditLogPage`, `Lecture.professors`, `Professor.lectureIds`,
+  `ModeratedItem.replies`, `HelpSection.actions`. `readonly` appeared four times in
+  `src/api` + `src/domain` + `src/utils` + `src/constants` combined before this.
+- The compiler found one real aliasing bug doing it: `createProfessorEditDraft`
+  put the caller's array straight into the draft the form then edits, so an edit in
+  progress shared a reference with the catalogue query's cache. It copies now.
+- `moduleAccent` was `Record<string, string>`, so `moduleAccent['/dashbaord']`
+  compiled and returned `undefined` — and four of its five call sites had no
+  fallback. It is private, keyed on `Route`, and reached through `accentForRoute`,
+  which owns the fallback too.
+
+**Command-query separation**
+
+`readStoredSession()` was named as a query, used as one — a `useState` initialiser,
+which React may call more than once — and **erased `localStorage` on three of its
+five paths** while reconfiguring the API client. It is now a pure
+`readStoredSession()` returning a classified result, and a `restoreSession()`
+command that acts on it. A sweep of every `read*`/`get*`/`is*`/`to*`/`find*`/`has*`
+function found no other.
+
+**Fixed — the keyboard trap on every clickable row.** `activateOnEnterOrSpace`
+fused "is this an activation key?" with `preventDefault()` and `activate()`, and
+the query half was missing its `event.target === event.currentTarget` test. Because
+keyboard events bubble, a row claimed every Enter pressed inside it: a keyboard
+user who tabbed to a row's author chip and pressed Enter got **the row's edit
+dialog**, because `preventDefault` suppressed the button's own click first. The
+mouse path had been shielded since it was written; the key path never was.
+Splitting the predicate out (`isOwnActivation`) fixes the smell and the defect in
+one edit.
+
+**No cyclic dependencies — `scripts/check-cycles.mjs` (new)**
+
+Three cycles existed: `useUserProfile` ↔ `useUserProfileActions` over
+`LoadedProfile`, and `LoginForms` ↔ each of its two step components over
+`LoginFormsProps`. All three were `import type`, so nothing failed at runtime —
+and all three were real edges on the module diagram a design review reads. The
+shared declarations moved into modules both sides can depend on.
+
+`docs/class-diagram.md` claimed acyclicity. That claim had been checked once, by
+hand, and only *between packages*, which is why it missed three cycles inside
+features. It is now checked on every `npm run check`, over all 256 files and 797
+edges, and the check was verified by introducing a cycle and watching it fail.
+
+**Named constants**
+
+- **`src/theme/iconSize.ts` (new)** — 55 bare icon sizes onto a five-step scale
+  named by where the icon sits. **No pixel changed**, deliberately: the same icon
+  appears at 13, 14 and 15 across the panel, and naming the sizes makes that
+  visible without a find-and-replace pretending to be a design decision. The eight
+  genuine one-offs are named where they are used.
+- **`src/api/client/paging.ts` (new)** — the page size was decided three times, and
+  the constraint that justifies it (the backend accepts 1–100) was written beside
+  only one of them.
+- `RECENT_MEMBER_COUNT` replaces two `4`s in two files whose coupling existed only
+  as prose in a comment.
+- `MAX_QUERY_RETRIES`, `HTTP_STATUS`, `SEMESTER_YEAR_RANGE`, `LAST_MOMENT_OF_DAY`,
+  and the two tooltip thresholds, which were an `80` and a `90` in separate files
+  with nothing saying they were related or why they differ.
+
+**Fixed — the report-reason filter clipped its longest option.** `w={180}` at
+`size="sm"` leaves roughly 130px of text, and "Inappropriate content" needs about
+140. A `Select` shows its value *in* the input, so there was no tooltip and no
+title attribute — the truncated text was also what a screen reader read back. The
+narrowest select in the panel held the longest label. Widths are now named by the
+content they must hold (`controlWidth` in `src/constants/layout.ts`).
+
+**Fixed — the sign-in card overflowed below 400px.** It was `width: 400`, not
+`max-width`, inside a flex-centred page, so on a small phone or at 200% browser
+zoom — which WCAG 1.4.4 and 1.4.10 both require to work — it overflowed on both
+sides at once and its left edge could not be scrolled back into view. Checked at
+320px and at 1280px in Chromium, not only asserted.
+
+**API documentation — 273 symbols**
+
+Every public service, hook and domain type now states what it does and its
+contract. The gap was not only large, it was **inverted**: the leaf services that
+nothing imports carried the contract prose, while the facades the app actually
+calls carried none. `UsersService` exposed eleven methods without a word between
+them, `src/context` had sixteen exports and no doc comment at all, and there were
+**zero** `@param`, `@returns` or `@throws` in the entire repository.
+
+Three docs were not missing but *wrong*, which is worse: `matchesLectureQuery`
+carried a comment describing a reverse-index builder, `useUserProfile`'s contract
+was attached to a private helper so the exported hook had none, and
+`openReports` claimed "newest first" while doing no sorting.
+
+`scripts/check-docs.mjs` (new) keeps it, and is deliberately shallow — it cannot
+tell a contract from a restatement and does not try. It catches the one thing
+review keeps missing: a symbol nobody wrote anything about. Verified by deleting a
+doc comment and watching it fail. Private members are exempt on purpose.
+
+**One decision, one place**
+
+- **Fixed — the catalogue delete dispatcher had no exhaustive check.**
+  `getCatalogDeletion` switched on `CatalogDeletion['type']` correctly; `CatalogPage`
+  then switched on the *same* discriminant again as an if-chain whose final
+  `return` was "delete a rating". A fourth kind of deletion would have got its own
+  correct wording and then silently deleted a rating. The call is chosen alongside
+  the wording now, and `assertNever` makes a fourth kind fail to compile.
+- **The Help page's hand-copied palette had already drifted.** Seven transcriptions
+  of `constants/colors.ts`, six agreeing by luck; the seventh documented a
+  dashboard card called "Not blocked" in yellow, and the dashboard has never shown
+  a card by that name or in that colour. Every row now reads the real map, the card
+  names are one constant read by both files, and "every 15 seconds" is computed
+  from `REFRESH_INTERVAL_MS` instead of retyped.
+- The `/system/status` counter names were spelled out in two feature modules that
+  knew nothing about each other, with different defaults and with `openBugReports`
+  known to only one. They live in `src/api/system` now, as `SystemCounts`. The
+  fixtures that were passing a `comments` counter the panel never reads no longer
+  type-check.
+- `auditActionColor` was an if-chain in the audit feature typed on `string`, so the
+  `AuditAction` union bought nothing. It is a table plus a suffix rule in
+  `constants/colors.ts`, where `docs/DESIGN.md` says colour decisions live. The
+  suffix rule stays: a deletion has to read as a deletion whatever it removed.
+- `CommentsPage` routed four mutations with four identical ternaries over
+  `item.kind`. One lookup table replaces all four.
+- **`src/components/ClickableRow.tsx` (new)** — five rows carried the same
+  activation contract at three levels of correctness, and four of the five had no
+  accessible name at all, so a screen reader announced "row, eight columns" with no
+  hint it was activatable. `label` is required, so the incomplete version is now
+  impossible rather than discouraged. `keepFromRow` was the same three lines in
+  three files and is now one.
+- Colour decided outside the maps: Active/Inactive inline in both catalogue rows
+  (a state with no entry in `colors.ts` at all), `UserChip` hardcoding `"red"` for
+  a blocked account, and `ProfileActions` deciding block/unblock colour, icon,
+  label and action with four ternaries over one condition.
+
+**The `Audit*` type shim is gone.** `src/api/logs/auditLogTypes.ts` renamed eleven
+domain types and added nothing, so a rename travelled through three modules and the
+feature layer read the same concepts under two vocabularies. The domain uses the
+`Audit*` names itself now — which is the accurate name, since the activity log it
+was once shared with is gone (ADR 0002) — and the aliases went with the shim. The
+dead `LogPage` went too.
+
+### Unchanged on purpose
+
+- **The `model/` packages stay functional** — data and the operations on it in one
+  module, rather than classes with methods. The module boundary *is* the
+  encapsulation, and converting would mean rehydrating objects that come out of the
+  query cache as plain JSON at every boundary. Recorded as an ADR rather than left
+  as an omission.
+- **`role="button"` is not added to the clickable rows.** It would strip the row
+  out of the table's structure — one defect traded for another. The accessible form
+  is a control inside the first cell, which is a visual change and wants the pass
+  `docs/DESIGN.md` asks for. `docs/TODO.md` carries it.
+- **The 13/14/15 icon sizes are not unified**, and neither are the two empty-state
+  sizes that differ from the scale. Naming them was behaviour-preserving; changing
+  them is not.
+- **`isAuditActorType` is kept although nothing outside its own test uses it.**
+  Deleting production code and its tests mid-refactor buys less than it risks; it
+  is recorded as dead surface instead.
+
+### Tests
+
+- `apiErrors.unit.test.ts`, `assert.unit.test.ts`, `keyboard.unit.test.ts` and
+  `ClickableRow.unit.test.tsx` are new — 33 tests over the four things this cycle
+  introduced or fixed.
+- The three `ApiClient` tests that asserted `status: 0` were the tripwire for the
+  error hierarchy and now assert the type and `transient` instead.
+- `deletion.unit.test.ts` gained a dispatch test, because the point of folding the
+  call in beside the wording is that the two cannot disagree.
+- `SystemStatusService.unit.test.ts` now asserts that a counter the backend did not
+  serve comes back `null` rather than passing through.
+- `formatDate` answered `'-'` for an unparseable date while every other marker in
+  the panel was `'—'`. One `EMPTY_VALUE`, and the test asserts the constant.
+
+**The gate.** 41 files, 320 tests, coverage **92.06 / 84.62 / 90.37 / 93.94** — up
+on every axis from 91.23 / 84.16 / 89.03 / 93.49. Zero warnings, clean build.
+`npm run check` now runs lint, the cycle check, the documentation check and `tsc`.
+
 ### Delivery hygiene and the documentation set — `P0`, `P6`, `P7`
 
 Two days before the Abnahme, and no new features. What was left was contract
