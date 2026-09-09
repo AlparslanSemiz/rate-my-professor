@@ -4,7 +4,7 @@ import { StatCardDetailed } from '../../../components/StatCard'
 import { KIT, moduleAccent } from '../../../constants/colors'
 import { statGridCols } from '../../../constants/layout'
 import { routes } from '../../../constants/routes'
-import type { DashboardStats } from '../hooks/useDashboardData'
+import type { DashboardStats } from '../dashboardModel'
 
 // The two cards that stand for a section are drawn in that section's colour; the other two
 // describe a subset of the accounts rather than a place to go, so they keep their own.

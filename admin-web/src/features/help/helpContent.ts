@@ -104,7 +104,7 @@ export const HELP_SECTIONS: HelpSection[] = [
             value: 'Admin',
             color: 'blue',
             meaning:
-              'Full panel access. Admin accounts (and your own) are protected: no Warn, Block or Delete button is offered, and Status, Role and Credibility score cannot be changed on them.',
+              'Full panel access. Non-elevated admins cannot warn, block, delete or change the status of another admin account. Your own account cannot have its status, role or credibility score changed here.',
           },
         ],
       },

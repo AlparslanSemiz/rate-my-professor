@@ -3,39 +3,18 @@ import { systemStatusService } from '../../../api/SystemStatusService'
 import { usersService, type User } from '../../../api/UsersService'
 import { useVisibleInterval } from '../../../hooks/useVisibleInterval'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
-import { healthDescription } from '../dashboardModel'
-
-export interface DashboardStats {
-  total: number
-  active: number
-  admins: number
-  openReports: number
-}
+import {
+  EMPTY_DASHBOARD_STATS,
+  dashboardActiveRate,
+  dashboardStatsFromCounts,
+  healthDescription,
+  type DashboardStats,
+} from '../dashboardModel'
 
 const REFRESH_INTERVAL_MS = 15_000
 const LOAD_ERROR_FALLBACK = 'The dashboard could not be refreshed.'
 /** Enough to fill the "Newest members" panel, which shows four. */
 const RECENT_USER_LIMIT = 4
-
-const EMPTY_STATS: DashboardStats = { total: 0, active: 0, admins: 0, openReports: 0 }
-
-/**
- * The counters the backend keeps, so the dashboard no longer reads every user and every bug
- * report to count them itself. A counter it does not serve reads as zero rather than as a
- * crash; the health status is what says the numbers could not be read at all.
- */
-function toStats(counts: Record<string, number>): DashboardStats {
-  return {
-    total: counts.users ?? 0,
-    active: counts.activeUsers ?? 0,
-    admins: counts.admins ?? 0,
-    openReports: counts.openBugReports ?? 0,
-  }
-}
-
-function calculateActiveRate({ total, active }: DashboardStats) {
-  return total ? Math.round((active / total) * 100) : 0
-}
 
 function firstFailure(results: PromiseSettledResult<unknown>[]): unknown {
   return results.find((result) => result.status === 'rejected')?.reason ?? null
@@ -50,7 +29,7 @@ function firstFailure(results: PromiseSettledResult<unknown>[]): unknown {
  */
 export function useDashboardData() {
   const [users, setUsers] = useState<User[]>([])
-  const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS)
+  const [stats, setStats] = useState<DashboardStats>(EMPTY_DASHBOARD_STATS)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [hasData, setHasData] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -73,7 +52,7 @@ export function useDashboardData() {
     // A degraded database answers the request but carries no counters. That is a reading we
     // do not have, not a reading of zero, so the last good numbers stay on screen.
     const counts = statusResult.status === 'fulfilled' ? statusResult.value.counts : null
-    if (counts) setStats(toStats(counts))
+    if (counts) setStats(dashboardStatsFromCounts(counts))
     if (recentResult.status === 'fulfilled') setUsers(recentResult.value.users)
     if (counts || recentResult.status === 'fulfilled') setHasData(true)
 
@@ -100,7 +79,7 @@ export function useDashboardData() {
   return {
     users,
     stats,
-    activeRate: calculateActiveRate(stats),
+    activeRate: dashboardActiveRate(stats),
     lastUpdated,
     loading,
     error,

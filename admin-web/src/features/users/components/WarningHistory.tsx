@@ -1,21 +1,12 @@
 import { useState } from 'react'
-import {
-  ActionIcon,
-  Box,
-  Button,
-  Group,
-  Text,
-  Textarea,
-  Tooltip,
-  type CSSProperties,
-} from '@mantine/core'
-import { IconCheck, IconClock, IconPencil, IconTrash, IconUser, IconX } from '@tabler/icons-react'
+import { Box, Group, Text, type CSSProperties } from '@mantine/core'
+import { IconClock, IconUser } from '@tabler/icons-react'
 import type { Warning } from '../../../api/UsersService'
-import ErrorAlert from '../../../components/ErrorAlert'
-import { darkInputStyles } from '../../../constants/inputStyles'
+import { KIT } from '../../../constants/colors'
 import { formatDate } from '../../../utils/formatDate'
 import { getErrorMessage } from '../../../utils/getErrorMessage'
-import { KIT } from '../../../constants/colors'
+import WarningActions from './warnings/WarningActions'
+import WarningEditor from './warnings/WarningEditor'
 
 const sectionTitleStyle: CSSProperties = { letterSpacing: '0.05em' }
 const emptyWarningsStyle: CSSProperties = {
@@ -113,40 +104,14 @@ export default function WarningHistory({
             return (
               <Box key={key} style={warningItemStyle}>
                 {isEditing ? (
-                  <>
-                    <Textarea
-                      value={draft}
-                      onChange={(event) => setDraft(event.currentTarget.value)}
-                      minRows={2}
-                      size="xs"
-                      mb={8}
-                      aria-label="Warning message"
-                      styles={darkInputStyles}
-                    />
-                    <ErrorAlert message={error} mb={8} />
-                    <Group gap={6} justify="flex-end">
-                      <Button
-                        size="compact-xs"
-                        variant="subtle"
-                        color="gray"
-                        leftSection={<IconX size={12} />}
-                        onClick={stopEditing}
-                        disabled={busy}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="compact-xs"
-                        color="yellow"
-                        leftSection={<IconCheck size={12} />}
-                        loading={busy}
-                        disabled={!draft.trim()}
-                        onClick={() => void save(warning)}
-                      >
-                        Save
-                      </Button>
-                    </Group>
-                  </>
+                  <WarningEditor
+                    draft={draft}
+                    error={error}
+                    busy={busy}
+                    onDraftChange={setDraft}
+                    onCancel={stopEditing}
+                    onSave={() => void save(warning)}
+                  />
                 ) : (
                   <Group justify="space-between" align="flex-start" wrap="nowrap" gap={10}>
                     <div>
@@ -172,50 +137,5 @@ export default function WarningHistory({
         </div>
       )}
     </Box>
-  )
-}
-
-interface WarningActionsProps {
-  warning: Warning
-  busy: boolean
-  onEdit: () => void
-  onWithdraw: () => void
-}
-
-/**
- * A warning can only be corrected or withdrawn when the backend told us its id. It has done
- * so since the 2026-08-20 release; against anything older the controls stay hidden rather
- * than offering an action that has nothing to address.
- */
-function WarningActions({ warning, busy, onEdit, onWithdraw }: WarningActionsProps) {
-  if (warning.id === null) return null
-
-  return (
-    <Group gap={2} wrap="nowrap">
-      <Tooltip label="Correct the wording" withArrow>
-        <ActionIcon
-          variant="subtle"
-          color="yellow"
-          size="sm"
-          disabled={busy}
-          aria-label="Edit warning"
-          onClick={onEdit}
-        >
-          <IconPencil size={14} />
-        </ActionIcon>
-      </Tooltip>
-      <Tooltip label="Withdraw this warning" withArrow>
-        <ActionIcon
-          variant="subtle"
-          color="red"
-          size="sm"
-          disabled={busy}
-          aria-label="Withdraw warning"
-          onClick={onWithdraw}
-        >
-          <IconTrash size={14} />
-        </ActionIcon>
-      </Tooltip>
-    </Group>
   )
 }

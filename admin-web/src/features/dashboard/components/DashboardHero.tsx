@@ -1,7 +1,7 @@
 import { Badge, Box, SimpleGrid, Text, type CSSProperties } from '@mantine/core'
 import { moduleGridCols } from '../../../constants/layout'
 import { formatDate } from '../../../utils/formatDate'
-import type { DashboardStats } from '../hooks/useDashboardData'
+import type { DashboardStats } from '../dashboardModel'
 import { KIT } from '../../../constants/colors'
 
 const heroStyle: CSSProperties = {

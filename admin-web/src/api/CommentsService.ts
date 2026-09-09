@@ -1,100 +1,51 @@
-import { apiClient, expectArray, type ApiClient, type BasicResponse } from './ApiClient'
-import type { UserReference, UserRole, UserStatus } from '../domain/user'
-import type {
-  ContentStatus,
-  EditableContentStatus,
+import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { CommentContentService } from './CommentContentService'
+import { CommentReportsService } from './CommentReportsService'
+import type { ContentUpdate } from './contentTypes'
+import type { CommentReportStatus, ManagedComment, ReportedComment } from './commentTypes'
+
+export type { ContentUpdate } from './contentTypes'
+export type {
+  CommentReportStatus,
+  CommentUserRef,
+  ManagedComment,
+  ReportedComment,
   ReportReason,
-  ReportStatus,
-} from '../domain/moderation'
-
-export type CommentReportStatus = ReportStatus
-export type { ReportReason }
-export type CommentUserRef = UserReference
-export type { UserRole, UserStatus }
-
-/**
- * A comment as the panel manages it — every comment, not only the reported ones. `status` is
- * the visibility the student app reads; hidden content is filtered out of its read path.
- */
-export interface ManagedComment {
-  id: string
-  content: string
-  status: ContentStatus
-  author: UserReference
-  postContext: string
-  lectureId: string
-  answers: number
-  reports: number
-  createdAt: string
-}
-
-export interface ReportedComment {
-  /** The **report's** id — what the status and withdrawal routes address. */
-  id: string
-  /** The reported comment's own id, which is what moderating the content addresses. */
-  commentId: string
-  commentContent: string
-  postContext: string
-  reportText: string
-  reportedUser: UserReference
-  reporter: UserReference
-  reason: ReportReason
-  status: CommentReportStatus
-  date: string
-}
-
-/** Partial edit of a comment. An omitted field is left alone; at least one has to be supplied. */
-export interface ContentUpdate {
-  content?: string
-  status?: EditableContentStatus
-}
-
-interface ManagedCommentsResponse extends BasicResponse {
-  comments: ManagedComment[]
-}
-
-interface ReportedCommentsResponse extends BasicResponse {
-  comments: ReportedComment[]
-}
+  UserRole,
+  UserStatus,
+} from './commentTypes'
 
 export class CommentsService {
-  private readonly client: ApiClient
+  private readonly content: CommentContentService
+  private readonly reports: CommentReportsService
 
   constructor(client: ApiClient) {
-    this.client = client
+    this.content = new CommentContentService(client)
+    this.reports = new CommentReportsService(client)
   }
 
   async getAll(): Promise<ManagedComment[]> {
-    const response = await this.client.get<ManagedCommentsResponse>('/comments')
-    return expectArray<ManagedComment>(response, 'comments', 'GET /comments')
+    return this.content.getAll()
   }
 
   async getReported(): Promise<ReportedComment[]> {
-    const response = await this.client.get<ReportedCommentsResponse>('/comments/reported')
-    return expectArray<ReportedComment>(response, 'comments', 'GET /comments/reported')
+    return this.reports.getReported()
   }
 
-  /** Edits the text or the visibility of a comment, independently of any report. */
   update(id: string, update: ContentUpdate): Promise<BasicResponse> {
-    return this.client.patch<BasicResponse>(`/comments/${id}`, update)
+    return this.content.update(id, update)
   }
 
-  /** Removes the comment and the thread under it. This is a real delete, not a hide. */
   delete(id: string): Promise<BasicResponse> {
-    return this.client.delete<BasicResponse>(`/comments/${id}`)
+    return this.content.delete(id)
   }
 
-  /**
-   * `ACTION_TAKEN` is the status that means the content was moderated, so it hides the
-   * comment; moving the report to any other status puts the comment back.
-   */
   updateStatus(id: string, status: CommentReportStatus): Promise<BasicResponse> {
-    return this.client.patch<BasicResponse>(`/comments/reported/${id}`, { status })
+    return this.reports.updateStatus(id, status)
   }
 
-  /** Withdraws the report. The comment itself is left as it is. */
   deleteReport(id: string): Promise<BasicResponse> {
-    return this.client.delete<BasicResponse>(`/comments/reported/${id}`)
+    return this.reports.deleteReport(id)
   }
 }
 

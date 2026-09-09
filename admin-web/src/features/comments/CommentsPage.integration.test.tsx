@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { answersService, type ManagedAnswer, type ReportedAnswer } from '../../api/AnswersService'
@@ -160,11 +160,9 @@ async function openReportsTab(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('tab', { name: /Reports/ }))
 }
 
-function openStatusOptions(select: HTMLElement) {
-  const optionsId = select.getAttribute('aria-controls')
-  const options = optionsId ? document.getElementById(optionsId) : null
-  expect(options).not.toBeNull()
-  return options as HTMLElement
+async function chooseActionTaken(user: ReturnType<typeof userEvent.setup>, select: HTMLElement) {
+  await user.click(select)
+  await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{Enter}')
 }
 
 describe('Comments page', () => {
@@ -344,13 +342,7 @@ describe('Comments page', () => {
     const statusSelect = await screen.findByRole('combobox', {
       name: 'Status for report by Alice Smith',
     })
-    await user.click(statusSelect)
-    fireEvent.click(
-      within(openStatusOptions(statusSelect)).getByRole('option', {
-        name: 'Action Taken',
-        hidden: true,
-      })
-    )
+    await chooseActionTaken(user, statusSelect)
 
     await waitFor(() => {
       expect(commentsService.updateStatus).toHaveBeenCalledWith('report-1', 'ACTION_TAKEN')
@@ -368,13 +360,7 @@ describe('Comments page', () => {
     const statusSelect = await screen.findByRole('combobox', {
       name: 'Status for report by Alice Smith',
     })
-    await user.click(statusSelect)
-    fireEvent.click(
-      within(openStatusOptions(statusSelect)).getByRole('option', {
-        name: 'Action Taken',
-        hidden: true,
-      })
-    )
+    await chooseActionTaken(user, statusSelect)
 
     expect(await screen.findByText('Update rejected')).toBeInTheDocument()
     expect(
