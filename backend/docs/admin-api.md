@@ -39,7 +39,7 @@ the panel can move at its own pace, and they are removed once it has.
 
 | Old | New |
 | --- | --- |
-| `/auth/request-login`, `/auth/login`, `/auth/logout`, `/auth/logout-all` | `/admin/auth/...` |
+| `/auth/request-login`, `/auth/login`, `/auth/logout`, `/auth/logout-all`, `/auth/me` | `/admin/auth/...` |
 | `/users/**` | `/admin/users/**` |
 | `/comments/**`, `/answers/**` | `/admin/comments/**`, `/admin/answers/**` |
 | `GET /ratings`, `DELETE /ratings/{id}` | `/admin/ratings...` |
@@ -1078,6 +1078,7 @@ reason, the way `PUBLIC_ROUTES` carries its own.
 | `POST /admin/auth/logout` | 200, 401 |
 | `POST /admin/auth/logout-all` | 200, 401 |
 | `GET /admin/auth/me` | 200, 401 |
+| `GET /auth/me` | 200, 401, 403 |
 | `GET /admin/users` | 200, 400, 401, 403 |
 | `GET /admin/users/{id}` | 200, 401, 403, 404 |
 | `PATCH /admin/users/{id}` | 200, 400, 401, 403, 404, 409, 415 |

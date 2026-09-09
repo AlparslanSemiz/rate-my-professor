@@ -32,6 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.json.JsonCompareMode;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -41,6 +42,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -337,6 +339,56 @@ class AdminApiPathSplitTests {
      * place rather than deleted — the route is being retired, and this test is what says the
      * 403 is the real contract.
      */
+    /**
+     * The legacy identity path the admin panel is still on.
+     *
+     * <p>{@code GET /auth/me} answers the same payload as {@code GET /admin/auth/me} and is
+     * guarded the same way. It exists only because the panel calls it: the panel's audit
+     * (docs/adminweb-consumer-findings.md, C-01) reports that a failure here is bare-caught
+     * after login, turned into a null identity and raised as an error that fails the whole
+     * sign-in -- so while this path was unmapped the panel could not sign anybody in at all,
+     * and nothing on either side said so.
+     *
+     * <p>Asserted against the admin path rather than against a literal, so the two cannot
+     * drift into answering different things. When the panel reports it has migrated, this
+     * test and the mapping it covers are what get deleted.
+     */
+    @Test
+    void theLegacyIdentityPathAnswersWhatTheAdminPathAnswers() throws Exception {
+        String rawToken = JsonPath.read(
+                loginThrough("/admin/auth", ADMIN_EMAIL, ""), "$.authToken");
+
+        String onAdminPath = mockMvc.perform(
+                        get("/admin/auth/me").header("Authorization", bearer(rawToken)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(rawToken)))
+                .andExpect(status().isOk())
+                .andExpect(content().json(onAdminPath, JsonCompareMode.STRICT));
+    }
+
+    /**
+     * The legacy path carries the admin guard, not the surrounding {@code permitAll()}.
+     *
+     * <p>Worth its own test because the mapping lives on {@link com.pse.auth.controller.AuthController}
+     * -- outside the {@code /admin/**} matcher that covers its twin -- and
+     * {@code SecurityConfig} ends in {@code anyRequest().permitAll()}. A new route there is
+     * anonymous unless something says otherwise, which would publish the signed-in
+     * administrator's name, address and role to anyone who asked.
+     */
+    @Test
+    void theLegacyIdentityPathRefusesAnAnonymousCallerAndAStudent() throws Exception {
+        mockMvc.perform(get("/auth/me"))
+                .andExpect(status().isUnauthorized());
+
+        String studentToken = JsonPath.read(
+                loginThrough("/auth", STUDENT_EMAIL, ""), "$.authToken");
+
+        mockMvc.perform(get("/auth/me").header("Authorization", bearer(studentToken)))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     void adminsValidateIsRefusedByTheChainBeforeItCanReportNotAnAdmin() throws Exception {
         String rawToken = JsonPath.read(

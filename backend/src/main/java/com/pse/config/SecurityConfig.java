@@ -94,6 +94,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/ratings/own/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout-all").authenticated()
+                        // The admin panel's legacy identity path. Its twin GET /admin/auth/me
+                        // is covered by the /admin/** rule above; this one sits outside it, so
+                        // without this line the chain's closing anyRequest().permitAll() would
+                        // publish the signed-in administrator's name, address and role to
+                        // anyone who asked. Same role as the twin, so the two cannot answer
+                        // differently.
+                        .requestMatchers(HttpMethod.GET, "/auth/me").hasRole("ADMIN")
                         .requestMatchers(
                                 "/users/**",
                                 "/comments",

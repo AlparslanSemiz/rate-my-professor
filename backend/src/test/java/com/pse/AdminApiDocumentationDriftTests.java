@@ -244,7 +244,7 @@ class AdminApiDocumentationDriftTests {
                 .as("claims that need a route's own fixture -- a duplicate name, an unreachable "
                         + "tracker, a spent limiter, a body valid for one endpoint. They are "
                         + "covered by that route's own tests, not here.")
-                .isEqualTo(87);
+                .isEqualTo(88);
     }
 
     // ---------- reading the document ----------

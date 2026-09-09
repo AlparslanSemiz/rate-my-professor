@@ -858,3 +858,23 @@ is why it is being answered properly rather than left to the catch-all.
 A malformed multipart body is unchanged: it still answers 415, because no route in this API can
 read that media type. Nothing to change unless you were treating the 500 as a backend outage --
 it never was one.
+
+
+///// 9.09 (15)
+
+
+"GET /auth/me" is served again. It answers exactly what "GET /admin/auth/me" answers.
+
+Was: 404 {"message": "Not found", "success": false}
+Now: 200 {"message": "Authenticated", "success": true, "user": {...}}
+
+The path was removed on the assumption that the panel had already moved to
+"GET /admin/auth/me". It had not, and the failure did not look like one from either side: the
+panel bare-catches this call after a successful login, turns the 404 into a null identity and
+raises "your admin account could not be read", which fails the whole sign-in. The code was
+accepted, the token was minted, and nobody could get in.
+
+Requires an admin session, the same as its twin -- an account without one gets 403, not 200.
+
+Nothing to change. If you are already on "GET /admin/auth/me", stay there: this path exists
+only until the panel confirms it has migrated, and then it goes again.
