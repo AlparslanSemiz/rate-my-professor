@@ -1,10 +1,11 @@
 import { SimpleGrid } from '@mantine/core'
 import { IconCheck, IconClock, IconEye, IconX } from '@tabler/icons-react'
-import StatCard from '../../../components/StatCard'
-import { statGridCols } from '../../../constants/layout'
-import { countByValue } from '../../../utils/collection'
-import type { ReportItem } from '../moderationModel'
-import { KIT } from '../../../constants/colors'
+import StatCard from '@/components/StatCard'
+import { statGridCols } from '@/constants/layout'
+import { countByValue } from '@/utils/collection'
+import type { ReportItem } from '../model'
+import { KIT } from '@/constants/colors'
+import { chrome } from '@/theme'
 
 export default function ReportStats({ reports }: { reports: ReportItem[] }) {
   return (
@@ -25,7 +26,7 @@ export default function ReportStats({ reports }: { reports: ReportItem[] }) {
         label="Dismissed"
         value={countByValue(reports, 'status', 'DISMISSED')}
         icon={IconX}
-        accent="#6b7280"
+        accent={chrome.textDim}
       />
       <StatCard
         label="Action taken"

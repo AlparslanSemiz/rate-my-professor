@@ -1,10 +1,11 @@
 import { Box, Group, Text, type CSSProperties } from '@mantine/core'
 import { IconMessageReport } from '@tabler/icons-react'
-import Panel from '../../../components/Panel'
-import TableHeaderRow from '../../../components/TableHeaderRow'
-import type { ReportStatus } from '../../../domain/moderation'
-import type { ModeratedItem, ReportItem } from '../moderationModel'
+import Panel from '@/components/Panel'
+import TableHeaderRow from '@/components/TableHeaderRow'
+import type { ReportStatus } from '@/domain/moderation'
+import type { ModeratedItem, ReportItem } from '../model'
 import ReportRow from './ReportRow'
+import { chrome } from '@/theme'
 
 const TABLE_COLUMNS = [
   'Content & Report',
@@ -17,7 +18,7 @@ const TABLE_COLUMNS = [
 ] as const
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
-const panelHeaderStyle: CSSProperties = { borderBottom: '1px solid #21262d' }
+const panelHeaderStyle: CSSProperties = { borderBottom: `1px solid ${chrome.border}` }
 const emptyStateStyle: CSSProperties = { textAlign: 'center' }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
 const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse', minWidth: 960 }
@@ -48,8 +49,8 @@ export default function ReportsTable({
     <Panel style={panelStyle}>
       <Box px={20} py={14} style={panelHeaderStyle}>
         <Group gap={6}>
-          <IconMessageReport size={14} color="#6b7280" />
-          <Text size="xs" c="#6b7280">
+          <IconMessageReport size={14} color={chrome.textDim} />
+          <Text size="xs" c={chrome.textDim}>
             {reports.length} report{reports.length !== 1 ? 's' : ''} matching filters
           </Text>
         </Group>
@@ -57,8 +58,8 @@ export default function ReportsTable({
 
       {reports.length === 0 ? (
         <Box py={60} style={emptyStateStyle}>
-          <IconMessageReport size={32} color="#374151" style={{ marginBottom: 12 }} />
-          <Text c="#4b5563" size="sm">
+          <IconMessageReport size={32} color={chrome.iconFaint} style={{ marginBottom: 12 }} />
+          <Text c={chrome.textFaint} size="sm">
             Nothing here — no reports match these filters.
           </Text>
         </Box>

@@ -2,44 +2,39 @@ import { MantineProvider } from '@mantine/core'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { answersService, type ManagedAnswer, type ReportedAnswer } from '../../api/AnswersService'
 import {
+  answersService,
   commentsService,
+  type ManagedAnswer,
   type ManagedComment,
+  type ReportedAnswer,
   type ReportedComment,
-} from '../../api/CommentsService'
-import { AuthProvider } from '../../context/AuthContext'
+} from '@/api/moderation'
+import { AuthProvider } from '@/context/AuthContext'
+import { withQueryClient } from '@/test/queryClient'
 import CommentsPage from './CommentsPage'
 
-vi.mock('../../api/AuthService', () => ({
+vi.mock('@/api/auth', () => ({
   authService: {
     me: vi.fn().mockResolvedValue({ success: true, message: 'Signed in' }),
   },
 }))
 
-vi.mock('../../api/CommentsService', () => ({
-  commentsService: {
+// Comments and answers are one package now, so they are one mock. Both services carry the
+// same six methods: they are the same class with a different noun.
+vi.mock('@/api/moderation', () => {
+  const moderationService = () => ({
     getAll: vi.fn(),
     getReported: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
     updateStatus: vi.fn(),
     deleteReport: vi.fn(),
-  },
-}))
+  })
+  return { commentsService: moderationService(), answersService: moderationService() }
+})
 
-vi.mock('../../api/AnswersService', () => ({
-  answersService: {
-    getAll: vi.fn(),
-    getReported: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    updateStatus: vi.fn(),
-    deleteReport: vi.fn(),
-  },
-}))
-
-vi.mock('../../api/UsersService', () => ({
+vi.mock('@/api/users', () => ({
   usersService: {
     getById: vi.fn(),
     getWarnings: vi.fn(),
@@ -149,9 +144,7 @@ function renderComments() {
 
   return render(
     <MantineProvider>
-      <AuthProvider>
-        <CommentsPage />
-      </AuthProvider>
+      <AuthProvider>{withQueryClient(<CommentsPage />)}</AuthProvider>
     </MantineProvider>
   )
 }

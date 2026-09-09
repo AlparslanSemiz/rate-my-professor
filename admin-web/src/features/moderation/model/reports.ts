@@ -1,7 +1,6 @@
-import type { ReportedAnswer } from '../../../api/AnswersService'
-import type { ReportedComment } from '../../../api/CommentsService'
-import type { ReportReason, ReportStatus } from '../../../domain/moderation'
-import type { UserReference } from '../../../domain/user'
+import { type ReportedAnswer, type ReportedComment } from '@/api/moderation'
+import type { ReportReason, ReportStatus } from '@/domain/moderation'
+import type { UserReference } from '@/domain/user'
 import { ALL_FILTERS, type ReasonFilter, type StatusFilter } from './filterOptions'
 
 /** A report against a comment or an answer, flattened the same way. */

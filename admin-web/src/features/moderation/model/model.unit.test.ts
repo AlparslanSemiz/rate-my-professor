@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { ManagedAnswer, ReportedAnswer } from '../../api/AnswersService'
-import type { ManagedComment, ReportedComment } from '../../api/CommentsService'
-import type { UserReference } from '../../domain/user'
+import { type ManagedAnswer, type ReportedAnswer, type ManagedComment, type ReportedComment } from '@/api/moderation'
+import type { UserReference } from '@/domain/user'
 import {
   attachReplies,
   buildContentUpdate,
@@ -13,7 +12,7 @@ import {
   toEditableStatus,
   toAnswerReport,
   toCommentReport,
-} from './moderationModel'
+} from './index'
 
 const alice: UserReference = {
   id: 'user-1',

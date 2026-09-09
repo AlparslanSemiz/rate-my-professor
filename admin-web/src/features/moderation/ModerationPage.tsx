@@ -1,21 +1,17 @@
 import { useState } from 'react'
 import { Tabs } from '@mantine/core'
 import { IconFlag, IconMessage } from '@tabler/icons-react'
-import ConfirmModal from '../../components/ConfirmModal'
-import ErrorAlert from '../../components/ErrorAlert'
-import LoadError from '../../components/LoadError'
-import PageHeader from '../../components/PageHeader'
-import PageLoader from '../../components/PageLoader'
-import UserProfileModal from '../users/components/UserProfileModal'
+import ConfirmModal from '@/components/ConfirmModal'
+import ErrorAlert from '@/components/ErrorAlert'
+import LoadError from '@/components/LoadError'
+import PageHeader from '@/components/PageHeader'
+import PageLoader from '@/components/PageLoader'
+import UserProfileModal from '@/features/users/components/UserProfileModal'
 import ContentEditModal from './components/ContentEditModal'
-import ContentFilters from './components/ContentFilters'
-import ContentStats from './components/ContentStats'
-import ContentTable from './components/ContentTable'
-import ReportFilters from './components/ReportFilters'
-import ReportStats from './components/ReportStats'
-import ReportsTable from './components/ReportsTable'
+import ContentTab from './components/ContentTab'
+import ReportsTab from './components/ReportsTab'
 import { useModerationPage, type ModerationApi } from './hooks/useModerationPage'
-import type { ModeratedItem, ReportItem } from './moderationModel'
+import type { ModeratedItem, ReportItem } from './model'
 
 interface ModerationPageProps {
   title: string
@@ -39,7 +35,12 @@ export default function ModerationPage({
   contentErrorMessage,
   reportsErrorMessage,
 }: ModerationPageProps) {
-  const page = useModerationPage({ api, contentErrorMessage, reportsErrorMessage })
+  const page = useModerationPage({
+    api,
+    resource: noun,
+    contentErrorMessage,
+    reportsErrorMessage,
+  })
   const [editing, setEditing] = useState<ModeratedItem | null>(null)
   const [deleting, setDeleting] = useState<ModeratedItem | null>(null)
   const [withdrawing, setWithdrawing] = useState<ReportItem | null>(null)
@@ -50,33 +51,23 @@ export default function ModerationPage({
   return (
     <>
       <PageHeader title={title} description={description} />
-      <ErrorAlert message={page.actionError} />
+      <ErrorAlert message={page.actions.actionError} />
 
       <Tabs defaultValue="content" keepMounted={false}>
         <Tabs.List mb={20}>
           <Tabs.Tab value="content" leftSection={<IconMessage size={14} />}>
-            All {noun}s ({page.content.length})
+            All {noun}s ({page.content.items.length})
           </Tabs.Tab>
           <Tabs.Tab value="reports" leftSection={<IconFlag size={14} />}>
-            Reports ({page.reports.length})
+            Reports ({page.reports.items.length})
           </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="content">
-          <ContentStats items={page.content} totalLabel={`Total ${noun}s`} />
-          <ContentFilters
-            search={page.contentSearch}
-            status={page.contentStatusFilter}
-            searchLabel={`Search ${noun}s`}
-            onSearchChange={page.setContentSearch}
-            onStatusChange={page.setContentStatusFilter}
-          />
-          <ContentTable
-            key={page.contentNarrowed ? 'narrowed' : 'full'}
-            items={page.filteredContent}
+          <ContentTab
+            content={page.content}
             noun={noun}
-            updating={page.mutating}
-            autoExpand={page.contentNarrowed}
+            updating={page.actions.mutating}
             onOpenProfile={page.profile.open}
             onEdit={setEditing}
             onDelete={setDeleting}
@@ -84,22 +75,13 @@ export default function ModerationPage({
         </Tabs.Panel>
 
         <Tabs.Panel value="reports">
-          <ReportStats reports={page.reports} />
-          <ReportFilters
-            search={page.reportSearch}
-            status={page.reportStatusFilter}
-            reason={page.reportReasonFilter}
-            searchLabel={`Search reported ${noun}s`}
-            onSearchChange={page.setReportSearch}
-            onStatusChange={page.setReportStatusFilter}
-            onReasonChange={page.setReportReasonFilter}
-          />
-          <ReportsTable
-            reports={page.filteredReports}
-            updating={page.mutating}
+          <ReportsTab
+            reports={page.reports}
+            noun={noun}
+            updating={page.actions.mutating}
             contentFor={page.contentFor}
             onOpenProfile={page.profile.open}
-            onStatusChange={page.changeReportStatus}
+            onStatusChange={page.actions.changeReportStatus}
             onEditContent={setEditing}
             onDeleteContent={setDeleting}
             onWithdraw={setWithdrawing}
@@ -110,7 +92,7 @@ export default function ModerationPage({
       <ContentEditModal
         item={editing}
         onClose={() => setEditing(null)}
-        onSubmit={page.editContent}
+        onSubmit={page.actions.editContent}
       />
 
       {deleting && (
@@ -124,7 +106,7 @@ export default function ModerationPage({
           }
           confirmLabel="Delete permanently"
           confirmColor="red"
-          onConfirm={() => page.deleteContent(deleting)}
+          onConfirm={() => page.actions.deleteContent(deleting)}
           onClose={() => setDeleting(null)}
         />
       )}
@@ -136,7 +118,7 @@ export default function ModerationPage({
           description={`Withdraw this report? The ${withdrawing.kind} itself is left exactly as it is.`}
           confirmLabel="Withdraw report"
           confirmColor="red"
-          onConfirm={() => page.withdrawReport(withdrawing)}
+          onConfirm={() => page.actions.withdrawReport(withdrawing)}
           onClose={() => setWithdrawing(null)}
         />
       )}

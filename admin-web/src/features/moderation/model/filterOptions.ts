@@ -8,8 +8,8 @@ import {
   type ContentStatus,
   type ReportReason,
   type ReportStatus,
-} from '../../../domain/moderation'
-import { enumLabel } from '../../../utils/enumLabel'
+} from '@/domain/moderation'
+import { enumLabel } from '@/utils/enumLabel'
 
 export const ALL_FILTERS = 'All'
 

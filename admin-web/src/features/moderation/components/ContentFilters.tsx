@@ -1,12 +1,12 @@
 import { Group, Select, TextInput, type CSSProperties } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
-import Panel from '../../../components/Panel'
-import { darkInputStyles } from '../../../constants/inputStyles'
+import Panel from '@/components/Panel'
 import {
   contentStatusFilterOptions,
   toContentStatusFilter,
   type ContentStatusFilter,
-} from '../moderationModel'
+} from '../model'
+import { chrome } from '@/theme'
 
 const panelStyle: CSSProperties = { padding: '14px 20px' }
 const searchInputStyle: CSSProperties = { flex: 1, minWidth: 200 }
@@ -33,11 +33,10 @@ export default function ContentFilters({
           placeholder="Search by text, author, or lecture..."
           value={search}
           onChange={(event) => onSearchChange(event.currentTarget.value)}
-          leftSection={<IconSearch size={14} color="#6b7280" />}
+          leftSection={<IconSearch size={14} color={chrome.textDim} />}
           style={searchInputStyle}
           size="sm"
           aria-label={searchLabel}
-          styles={darkInputStyles}
         />
         <Select
           placeholder="All Statuses"
@@ -48,7 +47,6 @@ export default function ContentFilters({
           w={160}
           size="sm"
           clearable={false}
-          styles={darkInputStyles}
         />
       </Group>
     </Panel>

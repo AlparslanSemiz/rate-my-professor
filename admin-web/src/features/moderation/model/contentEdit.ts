@@ -1,5 +1,5 @@
-import type { ContentUpdate } from '../../../api/CommentsService'
-import type { EditableContentStatus } from '../../../domain/moderation'
+import type { ContentUpdate } from '@/api/moderation'
+import type { EditableContentStatus } from '@/domain/moderation'
 import type { ModeratedItem } from './content'
 
 export interface ContentEditDraft {

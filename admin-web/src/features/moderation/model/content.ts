@@ -1,7 +1,6 @@
-import type { ManagedAnswer } from '../../../api/AnswersService'
-import type { ManagedComment } from '../../../api/CommentsService'
-import type { ContentStatus } from '../../../domain/moderation'
-import type { UserReference } from '../../../domain/user'
+import { type ManagedAnswer, type ManagedComment } from '@/api/moderation'
+import type { ContentStatus } from '@/domain/moderation'
+import type { UserReference } from '@/domain/user'
 import { ALL_FILTERS, type ContentStatusFilter } from './filterOptions'
 
 /** Everything a mutation needs to address a comment or an answer: which one, and of which kind. */

@@ -1,7 +1,6 @@
 import { Group, Select, TextInput, type CSSProperties } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
-import Panel from '../../../components/Panel'
-import { darkInputStyles } from '../../../constants/inputStyles'
+import Panel from '@/components/Panel'
 import {
   reasonFilterOptions,
   reportStatusFilterOptions,
@@ -9,7 +8,8 @@ import {
   toStatusFilter,
   type ReasonFilter,
   type StatusFilter,
-} from '../moderationModel'
+} from '../model'
+import { chrome } from '@/theme'
 
 const panelStyle: CSSProperties = { padding: '14px 20px' }
 const searchInputStyle: CSSProperties = { flex: 1, minWidth: 200 }
@@ -40,11 +40,10 @@ export default function ReportFilters({
           placeholder="Search by content, user, or report message..."
           value={search}
           onChange={(event) => onSearchChange(event.currentTarget.value)}
-          leftSection={<IconSearch size={14} color="#6b7280" />}
+          leftSection={<IconSearch size={14} color={chrome.textDim} />}
           style={searchInputStyle}
           size="sm"
           aria-label={searchLabel}
-          styles={darkInputStyles}
         />
         <Select
           placeholder="All Statuses"
@@ -55,7 +54,6 @@ export default function ReportFilters({
           w={150}
           size="sm"
           clearable={false}
-          styles={darkInputStyles}
         />
         <Select
           placeholder="All Reasons"
@@ -66,7 +64,6 @@ export default function ReportFilters({
           w={180}
           size="sm"
           clearable={false}
-          styles={darkInputStyles}
         />
       </Group>
     </Panel>

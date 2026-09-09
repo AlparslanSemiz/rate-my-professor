@@ -1,18 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { Button, Group, Modal, Select, Stack, Text, Textarea } from '@mantine/core'
-import type { ContentUpdate } from '../../../api/CommentsService'
-import ErrorAlert from '../../../components/ErrorAlert'
-import { darkInputStyles } from '../../../constants/inputStyles'
-import { darkModalStyles } from '../../../constants/modalStyles'
-import { EDITABLE_CONTENT_STATUSES, isEditableContentStatus } from '../../../domain/moderation'
-import { enumLabel } from '../../../utils/enumLabel'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
+import type { ContentUpdate } from '@/api/moderation'
+import ErrorAlert from '@/components/ErrorAlert'
+import { EDITABLE_CONTENT_STATUSES, isEditableContentStatus } from '@/domain/moderation'
+import { enumLabel } from '@/utils/enumLabel'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 import {
   buildContentUpdate,
   canSaveContentEdit,
   createContentEditDraft,
   type ModeratedItem,
-} from '../moderationModel'
+} from '../model'
+import { chrome } from '@/theme'
 
 const statusOptions = EDITABLE_CONTENT_STATUSES.map((status) => ({
   value: status,
@@ -33,7 +32,6 @@ export default function ContentEditModal({ item, onClose, onSubmit }: ContentEdi
       title={`Edit ${item?.kind ?? 'content'}`}
       centered
       size="lg"
-      styles={darkModalStyles}
     >
       {/* Keyed on the item so the form starts from that item's values: the fields are
           initial state, not state kept in step with a prop. */}
@@ -78,7 +76,7 @@ function ContentEditForm({ item, onClose, onSubmit }: ContentEditFormProps) {
   return (
     <form onSubmit={handleSubmit}>
       <Stack gap={14}>
-        <Text size="xs" c="#6b7280">
+        <Text size="xs" c={chrome.textDim}>
           {item.postContext} · by {item.author.name}
         </Text>
         <Textarea
@@ -89,7 +87,6 @@ function ContentEditForm({ item, onClose, onSubmit }: ContentEditFormProps) {
             setDraft((current) => ({ ...current, content }))
           }}
           minRows={5}
-          styles={darkInputStyles}
         />
         <Select
           label="Visibility"
@@ -102,7 +99,6 @@ function ContentEditForm({ item, onClose, onSubmit }: ContentEditFormProps) {
             }
           }}
           clearable={false}
-          styles={darkInputStyles}
         />
         <ErrorAlert message={error} mb={0} />
         <Group justify="flex-end" gap={10}>

@@ -1,13 +1,14 @@
 import { Select } from '@mantine/core'
-import { reportStatusColor } from '../../../constants/colors'
-import { isReportStatus, type ReportStatus } from '../../../domain/moderation'
-import { reportStatusSelectOptions, type ReportItem } from '../moderationModel'
+import { reportStatusColor } from '@/constants/colors'
+import { isReportStatus, type ReportStatus } from '@/domain/moderation'
+import { reportStatusSelectOptions, type ReportItem } from '../model'
+import { chrome } from '@/theme'
 
 function statusSelectStyles(status: ReportStatus) {
   return {
     input: {
-      background: '#0f1117',
-      border: '1px solid #21262d',
+      background: chrome.surfaceSunken,
+      border: `1px solid ${chrome.border}`,
       color: `var(--mantine-color-${reportStatusColor[status]}-4)`,
       fontWeight: 600,
       fontSize: 11,

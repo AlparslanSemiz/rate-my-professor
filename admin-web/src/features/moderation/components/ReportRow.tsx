@@ -1,13 +1,14 @@
 import { ActionIcon, Badge, Group, Text, Tooltip, type CSSProperties } from '@mantine/core'
 import { IconPencil, IconTrash, IconTrashX } from '@tabler/icons-react'
-import UserChip from '../../../components/UserChip'
-import { reportReasonColor } from '../../../constants/colors'
-import type { ReportStatus } from '../../../domain/moderation'
-import { enumLabel } from '../../../utils/enumLabel'
-import { formatDate } from '../../../utils/formatDate'
-import type { ModeratedItem, ReportItem } from '../moderationModel'
+import UserChip from '@/components/UserChip'
+import { reportReasonColor } from '@/constants/colors'
+import type { ReportStatus } from '@/domain/moderation'
+import { enumLabel } from '@/utils/enumLabel'
+import { formatDate } from '@/utils/formatDate'
+import type { ModeratedItem, ReportItem } from '../model'
 import ReportedContentPreview from './ReportedContentPreview'
 import ReportStatusSelect from './ReportStatusSelect'
+import { chrome } from '@/theme'
 
 const contentCellStyle: CSSProperties = { padding: '16px 20px', maxWidth: 340 }
 const userCellStyle: CSSProperties = { padding: '16px 20px', whiteSpace: 'nowrap' }
@@ -15,7 +16,7 @@ const cellStyle: CSSProperties = { padding: '16px 20px' }
 const dateCellStyle: CSSProperties = { ...cellStyle, whiteSpace: 'nowrap' }
 
 function rowStyle(isLast: boolean): CSSProperties {
-  return { borderBottom: isLast ? 'none' : '1px solid #1c2128' }
+  return { borderBottom: isLast ? 'none' : `1px solid ${chrome.borderSubtle}` }
 }
 
 interface ReportRowProps {
@@ -76,7 +77,7 @@ export default function ReportRow({
         </Badge>
       </td>
       <td style={dateCellStyle}>
-        <Text size="xs" c="#6b7280">
+        <Text size="xs" c={chrome.textDim}>
           {formatDate(report.date, { withTime: true })}
         </Text>
       </td>

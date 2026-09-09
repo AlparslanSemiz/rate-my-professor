@@ -1,10 +1,10 @@
 import { SimpleGrid } from '@mantine/core'
 import { IconEye, IconEyeOff, IconFlag, IconMessage } from '@tabler/icons-react'
-import StatCard from '../../../components/StatCard'
-import { statGridCols } from '../../../constants/layout'
-import { countByValue } from '../../../utils/collection'
-import { flattenContent, type ModeratedItem } from '../moderationModel'
-import { KIT } from '../../../constants/colors'
+import StatCard from '@/components/StatCard'
+import { statGridCols } from '@/constants/layout'
+import { countByValue } from '@/utils/collection'
+import { flattenContent, type ModeratedItem } from '../model'
+import { KIT } from '@/constants/colors'
 
 interface ContentStatsProps {
   items: ModeratedItem[]

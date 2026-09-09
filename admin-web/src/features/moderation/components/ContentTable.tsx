@@ -1,10 +1,12 @@
-import { Fragment, useState } from 'react'
+import { Fragment } from 'react'
 import { Box, Group, Text, type CSSProperties } from '@mantine/core'
+import { useSet } from '@mantine/hooks'
 import { IconMessage } from '@tabler/icons-react'
-import Panel from '../../../components/Panel'
-import TableHeaderRow from '../../../components/TableHeaderRow'
-import type { ModeratedItem } from '../moderationModel'
+import Panel from '@/components/Panel'
+import TableHeaderRow from '@/components/TableHeaderRow'
+import type { ModeratedItem } from '../model'
 import ContentRow from './ContentRow'
+import { chrome } from '@/theme'
 
 const TABLE_COLUMNS = ['Content', 'Author', 'Lecture', 'Visibility', 'Reports', 'Posted', ''] as const
 
@@ -20,7 +22,7 @@ const TABLE_COLUMNS = ['Content', 'Author', 'Lecture', 'Visibility', 'Reports', 
 const COLUMN_WIDTHS = ['28%', '14%', '15%', '9%', '7%', '17%', '10%'] as const
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
-const panelHeaderStyle: CSSProperties = { borderBottom: '1px solid #21262d' }
+const panelHeaderStyle: CSSProperties = { borderBottom: `1px solid ${chrome.border}` }
 const emptyStateStyle: CSSProperties = { textAlign: 'center' }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
 const tableStyle: CSSProperties = {
@@ -58,23 +60,19 @@ export default function ContentTable({
 }: ContentTableProps) {
   // While auto-expanding, the set records the rows explicitly closed instead; the component
   // is remounted when that mode changes, so the two meanings never mix.
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const expanded = useSet<string>()
 
   function toggleExpanded(id: string) {
-    setExpanded((current) => {
-      const next = new Set(current)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+    if (expanded.has(id)) expanded.delete(id)
+    else expanded.add(id)
   }
 
   return (
     <Panel style={panelStyle}>
       <Box px={20} py={14} style={panelHeaderStyle}>
         <Group gap={6}>
-          <IconMessage size={14} color="#6b7280" />
-          <Text size="xs" c="#6b7280">
+          <IconMessage size={14} color={chrome.textDim} />
+          <Text size="xs" c={chrome.textDim}>
             {items.length} {noun}
             {items.length === 1 ? '' : 's'} matching filters · newest first
           </Text>
@@ -83,8 +81,8 @@ export default function ContentTable({
 
       {items.length === 0 ? (
         <Box py={60} style={emptyStateStyle}>
-          <IconMessage size={32} color="#374151" style={{ marginBottom: 12 }} />
-          <Text c="#4b5563" size="sm">
+          <IconMessage size={32} color={chrome.iconFaint} style={{ marginBottom: 12 }} />
+          <Text c={chrome.textFaint} size="sm">
             Nothing here — no {noun}s match these filters.
           </Text>
         </Box>

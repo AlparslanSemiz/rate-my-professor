@@ -1,5 +1,7 @@
 import { Box, Text, Tooltip, type CSSProperties } from '@mantine/core'
-import type { ReportItem } from '../moderationModel'
+import type { ReportItem } from '../model'
+import { chrome } from '@/theme'
+import { KIT } from '@/constants/colors'
 
 const TOOLTIP_THRESHOLD = 80
 
@@ -10,7 +12,7 @@ const reportTextBoxStyle: CSSProperties = {
   padding: '5px 8px',
 }
 const parentBoxStyle: CSSProperties = {
-  borderLeft: '2px solid #21262d',
+  borderLeft: `2px solid ${chrome.border}`,
   paddingLeft: 8,
   marginBottom: 4,
 }
@@ -27,19 +29,19 @@ export default function ReportedContentPreview({ report }: { report: ReportItem 
     <>
       {report.parentContent && (
         <Box style={parentBoxStyle}>
-          <Text size="xs" c="#4b5563" lineClamp={1} style={breakWordStyle}>
+          <Text size="xs" c={chrome.textFaint} lineClamp={1} style={breakWordStyle}>
             In reply to: {report.parentContent}
           </Text>
         </Box>
       )}
       <Tooltip label={report.content} multiline w={340} withArrow disabled={!hasTooltip}>
-        <Text size="sm" c="#d1d5db" lineClamp={2} mb={4} style={contentTextStyle(hasTooltip)}>
+        <Text size="sm" c={chrome.textSecondary} lineClamp={2} mb={4} style={contentTextStyle(hasTooltip)}>
           "{report.content}"
         </Text>
       </Tooltip>
       {report.reportText && (
         <Box style={reportTextBoxStyle}>
-          <Text size="xs" c="#fca5a5" lineClamp={2} style={breakWordStyle}>
+          <Text size="xs" c={KIT.red} lineClamp={2} style={breakWordStyle}>
             Report: {report.reportText}
           </Text>
         </Box>

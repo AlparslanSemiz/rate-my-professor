@@ -10,7 +10,7 @@ export {
   type ContentStatusFilter,
   type ReasonFilter,
   type StatusFilter,
-} from './model/filterOptions'
+} from './filterOptions'
 export {
   attachReplies,
   findContent,
@@ -22,18 +22,18 @@ export {
   toModeratedComment,
   type ContentRef,
   type ModeratedItem,
-} from './model/content'
+} from './content'
 export {
   buildContentUpdate,
   canSaveContentEdit,
   createContentEditDraft,
   toEditableStatus,
   type ContentEditDraft,
-} from './model/contentEdit'
+} from './contentEdit'
 export {
   matchesReportFilters,
   matchesReportQuery,
   toAnswerReport,
   toCommentReport,
   type ReportItem,
-} from './model/reports'
+} from './reports'

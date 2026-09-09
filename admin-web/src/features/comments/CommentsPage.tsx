@@ -1,8 +1,7 @@
-import { answersService } from '../../api/AnswersService'
-import { commentsService } from '../../api/CommentsService'
-import ModerationPage from '../moderation/ModerationPage'
-import type { ModerationApi } from '../moderation/hooks/useModerationPage'
-import { attachReplies, toAnswerReport, toCommentReport } from '../moderation/moderationModel'
+import { answersService, commentsService } from '@/api/moderation'
+import ModerationPage from '@/features/moderation/ModerationPage'
+import type { ModerationApi } from '@/features/moderation/hooks/useModerationPage'
+import { attachReplies, toAnswerReport, toCommentReport } from '@/features/moderation/model'
 
 /**
  * Answers are replies to a comment, not a separate top-level feed, so they are fetched here

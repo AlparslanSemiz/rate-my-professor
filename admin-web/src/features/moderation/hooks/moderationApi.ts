@@ -1,7 +1,7 @@
-import type { BasicResponse } from '../../../api/ApiClient'
-import type { ContentUpdate } from '../../../api/CommentsService'
-import type { ReportStatus } from '../../../domain/moderation'
-import type { ContentRef, ModeratedItem, ReportItem } from '../moderationModel'
+import type { BasicResponse } from '@/api/client'
+import type { ContentUpdate } from '@/api/moderation'
+import type { ReportStatus } from '@/domain/moderation'
+import type { ContentRef, ModeratedItem, ReportItem } from '../model'
 
 /**
  * The calls a moderation page makes. Comments and answers expose the same operations under
