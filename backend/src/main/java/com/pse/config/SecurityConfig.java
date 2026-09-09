@@ -101,6 +101,11 @@ public class SecurityConfig {
                         // anyone who asked. Same role as the twin, so the two cannot answer
                         // differently.
                         .requestMatchers(HttpMethod.GET, "/auth/me").hasRole("ADMIN")
+                        // The app's unprefixed answer-report path. The /answers/** matchers
+                        // further down cover PATCH and DELETE for administrators only, so a
+                        // POST here would fall through to anyRequest().permitAll() and let an
+                        // anonymous caller file reports. Same guard as its /social twin.
+                        .requestMatchers(HttpMethod.POST, "/answers/report").authenticated()
                         .requestMatchers(
                                 "/users/**",
                                 "/comments",

@@ -878,3 +878,25 @@ Requires an admin session, the same as its twin -- an account without one gets 4
 
 Nothing to change. If you are already on "GET /admin/auth/me", stay there: this path exists
 only until the panel confirms it has migrated, and then it goes again.
+
+
+///// 9.09 (16)
+
+
+"POST /answers/report" is served. It answers exactly what "POST /social/answers/report"
+answers.
+
+Was: 405 {"message": "Method not allowed", "success": false}, Allow: DELETE, PATCH
+Now: 200 {"message": "...", "success": true}
+
+This is not a new feature, it is a route that was never there. The app has always sent
+"/answers/report" while the API has only ever served "/social/answers/report", so the request
+matched "/answers/{id}" on the moderation controller -- which maps PATCH and DELETE and no
+POST -- and was refused. Reporting an answer from the app has never worked. It looked like it
+did because the app tells the user the report was submitted before the response arrives.
+
+Requires a session, the same as its "/social" twin.
+
+Nothing to change to get it working; an installed app starts filing reports as soon as this
+ships. New work only if you want it on one path: move to "POST /social/answers/report", which
+is where every other social route already is, and tell us so this one can go.

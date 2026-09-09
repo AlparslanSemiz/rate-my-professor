@@ -39,6 +39,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -1105,6 +1106,71 @@ class SocialApiIntegrationTests {
                 .andExpect(jsonPath("$.comments[0].answers[0].content").value("Agreed"));
     }
 
+
+    /**
+     * The unprefixed report path the Android client actually calls.
+     *
+     * <p>Every other route the app uses on this controller carries the {@code /social}
+     * prefix; the client's own audit records this one as the exception
+     * (docs/frontend-consumer-findings.md, F-3.8) and treats it as a naming inconsistency.
+     * It was not: the path was never mapped. It matched {@code /answers/&#123;id&#125;} on the
+     * moderation controller, which maps PATCH and DELETE and no POST, so the request was
+     * answered 405 by {@code handleWrongMethod}.
+     *
+     * <p>Nobody saw it because the client dismisses the dialog and shows "report submitted"
+     * immediately after {@code enqueue}, before the response arrives -- so reporting an
+     * answer from the app has never worked and has always looked like it did.
+     *
+     * <p>Asserted against {@code /social/answers/report} rather than a literal so the alias
+     * and the real path cannot drift. Deleted with the mapping when the app has migrated.
+     */
+    @Test
+    void answerReportsAreAlsoServedOnTheUnprefixedPathTheAppCalls() throws Exception {
+        Session author = createSession("unprefixed-author@student.kit.edu");
+        Session reporter = createSession("unprefixed-reporter@student.kit.edu");
+        Lecture lecture = createLecture();
+        Comment comment = createComment(author.student(), lecture, "Root");
+        Answer answer = createAnswer(author.student(), comment, "Bad answer");
+
+        mockMvc.perform(post("/answers/report")
+                        .header("Authorization", bearer(reporter.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answerID":"%s",
+                                  "reportReason":"HARASSMENT",
+                                  "explanation":"Also rude"
+                                }
+                                """.formatted(answer.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        assertThat(answerReportRepository.count()).isEqualTo(1);
+    }
+
+    /**
+     * The alias carries the same session guard as the prefixed path.
+     *
+     * <p>{@code SecurityConfig} matches PATCH and DELETE on {@code /answers/**} for
+     * administrators and nothing else, so a POST there falls through to the chain's closing
+     * {@code anyRequest().permitAll()} unless a matcher says otherwise -- which would let an
+     * anonymous caller file reports.
+     */
+    @Test
+    void theUnprefixedAnswerReportPathRefusesAnAnonymousCaller() throws Exception {
+        mockMvc.perform(post("/answers/report")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answerID":"%s",
+                                  "reportReason":"SPAM",
+                                  "explanation":"x"
+                                }
+                                """.formatted(UUID.randomUUID())))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(answerReportRepository.count()).isZero();
+    }
 
     private Session createSession(String email) {
 
