@@ -630,3 +630,23 @@ This one is the opposite direction on purpose. The field is optional -- the assi
 writable afterwards through "PATCH /admin/data/professor/{id}" -- and "POST /data/professor"
 has always read its mirror field that way. Sending "professorIds": [] was already accepted and
 is unchanged; only omitting the key was broken.
+
+
+///// 9.09 (5)
+
+
+"ratingCount" on a professor is the number of ratings. It used to be 0, always.
+
+    GET /data/professor
+    GET /data/professor/{id}
+    GET /admin/data/professor/all
+
+Was: "ratingCount": 0      for every professor, however many ratings they had
+Now: "ratingCount": 12     the ratings on every lecture they teach
+
+The field was read from a stored column that nothing in the application ever wrote -- no
+default, no trigger, no code path. "averageRating" beside it has been recomputed on read all
+along and was correct, which is why this was not obvious from the response.
+
+Panel and app: if you were hiding or ignoring this field because it was always 0, it is worth
+showing now. If you were displaying it, it was wrong and now is not.

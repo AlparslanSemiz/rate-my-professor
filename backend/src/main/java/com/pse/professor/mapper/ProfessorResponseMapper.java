@@ -48,7 +48,11 @@ public final class ProfessorResponseMapper {
                 professor.getLastName(),
                 professor.isActive(),
                 averageRating,
-                professor.getRatingCount(),
+                // Counted from the same walk, and for the same reason. The stored
+                // rating_count column was never written by anything -- no setter call in
+                // src/main, no default, no trigger -- so this field answered 0 for every
+                // professor who had ever been rated while the average beside it was right.
+                ProfessorRatings.of(professor).size(),
                 professor.getLectures().stream()
                         .sorted(BY_NAME)
                         .map(Lecture::getId)
