@@ -1,41 +1,24 @@
-import type { User } from '../../api/UsersService'
-import ErrorAlert from '../../components/ErrorAlert'
-import LoadError from '../../components/LoadError'
-import PageHeader from '../../components/PageHeader'
-import PageLoader from '../../components/PageLoader'
-import { useSelectedId } from '../../hooks/useSelectedId'
-import { updateById } from '../../utils/collection'
+import ErrorAlert from '@/components/ErrorAlert'
+import LoadError from '@/components/LoadError'
+import PageHeader from '@/components/PageHeader'
+import PageLoader from '@/components/PageLoader'
+import { useSelectedId } from '@/hooks/useSelectedId'
 import UserFilters from './components/UserFilters'
 import UserProfileModal from './components/UserProfileModal'
 import UsersStats from './components/UsersStats'
 import UsersTable from './components/UsersTable'
 import { useUsersPage } from './hooks/useUsersPage'
-import type { UserChange } from './hooks/useUserProfile'
+import type { UserChange } from './model'
 
 const SORT_LABELS = { newest: 'newest first', oldest: 'oldest first' }
 
 export default function UsersPage() {
   const page = useUsersPage()
   const profile = useSelectedId()
-  const setUsers = page.setItems
 
   function handleUserChanged(id: string, change: UserChange) {
-    if (change.type === 'deleted') {
-      setUsers((current: User[]) => current.filter((user) => user.id !== id))
-      profile.close()
-      return
-    }
-
-    // An edit, a block and an unblock can each change any field, so the row is replaced with
-    // what the backend now reports rather than patched with what was asked for.
-    if (change.type === 'refreshed') {
-      setUsers((current: User[]) => updateById(current, id, () => change.user))
-      return
-    }
-
-    setUsers((current: User[]) =>
-      updateById(current, id, (user) => ({ ...user, warnings: change.warnings })),
-    )
+    page.applyUserChange(id, change)
+    if (change.type === 'deleted') profile.close()
   }
 
   if (page.loading && page.items.length === 0 && !page.tableError) return <PageLoader />
@@ -44,7 +27,7 @@ export default function UsersPage() {
     return (
       <>
         <UsersPageHeader />
-        <LoadError message={page.initialError} onRetry={() => void page.retryInitialLoad()} />
+        <LoadError message={page.initialError} onRetry={page.retryInitialLoad} />
       </>
     )
   }
@@ -53,7 +36,7 @@ export default function UsersPage() {
     <>
       <UsersPageHeader />
 
-      <UsersStats counts={page.meta} />
+      <UsersStats counts={page.counts} />
       <UserFilters
         draft={page.draft}
         loading={page.loading}
@@ -67,7 +50,7 @@ export default function UsersPage() {
       <UsersTable
         users={page.items}
         sortLabel={SORT_LABELS[page.draft.sort]}
-        nextCursor={page.nextCursor}
+        hasMore={page.hasMore}
         loadingMore={page.loadingMore}
         onLoadMore={page.loadMore}
         onOpenProfile={profile.open}

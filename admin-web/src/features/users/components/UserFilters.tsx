@@ -1,8 +1,7 @@
 import { type CSSProperties, type FormEvent } from 'react'
 import { Button, Group, Select, TextInput } from '@mantine/core'
 import { IconFilter, IconRefresh, IconSearch } from '@tabler/icons-react'
-import Panel from '../../../components/Panel'
-import { darkInputStyles } from '../../../constants/inputStyles'
+import Panel from '@/components/Panel'
 import {
   isUserRoleFilter,
   isUserSort,
@@ -11,7 +10,8 @@ import {
   USER_ROLE_FILTERS,
   USER_STATUS_FILTERS,
   type UserFilterDraft,
-} from '../usersModel'
+} from '../model'
+import { chrome } from '@/theme'
 
 const panelStyle: CSSProperties = { padding: '16px 20px' }
 const searchFieldStyle: CSSProperties = { flex: '2 1 260px' }
@@ -27,7 +27,7 @@ interface UserFiltersProps {
   draft: UserFilterDraft
   loading: boolean
   onDraftChange: (update: (current: UserFilterDraft) => UserFilterDraft) => void
-  onApply: (draft: UserFilterDraft) => Promise<void>
+  onApply: (draft: UserFilterDraft) => void
   onClear: () => void
 }
 
@@ -44,7 +44,7 @@ export default function UserFilters({
 }: UserFiltersProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    void onApply(draft)
+    onApply(draft)
   }
 
   return (
@@ -61,9 +61,8 @@ export default function UserFilters({
               const q = event.currentTarget.value
               onDraftChange((current) => ({ ...current, q }))
             }}
-            leftSection={<IconSearch size={14} color="#6b7280" />}
+            leftSection={<IconSearch size={14} color={chrome.textDim} />}
             style={searchFieldStyle}
-            styles={darkInputStyles}
           />
           <Select
             label="Status"
@@ -79,7 +78,6 @@ export default function UserFilters({
             }
             w={150}
             clearable
-            styles={darkInputStyles}
           />
           <Select
             label="Role"
@@ -95,7 +93,6 @@ export default function UserFilters({
             }
             w={150}
             clearable
-            styles={darkInputStyles}
           />
           <Select
             label="Sort"
@@ -110,7 +107,6 @@ export default function UserFilters({
             }
             w={150}
             clearable={false}
-            styles={darkInputStyles}
           />
           <Button type="submit" leftSection={<IconFilter size={15} />} loading={loading}>
             Apply filters

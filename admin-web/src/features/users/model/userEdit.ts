@@ -1,5 +1,5 @@
-import type { User, UserRole, UserStatus, UserUpdate } from '../../api/UsersService'
-import type { UserAccess } from './userAccess'
+import type { User, UserRole, UserStatus, UserUpdate } from '@/api/users'
+import type { UserAccess } from './access'
 
 export type EditableUserStatus = Extract<UserStatus, 'ACTIVE' | 'BLOCKED'>
 

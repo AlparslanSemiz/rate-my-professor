@@ -1,9 +1,10 @@
 import { Box, Button, Text, type CSSProperties } from '@mantine/core'
-import type { User } from '../../../api/UsersService'
-import Panel from '../../../components/Panel'
-import TableHeaderRow from '../../../components/TableHeaderRow'
+import type { User } from '@/api/users'
+import Panel from '@/components/Panel'
+import TableHeaderRow from '@/components/TableHeaderRow'
 import UsersTableHeader from './UsersTableHeader'
 import UserTableRow from './UserTableRow'
+import { chrome } from '@/theme'
 
 const TABLE_COLUMNS = [
   'Name',
@@ -25,7 +26,8 @@ const loadMoreStyle: CSSProperties = { padding: '14px 20px', textAlign: 'center'
 interface UsersTableProps {
   users: User[]
   sortLabel: string
-  nextCursor: string | null
+  /** Whether a further page exists. The cursor itself is the hook's business. */
+  hasMore: boolean
   loadingMore: boolean
   onLoadMore: () => Promise<void>
   onOpenProfile: (id: string) => void
@@ -34,7 +36,7 @@ interface UsersTableProps {
 export default function UsersTable({
   users,
   sortLabel,
-  nextCursor,
+  hasMore,
   loadingMore,
   onLoadMore,
   onOpenProfile,
@@ -63,7 +65,7 @@ export default function UsersTable({
         </table>
       </div>
 
-      {nextCursor && (
+      {hasMore && (
         <Box style={loadMoreStyle}>
           <Button variant="light" loading={loadingMore} onClick={() => void onLoadMore()}>
             Load more
@@ -78,7 +80,7 @@ function EmptyUsersRow() {
   return (
     <tr>
       <td colSpan={TABLE_COLUMNS.length} style={emptyCellStyle}>
-        <Text c="#4b5563" size="sm">
+        <Text c={chrome.textFaint} size="sm">
           No users found
         </Text>
       </td>

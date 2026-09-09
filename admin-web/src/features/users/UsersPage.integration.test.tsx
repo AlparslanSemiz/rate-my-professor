@@ -2,25 +2,26 @@ import { MantineProvider } from '@mantine/core'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError } from '../../api/ApiClient'
-import { systemStatusService, type SystemStatus } from '../../api/SystemStatusService'
-import { usersService, type User, type UserQuery, type Warning } from '../../api/UsersService'
-import { AuthProvider } from '../../context/AuthContext'
+import { ApiError } from '@/api/client'
+import { systemStatusService, type SystemStatus } from '@/api/system'
+import { usersService, type User, type UserQuery, type Warning } from '@/api/users'
+import { AuthProvider } from '@/context/AuthContext'
+import { withQueryClient } from '@/test/queryClient'
 import UsersPage from './UsersPage'
 
-vi.mock('../../api/AuthService', () => ({
+vi.mock('@/api/auth', () => ({
   authService: {
     me: vi.fn().mockResolvedValue({ success: true, message: 'Signed in' }),
   },
 }))
 
-vi.mock('../../api/SystemStatusService', () => ({
+vi.mock('@/api/system', () => ({
   systemStatusService: {
     getStatus: vi.fn(),
   },
 }))
 
-vi.mock('../../api/UsersService', () => ({
+vi.mock('@/api/users', () => ({
   usersService: {
     list: vi.fn(),
     getById: vi.fn(),
@@ -93,9 +94,7 @@ function renderUsers(sessionUser = authUser) {
 
   return render(
     <MantineProvider>
-      <AuthProvider>
-        <UsersPage />
-      </AuthProvider>
+      <AuthProvider>{withQueryClient(<UsersPage />)}</AuthProvider>
     </MantineProvider>
   )
 }
@@ -227,7 +226,7 @@ describe('Users page', () => {
     await user.click(await screen.findByRole('button', { name: 'Delete permanently' }))
 
     await waitFor(() => expect(usersService.delete).toHaveBeenCalledWith('user-2'))
-    expect(screen.queryByText('Bob Johnson')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Bob Johnson')).not.toBeInTheDocument())
     expect(screen.getByText('Alice Smith')).toBeInTheDocument()
   })
 

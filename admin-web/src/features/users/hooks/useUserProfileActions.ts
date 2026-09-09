@@ -1,129 +1,137 @@
-import { useState } from 'react'
-import { usersService, type User, type UserUpdate, type Warning } from '../../../api/UsersService'
-import { getStaleAfterWriteMessage } from '../../../utils/getErrorMessage'
-import type { UserChange } from './userProfileTypes'
+import { useCallback } from 'react'
+import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query'
+import { usersService, type User, type UserUpdate, type Warning } from '@/api/users'
+import { getStaleAfterWriteMessage } from '@/utils/getErrorMessage'
+import type { UserChange } from '../model'
+import type { LoadedProfile } from './useUserProfile'
 
 const RE_READ_ERROR_FALLBACK = 'the account could not be read back'
 
-interface UserProfileActionTarget {
+interface ProfileActionOptions {
+  userId: string | null
   user: User | null
-  updateUser: (id: string, update: (user: User) => User, nextWarnings?: Warning[]) => void
+  profileKey: QueryKey
+  onUserChanged?: (id: string, change: UserChange) => void
+  onStale: (message: string) => void
 }
 
-export function useUserProfileActions(
-  profile: UserProfileActionTarget,
-  onUserChanged?: (id: string, change: UserChange) => void,
-) {
-  const [warnLoading, setWarnLoading] = useState(false)
-  const [editLoading, setEditLoading] = useState(false)
-  const [warningBusy, setWarningBusy] = useState(false)
-  const [staleMessage, setStaleMessage] = useState('')
+/**
+ * The writes the profile modal can make.
+ *
+ * Every one of them re-reads what it changed, because the backend owns the result: a status
+ * change can alter more than the status, and a warning's count is whatever the list now
+ * holds. The re-read is deliberately *not* an invalidation — the modal needs the value in
+ * hand to report it back to the list behind it, so it reads and then writes both caches.
+ */
+export function useUserProfileActions({
+  userId,
+  user,
+  profileKey,
+  onUserChanged,
+  onStale,
+}: ProfileActionOptions) {
+  const queryClient = useQueryClient()
 
   /**
-   * A failed read after an accepted write must not make the write look refused. The modal keeps
-   * its last reading and tells the operator that only the read-back failed.
+   * A failed read after an accepted write must not make the write look refused. The modal
+   * keeps its last reading and says that only the read-back failed.
    */
-  async function readBack(read: () => Promise<void>) {
-    try {
-      await read()
-      setStaleMessage('')
-    } catch (readError: unknown) {
-      setStaleMessage(getStaleAfterWriteMessage(readError, RE_READ_ERROR_FALLBACK))
-    }
-  }
+  const readBack = useCallback(
+    async (read: () => Promise<void>) => {
+      try {
+        await read()
+        onStale('')
+      } catch (readError: unknown) {
+        onStale(getStaleAfterWriteMessage(readError, RE_READ_ERROR_FALLBACK))
+      }
+    },
+    [onStale],
+  )
 
-  function applyWarnings(id: string, refreshedWarnings: Warning[]) {
-    profile.updateUser(
-      id,
-      (currentUser) => ({ ...currentUser, warnings: refreshedWarnings.length }),
-      refreshedWarnings,
-    )
-    onUserChanged?.(id, { type: 'warnings-changed', warnings: refreshedWarnings.length })
-  }
+  const refreshWarnings = useCallback(
+    async (id: string) => {
+      const warnings = await usersService.getWarnings(id)
+      queryClient.setQueryData<LoadedProfile>(profileKey, (current) =>
+        current?.user ? { user: { ...current.user, warnings: warnings.length }, warnings } : current,
+      )
+      onUserChanged?.(id, { type: 'warnings-changed', warnings: warnings.length })
+    },
+    [onUserChanged, profileKey, queryClient],
+  )
 
-  function applyAccount(id: string, refreshed: User) {
-    profile.updateUser(id, () => refreshed)
-    onUserChanged?.(id, { type: 'refreshed', user: refreshed })
-  }
+  const refreshAccount = useCallback(
+    async (id: string) => {
+      const refreshed = await usersService.getById(id)
+      queryClient.setQueryData<LoadedProfile>(profileKey, (current) =>
+        current ? { ...current, user: refreshed } : current,
+      )
+      onUserChanged?.(id, { type: 'refreshed', user: refreshed })
+    },
+    [onUserChanged, profileKey, queryClient],
+  )
 
-  async function warn(message: string) {
-    const trimmedMessage = message.trim()
-    if (!profile.user || !trimmedMessage) return
+  const warnMutation = useMutation({
+    mutationFn: async (message: string) => {
+      const id = user?.id
+      const trimmed = message.trim()
+      if (!id || !trimmed) return
+      await usersService.warn(id, trimmed)
+      await readBack(() => refreshWarnings(id))
+    },
+  })
 
-    const id = profile.user.id
-    setWarnLoading(true)
-    try {
-      await usersService.warn(id, trimmedMessage)
-      await readBack(async () => applyWarnings(id, await usersService.getWarnings(id)))
-    } finally {
-      setWarnLoading(false)
-    }
-  }
+  const updateMutation = useMutation({
+    mutationFn: async (update: UserUpdate) => {
+      const id = user?.id
+      if (!id || Object.keys(update).length === 0) return
+      await usersService.update(id, update)
+      await readBack(() => refreshAccount(id))
+    },
+  })
 
-  async function update(nextUpdate: UserUpdate) {
-    if (!profile.user || Object.keys(nextUpdate).length === 0) return
+  const warningMutation = useMutation({
+    mutationFn: async (change: (id: string) => Promise<unknown>) => {
+      const id = user?.id
+      if (!id) return
+      await change(id)
+      await readBack(() => refreshWarnings(id))
+    },
+  })
 
-    const id = profile.user.id
-    setEditLoading(true)
-    try {
-      await usersService.update(id, nextUpdate)
-      await readBack(async () => applyAccount(id, await usersService.getById(id)))
-    } finally {
-      setEditLoading(false)
-    }
-  }
-
-  async function runWarningChange(change: () => Promise<unknown>) {
-    if (!profile.user) return
-
-    const id = profile.user.id
-    setWarningBusy(true)
-    try {
-      await change()
-      await readBack(async () => applyWarnings(id, await usersService.getWarnings(id)))
-    } finally {
-      setWarningBusy(false)
-    }
-  }
-
-  async function editWarning(warning: Warning, message: string) {
-    const warningId = warning.id
-    if (warningId === null) return
-    await runWarningChange(() => usersService.updateWarning(warning.userID, warningId, message))
-  }
-
-  async function withdrawWarning(warning: Warning) {
-    const warningId = warning.id
-    if (warningId === null) return
-    await runWarningChange(() => usersService.deleteWarning(warning.userID, warningId))
-  }
-
-  async function changeStatus(request: (id: string) => Promise<unknown>) {
-    if (!profile.user) return
-
-    const id = profile.user.id
-    await request(id)
-    await readBack(async () => applyAccount(id, await usersService.getById(id)))
-  }
-
-  async function remove() {
-    if (!profile.user) return
-    await usersService.delete(profile.user.id)
-    onUserChanged?.(profile.user.id, { type: 'deleted' })
-  }
+  const changeStatus = useCallback(
+    async (request: (id: string) => Promise<unknown>) => {
+      const id = user?.id
+      if (!id) return
+      await request(id)
+      await readBack(() => refreshAccount(id))
+    },
+    [readBack, refreshAccount, user?.id],
+  )
 
   return {
-    staleMessage,
-    reset: () => setStaleMessage(''),
-    warnLoading,
-    editLoading,
-    warningBusy,
-    warn,
-    update,
-    editWarning,
-    withdrawWarning,
+    warnLoading: warnMutation.isPending,
+    editLoading: updateMutation.isPending,
+    warningBusy: warningMutation.isPending,
+    warn: warnMutation.mutateAsync,
+    update: updateMutation.mutateAsync,
+    editWarning: (warning: Warning, message: string) =>
+      warning.id === null
+        ? Promise.resolve()
+        : warningMutation.mutateAsync(() =>
+            usersService.updateWarning(warning.userID, warning.id as string, message),
+          ),
+    withdrawWarning: (warning: Warning) =>
+      warning.id === null
+        ? Promise.resolve()
+        : warningMutation.mutateAsync(() =>
+            usersService.deleteWarning(warning.userID, warning.id as string),
+          ),
     block: () => changeStatus((id) => usersService.block(id)),
     unblock: () => changeStatus((id) => usersService.unblock(id)),
-    remove,
+    remove: async () => {
+      if (!userId) return
+      await usersService.delete(userId)
+      onUserChanged?.(userId, { type: 'deleted' })
+    },
   }
 }

@@ -1,16 +1,17 @@
 import { Badge, Text, type CSSProperties, type MantineColor } from '@mantine/core'
-import type { User } from '../../../api/UsersService'
-import { roleColor, userStatusColor } from '../../../constants/colors'
-import { enumLabel } from '../../../utils/enumLabel'
-import { formatDate } from '../../../utils/formatDate'
-import { activateOnEnterOrSpace } from '../../../utils/keyboard'
+import type { User } from '@/api/users'
+import { roleColor, userStatusColor } from '@/constants/colors'
+import { enumLabel } from '@/utils/enumLabel'
+import { formatDate } from '@/utils/formatDate'
+import { activateOnEnterOrSpace } from '@/utils/keyboard'
+import { chrome } from '@/theme'
 
 const cellStyle: CSSProperties = { padding: '13px 20px' }
 const dateTextStyle: CSSProperties = { whiteSpace: 'nowrap' }
 
 function rowStyle(isLast: boolean): CSSProperties {
   return {
-    borderBottom: isLast ? 'none' : '1px solid #1c2128',
+    borderBottom: isLast ? 'none' : `1px solid ${chrome.borderSubtle}`,
   }
 }
 
@@ -32,12 +33,12 @@ export default function UserTableRow({ user, isLast, onOpenProfile }: UserTableR
       tabIndex={0}
     >
       <td style={cellStyle}>
-        <Text size="sm" fw={500} c="#e2e8f0">
+        <Text size="sm" fw={500} c={chrome.textPrimary}>
           {user.username}
         </Text>
       </td>
       <td style={cellStyle}>
-        <Text size="sm" c="#6b7280">
+        <Text size="sm" c={chrome.textDim}>
           {user.kitEmail}
         </Text>
       </td>
@@ -58,12 +59,12 @@ export default function UserTableRow({ user, isLast, onOpenProfile }: UserTableR
         <CountBadge value={user.reports} color="red" />
       </td>
       <td style={cellStyle}>
-        <Text size="xs" c="#6b7280" style={dateTextStyle}>
+        <Text size="xs" c={chrome.textDim} style={dateTextStyle}>
           {formatDate(user.lastOnline)}
         </Text>
       </td>
       <td style={cellStyle}>
-        <Text size="xs" c="#6b7280" style={dateTextStyle}>
+        <Text size="xs" c={chrome.textDim} style={dateTextStyle}>
           {formatDate(user.joined)}
         </Text>
       </td>
@@ -74,7 +75,7 @@ export default function UserTableRow({ user, isLast, onOpenProfile }: UserTableR
 function CountBadge({ value, color }: { value: number; color: MantineColor }) {
   if (value <= 0) {
     return (
-      <Text size="xs" c="#374151">
+      <Text size="xs" c={chrome.iconFaint}>
         —
       </Text>
     )

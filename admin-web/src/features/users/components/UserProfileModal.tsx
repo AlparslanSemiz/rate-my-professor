@@ -1,19 +1,24 @@
 import { useState } from 'react'
 import { Center, Loader, Modal, Text } from '@mantine/core'
-import type { Warning } from '../../../api/UsersService'
-import ConfirmModal from '../../../components/ConfirmModal'
-import ErrorAlert from '../../../components/ErrorAlert'
-import LoadError from '../../../components/LoadError'
-import { darkModalStyles } from '../../../constants/modalStyles'
-import { useAuth } from '../../../context/useAuth'
-import { useUserProfile, type UserChange } from '../hooks/useUserProfile'
-import { getUserAccess } from '../userAccess'
-import { getUserConfirmation, type ConfirmAction } from '../userConfirmation'
+import { useDisclosure } from '@mantine/hooks'
+import type { Warning } from '@/api/users'
+import ConfirmModal from '@/components/ConfirmModal'
+import ErrorAlert from '@/components/ErrorAlert'
+import LoadError from '@/components/LoadError'
+import { useAuth } from '@/context/useAuth'
+import { useUserProfile } from '../hooks/useUserProfile'
+import {
+  getUserAccess,
+  getUserConfirmation,
+  type ConfirmAction,
+  type UserChange,
+} from '../model'
 import ProfileActions from './ProfileActions'
 import ProfileSummary from './ProfileSummary'
 import UserEditForm from './UserEditForm'
 import WarnForm from './WarnForm'
 import WarningHistory from './WarningHistory'
+import { chrome } from '@/theme'
 
 interface UserProfileModalProps {
   userId: string | null
@@ -31,15 +36,15 @@ export default function UserProfileModal({
 }: UserProfileModalProps) {
   const { user: currentAdmin } = useAuth()
   const profile = useUserProfile(userId, opened, onUserChanged)
-  const [showWarnForm, setShowWarnForm] = useState(false)
-  const [showEditForm, setShowEditForm] = useState(false)
+  const [warnFormOpen, warnForm] = useDisclosure(false)
+  const [editFormOpen, editForm] = useDisclosure(false)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [withdrawing, setWithdrawing] = useState<Warning | null>(null)
 
   function handleClose() {
     profile.reset()
-    setShowWarnForm(false)
-    setShowEditForm(false)
+    warnForm.close()
+    editForm.close()
     setConfirmAction(null)
     setWithdrawing(null)
     onClose()
@@ -52,7 +57,7 @@ export default function UserProfileModal({
 
   async function handleWarning(message: string) {
     await profile.warn(message)
-    setShowWarnForm(false)
+    warnForm.close()
   }
 
   const confirmConfig =
@@ -72,7 +77,6 @@ export default function UserProfileModal({
         title="User Profile"
         centered
         size="lg"
-        styles={darkModalStyles}
       >
         {profile.loading ? (
           <Center h={160}>
@@ -82,7 +86,7 @@ export default function UserProfileModal({
           <LoadError message={profile.error} onRetry={profile.retry} />
         ) : !profile.user ? (
           <Center h={120}>
-            <Text c="#4b5563" size="sm">
+            <Text c={chrome.textFaint} size="sm">
               User not found.
             </Text>
           </Center>
@@ -94,28 +98,28 @@ export default function UserProfileModal({
             <ProfileActions
               user={profile.user}
               access={getUserAccess(profile.user, currentAdmin)}
-              onToggleEdit={() => setShowEditForm((visible) => !visible)}
-              onToggleWarning={() => setShowWarnForm((visible) => !visible)}
+              onToggleEdit={editForm.toggle}
+              onToggleWarning={warnForm.toggle}
               onConfirm={setConfirmAction}
             />
-            {showEditForm && (
+            {editFormOpen && (
               <UserEditForm
                 key={profile.user.id}
                 user={profile.user}
                 access={getUserAccess(profile.user, currentAdmin)}
                 loading={profile.editLoading}
-                onCancel={() => setShowEditForm(false)}
+                onCancel={editForm.close}
                 onSubmit={async (update) => {
                   await profile.update(update)
-                  setShowEditForm(false)
+                  editForm.close()
                 }}
               />
             )}
-            {showWarnForm && (
+            {warnFormOpen && (
               <WarnForm
                 userName={profile.user.username}
                 loading={profile.warnLoading}
-                onCancel={() => setShowWarnForm(false)}
+                onCancel={warnForm.close}
                 onSubmit={handleWarning}
               />
             )}

@@ -1,7 +1,6 @@
 import { Button, Group, Textarea } from '@mantine/core'
 import { IconCheck, IconX } from '@tabler/icons-react'
-import ErrorAlert from '../../../../components/ErrorAlert'
-import { darkInputStyles } from '../../../../constants/inputStyles'
+import ErrorAlert from '@/components/ErrorAlert'
 
 interface WarningEditorProps {
   draft: string
@@ -29,7 +28,6 @@ export default function WarningEditor({
         size="xs"
         mb={8}
         aria-label="Warning message"
-        styles={darkInputStyles}
       />
       <ErrorAlert message={error} mb={8} />
       <Group gap={6} justify="flex-end">

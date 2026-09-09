@@ -1,9 +1,8 @@
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import { Box, Button, Group, Text, Textarea } from '@mantine/core'
-import ErrorAlert from '../../../components/ErrorAlert'
-import { darkInputStyles } from '../../../constants/inputStyles'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
-import { KIT } from '../../../constants/colors'
+import ErrorAlert from '@/components/ErrorAlert'
+import { getErrorMessage } from '@/utils/getErrorMessage'
+import { KIT } from '@/constants/colors'
 
 interface WarnFormProps {
   userName: string
@@ -18,9 +17,8 @@ const warnFormStyle: CSSProperties = {
   borderRadius: 10,
   padding: '14px 16px',
 }
-const warningTextareaStyles = {
-  input: { ...darkInputStyles.input, fontSize: 13 },
-}
+/** The rest of the field is the panel's themed input; only the type is smaller here. */
+const warningTextareaStyles = { input: { fontSize: 13 } }
 
 export default function WarnForm({
   userName,

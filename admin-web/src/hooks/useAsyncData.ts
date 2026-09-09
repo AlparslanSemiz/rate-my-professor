@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
-import { getErrorMessage } from '../utils/getErrorMessage'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 
 interface AsyncDataResult<T> {
   data: T

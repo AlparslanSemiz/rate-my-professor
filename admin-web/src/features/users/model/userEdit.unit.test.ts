@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import type { User } from '../../api/UsersService'
-import { getUserAccess } from './userAccess'
+import type { User } from '@/api/users'
+import { getUserAccess } from './access'
 import {
   buildUserUpdate,
   canSaveUserEdit,
   createUserEditDraft,
   type UserEditDraft,
-} from './userEditModel'
+} from './userEdit'
 
 const user: User = {
   id: 'user-1',

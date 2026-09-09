@@ -1,5 +1,5 @@
 import type { MantineColor } from '@mantine/core'
-import type { User } from '../../api/UsersService'
+import type { User } from '@/api/users'
 
 export type ConfirmAction = 'block' | 'unblock' | 'delete'
 

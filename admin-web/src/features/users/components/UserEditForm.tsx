@@ -1,19 +1,18 @@
-import { useState, type CSSProperties, type FormEvent } from 'react'
-import { Box, Button, Group, NumberInput, Select, Text, TextInput, Textarea } from '@mantine/core'
-import type { User, UserUpdate } from '../../../api/UsersService'
-import ErrorAlert from '../../../components/ErrorAlert'
-import { darkInputStyles } from '../../../constants/inputStyles'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
-import type { UserAccess } from '../userAccess'
+import { useState, type CSSProperties } from 'react'
+import { Box, Button, Group, Text, TextInput, Textarea } from '@mantine/core'
+import { useForm } from '@mantine/form'
+import type { User, UserUpdate } from '@/api/users'
+import ErrorAlert from '@/components/ErrorAlert'
+import { KIT } from '@/constants/colors'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 import {
   buildUserUpdate,
   canSaveUserEdit,
   createUserEditDraft,
-  isEditableUserStatus,
-  isUserRole,
-  USER_ROLE_EDIT_OPTIONS,
-  USER_STATUS_EDIT_OPTIONS,
-} from '../userEditModel'
+  type UserAccess,
+  type UserEditDraft,
+} from '../model'
+import UserModerationFields from './UserModerationFields'
 
 const formStyle: CSSProperties = {
   background: 'rgba(59,130,246,0.05)',
@@ -33,7 +32,8 @@ interface UserEditFormProps {
 /**
  * Corrects a wrong name, a typo'd address or a stale biography, and moves an account between
  * student and admin. Only the fields that actually changed are sent: the backend rejects an
- * empty body and records one event listing exactly what moved.
+ * empty body and records one event listing exactly what moved — which is why the update is
+ * still built by `buildUserUpdate` from the original account rather than by the form.
  */
 export default function UserEditForm({
   user,
@@ -42,14 +42,13 @@ export default function UserEditForm({
   onCancel,
   onSubmit,
 }: UserEditFormProps) {
-  const [draft, setDraft] = useState(() => createUserEditDraft(user))
+  const form = useForm<UserEditDraft>({ initialValues: createUserEditDraft(user) })
   const [error, setError] = useState('')
 
-  const update = buildUserUpdate(user, draft, access)
-  const canSave = canSaveUserEdit(user, draft, access)
+  const update = buildUserUpdate(user, form.values, access)
+  const canSave = canSaveUserEdit(user, form.values, access)
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function handleSubmit() {
     if (!canSave) return
 
     setError('')
@@ -61,101 +60,25 @@ export default function UserEditForm({
   }
 
   return (
-    <Box component="form" mb={20} style={formStyle} onSubmit={handleSubmit}>
-      <Text size="xs" fw={600} c="#60a5fa" mb={10}>
+    <Box component="form" mb={20} style={formStyle} onSubmit={form.onSubmit(handleSubmit)}>
+      <Text size="xs" fw={600} c={KIT.blue} mb={10}>
         Edit {user.username}
       </Text>
 
       <Group grow align="flex-start" mb={10}>
-        <TextInput
-          label="Username"
-          value={draft.username}
-          onChange={(event) => {
-            const username = event.currentTarget.value
-            setDraft((current) => ({ ...current, username }))
-          }}
-          size="sm"
-          styles={darkInputStyles}
-        />
+        <TextInput label="Username" size="sm" {...form.getInputProps('username')} />
         <TextInput
           label="KIT email"
           description="Login identity; cannot be changed here."
           value={user.kitEmail}
           disabled
           size="sm"
-          styles={darkInputStyles}
         />
       </Group>
 
-      <Textarea
-        label="Biography"
-        value={draft.biography}
-        onChange={(event) => {
-          const biography = event.currentTarget.value
-          setDraft((current) => ({ ...current, biography }))
-        }}
-        minRows={2}
-        size="sm"
-        mb={10}
-        styles={darkInputStyles}
-      />
+      <Textarea label="Biography" minRows={2} size="sm" mb={10} {...form.getInputProps('biography')} />
 
-      <Group grow align="flex-start" mb={12}>
-        <Select
-          label="Status"
-          data={USER_STATUS_EDIT_OPTIONS}
-          value={draft.status}
-          onChange={(value) => {
-            if (isEditableUserStatus(value)) {
-              setDraft((current) => ({ ...current, status: value }))
-            }
-          }}
-          disabled={!access.canEditStatus}
-          description={
-            !access.canEditStatus
-              ? 'Admin accounts are protected here.'
-              : 'Deleting is a separate action.'
-          }
-          size="sm"
-          clearable={false}
-          styles={darkInputStyles}
-        />
-        <Select
-          label="Role"
-          data={USER_ROLE_EDIT_OPTIONS}
-          value={draft.role}
-          onChange={(value) => {
-            if (isUserRole(value)) {
-              setDraft((current) => ({ ...current, role: value }))
-            }
-          }}
-          disabled={!access.canEditRole}
-          description={
-            !access.canEditRole
-              ? 'You cannot change your own role.'
-              : 'Demoting an admin also signs it out.'
-          }
-          size="sm"
-          clearable={false}
-          styles={darkInputStyles}
-        />
-        <NumberInput
-          label="Credibility score"
-          placeholder="Leave unchanged"
-          value={draft.credibilityScore ?? ''}
-          onChange={(value) =>
-            setDraft((current) => ({
-              ...current,
-              credibilityScore: typeof value === 'number' ? value : null,
-            }))
-          }
-          allowDecimal={false}
-          disabled={!access.canEditCredibilityScore}
-          description={!access.canEditCredibilityScore ? 'You cannot change your own score.' : undefined}
-          size="sm"
-          styles={darkInputStyles}
-        />
-      </Group>
+      <UserModerationFields form={form} access={access} />
 
       <ErrorAlert message={error} />
       <Group gap={8} justify="flex-end">

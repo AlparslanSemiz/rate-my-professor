@@ -1,4 +1,4 @@
-import type { User } from '../../../api/UsersService'
+import type { User } from '@/api/users'
 
 /**
  * What a profile action changed, carrying the value the backend reported rather than leaving

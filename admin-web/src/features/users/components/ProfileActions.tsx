@@ -6,11 +6,11 @@ import {
   IconShieldOff,
   IconTrash,
 } from '@tabler/icons-react'
-import type { User } from '../../../api/UsersService'
-import type { UserAccess } from '../userAccess'
-import type { ConfirmAction } from '../userConfirmation'
+import type { User } from '@/api/users'
+import type { UserAccess } from '../model'
+import type { ConfirmAction } from '../model'
 
-export type { ConfirmAction } from '../userConfirmation'
+export type { ConfirmAction } from '../model'
 
 const deleteButtonStyle: CSSProperties = { marginLeft: 'auto' }
 

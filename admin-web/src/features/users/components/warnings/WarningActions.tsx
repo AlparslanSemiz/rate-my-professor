@@ -1,6 +1,6 @@
 import { ActionIcon, Group, Tooltip } from '@mantine/core'
 import { IconPencil, IconTrash } from '@tabler/icons-react'
-import type { Warning } from '../../../../api/UsersService'
+import type { Warning } from '@/api/users'
 
 interface WarningActionsProps {
   warning: Warning

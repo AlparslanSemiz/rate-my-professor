@@ -1,13 +1,13 @@
 import { SimpleGrid } from '@mantine/core'
 import { IconShieldCheck, IconUserCheck, IconUsers } from '@tabler/icons-react'
-import StatCard from '../../../components/StatCard'
-import { KIT, moduleAccent } from '../../../constants/colors'
-import { statGridCols } from '../../../constants/layout'
-import { routes } from '../../../constants/routes'
-import type { UserCounts } from '../usersModel'
+import StatCard from '@/components/StatCard'
+import { KIT, moduleAccent } from '@/constants/colors'
+import { statGridCols } from '@/constants/layout'
+import { routes } from '@/constants/routes'
+import type { UserCounts } from '../model'
 
 const ACTIVE_ACCENT = KIT.green
-const ADMIN_ACCENT = '#f59e0b'
+const ADMIN_ACCENT = KIT.orange
 
 /** A counter the backend did not report is unknown, not zero. */
 function figure(value: number | null) {

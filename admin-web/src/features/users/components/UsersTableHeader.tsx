@@ -1,6 +1,7 @@
 import { Box, Group, Text, type CSSProperties } from '@mantine/core'
+import { chrome } from '@/theme'
 
-const headerStyle: CSSProperties = { borderBottom: '1px solid #21262d' }
+const headerStyle: CSSProperties = { borderBottom: `1px solid ${chrome.border}` }
 
 interface UsersTableHeaderProps {
   loadedCount: number
@@ -12,12 +13,12 @@ export default function UsersTableHeader({ loadedCount, sortLabel }: UsersTableH
     <Box px={20} py={16} style={headerStyle}>
       <Group justify="space-between">
         <div>
-          <Text fw={600} c="#e2e8f0" size="sm">
+          <Text fw={600} c={chrome.textPrimary} size="sm">
             All users
           </Text>
           {/* Not "x of y": these are the rows read so far, and how many accounts exist is a
               question only the counters above can answer. */}
-          <Text size="xs" c="#4b5563">
+          <Text size="xs" c={chrome.textFaint}>
             {loadedCount} loaded · {sortLabel} · tap a row to open a profile
           </Text>
         </div>

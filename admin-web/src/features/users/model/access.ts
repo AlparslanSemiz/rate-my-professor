@@ -1,4 +1,4 @@
-import type { User } from '../../api/UsersService'
+import type { User } from '@/api/users'
 
 interface UserOperator {
   id: string

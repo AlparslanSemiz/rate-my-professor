@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { Box, Group, Text, type CSSProperties } from '@mantine/core'
 import { IconClock, IconUser } from '@tabler/icons-react'
-import type { Warning } from '../../../api/UsersService'
-import { KIT } from '../../../constants/colors'
-import { formatDate } from '../../../utils/formatDate'
-import { getErrorMessage } from '../../../utils/getErrorMessage'
+import type { Warning } from '@/api/users'
+import { KIT } from '@/constants/colors'
+import { formatDate } from '@/utils/formatDate'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 import WarningActions from './warnings/WarningActions'
 import WarningEditor from './warnings/WarningEditor'
+import { chrome } from '@/theme'
 
 const sectionTitleStyle: CSSProperties = { letterSpacing: '0.05em' }
 const emptyWarningsStyle: CSSProperties = {
-  background: '#0f1117',
-  border: '1px solid #21262d',
+  background: chrome.surfaceSunken,
+  border: `1px solid ${chrome.border}`,
   borderRadius: 8,
   padding: '16px',
   textAlign: 'center',
@@ -22,7 +23,7 @@ const warningListStyle: CSSProperties = {
   gap: 8,
 }
 const warningItemStyle: CSSProperties = {
-  background: '#0f1117',
+  background: chrome.surfaceSunken,
   border: '1px solid rgba(234,179,8,0.15)',
   borderLeft: `3px solid ${KIT.yellow}`,
   borderRadius: 8,
@@ -83,15 +84,15 @@ export default function WarningHistory({
   return (
     <Box>
       <Group gap={6} mb={12}>
-        <IconClock size={13} color="#6b7280" />
-        <Text size="xs" fw={600} c="#6b7280" tt="uppercase" style={sectionTitleStyle}>
+        <IconClock size={13} color={chrome.textDim} />
+        <Text size="xs" fw={600} c={chrome.textDim} tt="uppercase" style={sectionTitleStyle}>
           Warning history ({warnings.length})
         </Text>
       </Group>
       {warnings.length === 0 ? (
         <Box style={emptyWarningsStyle}>
-          <IconUser size={20} color="#374151" style={{ marginBottom: 6 }} />
-          <Text size="xs" c="#4b5563">
+          <IconUser size={20} color={chrome.iconFaint} style={{ marginBottom: 6 }} />
+          <Text size="xs" c={chrome.textFaint}>
             No warnings issued.
           </Text>
         </Box>
@@ -115,10 +116,10 @@ export default function WarningHistory({
                 ) : (
                   <Group justify="space-between" align="flex-start" wrap="nowrap" gap={10}>
                     <div>
-                      <Text size="sm" c="#d1d5db" mb={4}>
+                      <Text size="sm" c={chrome.textSecondary} mb={4}>
                         {warning.message}
                       </Text>
-                      <Text size="xs" c="#4b5563">
+                      <Text size="xs" c={chrome.textFaint}>
                         {formatDate(warning.createdAt, { withTime: true })} · Issued by{' '}
                         {warning.issuedByName}
                       </Text>

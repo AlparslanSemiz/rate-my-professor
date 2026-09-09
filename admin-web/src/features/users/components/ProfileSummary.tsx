@@ -1,8 +1,9 @@
 import { Badge, Box, Divider, Group, Text, type CSSProperties } from '@mantine/core'
-import type { User } from '../../../api/UsersService'
-import { KIT, roleAccent, userStatusColor } from '../../../constants/colors'
-import { enumLabel } from '../../../utils/enumLabel'
-import { formatDate } from '../../../utils/formatDate'
+import type { User } from '@/api/users'
+import { KIT, roleAccent, userStatusColor } from '@/constants/colors'
+import { enumLabel } from '@/utils/enumLabel'
+import { formatDate } from '@/utils/formatDate'
+import { chrome } from '@/theme'
 
 const profileTitleStyle: CSSProperties = { fontSize: 20 }
 const warningSummaryStyle: CSSProperties = {
@@ -14,8 +15,8 @@ const warningSummaryStyle: CSSProperties = {
 }
 const warningCountStyle: CSSProperties = { fontSize: 18, lineHeight: 1 }
 const detailsPanelStyle: CSSProperties = {
-  background: '#0f1117',
-  border: '1px solid #21262d',
+  background: chrome.surfaceSunken,
+  border: `1px solid ${chrome.border}`,
   borderRadius: 10,
   padding: '14px 16px',
 }
@@ -50,7 +51,7 @@ export default function ProfileSummary({ user }: { user: User }) {
         <Group justify="space-between" align="flex-start">
           <div>
             <Group gap={8} mb={6}>
-              <Text fw={700} c="#f1f5f9" style={profileTitleStyle}>
+              <Text fw={700} c={chrome.textBright} style={profileTitleStyle}>
                 {user.username}
               </Text>
               <Badge size="sm" variant="light" style={roleBadgeStyle(user.role)}>
@@ -60,7 +61,7 @@ export default function ProfileSummary({ user }: { user: User }) {
                 {enumLabel(user.status)}
               </Badge>
             </Group>
-            <Text size="sm" c="#6b7280">
+            <Text size="sm" c={chrome.textDim}>
               {user.kitEmail}
             </Text>
           </div>
@@ -72,10 +73,10 @@ export default function ProfileSummary({ user }: { user: User }) {
         <div style={detailsGridStyle}>
           {profileFields(user).map((item) => (
             <div key={item.label}>
-              <Text size="xs" c="#4b5563" mb={1}>
+              <Text size="xs" c={chrome.textFaint} mb={1}>
                 {item.label}
               </Text>
-              <Text size="sm" c="#d1d5db">
+              <Text size="sm" c={chrome.textSecondary}>
                 {item.value}
               </Text>
             </div>
@@ -83,11 +84,11 @@ export default function ProfileSummary({ user }: { user: User }) {
         </div>
         {user.biography && (
           <>
-            <Divider color="#21262d" my={12} />
-            <Text size="xs" c="#4b5563" mb={4}>
+            <Divider color={chrome.border} my={12} />
+            <Text size="xs" c={chrome.textFaint} mb={4}>
               Bio
             </Text>
-            <Text size="sm" c="#9ca3af">
+            <Text size="sm" c={chrome.textMuted}>
               {user.biography}
             </Text>
           </>
@@ -103,7 +104,7 @@ function WarningSummary({ count }: { count: number }) {
       <Text fw={700} c={KIT.yellow} style={warningCountStyle}>
         {count}
       </Text>
-      <Text size="xs" c="#92400e">
+      <Text size="xs" c={KIT.yellow}>
         warning{count !== 1 ? 's' : ''}
       </Text>
     </Box>
