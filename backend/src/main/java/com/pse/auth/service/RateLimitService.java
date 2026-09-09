@@ -115,6 +115,21 @@ public class RateLimitService {
         return bucket;
     }
 
+    /**
+     * Wall-clock arithmetic on a {@code LocalDateTime}, which is safe here for one reason and
+     * one only: the {@code Clock} bean is {@code Clock.systemUTC()} ({@code TimeConfig}), and
+     * UTC has no daylight-saving transitions.
+     *
+     * <p>Change that bean to {@code systemDefaultZone()} and this silently acquires a bug that
+     * appears twice a year: at the autumn transition the clock goes back an hour, so this
+     * comparison stays true for an extra hour and everyone rate-limited at that moment stays
+     * locked out for an hour longer. {@code retryAfter} below has the same dependency and
+     * would report an hour of nonsense.
+     *
+     * <p>Written down because static analysis flags both lines and the answer is not in either
+     * of them -- it is in a different file, in a bean nobody editing a rate limiter would think
+     * to look at.
+     */
     private boolean isCurrentWindow(AuthRateLimitBucket bucket, LocalDateTime now) {
         return bucket.getWindowStartedAt().plus(window).isAfter(now);
     }

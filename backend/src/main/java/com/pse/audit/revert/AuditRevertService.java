@@ -177,6 +177,13 @@ public class AuditRevertService {
             throw refusal(log, verdict.reason());
         }
 
+        // `handler` cannot be null here, and the reason is two methods apart: it is null only
+        // when !isFieldDiff(log) or when no handler is registered for the target type, and
+        // evaluate() refuses both on its first line -- so the throw above has already run.
+        // Static analysis flags this as a possible NPE because it cannot see that coupling;
+        // it is written down rather than guarded so that nobody "fixes" it with a null check
+        // that would silently swallow a genuinely unrevertible entry instead of refusing it.
+        //
         // The inverse goes through the same service method the panel calls, so it inherits
         // every guard that path enforces and writes its own audit event. The context is what
         // links that new event back to this one; the entry being reverted is not touched.
