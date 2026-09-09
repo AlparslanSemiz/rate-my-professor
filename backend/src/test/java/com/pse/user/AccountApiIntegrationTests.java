@@ -10,6 +10,7 @@ import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.WarningRepository;
+import com.pse.professor.model.Professor;
 import com.pse.professor.repository.ProfessorRepository;
 import com.pse.rating.model.Rating;
 import com.pse.rating.repository.RatingRepository;
@@ -312,7 +313,115 @@ class AccountApiIntegrationTests {
     }
 
 
-    private void rateLecture(Student student, String lectureName, LocalDateTime writtenAt) {
+    /**
+     * The professor list inside a rating: never null, and in a defined order.
+     *
+     * <p>The Android client takes {@code ratings[].lecture.professors.get(0).id()} and
+     * navigates to whichever professor that is, with a comment in its own source
+     * acknowledging that it just picks the first. Two things follow, and only one of them is
+     * this API's problem.
+     *
+     * <p>The order <b>is</b>: if it were not stable, the same rating would open different
+     * professors on different loads. It is stable, and it is F-21's own comparator -- last
+     * name, first name, id -- because this endpoint maps through
+     * {@code LectureResponseMapper} rather than carrying a second copy. Asserted here anyway,
+     * on the one route F-21's own tests do not cover, since "the shared mapper is used" is
+     * exactly the kind of thing a refactor quietly stops being true.
+     *
+     * <p>The emptiness is <b>not</b>: a lecture with no staff is legitimate and the mapper
+     * handles it deliberately, so {@code professors} can be {@code []} and the client's
+     * {@code get(0)} would throw. That is recorded for the client in
+     * {@code docs/frontend-tasks.md}; what is pinned here is only that the field is present
+     * and never null, which is what lets the client guard it.
+     */
+    @Test
+    void theProfessorsInsideARatingAreNeverNullAndAreOrderedByName()
+            throws Exception {
+
+        Session session =
+                createSession("professor-order@student.kit.edu");
+
+        // Inserted last name first, so insertion order and the answer disagree.
+        Lecture lecture = rateLecture(
+                session.student(),
+                "Co-taught",
+                LocalDateTime.of(2026, 5, 1, 9, 0)
+        );
+
+        attachProfessor(lecture, "Zoe", "Zimmermann");
+        attachProfessor(lecture, "Ada", "Auerbach");
+
+        mockMvc.perform(
+                        get("/account/ratings")
+                                .header(
+                                        "Authorization",
+                                        bearer(session.rawToken())
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ratings[0].lecture.professors").isArray())
+                .andExpect(jsonPath("$.ratings[0].lecture.professors", hasSize(2)))
+                .andExpect(jsonPath("$.ratings[0].lecture.professors[0].lastName")
+                        .value("Auerbach"))
+                .andExpect(jsonPath("$.ratings[0].lecture.professors[1].lastName")
+                        .value("Zimmermann"));
+    }
+
+
+    /**
+     * A lecture nobody teaches still serves a professor list, empty rather than absent.
+     *
+     * <p>This is the case the Android client cannot survive -- it calls {@code get(0)} -- and
+     * it is also the case this API is right to serve. Pinned so that the client's report says
+     * what actually arrives: an empty array, not a null and not a missing key.
+     */
+    @Test
+    void aLectureWithNoProfessorsServesAnEmptyListRatherThanNull()
+            throws Exception {
+
+        Session session =
+                createSession("no-professors@student.kit.edu");
+
+        rateLecture(
+                session.student(),
+                "Unstaffed",
+                LocalDateTime.of(2026, 5, 1, 9, 0)
+        );
+
+        mockMvc.perform(
+                        get("/account/ratings")
+                                .header(
+                                        "Authorization",
+                                        bearer(session.rawToken())
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ratings[0].lecture.professors").isArray())
+                .andExpect(jsonPath("$.ratings[0].lecture.professors", hasSize(0)));
+    }
+
+
+    private void attachProfessor(Lecture lecture, String firstName, String lastName) {
+
+        Professor professor = new Professor();
+
+        professor.setFirstName(firstName);
+        professor.setLastName(lastName);
+
+        professor = professorRepository.saveAndFlush(professor);
+
+        // The join row, written directly. Going through Lecture.professors would mean
+        // loading a lazy collection outside a session, and reusing the caller's copy of the
+        // lecture re-inserts the rows it was read before.
+        jdbcTemplate.update(
+                "INSERT INTO lecture_professors (lecture_id, professor_id) VALUES (?, ?)",
+                lecture.getId(),
+                professor.getId()
+        );
+    }
+
+
+    private Lecture rateLecture(Student student, String lectureName, LocalDateTime writtenAt) {
 
         Lecture lecture = new Lecture();
 
@@ -339,6 +448,8 @@ class AccountApiIntegrationTests {
                 writtenAt,
                 rating.getId()
         );
+
+        return lecture;
     }
 
 

@@ -470,6 +470,78 @@ class ApiProtocolContractTests {
     }
 
     /**
+     * {@code own} is a path segment, not a lecture id.
+     *
+     * <p>The Android audit flags {@code GET /ratings/own/{lectureId}} and
+     * {@code GET /ratings/{lectureId}} as colliding in shape and records that it cannot tell
+     * from its side which one the router picks. They cannot collide -- one is three segments
+     * and the other two -- and the pin is here rather than a sentence in a document because
+     * the neighbour that *can* shadow is real: {@code GET /ratings/rate} falls into
+     * {@code GET /ratings/{lectureId}} and is answered 400, and the two mappings differ by a
+     * literal in exactly the same position.
+     *
+     * <p>Asserted on the answers rather than on the mapping, because two handlers reached is
+     * what the client actually depends on: the owner read refuses an unknown lecture, the
+     * public read answers an empty average for one.
+     */
+    @Test
+    void theOwnRatingsSegmentIsNotCapturedAsALectureId() throws Exception {
+        String token = AdminSessions.createAdmin(
+                ADMIN_EMAIL, studentRepository, adminRepository, tokenRepository);
+        String lectureId = UUID.randomUUID().toString();
+
+        mockMvc.perform(get("/ratings/own/" + lectureId).header("Authorization", bearer(token)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Lecture not found"));
+
+        mockMvc.perform(get("/ratings/" + lectureId).header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ratings").isArray());
+
+        // And the two-segment form, which is what a collision would look like: "own" reaches
+        // the public read as a lecture id and is refused for not being one.
+        mockMvc.perform(get("/ratings/own").header("Authorization", bearer(token)))
+                .andExpect(status().isBadRequest());
+    }
+
+    /**
+     * An empty trailing path segment is not a route.
+     *
+     * <p>Both consumer audits arrive at this from different directions and neither could
+     * answer it. The Android client builds a notification id with a fallback to the empty
+     * string and can send {@code PATCH /social/notifications/} before its own emptiness guard
+     * runs; the admin panel interpolates ids into paths without escaping them, so an empty id
+     * would produce {@code GET /users/} rather than {@code /users//}. The question in both
+     * cases is whether the truncated path quietly reaches a <em>different</em> route.
+     *
+     * <p>It does not, and the distinction the assertions draw is the point: the empty-segment
+     * form is 404 {@code Not found} -- no such path -- while the collection path itself is
+     * 405, meaning the path exists and does not take that verb. Two different mechanisms, and
+     * a client that saw one status for both would have no way to tell them apart.
+     */
+    @Test
+    void anEmptyTrailingSegmentIsNotFoundRatherThanTheCollectionRoute() throws Exception {
+        String token = AdminSessions.createAdmin(
+                ADMIN_EMAIL, studentRepository, adminRepository, tokenRepository);
+
+        mockMvc.perform(patch("/social/notifications/").header("Authorization", bearer(token)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Not found"));
+
+        mockMvc.perform(patch("/social/notifications").header("Authorization", bearer(token)))
+                .andExpect(status().isMethodNotAllowed());
+
+        mockMvc.perform(get("/users/").header("Authorization", bearer(token)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Not found"));
+
+        // The listing the panel would have reached had the empty id collapsed the path.
+        mockMvc.perform(get("/users").header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users").isArray());
+    }
+
+    /**
      * The complement of {@link #bodyReadingRoutes()}: mapped writes that declare no
      * {@code @RequestBody}, and so never run content negotiation.
      *
