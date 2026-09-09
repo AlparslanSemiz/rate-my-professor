@@ -2,6 +2,66 @@
 
 ## [Unreleased]
 
+### Documentation — a fixed layout and the rule for keeping it current
+
+Working notes were scattered across the repository root in ad-hoc files, some of
+them in Turkish, and `README.md` filed requests against a `BACKEND-TASKS.md`
+that did not exist here at all. They now have one place each, and a written rule
+for keeping them up to date.
+
+**`docs/`**
+- `TODO.md` (was `tasks.md`) — open work. A `## Notebook` section at the top is
+  reserved for the maintainer and is never edited by an agent.
+- `backend-tasks.md` (was the untracked `backendtasks.md`) — now **tracked**,
+  because it is the file handed to the backend team. Its closing Turkish note
+  became the rule it stated: an elevated operator may change anything on another
+  admin, an ordinary admin only on non-admin accounts. The gaps `README.md`
+  already labelled F1, F2, F3 and G1 were folded in, so the backend team has one
+  document instead of a reference to a missing one. The `/auth/me` `isSuperAdmin`
+  section is marked done, since it shipped.
+- `testplan.md` (new) — scope, the four test layers, the environment, a coverage
+  matrix built from the real suite (33 files, 244 tests: 24 unit files / 136
+  tests, 9 integration files / 108 tests), the automation gaps stated as fact,
+  and ten manual end-to-end scenarios the stubbed suite cannot establish.
+- `testfindings.md` (new) — the findings register, seeded with the unverified
+  elevated operator (F-001, open) and the two defects already fixed: the reload
+  sign-out (F-002) and the locked credibility score (F-003).
+
+**`wiki.md`** (new, root)
+- The self-contained copy published to the GitLab wiki. It duplicates `README.md`
+  on purpose; the two are changed together.
+
+**`CLAUDE.md`** (new, root, untracked)
+- The working rules: a changelog entry on every change, work filed in
+  `docs/TODO.md` below the untouched notebook, backend asks in
+  `docs/backend-tasks.md`, test scope and results in their two files, English
+  everywhere, and the conventions read off the existing history.
+
+**Test strategy recorded, not started**
+- `docs/TODO.md` gained a "Test strategy" section: twelve phases with their
+  acceptance criteria, and the decisions behind them. The finding that prompted
+  it — the suite has 244 tests but **no page test touches HTTP**, because all
+  nine integration files mock the service modules with `vi.mock`, so nothing
+  asserts the query parameters a screen actually sends. Coverage has never been
+  measured; there is no baseline.
+- `docs/testplan.md` says so in a new section rather than describing coverage the
+  suite does not have. Its matrix still describes the suite as it is today.
+- Nothing is implemented: a refactor comes first, and only Phase 1 (coverage
+  infrastructure) is meant to land before it.
+
+**`.gitignore`**
+- Dropped the bare `TODO.md` pattern, which matched at any depth and would have
+  kept `docs/TODO.md` out of the repository, and the superseded
+  `BACKEND-TASKS.md`. `CLAUDE.md` stays ignored, as it was.
+
+**`README.md`**
+- The F1/F2/F3/G1 references now point at `docs/backend-tasks.md`.
+- The project structure listed `src/features/answers/`, which does not exist, and
+  omitted `src/features/help/`, which does. Answers are replies worked from the
+  Comments screen — not a page chunk of their own, so the lazy-loading list no
+  longer claims one.
+
+
 ### Added — elevated permissions for `u-kisi4@student.kit.edu`
 
 One address may now act on **admin** accounts from the user profile, not only on

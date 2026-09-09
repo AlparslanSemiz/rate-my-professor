@@ -1,0 +1,165 @@
+# Backend tasks — admin panel (`admin-web`)
+
+Hand this file to the backend repository. It holds everything the admin panel
+needs from the backend and cannot do itself. Section A is the elevated operator;
+sections F and G are contract gaps the panel currently works around.
+
+---
+
+# A. Elevated operator for the admin panel
+
+The admin panel has already been changed; this is the part it cannot do itself.
+
+## Goal
+
+`u-kisi4@student.kit.edu` must be able to moderate **other admin accounts**, not
+only students. Today those requests are refused with `409` (and admin-only
+endpoints with `403`), so the panel offers the buttons but the action fails.
+
+Stated as one rule: **an elevated operator may change anything on another
+admin's account; an ordinary admin may only do so against non-admin (student)
+accounts.**
+
+Two hard constraints:
+
+1. **The role stays `ADMIN`.** Do not introduce a `SUPERADMIN` value in the
+   `role` field. `/auth/me`, `GET /users` and `GET /users/:id` must keep
+   reporting `"role": "ADMIN"` for this account — the panel's `UserRole` union
+   is `'STUDENT' | 'ADMIN'` and a third value would break its rendering. If the
+   distinction needs to travel to the client, add a **separate** field (see
+   section A5), never a new role.
+2. **Self actions stay refused.** No one blocks, deletes or demotes their own
+   account, elevated or not. The panel keeps hiding those controls for the
+   operator's own profile; the backend should keep rejecting them regardless.
+
+## A1. A way to mark the elevated account
+
+Pick whichever fits the existing setup:
+
+- an env var alongside `ADMIN_BOOTSTRAP_EMAILS`, e.g.
+  `ADMIN_SUPERUSER_EMAILS=u-kisi4@student.kit.edu`, resolved at bootstrap the same
+  way; or
+- a boolean column on the `admins` table (`is_super`, default `false`), seeded
+  from that env var.
+
+The column is preferable if the set is expected to change without a redeploy.
+Whatever is chosen, it must be normalized the same way the panel normalizes:
+trim + lowercase.
+
+## A2. Endpoints that must accept an elevated operator
+
+For each, the current behaviour is "refuse when the **target** account has role
+`ADMIN`". That refusal should be lifted when the **caller** is elevated and the
+target is not the caller.
+
+| Endpoint | What must become possible |
+| --- | --- |
+| `PATCH /users/:id` | Change `status` (`ACTIVE` / `BLOCKED`) and `credibilityScore` on an admin target. `username` / `biography` already work. |
+| `PATCH /users/:id` (`role`) | Demote an admin target to `STUDENT` (and the existing sign-out of that account still applies). Never on self. |
+| `POST /users/:id/warnings` | Issue a warning against an admin target. |
+| block / unblock | Block and unblock an admin target. |
+| `DELETE /users/:id` | Delete an admin target. |
+
+Refusals that must **stay**:
+
+- caller `id` == target `id` for block, unblock, delete and `role` — answer the
+  same status as today;
+- any of the above from a non-elevated admin against an admin target — unchanged
+  `409`;
+- everything for a non-admin token — unchanged `403`.
+
+## A3. Audit log
+
+Every one of these actions must be recorded with the acting admin as actor, the
+same shape the panel already renders
+(`actor: { name, email, role }`, `role` being `"ADMIN"`). Recording that the
+actor was elevated is useful — but as a separate field or in the event metadata,
+not by changing `actor.role`.
+
+## A4. Tests worth having
+
+- an elevated admin blocks, warns, unblocks and deletes another admin → success;
+- an elevated admin edits another admin's status and credibility score →
+  success;
+- a normal admin does any of the above → unchanged `409`;
+- an elevated admin tries it on their own account → refused;
+- `/auth/me` for the elevated account still answers `"role": "ADMIN"`.
+
+## A5. Report the permission on `/auth/me` — **done**
+
+The panel no longer keeps a hardcoded address set of its own. The backend
+resolves the permission from `ADMIN_SUPERUSER_EMAILS` and reports it as
+`isSuperAdmin` on `/auth/me`:
+
+```json
+{ "success": true, "message": "OK",
+  "user": { "id": "...", "name": "...", "email": "...", "role": "ADMIN", "isSuperAdmin": true } }
+```
+
+`SUPER_ADMIN_EMAILS` and `isSuperAdminEmail` are gone from
+`src/utils/adminAccess.ts`; the panel reads the flag and nothing else. `role`
+must still be `"ADMIN"` in that response. Kept here as the record of the agreed
+contract — nothing further is needed.
+
+---
+
+# F. `/system/status` and bug report gaps
+
+## F1. No total bug report counter
+
+`counts.openBugReports` reports the open ones only. There is no total, so the
+dashboard cannot say "N of M bug reports". The panel removed its "of N bug
+reports" sub-line and its "Reports handled" percentage rather than reading the
+whole `/reports` table on a timer to derive them.
+
+**Asked for:** a total bug report count in `/system/status` `counts`, alongside
+the existing `openBugReports`.
+
+## F2. No blocked account counter
+
+`counts` carries `users`, `activeUsers` and `admins`. `users - activeUsers` is
+blocked *plus* inactive, so blocked cannot be derived from it. With the Users
+table paginated it cannot be counted on screen either, so that stat card is not
+shown at all.
+
+**Asked for:** a blocked account count in `/system/status` `counts`.
+
+## F3. A bug report has no `statusChangedAt`
+
+A report carries `reportedAt` only. The Bug Reports History tab can therefore
+show when a report was *filed*, but not when it was closed; the subtitle says so
+rather than letting a filing date pass as a closing one.
+
+**Asked for:** a `statusChangedAt` timestamp on a bug report, set whenever its
+status changes.
+
+---
+
+# G. Catalogue gaps
+
+## G1. Catalogue reads return active records only
+
+`GET /data/lectures` and `GET /data/professor` filter on `active = true`, but
+both `PATCH` routes accept `active`. Switching a lecture or professor off from
+the panel therefore removes it from the only list the panel can read, with no
+way back short of a database write. The edit forms warn before the switch is
+saved, and an All / Active / Inactive filter waits on this.
+
+**Asked for:** a way to read inactive records — either an `active` query
+parameter on both reads (`active=true|false|all`), or dropping the filter and
+letting the client decide.
+
+---
+
+## Contract details worth keeping
+
+Two behaviours that are correct as they are, recorded so they are not
+rediscovered as bugs:
+
+- `counts.admins` counts accounts holding the role, not the allowlist. An
+  address in the bootstrap list is re-promoted on the next restart or sign-in,
+  so demoting it in the panel does not stick until the address leaves that
+  configuration.
+- `POST /users/{id}/warnings` accepts the old `userID` + `createdFrom` body
+  permanently, not as a temporary shim, so the two repositories deploy in any
+  order.

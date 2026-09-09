@@ -37,7 +37,7 @@ that.
 | Dashboard | At-a-glance user, administrator and report counters, read from `/system/status` |
 | Users | Search, filter and page through accounts on the server; inspect profiles and warning history, edit account fields, warn, block, unblock, or delete |
 | Comments | Browse every comment, edit or hide its text, delete it, and work the report queue — acting on the reported content from the queue itself |
-| Answers | The same for replies posted under comments, with the parent thread as context |
+| Answers | Replies posted under comments — worked from the Comments screen rather than one of their own, with the parent thread as context |
 | Lectures & Professors | Edit and remove lectures and professors, reassign who teaches what, and remove individual ratings |
 | Bug Reports | Review submitted problems, rewrite the title or description, update status or severity, delete, and open a GitLab issue |
 | Audit Logs | Filter and inspect administrative actions, including before/after values, and undo a field edit |
@@ -192,13 +192,13 @@ src/
 ├── domain/       Shared domain types and moderation rules
 ├── features/     Feature-owned pages, components, hooks, and tests
 │   ├── activity-logs/
-│   ├── answers/
 │   ├── audit-logs/
 │   ├── auth/
 │   ├── catalog/
 │   ├── comments/
 │   ├── dashboard/
 │   ├── feedback/
+│   ├── help/
 │   ├── moderation/   Content and report screens shared by comments and answers
 │   └── users/
 ├── hooks/        Reusable hooks without feature ownership
@@ -487,10 +487,10 @@ leaves that configuration. And `POST /users/{id}/warnings` accepts the old `user
 | A session that ends on **TTL expiry** writes no `ADMIN_LOGOUT` | The pair closes on an explicit sign-out — the panel calls `POST /auth/logout` — and a session the backend revokes itself is recorded on the action that caused it (`USER_UPDATED` with `metadata.sessionsRevoked`). Pure TTL expiry has no actor and no request, so nothing is written. A missing `ADMIN_LOGOUT` is normal and does **not** mean the session is still live. |
 | `GET /users` orders differently with and without parameters | Unparameterised it is admins first, then newest. Any paginated call is strictly newest-first, because role is not a column it can sort on. The Users page changes order the moment it paginates. |
 | GitLab issue creation is inert until it is configured | Without `GITLAB_BASE_URL`, `GITLAB_PROJECT_ID` and `GITLAB_TOKEN` the backend reports `gitlabEnabled: false` and the endpoint answers `503`. The panel hides the control rather than offering one that cannot work. |
-| `/system/status` has **no total bug report counter** | `counts.openBugReports` is the open ones only. The dashboard's "of N bug reports" sub-line and its "Reports handled" percentage were removed rather than kept by reading the whole `/reports` table on a timer. Requested as F1 in `BACKEND-TASKS.md`. |
-| `/system/status` has **no blocked account counter** | `counts` carries `users`, `activeUsers` and `admins`; `users - activeUsers` is blocked *plus* inactive, so blocked cannot be derived. With the Users table paginated it cannot be counted on screen either, so that stat card is not shown. Requested as F2. |
-| The catalogue reads return **active records only** | `GET /data/lectures` and `GET /data/professor` filter on `active = true`, but both `PATCH` routes accept `active` — so switching a lecture or professor off from the panel removes it from the only list the panel can read, with no way back short of a database write. The edit forms warn before the switch is saved; an All/Active/Inactive filter waits on the backend. Requested as G1 in `BACKEND-TASKS.md`. |
-| A bug report has **no `statusChangedAt`** | It carries `reportedAt` only, so the Bug Reports History tab can show when a report was *filed* but not when it was closed. The subtitle says so rather than letting a filing date pass as a closing one. Requested as F3. |
+| `/system/status` has **no total bug report counter** | `counts.openBugReports` is the open ones only. The dashboard's "of N bug reports" sub-line and its "Reports handled" percentage were removed rather than kept by reading the whole `/reports` table on a timer. Requested as F1 in `docs/backend-tasks.md`. |
+| `/system/status` has **no blocked account counter** | `counts` carries `users`, `activeUsers` and `admins`; `users - activeUsers` is blocked *plus* inactive, so blocked cannot be derived. With the Users table paginated it cannot be counted on screen either, so that stat card is not shown. Requested as F2 in `docs/backend-tasks.md`. |
+| The catalogue reads return **active records only** | `GET /data/lectures` and `GET /data/professor` filter on `active = true`, but both `PATCH` routes accept `active` — so switching a lecture or professor off from the panel removes it from the only list the panel can read, with no way back short of a database write. The edit forms warn before the switch is saved; an All/Active/Inactive filter waits on the backend. Requested as G1 in `docs/backend-tasks.md`. |
+| A bug report has **no `statusChangedAt`** | It carries `reportedAt` only, so the Bug Reports History tab can show when a report was *filed* but not when it was closed. The subtitle says so rather than letting a filing date pass as a closing one. Requested as F3 in `docs/backend-tasks.md`. |
 
 ## Audit Log Design
 
@@ -555,7 +555,7 @@ This project uses `React.lazy`, dynamic `import()`, and `Suspense` at route
 boundaries:
 
 - The login and authenticated application layout are separate chunks.
-- Dashboard, Users, Comments, Answers, Lectures & Professors, Bug Reports, Audit Logs,
+- Dashboard, Users, Comments, Lectures & Professors, Bug Reports, Audit Logs,
   Activity Log and Help are separate page chunks.
 - `PageLoader` provides feedback while a requested chunk is loading.
 
