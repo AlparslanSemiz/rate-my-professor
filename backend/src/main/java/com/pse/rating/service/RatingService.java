@@ -154,7 +154,7 @@ public class RatingService {
     @Transactional(readOnly = true)
     public RatingsAverageResponse getRatings(UUID lectureId) {
 
-        List<Rating> ratings = ratingRepository.findActiveByLectureId(lectureId);
+        List<Rating> ratings = ratingRepository.findByLectureIdAndStudentStatus(lectureId, UserStatus.ACTIVE);
 
         // EnumMap, not HashMap: Enum.hashCode is the identity hash, so a HashMap's key order
         // is decided by where the JVM put the constants -- different between two runs of the
