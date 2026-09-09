@@ -1,89 +1,79 @@
-import { useCallback, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { systemStatusService } from '@/api/system'
-import { usersService, type User } from '@/api/users'
-import { useVisibleInterval } from '@/hooks/useVisibleInterval'
-import { getErrorMessage } from '@/utils/getErrorMessage'
+import { usersService } from '@/api/users'
 import {
   EMPTY_DASHBOARD_STATS,
   dashboardActiveRate,
+  dashboardReadingError,
   dashboardStatsFromCounts,
-  healthDescription,
-  type DashboardStats,
+  isCompleteReading,
+  type DashboardReading,
 } from '../dashboardModel'
 
-const REFRESH_INTERVAL_MS = 15_000
+export const REFRESH_INTERVAL_MS = 15_000
 const LOAD_ERROR_FALLBACK = 'The dashboard could not be refreshed.'
 /** Enough to fill the "Newest members" panel, which shows four. */
 const RECENT_USER_LIMIT = 4
 
-function firstFailure(results: PromiseSettledResult<unknown>[]): unknown {
-  return results.find((result) => result.status === 'rejected')?.reason ?? null
+const dashboardKeys = {
+  all: ['dashboard'] as const,
+  status: () => [...dashboardKeys.all, 'status'] as const,
+  recentUsers: () => [...dashboardKeys.all, 'recent-users'] as const,
 }
 
 /**
  * The dashboard is an overview, so a failed refresh keeps the last good numbers rather than
  * blanking the page. It must not keep them *silently*, though: showing zeros because
  * `/system/status` is down states that nobody has signed up, which is a different claim
- * entirely. `lastUpdated` only moves on a fully successful read, so the timestamp never
- * vouches for numbers that did not arrive.
+ * entirely.
+ *
+ * Two queries rather than one, because they are two reads that fail independently — half the
+ * page arriving is a real and useful outcome. Keeping the last good value on a failed refetch
+ * is what TanStack already does, which is why there is no longer a `latestRead` ref
+ * discarding overtaken responses, and `refetchInterval` replaces the hand-rolled
+ * `visibilitychange` and `setInterval`: it pauses while the tab is not visible, and
+ * `refetchOnWindowFocus` reads again the moment it comes back.
  */
 export function useDashboardData() {
-  const [users, setUsers] = useState<User[]>([])
-  const [stats, setStats] = useState<DashboardStats>(EMPTY_DASHBOARD_STATS)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [hasData, setHasData] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
-  // Which read is allowed to write to the screen. Every read bumps it as it starts, so when
-  // a retry or a poll fires while the previous one is still in flight, the older response is
-  // discarded instead of landing on top of the newer one.
-  const latestRead = useRef(0)
+  const status = useQuery({
+    queryKey: dashboardKeys.status(),
+    queryFn: () => systemStatusService.getStatus(),
+    refetchInterval: REFRESH_INTERVAL_MS,
+  })
 
-  const refresh = useCallback(async () => {
-    const read = ++latestRead.current
-    const results = await Promise.allSettled([
-      systemStatusService.getStatus(),
-      usersService.list({ limit: RECENT_USER_LIMIT, sort: 'newest' }),
-    ])
-    if (read !== latestRead.current) return
+  const recent = useQuery({
+    queryKey: dashboardKeys.recentUsers(),
+    queryFn: () => usersService.list({ limit: RECENT_USER_LIMIT, sort: 'newest' }),
+    refetchInterval: REFRESH_INTERVAL_MS,
+  })
 
-    const [statusResult, recentResult] = results
-    // A degraded database answers the request but carries no counters. That is a reading we
-    // do not have, not a reading of zero, so the last good numbers stay on screen.
-    const counts = statusResult.status === 'fulfilled' ? statusResult.value.counts : null
-    if (counts) setStats(dashboardStatsFromCounts(counts))
-    if (recentResult.status === 'fulfilled') setUsers(recentResult.value.users)
-    if (counts || recentResult.status === 'fulfilled') setHasData(true)
+  // A degraded database answers the request but carries no counters. That is a reading we do
+  // not have, not a reading of zero, so the last good numbers stay on screen.
+  const counts = status.data?.counts ?? null
+  const reading: DashboardReading = {
+    counts,
+    countsError: status.error,
+    usersError: recent.error,
+  }
 
-    const failure = firstFailure(results)
-    if (failure !== null) {
-      setError(getErrorMessage(failure, LOAD_ERROR_FALLBACK))
-    } else if (!counts) {
-      setError(healthDescription.DEGRADED)
-    } else {
-      setLastUpdated(new Date())
-      setError('')
-    }
-    setLoading(false)
-  }, [])
-
-  useVisibleInterval(() => void refresh(), REFRESH_INTERVAL_MS, reloadKey)
-
-  const retry = useCallback(() => {
-    setLoading(true)
-    setError('')
-    setReloadKey((key) => key + 1)
-  }, [])
+  const stats = counts ? dashboardStatsFromCounts(counts) : EMPTY_DASHBOARD_STATS
+  const users = recent.data?.users ?? []
 
   return {
     users,
     stats,
     activeRate: dashboardActiveRate(stats),
-    lastUpdated,
-    loading,
-    error,
-    hasData,
-    retry,
+    // `dataUpdatedAt` only moves on a successful read, and this only reads it when both
+    // halves came — so the timestamp never vouches for numbers that did not arrive.
+    lastUpdated: isCompleteReading(reading)
+      ? new Date(Math.max(status.dataUpdatedAt, recent.dataUpdatedAt))
+      : null,
+    loading: status.isPending || recent.isPending,
+    error: dashboardReadingError(reading, LOAD_ERROR_FALLBACK),
+    hasData: counts !== null || recent.data !== undefined,
+    retry: () => {
+      void status.refetch()
+      void recent.refetch()
+    },
   }
 }

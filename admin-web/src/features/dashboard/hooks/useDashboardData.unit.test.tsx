@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { systemStatusService, type SystemStatus } from '@/api/system'
 import { usersService, type User } from '@/api/users'
+import { withQueryClient } from '@/test/queryClient'
 import { useDashboardData } from './useDashboardData'
 
 vi.mock('@/api/system', () => ({
@@ -48,7 +49,7 @@ describe('useDashboardData', () => {
   })
 
   it('takes its totals from the backend counters rather than counting rows itself', async () => {
-    const { result } = renderHook(() => useDashboardData())
+    const { result } = renderHook(() => useDashboardData(), { wrapper: ({ children }) => withQueryClient(children) })
 
     await waitFor(() => expect(result.current.stats.total).toBe(42))
 
@@ -65,7 +66,7 @@ describe('useDashboardData', () => {
   it('keeps the half that loaded and reports the half that did not', async () => {
     vi.mocked(usersService.list).mockRejectedValue(new Error('Unavailable'))
 
-    const { result } = renderHook(() => useDashboardData())
+    const { result } = renderHook(() => useDashboardData(), { wrapper: ({ children }) => withQueryClient(children) })
 
     await waitFor(() => expect(result.current.stats.total).toBe(42))
 
@@ -80,7 +81,7 @@ describe('useDashboardData', () => {
   it('does not read missing counters as zeros', async () => {
     vi.mocked(systemStatusService.getStatus).mockResolvedValue({ ...status, counts: null })
 
-    const { result } = renderHook(() => useDashboardData())
+    const { result } = renderHook(() => useDashboardData(), { wrapper: ({ children }) => withQueryClient(children) })
 
     await waitFor(() => expect(result.current.loading).toBe(false))
 
@@ -93,7 +94,7 @@ describe('useDashboardData', () => {
     vi.mocked(systemStatusService.getStatus).mockRejectedValue(new Error('Backend unavailable'))
     vi.mocked(usersService.list).mockRejectedValue(new Error('Backend unavailable'))
 
-    const { result } = renderHook(() => useDashboardData())
+    const { result } = renderHook(() => useDashboardData(), { wrapper: ({ children }) => withQueryClient(children) })
 
     await waitFor(() => expect(result.current.loading).toBe(false))
 

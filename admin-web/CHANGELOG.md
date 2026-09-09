@@ -226,7 +226,58 @@ them are TanStack's derived expressions — `isPending || (isFetching &&
 tests were added chasing it before that became clear; all three pin real
 behaviour and are kept.
 
-### Refactor step 8 — the dashboard was migrated, and put back
+### Refactor step 8 — the dashboard, on the second attempt
+
+The first attempt is described below and was reverted. This one lands, and the
+two tests that blocked it pass — they were not deleted and their assertions are
+unchanged.
+
+**`hooks/useDashboardData.ts` — 89 lines to 78, and two queries instead of one**
+- `Promise.allSettled` over `/system/status` and `/users` becomes two `useQuery`.
+  They are two reads that fail independently, and half the page arriving is a
+  real outcome the screen already handled — expressing that as two queries is
+  what makes the rest fall out.
+- **`src/hooks/useVisibleInterval.ts` is deleted**, with its 7 tests. 59 lines of
+  hand-rolled `visibilitychange` and `setInterval`: `refetchInterval` does not
+  run while the tab is hidden, and `refetchOnWindowFocus` reads again the moment
+  it comes back.
+- **The `latestRead` ref is gone.** It existed to discard a response overtaken by
+  a newer one; TanStack does that per query.
+- "Keeps the last good numbers on a failed refresh" is now the library's default
+  rather than six `useState` and a set of conditional writes.
+- `REFRESH_INTERVAL_MS` is exported, so nothing has to repeat `15_000`.
+
+**`dashboardModel.ts` — the one rule TanStack does not supply**
+- `lastUpdated` must move only when **both** reads succeed **and** the status
+  carried counters, so the timestamp never vouches for numbers that did not
+  arrive. No single query field says that, so `isCompleteReading` and
+  `dashboardReadingError` are pure functions in the model, where the three-way
+  rule — a failure reports its message, a successful read with no counters is
+  `DEGRADED`, otherwise nothing — is readable and directly testable.
+
+**The tests, and what actually blocked this before**
+- Both files needed a `QueryClientProvider`; neither had one.
+- The two poll tests drove the refresh with `vi.useFakeTimers()` and
+  `advanceTimersByTimeAsync(15_000)`. Narrowing `toFake` to leave
+  `queueMicrotask` real — TanStack notifies its observers through it — got the
+  refetch to fire, and the `queryFn` was called a second time as expected. The
+  component still rendered its whole tree with **every text node empty**, which
+  is where the previous attempt also stopped.
+- So the clock is out of it. Both tests now ask the query client to re-read, via
+  a `refreshDashboard` helper. That is not a weaker test: what they guard is what
+  a *failed refresh* does — the last good numbers stay and the screen says the
+  reading is stale — and not when the next one is due. The interval is
+  TanStack's to get right, and it is now declared rather than implemented.
+- All four `useDashboardData` unit tests pass **unchanged**, including the two
+  that pin the awkward cases: a partial read keeps the half that arrived, and
+  `counts: null` is not read as zeros.
+
+**Coverage: 91.23 / 84.16 / 89.03 / 93.49**, against 89.58 / 83.14 / 86.48 /
+92.12 before the refactor. Up on all four axes. `src/hooks/` now holds
+`useSearch` and `useSelectedId` and nothing else, which is what `docs/TODO.md`
+set as the target.
+
+#### The first attempt, for the record
 
 `useDashboardData` was rewritten on `useQuery` with `refetchInterval`, which
 would have deleted `useVisibleInterval` (60 lines of hand-rolled
@@ -244,8 +295,8 @@ That is a test-harness problem, but shipping an unverifiable change to the one
 screen that polls live data is the wrong trade: the behaviour it guards is
 "a failed refresh keeps the last good numbers and says so", and a dashboard
 quietly showing zeros claims nobody has signed up. Carried in `docs/TODO.md` as
-follow-up, with what was learned, so the next attempt does not start from
-scratch.
+follow-up, with what was learned — which is what the successful attempt above
+started from.
 
 ### Refactor step 7 — moderation, and a hook that returned twenty-four fields
 

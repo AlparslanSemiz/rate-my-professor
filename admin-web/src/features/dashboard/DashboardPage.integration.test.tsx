@@ -1,11 +1,13 @@
 import { MantineProvider } from '@mantine/core'
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { systemStatusService, type SystemStatus } from '@/api/system'
 import { usersService, type User } from '@/api/users'
 import { AuthProvider } from '@/context/AuthContext'
+import type { QueryClient } from '@tanstack/react-query'
+import { createTestQueryClient, withQueryClient } from '@/test/queryClient'
 import DashboardPage from './DashboardPage'
 
 vi.mock('@/api/auth', () => ({
@@ -80,16 +82,35 @@ const status: SystemStatus = {
   gitlabEnabled: false,
 }
 
-function renderDashboard() {
-  return render(
+/**
+ * Drives one refresh.
+ *
+ * The screen polls every fifteen seconds, but the behaviour these tests guard is what a
+ * *failed refresh* does, not when the next one is due — and the interval itself is TanStack's
+ * to get right. Asking the client to re-read says the same thing without a clock: fake timers
+ * also stand in for `queueMicrotask`, which is how the query client notifies its observers,
+ * and the two do not compose.
+ */
+async function refreshDashboard(client: QueryClient) {
+  await act(async () => {
+    await client.refetchQueries()
+  })
+}
+
+function renderDashboard(client = createTestQueryClient()) {
+  render(
     <MantineProvider>
       <AuthProvider>
-        <MemoryRouter>
-          <DashboardPage />
-        </MemoryRouter>
+        {withQueryClient(
+          <MemoryRouter>
+            <DashboardPage />
+          </MemoryRouter>,
+          client
+        )}
       </AuthProvider>
     </MantineProvider>
   )
+  return client
 }
 
 /**
@@ -154,38 +175,29 @@ describe('Dashboard page', () => {
   })
 
   it('keeps the last good counts and marks the reading stale when a refresh fails', async () => {
-    vi.useFakeTimers()
-    renderDashboard()
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0)
-    })
+    const client = renderDashboard()
+    expect(await screen.findByText('Total users')).toBeInTheDocument()
     expect(statValue('Total users')).toBe('3')
 
     vi.mocked(systemStatusService.getStatus).mockRejectedValue(new Error('Counters are unavailable.'))
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(15_000)
-    })
+    await refreshDashboard(client)
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'Counters are unavailable. Showing the last successful reading.'
     )
+    // The point of the whole arrangement: a dashboard quietly showing zeros would claim
+    // nobody has signed up.
     expect(statValue('Total users')).toBe('3')
   })
 
   it('drops the stale banner once a refresh succeeds again', async () => {
-    vi.useFakeTimers()
     vi.mocked(systemStatusService.getStatus).mockRejectedValueOnce(new Error('Counters are unavailable.'))
-    renderDashboard()
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0)
-    })
-    expect(screen.getByRole('alert')).toHaveTextContent('Showing the last successful reading.')
+    const client = renderDashboard()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Showing the last successful reading.')
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(15_000)
-    })
+    await refreshDashboard(client)
 
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
     expect(statValue('Total users')).toBe('3')
   })
 })

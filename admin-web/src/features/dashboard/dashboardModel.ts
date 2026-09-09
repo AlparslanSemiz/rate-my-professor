@@ -1,4 +1,5 @@
 import type { SystemHealth } from '@/api/system'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 
 export interface DashboardStats {
   total: number
@@ -50,4 +51,34 @@ export const healthDescription: Record<SystemHealth, string> = {
   OK: 'The database answered and the counters were read.',
   DEGRADED: 'The database answered, but a count query failed — counters are unavailable.',
   DOWN: 'The database is unreachable, so counters and the last write cannot be read.',
+}
+
+/** The outcome of one dashboard refresh: two independent reads, either of which may fail. */
+export interface DashboardReading {
+  /** The counters the status read carried, or `null` if it carried none. */
+  counts: Record<string, number> | null
+  countsError: unknown
+  usersError: unknown
+}
+
+/**
+ * What to tell the operator about a reading.
+ *
+ * A failed read is reported with its own message, the counters read first because a status
+ * failure explains more than a user-list failure. A read that succeeded but carried no
+ * counters is the `DEGRADED` case: that is a reading we do not have, not a reading of zero,
+ * and saying nothing would leave zeros on screen claiming nobody has signed up.
+ */
+export function dashboardReadingError(reading: DashboardReading, fallback: string): string {
+  const failure = reading.countsError ?? reading.usersError
+  if (failure) return getErrorMessage(failure, fallback)
+  return reading.counts ? '' : healthDescription.DEGRADED
+}
+
+/**
+ * Whether both halves arrived. `lastUpdated` is only allowed to move on a complete reading,
+ * so the timestamp never vouches for numbers that did not come.
+ */
+export function isCompleteReading(reading: DashboardReading): boolean {
+  return !reading.countsError && !reading.usersError && reading.counts !== null
 }
