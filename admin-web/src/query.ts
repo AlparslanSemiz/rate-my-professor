@@ -10,14 +10,23 @@ import { ApiError } from '@/api/client'
 const STALE_TIME_MS = 30_000
 
 /**
- * A request the backend refused is not worth repeating. `401` ends the session,
- * `403` and `404` will refuse again, and `400` means the panel sent something wrong — none
- * of which a retry fixes, and each retry delays the message the operator needs to see.
- * Anything else (a network blip, a `500`, a `503`) is retried twice.
+ * How many times a failure that could plausibly pass is retried before the operator is told.
+ */
+const MAX_QUERY_RETRIES = 2
+
+/**
+ * A request the backend refused is not worth repeating: an expired session, a refusal, a
+ * missing record and a malformed request all fail again the same way, and each retry delays
+ * the message the operator needs to see. Neither is a response the panel could not parse —
+ * that used to arrive as `status: 0`, which this predicate read as "not a 4xx" and retried
+ * twice for nothing.
+ *
+ * The judgement itself is not made here. Each error type answers `transient` for itself, so
+ * adding a failure mode does not mean editing this function.
  */
 function shouldRetry(failureCount: number, error: unknown): boolean {
-  if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false
-  return failureCount < 2
+  if (error instanceof ApiError && !error.transient) return false
+  return failureCount < MAX_QUERY_RETRIES
 }
 
 export function createQueryClient(): QueryClient {

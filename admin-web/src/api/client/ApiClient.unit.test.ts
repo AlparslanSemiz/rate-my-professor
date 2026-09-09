@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiClient, expectArray } from './ApiClient'
+import { ApiClient, ContractError, expectArray, NetworkError, RefusedError } from './ApiClient'
 import { jsonResponse, TEST_API_BASE_URL } from '@/test/http'
 
 const fetchMock = vi.fn()
@@ -76,11 +76,11 @@ describe('ApiClient', () => {
     )
     const client = new ApiClient(TEST_API_BASE_URL)
 
-    await expect(client.patch('/users/1/block')).rejects.toMatchObject({
-      name: 'ApiError',
-      status: 200,
-      message: 'Admins cannot be blocked.',
-    })
+    const failure = await client.patch('/users/1/block').catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(RefusedError)
+    expect(failure).toMatchObject({ status: 200, message: 'Admins cannot be blocked.' })
+    // A refusal the backend chose to serve as a 2xx will refuse again, whatever the status says.
+    expect((failure as RefusedError).transient).toBe(false)
   })
 
   it('falls back to a generic refusal when success is false without a message', async () => {
@@ -100,33 +100,39 @@ describe('ApiClient', () => {
     })
   })
 
-  it('reports a transport failure without blaming the connection alone', async () => {
+  it('reports a transport failure as a NetworkError, without blaming the connection alone', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
     const client = new ApiClient(TEST_API_BASE_URL)
 
-    await expect(client.get('/users')).rejects.toMatchObject({
-      name: 'ApiError',
-      status: 0,
-      message: expect.stringContaining('refusing requests from this origin'),
-    })
+    const failure = await client.get('/users').catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(NetworkError)
+    expect((failure as NetworkError).message).toContain('refusing requests from this origin')
+    // The browser's own TypeError explains nothing to an operator, so it is carried as
+    // `cause` for the console instead of being discarded.
+    expect((failure as NetworkError).cause).toBeInstanceOf(TypeError)
+    // An unreachable host may come back; this is the one failure worth retrying.
+    expect((failure as NetworkError).transient).toBe(true)
   })
 
   it('rejects empty successful responses with a readable error', async () => {
     fetchMock.mockResolvedValueOnce(new Response('', { status: 200 }))
     const client = new ApiClient(TEST_API_BASE_URL)
 
-    await expect(client.get('/users')).rejects.toThrow('The server returned an empty response.')
+    const failure = await client.get('/users').catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(ContractError)
+    expect((failure as ContractError).message).toBe('The server returned an empty response.')
   })
 
-  it('wraps malformed successful JSON responses in an ApiError', async () => {
+  it('reports a body it cannot parse as a ContractError, not as a retryable failure', async () => {
     fetchMock.mockResolvedValueOnce(new Response('{invalid json', { status: 200 }))
     const client = new ApiClient(TEST_API_BASE_URL)
 
-    await expect(client.get('/users')).rejects.toMatchObject({
-      name: 'ApiError',
-      status: 200,
-      message: 'The server returned an invalid JSON response.',
-    })
+    const failure = await client.get('/users').catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(ContractError)
+    expect((failure as ContractError).message).toBe('The server returned an invalid JSON response.')
+    // This used to arrive as `status: 0`, which the retry predicate read as "not a 4xx" and
+    // repeated twice for nothing.
+    expect((failure as ContractError).transient).toBe(false)
   })
 })
 
@@ -135,7 +141,7 @@ describe('expectArray', () => {
     expect(expectArray<number>({ users: [1, 2] }, 'users', 'GET /users')).toEqual([1, 2])
   })
 
-  it('throws a readable ApiError naming the endpoint and the missing field', () => {
+  it('throws a readable ContractError naming the endpoint and the missing field', () => {
     expect(() => expectArray({ success: true }, 'users', 'GET /users')).toThrowError(
       /GET \/users did not return a "users" list/
     )
