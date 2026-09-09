@@ -42,11 +42,21 @@ web:test:
 
 # The end-to-end layer. It runs against the in-browser mock backend, so it needs no
 # deployment — but it drives a real browser, which makes it the slowest and least stable
-# thing in the pipeline. `allow_failure` is deliberate: a flaky browser must not be able to
-# block a merge, and the report is there to be read when it goes red.
+# thing in the pipeline.
+#
+# `when: manual` is about time, not trust. `allow_failure` already meant a flaky browser
+# could not block a merge, but the job still ran on every push, and its cost is paid before
+# a single test does: pulling the ~2GB `mcr.microsoft.com/playwright` image and running its
+# own `npm ci`, because it cannot share the Alpine image the other jobs use. That is minutes
+# added to every pipeline for a suite whose value is occasional. It stays one click away in
+# the pipeline view, and `npm run test:e2e` is the same command locally.
+#
+# `allow_failure` is kept explicitly. It is the default for a manual job, and spelling it out
+# is what stops someone reading the removal of `when: manual` later as "and now it gates".
 web:e2e:
   image: mcr.microsoft.com/playwright:v1.63.0-noble
   stage: e2e
+  when: manual
   allow_failure: true
   cache:
     key: "npm-${CI_COMMIT_REF_SLUG}"

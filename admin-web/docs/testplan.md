@@ -317,9 +317,15 @@ manual list, and they are the reason section 7 still exists.
 
 **Exit for a merge:** `npm run check`, `npm test` and `npm run build` pass, coverage
 has not fallen, and any scenario in section 7 that the change touches has been run
-and recorded. `npm run test:e2e` is expected to pass locally; in CI it is
-`allow_failure: true` and never blocks a merge, because a flaky browser must not be
-able to.
+and recorded.
+
+**`npm run test:e2e` is a local gate, not a CI one.** The `web:e2e` job is
+`when: manual` and `allow_failure: true`, so it runs only when somebody starts it. That
+is a decision about time rather than about trust: the job cannot share the Alpine image
+the rest of the pipeline uses, so it pays for a large browser image and its own
+`npm ci` before the first test runs, on every push, for a suite whose value is
+occasional. **Run it locally before merging anything that touches a flow in section 7**
+— nothing in CI will tell you it broke.
 
 **Exit for a release:** the above, plus every scenario in section 7 run against the
 deployed backend, with each result written into [testfindings.md](testfindings.md).

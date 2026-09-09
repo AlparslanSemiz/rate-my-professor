@@ -203,6 +203,15 @@ The confirmed CI deployment path is the manual `web:deploy` job on `main`.
    - `$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA`
    - `$CI_REGISTRY_IMAGE:latest`
 
+### The end-to-end job
+
+`web:e2e` is `when: manual` and `allow_failure: true`, so it does not run on a push and
+cannot block anything. It needs no backend — it serves the panel from the in-browser
+mock — but it runs on `mcr.microsoft.com/playwright:v1.63.0-noble` rather than the
+Alpine image the other jobs share, so it pays for that image and a second `npm ci`
+before it starts. Start it from the pipeline view when a browser-level check is wanted;
+`npm run test:e2e` is the same suite locally.
+
 ### CI deployment
 
 `web:deploy`:

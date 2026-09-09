@@ -115,7 +115,10 @@ instead of a second one that only exists on developer machines.
   `chromium-1234`, say — sitting beside it is not a substitute and is not used; if
   both are present the suite still fails until 1243 is there. `PLAYWRIGHT_BROWSERS_PATH`
   overrides the location. CI does not install anything: the `web:e2e` job runs on the
-  `mcr.microsoft.com/playwright:v1.63.0-noble` image, which ships the matching browser.
+  `mcr.microsoft.com/playwright:v1.63.0-noble` image, which ships the matching browser —
+  and that job is **manual**, so it runs only when somebody starts it. Pulling a browser
+  image and running a second `npm ci` on every push cost more than the suite was worth
+  there. Run it locally instead; it needs no backend.
 
 ### Start the application
 

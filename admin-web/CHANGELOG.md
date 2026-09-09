@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+### The end-to-end job is manual now
+
+**`web:e2e` is `when: manual`.** It was already `allow_failure: true`, so it could
+never block a merge — but it still ran on every push, and its cost is paid before a
+single test does. It cannot share the Alpine image the rest of the pipeline uses, so
+each run pulls `mcr.microsoft.com/playwright:v1.63.0-noble` and performs its own
+`npm ci`. That is minutes on every pipeline for a suite whose value is occasional.
+
+**This is a decision about time, not about trust.** The suite is unchanged and still
+green; it is one click away in the pipeline view and `npm run test:e2e` is the same
+command locally.
+
+`allow_failure: true` is kept even though it is the default for a manual job. Spelling
+it out is what stops someone reading a later removal of `when: manual` as "and now it
+gates".
+
+**The cost, stated rather than buried:** nothing in CI will now tell you an end-to-end
+flow broke. `docs/testplan.md` §8 says so where the exit criteria are — run it locally
+before merging anything that touches a flow in §7.
+
+
 ### Making the documents true — the delivery pass
 
 No code, except one `package.json` script. The work was reconciling what the documents

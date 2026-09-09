@@ -114,7 +114,10 @@ afternoon: `~/.cache/ms-playwright` on Linux, `~/Library/Caches/ms-playwright` o
 macOS, `%USERPROFILE%\AppData\Local\ms-playwright` on Windows. Playwright **1.63**
 wants `chromium-1243`; a directory from an earlier version sitting beside it is not a
 substitute. CI installs nothing — the `web:e2e` job runs on the
-`mcr.microsoft.com/playwright:v1.63.0-noble` image.
+`mcr.microsoft.com/playwright:v1.63.0-noble` image, and that job is **manual**, so it
+runs only when somebody starts it. Pulling a browser image and running a second
+`npm ci` on every push cost more than the suite was worth there. Run it locally
+instead; it needs no backend.
 
 ```bash
 npm ci
