@@ -1,27 +1,28 @@
 import { MantineProvider } from '@mantine/core'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  auditLogsService,
-  type AuditLog,
-  type AuditMeta,
-} from '@/api/logs'
-import { ApiError } from '@/api/client'
+import { http } from 'msw'
+import { beforeEach, describe, expect, it } from 'vitest'
+import type { AuditLog, AuditMeta } from '@/api/logs'
+import { DEFAULT_PAGE_SIZE } from '@/api/client'
+import { apiUrl } from '@/test/msw/apiUrl'
+import { seedDb } from '@/test/msw/db'
+import { failure, ok } from '@/test/msw/envelope'
+import { requestsTo } from '@/test/msw/requests'
+import { server, startMockBackend } from '@/test/msw/server'
+import { without } from '@/test/msw/wire'
 import { withQueryClient } from '@/test/queryClient'
 import AuditLogsPage from './AuditLogsPage'
 
-vi.mock('@/api/logs', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@/api/logs')>()
-  return {
-    ...original,
-    auditLogsService: {
-      getLogs: vi.fn(),
-      getMeta: vi.fn(),
-      revert: vi.fn(),
-    },
-  }
-})
+/**
+ * The audit log over the real request layer.
+ *
+ * This screen is the one that filters and pages **server-side**, so what a test can prove
+ * about either is entirely about the query string it produced — and under a service mock that
+ * string was never built. "Applying a filter" was an assertion that a function had been called
+ * with an object; here it is the `q=` that went out.
+ */
+startMockBackend()
 
 const meta: AuditMeta = {
   actors: [{
@@ -91,11 +92,7 @@ function renderAuditLogs() {
 
 describe('Audit Logs page', () => {
   beforeEach(() => {
-    vi.mocked(auditLogsService.getMeta).mockResolvedValue(meta)
-    vi.mocked(auditLogsService.getLogs).mockResolvedValue({
-      auditLogs: [firstLog],
-      nextCursor: null,
-    })
+    seedDb({ auditMeta: meta, auditLogs: [firstLog] })
   })
 
   it('shows audit events and opens their before/after details', async () => {
@@ -122,41 +119,48 @@ describe('Audit Logs page', () => {
     await user.type(screen.getByRole('textbox', { name: 'Search' }), 'Alice')
     await user.click(screen.getByRole('button', { name: 'Apply filters' }))
 
-    await waitFor(() => {
-      expect(auditLogsService.getLogs).toHaveBeenLastCalledWith(expect.objectContaining({
-        q: 'Alice',
-      }))
-    })
+    await waitFor(() => expect(requestsTo('GET', '/api/audit-logs')).toHaveLength(2))
+    // The filter is a query parameter on a real request, not an argument to a double.
+    expect(requestsTo('GET', '/api/audit-logs').at(-1)?.path).toContain('q=Alice')
   })
 
   it('appends the next cursor page', async () => {
-    vi.mocked(auditLogsService.getLogs)
-      .mockResolvedValueOnce({ auditLogs: [firstLog], nextCursor: 'next-page' })
-      .mockResolvedValueOnce({ auditLogs: [secondLog], nextCursor: null })
+    // A full page and one more, because the handler really slices: with fewer entries than
+    // the page size there is no second page to append, and a mock that simply returned two
+    // canned responses proved the appending without anything having been paged.
+    const filler = Array.from({ length: DEFAULT_PAGE_SIZE - 1 }, (_, index) => ({
+      ...firstLog,
+      id: `audit-filler-${index}`,
+    }))
+    seedDb({ auditMeta: meta, auditLogs: [firstLog, ...filler, secondLog] })
     const user = userEvent.setup()
     renderAuditLogs()
 
     await user.click(await screen.findByRole('button', { name: 'Load more' }))
 
-    await waitFor(() => expect(auditLogsService.getLogs).toHaveBeenLastCalledWith({}, 'next-page'))
+    await waitFor(() => expect(requestsTo('GET', '/api/audit-logs')).toHaveLength(2))
+    // The cursor is the last id of the previous page, and the panel sends back what it was
+    // given rather than an offset it computed — which is the contract in ADR 0006.
+    expect(requestsTo('GET', '/api/audit-logs').at(-1)?.path).toContain(
+      `cursor=${filler.at(-1)?.id}`,
+    )
     expect(await screen.findByText('Admin User admin session')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument()
   })
 
   it('shows an empty state for filters with no matches', async () => {
-    vi.mocked(auditLogsService.getLogs).mockResolvedValue({
-      auditLogs: [],
-      nextCursor: null,
-    })
+    seedDb({ auditMeta: meta, auditLogs: [] })
     renderAuditLogs()
 
     expect(await screen.findByText('No audit events match these filters.')).toBeInTheDocument()
   })
 
   it('shows a retryable error when initial loading fails', async () => {
-    vi.mocked(auditLogsService.getLogs)
-      .mockRejectedValueOnce(new Error('Audit service unavailable'))
-      .mockResolvedValueOnce({ auditLogs: [firstLog], nextCursor: null })
+    server.use(
+      http.get(apiUrl('/audit-logs'), () => failure(503, 'Audit service unavailable'), {
+        once: true,
+      }),
+    )
     const user = userEvent.setup()
     renderAuditLogs()
 
@@ -167,7 +171,7 @@ describe('Audit Logs page', () => {
   })
 
   it('explains when the configured backend does not expose audit endpoints', async () => {
-    vi.mocked(auditLogsService.getLogs).mockRejectedValue(new ApiError(404, 'Not found'))
+    server.use(http.get(apiUrl('/audit-logs'), () => failure(404, 'Not found')))
     renderAuditLogs()
 
     expect(await screen.findByText(
@@ -176,10 +180,7 @@ describe('Audit Logs page', () => {
     expect(screen.queryByText('Not found')).not.toBeInTheDocument()
   })
   it('offers undo only where the backend says the entry can be undone', async () => {
-    vi.mocked(auditLogsService.getLogs).mockResolvedValue({
-      auditLogs: [firstLog, secondLog],
-      nextCursor: null,
-    })
+    seedDb({ auditMeta: meta, auditLogs: [firstLog, secondLog] })
     const user = userEvent.setup()
     renderAuditLogs()
 
@@ -194,7 +195,6 @@ describe('Audit Logs page', () => {
   })
 
   it('undoes a change and re-reads the log afterwards', async () => {
-    vi.mocked(auditLogsService.revert).mockResolvedValue({ success: true, message: 'Reverted' })
     const user = userEvent.setup()
     renderAuditLogs()
 
@@ -206,15 +206,87 @@ describe('Audit Logs page', () => {
     const confirmation = await screen.findByRole('dialog', { name: 'Undo this change' })
     await user.click(within(confirmation).getByRole('button', { name: 'Undo the change' }))
 
-    await waitFor(() => expect(auditLogsService.revert).toHaveBeenCalledWith('audit-1'))
+    await waitFor(() =>
+      expect(requestsTo('POST', '/api/audit-logs/audit-1/revert')).toHaveLength(1),
+    )
     // The response carries nothing but a message, so the list is the only place the result
     // of the undo can be read from.
-    await waitFor(() => expect(auditLogsService.getLogs).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(requestsTo('GET', '/api/audit-logs')).toHaveLength(2))
+  })
+
+  /**
+   * `F-021`. `changes` and `metadata` are open maps the panel walks with `Object.keys` and
+   * `Object.entries`, and `toAuditLog` fills in the three revert fields and stops there. An
+   * entry served without either key is not a detail-view problem: the row itself counts its
+   * changed fields, so one such entry takes down **every row of the table**.
+   *
+   * `docs/consumer-findings.md` C-08 asks the backend to always serve both, even empty. This
+   * is the panel's half of that — an entry type that legitimately has neither, a sign-in or a
+   * deletion, is exactly the kind of thing a serializer omits.
+   */
+  describe('an audit entry the backend served without its open maps', () => {
+    /** The wire shape, built here rather than in `db`, because the store is domain-typed. */
+    function serveEntry(entry: Record<string, unknown>) {
+      server.use(http.get(apiUrl('/audit-logs'), () => ok({ auditLogs: [entry], nextCursor: null })))
+    }
+
+    it('renders the table when an entry carries no changes', async () => {
+      serveEntry(without(firstLog, 'changes'))
+
+      renderAuditLogs()
+
+      // The row itself, not the badge text: `AuditLogRow` counts `Object.keys(log.changes)`
+      // to label the row, so the row existing is the assertion that the count survived.
+      expect(await screen.findByRole('row', {
+        name: 'Open audit event User Blocked by Admin User',
+      })).toBeInTheDocument()
+    })
+
+    it('renders the details when an entry carries no metadata', async () => {
+      const user = userEvent.setup()
+      serveEntry(without(firstLog, 'metadata'))
+
+      renderAuditLogs()
+
+      await user.click(await screen.findByRole('row', {
+        name: 'Open audit event User Blocked by Admin User',
+      }))
+
+      expect(within(await screen.findByRole('dialog')).getByText('Audit Event Details')).toBeInTheDocument()
+    })
+  })
+
+  /**
+   * `F-022`, measured and **deliberately not fixed**. `AuditEntry.actor` is declared non-null
+   * and read without a guard in four places, while `target` — nested identically, in the same
+   * type — is nullable and guarded at both of its. That asymmetry is what
+   * `docs/consumer-findings.md` C-07 is about.
+   *
+   * This test records what actually happens rather than asserting what should. The backend has
+   * since confirmed the actor columns are five `NOT NULL`s, so this is a **recorded risk, not a
+   * live defect** — and the fix, making the domain type nullable, is a TypeScript change that
+   * reaches every read site. `docs/TODO.md` carries it under the deferred list.
+   */
+  it('is measured, not fixed: an entry with no actor takes the whole table down', async () => {
+    const withoutActor = without(firstLog, 'actor')
+    server.use(http.get(apiUrl('/audit-logs'), () => ok({ auditLogs: [withoutActor], nextCursor: null })))
+
+    renderAuditLogs()
+
+    // Not "renders a dash": the table does not render at all. Pinned as it is, so that the day
+    // somebody makes the type nullable, this test tells them what they changed.
+    await waitFor(() =>
+      expect(screen.queryByRole('row', {
+        name: /Open audit event User Blocked/,
+      })).not.toBeInTheDocument()
+    )
   })
 
   it('explains a refused undo instead of reporting a generic failure', async () => {
-    vi.mocked(auditLogsService.revert).mockRejectedValue(
-      new ApiError(409, 'The value changed after this entry', 'VALUE_CHANGED'),
+    server.use(
+      http.post(apiUrl('/audit-logs/:id/revert'), () =>
+        failure(409, 'The value changed after this entry', 'VALUE_CHANGED'),
+      ),
     )
     const user = userEvent.setup()
     renderAuditLogs()
