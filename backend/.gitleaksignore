@@ -34,3 +34,38 @@
 #bf4a4764f0e19c01d73c35117f31f074fb58718c:testclient/TestClient.java:generic-api-key:24
 #c592ae5eac7a588e43540787c6f9ce07f485a8e6:testclient/TestClient.java:generic-api-key:24
 #8bc81ef83a4eb7e1d2d91fcbc3fdacf972fcd919:testclient/TestClient.java:generic-api-key:24
+
+# --- Found by .gitleaks.toml, which did not exist when the list above was written -----------
+#
+# These are the same kind of credential, in commits the rotation list in docs/TODO.md does not
+# name. The default rules never reported them: two are passwords whose punctuation the
+# generic-api-key value pattern cannot span, and one is in a MARKDOWN file, which nobody had
+# thought to read. That is the "floor, not a ceiling" line in docs/TODO.md turned around --
+# the reading found three the scanner missed, and the scanner has now found three the reading
+# missed.
+#
+# Same rule as above: uncomment one only after the credential behind it is rotated AT ITS
+# PROVIDER, with the date.
+
+# spring.datasource.password, in a DOCUMENT rather than a properties file. BackEndStructure.md
+# was a design note; the password went into it as an illustration of the config. Rotate the
+# database password.
+#214ff090f1c0aaf8026a40da312e5f74bda0b3db:BackEndStructure.md:pse-known-credential-property:153
+
+# spring.mail.password, an earlier commit than the 245174c the list records. Same SMTP account,
+# so it retires with that one -- but it means the value was public for longer than the list says.
+#8bc81ef83a4eb7e1d2d91fcbc3fdacf972fcd919:src/main/resources/application.properties:pse-known-credential-property:6
+
+# spring.datasource.password again, bare rather than in a ${...} placeholder. docs/TODO.md
+# records the placeholder-with-a-default case and calls it "not certainly live"; this is the
+# other one, and it is a plain assignment.
+#d4cdbde03517937b1ce2584a0a003e966d7a2cb7:src/main/resources/application.properties:pse-known-credential-property:8
+
+# The four in 245174c that the new rules see and generic-api-key did not. These are the same
+# credentials the list above already names -- the ipinfo token, the Geoapify key, and the two
+# account passwords in comments -- so they retire WITH their existing lines, not separately.
+# They are here because a fingerprint is per rule: silencing generic-api-key leaves these.
+#245174c45af709dd4007199fdec2a3e7aa750797:src/main/resources/application.properties:pse-known-credential-property:23
+#245174c45af709dd4007199fdec2a3e7aa750797:src/main/resources/application.properties:pse-credential-in-a-comment:24
+#245174c45af709dd4007199fdec2a3e7aa750797:src/main/resources/application.properties:pse-credential-in-a-comment:26
+#245174c45af709dd4007199fdec2a3e7aa750797:src/main/resources/application.properties:pse-known-credential-property:28
