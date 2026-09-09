@@ -1,52 +1,36 @@
 import { MantineProvider } from '@mantine/core'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  answersService,
-  commentsService,
-  type ManagedAnswer,
-  type ManagedComment,
-  type ReportedAnswer,
-  type ReportedComment,
+import { http } from 'msw'
+import { beforeEach, describe, expect, it } from 'vitest'
+import type {
+  ManagedAnswer,
+  ManagedComment,
+  ReportedAnswer,
+  ReportedComment,
 } from '@/api/moderation'
 import { AuthProvider } from '@/context/AuthContext'
 import { withQueryClient } from '@/test/queryClient'
+import { apiUrl } from '@/test/msw/apiUrl'
+import { seedDb } from '@/test/msw/db'
+import { failure, ok } from '@/test/msw/envelope'
+import { setSessionUser } from '@/test/msw/handlers/auth'
+import { requestTo, requestsTo } from '@/test/msw/requests'
+import { server, startMockBackend } from '@/test/msw/server'
+import { without } from '@/test/msw/wire'
 import CommentsPage from './CommentsPage'
 
-vi.mock('@/api/auth', () => ({
-  authService: {
-    me: vi.fn().mockResolvedValue({ success: true, message: 'Signed in' }),
-  },
-}))
-
-// Comments and answers are one package now, so they are one mock. Both services carry the
-// same six methods: they are the same class with a different noun.
-vi.mock('@/api/moderation', () => {
-  const moderationService = () => ({
-    getAll: vi.fn(),
-    getReported: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    updateStatus: vi.fn(),
-    deleteReport: vi.fn(),
-  })
-  return { commentsService: moderationService(), answersService: moderationService() }
-})
-
-vi.mock('@/api/users', () => ({
-  usersService: {
-    getById: vi.fn(),
-    getWarnings: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    block: vi.fn(),
-    unblock: vi.fn(),
-    warn: vi.fn(),
-    updateWarning: vi.fn(),
-    deleteWarning: vi.fn(),
-  },
-}))
+/**
+ * The reference slice for MSW — see `docs/adr/0009-msw-slice-by-slice.md`.
+ *
+ * Nothing here replaces a service module. The page's real services run, `ApiClient` builds
+ * real requests, and a handler answers them, so these tests assert the path, the method and
+ * the body the screen actually produces. Under `vi.mock` none of those existed to assert.
+ *
+ * Comments is the right slice for it: it is the only screen driven through a `ModerationApi`
+ * over *two* services, so a handler that gets the envelope wrong breaks it twice.
+ */
+startMockBackend()
 
 const authUser = {
   id: 'admin-1',
@@ -160,19 +144,13 @@ async function chooseActionTaken(user: ReturnType<typeof userEvent.setup>, selec
 
 describe('Comments page', () => {
   beforeEach(() => {
-    vi.mocked(commentsService.getAll).mockResolvedValue(comments)
-    vi.mocked(commentsService.getReported).mockResolvedValue(reports)
-    vi.mocked(commentsService.update).mockResolvedValue({ success: true, message: 'Updated' })
-    vi.mocked(commentsService.delete).mockResolvedValue({ success: true, message: 'Deleted' })
-    vi.mocked(commentsService.updateStatus).mockResolvedValue({ success: true, message: 'Updated' })
-    vi.mocked(commentsService.deleteReport).mockResolvedValue({ success: true, message: 'Deleted' })
-
-    vi.mocked(answersService.getAll).mockResolvedValue(answers)
-    vi.mocked(answersService.getReported).mockResolvedValue(answerReports)
-    vi.mocked(answersService.update).mockResolvedValue({ success: true, message: 'Updated' })
-    vi.mocked(answersService.delete).mockResolvedValue({ success: true, message: 'Deleted' })
-    vi.mocked(answersService.updateStatus).mockResolvedValue({ success: true, message: 'Updated' })
-    vi.mocked(answersService.deleteReport).mockResolvedValue({ success: true, message: 'Deleted' })
+    seedDb({ comments, answers, commentReports: reports, answerReports })
+    setSessionUser({
+      id: authUser.id,
+      username: authUser.name,
+      kitEmail: authUser.email,
+      role: authUser.role,
+    })
   })
 
   it('lists every comment and filters them by text, author, or lecture', async () => {
@@ -223,11 +201,12 @@ describe('Comments page', () => {
     await user.type(textarea, 'Corrected text')
     await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
 
-    await waitFor(() => {
-      expect(commentsService.update).toHaveBeenCalledWith('comment-1', {
-        content: 'Corrected text',
-      })
-    })
+    await waitFor(() => expect(requestsTo('PATCH', '/api/comments/comment-1')).toHaveLength(1))
+    const request = requestTo('PATCH', '/api/comments/comment-1')
+    // Only the field that changed. The status was not touched, so it is not sent — an empty
+    // body is refused and an unchanged field still writes an audit entry.
+    expect(request.body).toEqual({ content: 'Corrected text' })
+    expect(request.authorization).toBe('Bearer admin-token')
   })
 
   it('deletes a comment only after the confirmation is accepted', async () => {
@@ -238,7 +217,9 @@ describe('Comments page', () => {
     const dialog = await screen.findByRole('dialog')
     await user.click(within(dialog).getByRole('button', { name: 'Delete permanently' }))
 
-    await waitFor(() => expect(commentsService.delete).toHaveBeenCalledWith('comment-1'))
+    await waitFor(() => expect(requestsTo('DELETE', '/api/comments/comment-1')).toHaveLength(1))
+    // The comment is addressed, not the report about it — different paths, different acts.
+    expect(requestsTo('DELETE', '/api/comments/reported/report-1')).toHaveLength(0)
   })
 
   it('opens the editor when the row itself is pressed', async () => {
@@ -307,10 +288,13 @@ describe('Comments page', () => {
     await user.type(textarea, 'Corrected answer')
     await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
 
-    await waitFor(() => {
-      expect(answersService.update).toHaveBeenCalledWith('answer-1', { content: 'Corrected answer' })
+    await waitFor(() => expect(requestsTo('PATCH', '/api/answers/answer-1')).toHaveLength(1))
+    expect(requestTo('PATCH', '/api/answers/answer-1').body).toEqual({
+      content: 'Corrected answer',
     })
-    expect(commentsService.update).not.toHaveBeenCalled()
+    // Routed to `/answers`, not `/comments`. Under a service mock this asserted that one
+    // double was called and another was not; here it asserts the path that went out.
+    expect(requestsTo('PATCH', '/api/comments/comment-1')).toHaveLength(0)
   })
 
   it('filters reports by comment, user, or report text', async () => {
@@ -337,15 +321,62 @@ describe('Comments page', () => {
     })
     await chooseActionTaken(user, statusSelect)
 
-    await waitFor(() => {
-      expect(commentsService.updateStatus).toHaveBeenCalledWith('report-1', 'ACTION_TAKEN')
+    await waitFor(() =>
+      expect(requestsTo('PATCH', '/api/comments/reported/report-1')).toHaveLength(1),
+    )
+    expect(requestTo('PATCH', '/api/comments/reported/report-1').body).toEqual({
+      status: 'ACTION_TAKEN',
     })
     // ACTION_TAKEN hides the comment, so both lists are re-read rather than patched locally.
-    await waitFor(() => expect(commentsService.getAll).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(requestsTo('GET', '/api/comments')).toHaveLength(2))
+    // And the content really is hidden now. The handler applies the rule the backend does, so
+    // coming back to the content tab shows a second hidden comment — one was hidden already,
+    // and Alice's has just joined it. Under a service mock this could not be checked at all:
+    // nothing was re-read, so nothing could have changed.
+    await user.click(screen.getByRole('tab', { name: /All comments/ }))
+    const row = await screen.findByLabelText('Edit comment by Alice Smith')
+    await waitFor(() => expect(within(row).getByText('Hidden')).toBeInTheDocument())
+  })
+
+  it('restores the content when a report moves to any status other than ACTION_TAKEN', async () => {
+    // The other half of the rule, and the half no test covered: `ACTION_TAKEN` hides content
+    // and *every other status puts it back*. It is documented as a decision in
+    // `ReportsService` and implemented in the backend, so the only way to check it is to make
+    // a real request and read what the next one returns.
+    seedDb({
+      comments: [{ ...comments[0], status: 'HIDDEN' }],
+      answers: [],
+      commentReports: [{ ...reports[0], status: 'ACTION_TAKEN' }],
+      answerReports: [],
+    })
+    const user = userEvent.setup()
+    renderComments()
+    await openReportsTab(user)
+
+    const statusSelect = await screen.findByRole('combobox', {
+      name: 'Status for report by Alice Smith',
+    })
+    // Driven by keyboard rather than by clicking the option: the filter above the table
+    // offers the same four statuses, so `getByRole('option', …)` matches twice. Navigation
+    // starts from the current value, which is ACTION_TAKEN, so one step up is Dismissed.
+    await user.click(statusSelect)
+    await user.keyboard('{ArrowUp}{Enter}')
+
+    await waitFor(() =>
+      expect(requestTo('PATCH', '/api/comments/reported/report-1').body).toEqual({
+        status: 'DISMISSED',
+      }),
+    )
+
+    await user.click(screen.getByRole('tab', { name: /All comments/ }))
+    const row = await screen.findByLabelText('Edit comment by Alice Smith')
+    await waitFor(() => expect(within(row).getByText('Visible')).toBeInTheDocument())
   })
 
   it('shows an error and keeps the report when an update fails', async () => {
-    vi.mocked(commentsService.updateStatus).mockRejectedValue(new Error('Update rejected'))
+    server.use(
+      http.patch(apiUrl('/comments/reported/:id'), () => failure(500, 'Update rejected')),
+    )
     const user = userEvent.setup()
     renderComments()
     await openReportsTab(user)
@@ -370,8 +401,12 @@ describe('Comments page', () => {
     const dialog = await screen.findByRole('dialog')
     await user.click(within(dialog).getByRole('button', { name: 'Withdraw report' }))
 
-    await waitFor(() => expect(commentsService.deleteReport).toHaveBeenCalledWith('report-1'))
-    expect(commentsService.update).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(requestsTo('DELETE', '/api/comments/reported/report-1')).toHaveLength(1),
+    )
+    // The report is withdrawn; the comment is not touched at all.
+    expect(requestsTo('PATCH', '/api/comments/comment-1')).toHaveLength(0)
+    expect(requestsTo('DELETE', '/api/comments/comment-1')).toHaveLength(0)
   })
 
   it('edits the reported comment from the reports tab', async () => {
@@ -395,12 +430,12 @@ describe('Comments page', () => {
     await user.type(dialog.getByRole('textbox', { name: 'Text' }), 'Rewritten by an admin')
     await user.click(dialog.getByRole('button', { name: 'Save changes' }))
 
-    // Addressed by the comment's id, which is not the report's id.
-    await waitFor(() =>
-      expect(commentsService.update).toHaveBeenCalledWith('comment-1', {
-        content: 'Rewritten by an admin',
-      }),
-    )
+    // Addressed by the comment's id, which is not the report's id — and now that is a path
+    // rather than an argument, so getting it wrong would be a request to `/comments/report-1`.
+    await waitFor(() => expect(requestsTo('PATCH', '/api/comments/comment-1')).toHaveLength(1))
+    expect(requestTo('PATCH', '/api/comments/comment-1').body).toEqual({
+      content: 'Rewritten by an admin',
+    })
   })
 
   it('deletes the reported answer from the reports tab', async () => {
@@ -414,15 +449,17 @@ describe('Comments page', () => {
     const dialog = await screen.findByRole('dialog')
     await user.click(within(dialog).getByRole('button', { name: 'Delete permanently' }))
 
-    await waitFor(() => expect(answersService.delete).toHaveBeenCalledWith('answer-1'))
+    await waitFor(() => expect(requestsTo('DELETE', '/api/answers/answer-1')).toHaveLength(1))
     // The content was deleted, not the report withdrawn — different addresses, different acts.
-    expect(answersService.deleteReport).not.toHaveBeenCalled()
+    expect(requestsTo('DELETE', '/api/answers/reported/answer-report-1')).toHaveLength(0)
   })
 
   it('shows a load error and retries the request', async () => {
-    vi.mocked(commentsService.getReported)
-      .mockRejectedValueOnce(new Error('Backend unavailable'))
-      .mockResolvedValue(reports)
+    server.use(
+      http.get(apiUrl('/comments/reported'), () => failure(503, 'Backend unavailable'), {
+        once: true,
+      }),
+    )
     const user = userEvent.setup()
     renderComments()
 
@@ -430,6 +467,31 @@ describe('Comments page', () => {
     await user.click(screen.getByRole('button', { name: 'Try again' }))
 
     expect(await screen.findByText('Reported text')).toBeInTheDocument()
-    expect(commentsService.getReported).toHaveBeenCalledTimes(2)
+    expect(requestsTo('GET', '/api/comments/reported')).toHaveLength(2)
+  })
+
+  /**
+   * `F-022`, measured and **deliberately not fixed** — the moderation half of the same
+   * asymmetry as the audit log's actor. `ModeratedItem.author` is declared non-null and read
+   * without a guard in four places, while `ratingMapper` and `userWarningMapper` both defend
+   * theirs. `docs/consumer-findings.md` C-07.
+   *
+   * The fix is a nullable domain type reaching every read site, which is not a change to make
+   * on the last day. Recorded as a risk in `docs/TODO.md`; this test says what the risk *is*
+   * rather than leaving it as prose.
+   */
+  it('is measured, not fixed: a comment with no author takes the table down', async () => {
+    const withoutAuthor = without(comments[0], 'author')
+    server.use(
+      http.get(apiUrl('/comments'), () => ok({ comments: [withoutAuthor] })),
+    )
+
+    renderComments()
+
+    // The row never arrives. `ContentRow` reads `item.author.name` into its accessible label,
+    // so the throw happens before anything is painted — this is not a missing cell.
+    await waitFor(() =>
+      expect(screen.queryByText('Reported text')).not.toBeInTheDocument()
+    )
   })
 })
