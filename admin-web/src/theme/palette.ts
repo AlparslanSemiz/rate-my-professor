@@ -1,4 +1,4 @@
-import { createTheme, type MantineColorsTuple } from '@mantine/core'
+import type { MantineColorsTuple } from '@mantine/core'
 
 /**
  * KIT's own colours, softened for a dark interface.
@@ -13,7 +13,7 @@ import { createTheme, type MantineColorsTuple } from '@mantine/core'
  * `KIT_PALETTE` in `src/constants/colors.ts` holds shade 3 of each ramp for the places that
  * take a colour as a plain string — stat-card accents, severity bars, section colours.
  */
-const kitColors: Record<string, MantineColorsTuple> = {
+export const kitColors: Record<string, MantineColorsTuple> = {
   // KIT-Grün #009682 — the primary.
   green: ['#dbf0ee', '#b8e2dc', '#8fd1c8', '#66c0b4', '#42b1a2', '#1fa391', '#009682', '#027b6c', '#046257', '#064b44'],
   // Maigrün #77A200.
@@ -35,29 +35,3 @@ const kitColors: Record<string, MantineColorsTuple> = {
   dark: ['#c9d1d9', '#adb5c0', '#8a93a1', '#6b7482', '#474e5a', '#2f3540', '#232935', '#171b23', '#12151c', '#0b0d12'],
   gray: ['#eef0f2', '#dde0e4', '#c3c8cf', '#a4abb5', '#858d99', '#6b7482', '#586170', '#464e5b', '#373e49', '#2b313a'],
 }
-
-export const theme = createTheme({
-  primaryColor: 'green',
-  // Filled surfaces have to carry white text; the pastel end of the ramp cannot. Shade 7 in
-  // dark mode keeps a primary button readable while badges stay soft.
-  primaryShade: { light: 6, dark: 7 },
-  defaultRadius: 'md',
-  fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-  headings: {
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-    fontWeight: '650',
-  },
-  radius: {
-    xs: '6px',
-    sm: '9px',
-    md: '12px',
-    lg: '16px',
-    xl: '22px',
-  },
-  shadows: {
-    sm: '0 1px 2px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.14)',
-    md: '0 1px 2px rgba(0,0,0,0.35), 0 10px 28px rgba(0,0,0,0.16)',
-    lg: '0 2px 4px rgba(0,0,0,0.4), 0 18px 44px rgba(0,0,0,0.28)',
-  },
-  colors: kitColors,
-})

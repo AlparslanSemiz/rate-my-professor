@@ -1,5 +1,5 @@
-import type { ContentStatus, ReportReason, ReportStatus, Severity } from '../domain/moderation'
-import type { UserRole, UserStatus } from '../domain/user'
+import type { ContentStatus, ReportReason, ReportStatus, Severity } from '@/domain/moderation'
+import type { UserRole, UserStatus } from '@/domain/user'
 import { routes } from './routes'
 
 /**
@@ -32,6 +32,13 @@ export const KIT = {
   /** For a value that carries no state of its own. */
   neutral: '#6b7482',
 } as const
+
+/**
+ * KIT-Grün exactly as the institute publishes it, for the one place that needs the
+ * unsoftened value: the gradient on the page-header accent bar, which runs from the pastel
+ * `KIT.green` down to this. Everywhere else uses the ramp in `src/theme/palette.ts`.
+ */
+export const KIT_GREEN_PUBLISHED = '#009682'
 
 /**
  * The colour a section is drawn in, keyed by its route. The dashboard's module cards, its

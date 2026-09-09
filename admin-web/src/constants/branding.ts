@@ -1,4 +1,4 @@
-import logoUrl from '../assets/ic_launcher-playstore.png'
+import logoUrl from '@/assets/ic_launcher-playstore.png'
 
 /**
  * The product's name and mark, in one place. The panel and the student app are the same
