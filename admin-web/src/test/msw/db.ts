@@ -4,6 +4,8 @@ import type {
   ReportedAnswer,
   ReportedComment,
 } from '@/api/moderation'
+import type { Lecture, Professor } from '@/api/catalog'
+import type { BackendRating } from '@/api/catalog/ratingTypes'
 import type { BugReport } from '@/api/feedback'
 import type { AuditLog, AuditMeta } from '@/api/logs'
 import type { SystemStatus } from '@/api/system'
@@ -27,6 +29,14 @@ export interface MswDb {
   answerReports: ReportedAnswer[]
   users: User[]
   warnings: Record<string, Warning[]>
+  lectures: Lecture[]
+  professors: Professor[]
+  /**
+   * Stored as the backend serves them, not as `toRating` leaves them: the author is nested
+   * and `scores` may be absent, and a store holding the flattened shape could not serve
+   * either. This is the one collection where the wire type is the honest one.
+   */
+  ratings: BackendRating[]
   auditLogs: AuditLog[]
   auditMeta: AuditMeta | null
   bugReports: BugReport[]
@@ -44,6 +54,9 @@ function emptyDb(): MswDb {
     answerReports: [],
     users: [],
     warnings: {},
+    lectures: [],
+    professors: [],
+    ratings: [],
     auditLogs: [],
     auditMeta: null,
     bugReports: [],

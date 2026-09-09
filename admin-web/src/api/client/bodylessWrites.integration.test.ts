@@ -93,6 +93,12 @@ describe('the writes that carry no body', () => {
 
     // Absent, not empty. A backend that rejects an absent `Content-Type` on a POST or PATCH
     // would fail all five of these, and `POST /auth/logout` would fail silently.
+    //
+    // The header claim is no longer only these five: `src/api/callSurface.integration.test.ts`
+    // carries a `Content-Type` expectation for **every** call the panel can make, so a write
+    // that started sending one, or a read that stopped, is caught there too. These five stay
+    // because the file's other half — what a `415` on each of them does — has no equivalent
+    // in a sweep that only looks at requests.
     expect(requestTo(method, `${BASE}${path}`).contentType).toBeNull()
   })
 
