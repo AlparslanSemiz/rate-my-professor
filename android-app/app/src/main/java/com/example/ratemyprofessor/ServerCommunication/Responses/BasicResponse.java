@@ -7,7 +7,7 @@ package com.example.ratemyprofessor.ServerCommunication.Responses;
  * server (HTTP 200) and still be rejected by it, in which case {@code success} is false and
  * {@code message} explains why.</p>
  *
- * @param message a human readable explanation, mostly relevant when the action failed
+ * @param message a human-readable explanation, mostly relevant when the action failed
  * @param success whether the action was carried out
  */
 public record BasicResponse (

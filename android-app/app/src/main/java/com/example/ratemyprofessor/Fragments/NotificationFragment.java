@@ -31,7 +31,7 @@ import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsRespons
 
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Calendar;
+
 import java.util.Date;
 import java.util.List;
 
@@ -80,11 +80,11 @@ public class NotificationFragment extends Fragment {
                 session.bearerToken()
         );
 
-        notificationsCall.enqueue(new Callback<NotificationsResponse>() {
+        notificationsCall.enqueue(new Callback<>() {
             @Override
             public void onResponse(
-                    Call<NotificationsResponse> call,
-                    Response<NotificationsResponse> response
+                    @NonNull Call<NotificationsResponse> call,
+                    @NonNull Response<NotificationsResponse> response
             ) {
                 if (binding == null) {
                     return;
@@ -118,15 +118,12 @@ public class NotificationFragment extends Fragment {
 
                 showNotifications(notifications);
 
-//                if (!notifications.isEmpty()) {
-//                    //markNotificationsAsSeen();
-//                }
             }
 
             @Override
             public void onFailure(
-                    Call<NotificationsResponse> call,
-                    Throwable throwable
+                    @NonNull Call<NotificationsResponse> call,
+                    @NonNull Throwable throwable
             ) {
                 if (call.isCanceled() || binding == null) {
                     return;
@@ -274,17 +271,17 @@ public class NotificationFragment extends Fragment {
 
 
         apiService.markNotificationsAsSeen(token, notification.notificationId)
-                .enqueue(new Callback<BasicResponse>() {
+                .enqueue(new Callback<>() {
                     @Override
                     public void onResponse(
-                            Call<BasicResponse> call,
-                            Response<BasicResponse> response
+                            @NonNull Call<BasicResponse> call,
+                            @NonNull Response<BasicResponse> response
                     ) {
                         BasicResponse body = response.body();
 
                         if (!response.isSuccessful()
-                            || body == null
-                            || !body.success()) {
+                                || body == null
+                                || !body.success()) {
 
                             Log.w(TAG, "Notifications could not be marked as seen " + response.code());
                             return;
@@ -307,8 +304,8 @@ public class NotificationFragment extends Fragment {
 
                     @Override
                     public void onFailure(
-                            Call<BasicResponse> call,
-                            Throwable throwable
+                            @NonNull Call<BasicResponse> call,
+                            @NonNull Throwable throwable
                     ) {
                         Log.e(TAG, "Could not mark notifications as seen", throwable);
                     }
@@ -317,9 +314,9 @@ public class NotificationFragment extends Fragment {
     private void loadAndOpenCommentThread(String lectureId, String commentId) {
         commentThreadCall = apiService.getComments(lectureId);
 
-        commentThreadCall.enqueue(new Callback<CommentsResponse>() {
+        commentThreadCall.enqueue(new Callback<>() {
             @Override
-            public void onResponse(Call<CommentsResponse> call, Response<CommentsResponse> response) {
+            public void onResponse(@NonNull Call<CommentsResponse> call, @NonNull Response<CommentsResponse> response) {
                 if (!isAdded()) {
                     return;
                 }
@@ -346,8 +343,8 @@ public class NotificationFragment extends Fragment {
 
             @Override
             public void onFailure(
-                    Call<CommentsResponse> call,
-                    Throwable throwable
+                    @NonNull Call<CommentsResponse> call,
+                    @NonNull Throwable throwable
             ) {
                 if (call.isCanceled() || !isAdded()) {
                     return;

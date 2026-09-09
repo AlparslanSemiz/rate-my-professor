@@ -5,6 +5,7 @@ import static android.view.View.INVISIBLE;
 import android.content.Context;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -33,6 +34,7 @@ import com.example.ratemyprofessor.databinding.ItemCommentBinding;
 import com.example.ratemyprofessor.logic.CommentHelper;
 
 import java.util.List;
+import java.util.Objects;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -45,8 +47,7 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
 
     private Comment comment;
     private FragmentReplyBinding binding;
-    private RecyclerView answerList;
-    private APIService apiService;
+    private final APIService apiService;
 
     public ReplyFragment() {
         apiService = RetrofitClient.getClient().create(APIService.class);
@@ -63,18 +64,18 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         binding = FragmentReplyBinding.inflate(inflater, container, false);
-        answerList = binding.answerList;
+        RecyclerView answerList = binding.answerList;
         ItemCommentBinding mainComment = binding.mainComment;
         binding.backButton.setOnClickListener(v ->
                 getParentFragmentManager().popBackStack()
         );
 
         if (comment.profilePicture() != null) {
-            Glide.with(getContext())
+            Glide.with(requireContext())
                     .load(comment.profilePicture().replaceFirst("svg", "png"))
                     .into(mainComment.profilePicture);
         }
@@ -87,11 +88,9 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         binding.cancelReply.setVisibility(INVISIBLE);
         binding.submitReply.setEnabled(false);
 
-        binding.inputReply.setOnFocusChangeListener((view, hasFocus) -> {
-            binding.cancelReply.setVisibility(
-                    hasFocus ? View.VISIBLE : View.INVISIBLE
-            );
-        });
+        binding.inputReply.setOnFocusChangeListener((view, hasFocus) -> binding.cancelReply.setVisibility(
+                hasFocus ? View.VISIBLE : View.INVISIBLE
+        ));
         binding.inputReply.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence text, int start, int count, int after) {
@@ -166,9 +165,9 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         String token = LoginSession.from(requireContext()).bearerToken();
         binding.submitReply.setEnabled(false);
         apiService.postAnswer(token, new SubmitAnswerRequest(commentId, trimmedReply))
-                .enqueue(new Callback<BasicResponse>() {
+                .enqueue(new Callback<>() {
                     @Override
-                    public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                    public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
                         if (!isAdded() || binding == null) {
                             return;
                         }
@@ -188,7 +187,7 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
                     }
 
                     @Override
-                    public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                    public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {
                         if (!isAdded() || binding == null) {
                             return;
                         }

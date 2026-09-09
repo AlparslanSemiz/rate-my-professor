@@ -159,8 +159,7 @@ public interface SearchService {
             "lectures.semesterYear = :semesterYear AND lectures.semesterSeason = :season")
     List<Lecture> getLecture(String professorId, String lectureTitle, int semesterYear, SemesterSeason season);
 
-    //@Query("UPDATE lectures SET professorId = '748d6383-5dd6-42f1-a797-77f304beb3fb' WHERE id = 'bd9dd15d-bc13-4630-a2d1-ac76f542124d'")
-    //void fillMissingData();
+
 
     @Insert
     void insertComment(CommentModel comment);

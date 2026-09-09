@@ -2,7 +2,7 @@ package com.example.ratemyprofessor.DomainModel;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
-import androidx.room.ForeignKey;
+
 
 /**
  * The rating one user gave to one lecture offering.
@@ -13,11 +13,6 @@ import androidx.room.ForeignKey;
  */
 @Entity(tableName = "ratings",
        primaryKeys = {"lectureID", "rater", "category"}
-//        foreignKeys = @ForeignKey(
-//                entity = Lecture.class,
-//                parentColumns = "id",
-//                childColumns = "lectureID"
-//        )
 )
 public class Rating {
     @NonNull
@@ -28,7 +23,7 @@ public class Rating {
     @NonNull
     public Rater rater;
 
-    public Rating (String lectureID, RatingCategory category, double score, Rater rater) {
+    public Rating (@NonNull String lectureID, @NonNull RatingCategory category, double score, @NonNull Rater rater) {
         this.lectureID = lectureID;
         this.category = category;
         this.score = score;

@@ -9,6 +9,7 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.ratemyprofessor.R;
@@ -37,19 +38,17 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
 
     private static final String TAG = "login response ___";
 
-    private Button continueButton;
     private EditText tokenInput;
-    private ActivityEnterAuthTokenBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        binding = ActivityEnterAuthTokenBinding.inflate(getLayoutInflater());
+        ActivityEnterAuthTokenBinding binding = ActivityEnterAuthTokenBinding.inflate(getLayoutInflater());
         View view = binding.getRoot();
         setContentView(view);
 
-        continueButton = binding.enterButton;
+        Button continueButton = binding.enterButton;
         tokenInput = binding.codeInput;
 
         continueButton.setOnClickListener(v -> submitToken(tokenInput.getText().toString()));
@@ -82,7 +81,7 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
         } else {
             call.enqueue(new Callback<>() {
                 @Override
-                public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                public void onResponse(@NonNull Call<ServerResponse> call, @NonNull Response<ServerResponse> response) {
                     ServerResponse body = response.body();
 
                     // A rejected login comes back without a body, so it has to be checked before
@@ -110,7 +109,7 @@ public class EnterAuthTokenActivity extends AppCompatActivity {
                 }
 
                 @Override
-                public void onFailure(Call<ServerResponse> call, Throwable t) {
+                public void onFailure(@NonNull Call<ServerResponse> call,@NonNull Throwable t) {
                     Log.e(TAG, "login failed: " + t);
                     Toast.makeText(
                             EnterAuthTokenActivity.this,

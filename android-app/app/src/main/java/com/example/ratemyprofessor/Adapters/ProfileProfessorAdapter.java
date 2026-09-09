@@ -8,7 +8,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.ratemyprofessor.DomainModel.Professor;
-import com.example.ratemyprofessor.R;
+
 import com.example.ratemyprofessor.databinding.ItemProfNameSmallBinding;
 
 import java.util.List;

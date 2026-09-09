@@ -1,7 +1,6 @@
 package com.example.ratemyprofessor.Fragments;
 
 import static android.view.View.INVISIBLE;
-import static android.view.View.resolveSize;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -28,7 +27,6 @@ import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.CommentModel;
 import com.example.ratemyprofessor.DomainModel.CommentType;
 import com.example.ratemyprofessor.DomainModel.Lecture;
-import com.example.ratemyprofessor.DomainModel.LectureType;
 import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.Rater;
 import com.example.ratemyprofessor.DomainModel.Rating;
@@ -47,7 +45,6 @@ import com.example.ratemyprofessor.ServerCommunication.Responses.LectureDetailRe
 import com.example.ratemyprofessor.ServerCommunication.Responses.LectureResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorDetailResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingAverageResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoriesResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoryResponse;
@@ -64,6 +61,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -124,7 +122,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         binding = FragmentRatingsBinding.inflate(inflater, container, false);
@@ -136,11 +134,9 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         binding.cancelComment.setVisibility(INVISIBLE);
         binding.submitComment.setEnabled(false);
 
-        binding.inputComment.setOnFocusChangeListener((view, hasFocus) -> {
-            binding.cancelComment.setVisibility(
-                    hasFocus ? View.VISIBLE : View.INVISIBLE
-            );
-        });
+        binding.inputComment.setOnFocusChangeListener((view, hasFocus) -> binding.cancelComment.setVisibility(
+                hasFocus ? View.VISIBLE : View.INVISIBLE
+        ));
 
 
         getComments();
@@ -255,9 +251,9 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         }
 
         Call<CommentsResponse> commentsResponseCall = apiService.getComments(lecture.id);
-        commentsResponseCall.enqueue(new Callback<CommentsResponse>() {
+        commentsResponseCall.enqueue(new Callback<>() {
             @Override
-            public void onResponse(Call<CommentsResponse> call, Response<CommentsResponse> response) {
+            public void onResponse(@NonNull Call<CommentsResponse> call, @NonNull Response<CommentsResponse> response) {
                 CommentsResponse body = response.body();
                 if (!response.isSuccessful() || body == null || body.comments() == null) {
                     Log.d(TAG, "couldn't get the comments");
@@ -276,7 +272,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             }
 
             @Override
-            public void onFailure(Call<CommentsResponse> call, Throwable throwable) {
+            public void onFailure(@NonNull Call<CommentsResponse> call, @NonNull Throwable throwable) {
                 Log.d(TAG, "couldn't get the comments: " + throwable.getMessage());
             }
         });
@@ -322,15 +318,15 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             commentInput.getText().clear();
             commentInput.clearFocus();
             InputMethodManager imm =
-                    (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                    (InputMethodManager) requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.hideSoftInputFromWindow(commentInput.getWindowToken(), 0);
 
             if (!AuthManager.getInstance().isLoggedIn()) {
                 Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
             } else {
-                apiService.postComment(token, request).enqueue(new Callback<ServerResponse>() {
+                apiService.postComment(token, request).enqueue(new Callback<>() {
                     @Override
-                    public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                    public void onResponse(@NonNull Call<ServerResponse> call, @NonNull Response<ServerResponse> response) {
                         if (!response.isSuccessful()) {
                             showToast("Your comment couldn't be sent.");
                             return;
@@ -339,7 +335,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                     }
 
                     @Override
-                    public void onFailure(Call<ServerResponse> call, Throwable throwable) {
+                    public void onFailure(@NonNull Call<ServerResponse> call, @NonNull Throwable throwable) {
                         showToast("Your comment couldn't be sent.");
                     }
                 });
@@ -354,7 +350,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
      *
      * @param lecture the offering the averages are loaded for
      */
-    public void insertAverageRatings(Lecture lecture) {
+    private void insertAverageRatings(Lecture lecture) {
         Call<RatingAverageResponse> ratingCall = apiService.getRatings(lecture.id);
         Log.d(TAG, "loading ratings for id: " + lecture.id);
 
@@ -363,24 +359,21 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
         if (!AuthManager.getInstance().isLoggedIn()) {
             Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
-            executorService.execute(new Runnable() {
-                @Override
-                public void run() {
-                    List<Rating> ratings = searchService.getLectureRatings(lecture.id, Rater.AVERAGE);
-                    List<TopicAverageResponse> topicRatings = new ArrayList<>();
-                    for (Rating rating : ratings) {
-                        if (!rating.category.equals(RatingCategory.OVERALL)) {
-                            topicRatings.add(new TopicAverageResponse(rating.category, rating.score));
-                        }
+            executorService.execute(() -> {
+                List<Rating> ratings = searchService.getLectureRatings(lecture.id, Rater.AVERAGE);
+                List<TopicAverageResponse> topicRatings = new ArrayList<>();
+                for (Rating rating : ratings) {
+                    if (!rating.category.equals(RatingCategory.OVERALL)) {
+                        topicRatings.add(new TopicAverageResponse(rating.category, rating.score));
                     }
-                    showRatings(topicRatings, null);
                 }
+                showRatings(topicRatings, null);
             });
         } else {
-            ratingCall.enqueue(new Callback<RatingAverageResponse>() {
+            ratingCall.enqueue(new Callback<>() {
                 @Override
-                public void onResponse(Call<RatingAverageResponse> call,
-                                       Response<RatingAverageResponse> response) {
+                public void onResponse(@NonNull Call<RatingAverageResponse> call,
+                                       @NonNull Response<RatingAverageResponse> response) {
                     RatingAverageResponse body = response.body();
                     if (!response.isSuccessful() || body == null || body.ratings() == null) {
                         Log.d(TAG, "couldn't get the ratings, status " + response.code());
@@ -400,8 +393,8 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                 }
 
                 @Override
-                public void onFailure(Call<RatingAverageResponse> call,
-                                      Throwable throwable) {
+                public void onFailure(@NonNull Call<RatingAverageResponse> call,
+                                      @NonNull Throwable throwable) {
                     Log.d(TAG, "couldn't get the ratings: " + throwable.getMessage());
                 }
             });
@@ -413,11 +406,11 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         String token = LoginSession.from(requireContext()).bearerToken();
 
         apiService.getOwnRatings(token, lecture.id)
-                .enqueue(new Callback<RatingAverageResponse>() {
+                .enqueue(new Callback<>() {
                     @Override
                     public void onResponse(
-                            Call<RatingAverageResponse> call,
-                            Response<RatingAverageResponse> response
+                            @NonNull Call<RatingAverageResponse> call,
+                            @NonNull Response<RatingAverageResponse> response
                     ) {
                         RatingAverageResponse body = response.body();
 
@@ -448,8 +441,8 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
                     @Override
                     public void onFailure(
-                            Call<RatingAverageResponse> call,
-                            Throwable throwable
+                            @NonNull Call<RatingAverageResponse> call,
+                            @NonNull Throwable throwable
                     ) {
                         loadCachedUserRatings(averageRatings);
                     }
@@ -543,9 +536,9 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
     private void setEmptyRating() {
         Call<RatingCategoriesResponse> responseCall = apiService.getCategories(lecture.id);
-        responseCall.enqueue(new Callback<RatingCategoriesResponse>() {
+        responseCall.enqueue(new Callback<>() {
             @Override
-            public void onResponse(Call<RatingCategoriesResponse> call, Response<RatingCategoriesResponse> response) {
+            public void onResponse(@NonNull Call<RatingCategoriesResponse> call, @NonNull Response<RatingCategoriesResponse> response) {
                 RatingCategoriesResponse body = response.body();
                 Log.d(TAG, "WE ARE IN");
                 if (!response.isSuccessful() || body == null || body.categories() == null) {
@@ -557,15 +550,13 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                 List<TopicAverageResponse> topicRatings = new ArrayList<>();
                 List<RatingCategoryResponse> categories = body.categories();
                 for (RatingCategoryResponse category : categories) {
-                    if (!category.equals(RatingCategory.OVERALL)) {
-                        topicRatings.add(new TopicAverageResponse(category.category(), 0));
-                    }
+                    topicRatings.add(new TopicAverageResponse(category.category(), 0));
                 }
                 showRatings(topicRatings, null);
             }
 
             @Override
-            public void onFailure(Call<RatingCategoriesResponse> call, Throwable throwable) {
+            public void onFailure(@NonNull Call<RatingCategoriesResponse> call, @NonNull Throwable throwable) {
                 Log.d(TAG, "couldn't get the ratings: " + throwable.getMessage());
             }
         });
@@ -638,32 +629,27 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         }
 
         Call<LectureDetailResponse> call = apiService.getLecture(lecture.id);
-        executorService.execute(new Runnable() {
+        executorService.execute(() -> call.enqueue(new Callback<>() {
             @Override
-            public void run() {
-                call.enqueue(new Callback<LectureDetailResponse>() {
-                    @Override
-                    public void onResponse(Call<LectureDetailResponse> call, Response<LectureDetailResponse> response) {
-                        if (response.isSuccessful()) {
-                            double averageRating = response.body().lecture().averageRating();
+            public void onResponse(Call<LectureDetailResponse> call1, Response<LectureDetailResponse> response) {
+                if (response.isSuccessful()) {
+                    double averageRating = response.body().lecture().averageRating();
 
-                            binding.averageLectureRating.setText(
-                                    String.format(Locale.ROOT, RATING_FORMAT, averageRating));
+                    binding.averageLectureRating.setText(
+                            String.format(Locale.ROOT, RATING_FORMAT, averageRating));
 
-                            binding.averageLectureRating.setTextColor(
-                                    RatingColorCalculator.calculateColour(binding.averageLectureRating.getContext(),
-                                            averageRating));
+                    binding.averageLectureRating.setTextColor(
+                            RatingColorCalculator.calculateColour(binding.averageLectureRating.getContext(),
+                                    averageRating));
 
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<LectureDetailResponse> call, Throwable throwable) {
-
-                    }
-                });
+                }
             }
-        });
+
+            @Override
+            public void onFailure(Call<LectureDetailResponse> call1, Throwable throwable) {
+
+            }
+        }));
     }
 
     /**
@@ -680,6 +666,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             for (TopicAverageResponse rating : allRatings) {
                 if (!changedRatings.containsKey(rating.category())) {
                     check = true;
+                    break;
                 }
             }
             if (check) {
@@ -702,9 +689,9 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             if (!AuthManager.getInstance().isLoggedIn()) {
                 Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
             } else {
-                apiService.submitRating(token, request).enqueue(new Callback<ServerResponse>() {
+                apiService.submitRating(token, request).enqueue(new Callback<>() {
                     @Override
-                    public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                    public void onResponse(@NonNull Call<ServerResponse> call, @NonNull Response<ServerResponse> response) {
                         if (!response.isSuccessful()) {
                             Toast.makeText(requireContext(),
                                     "Your rating couldn't be sent.",
@@ -724,13 +711,8 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                     }
 
                     @Override
-                    public void onFailure(Call<ServerResponse> call, Throwable throwable) {
-                        requireActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(requireContext(), "Your rating couldn't be sent.", Toast.LENGTH_SHORT).show();
-                            }
-                        });
+                    public void onFailure(@NonNull Call<ServerResponse> call, @NonNull Throwable throwable) {
+                        requireActivity().runOnUiThread(() -> Toast.makeText(requireContext(), "Your rating couldn't be sent.", Toast.LENGTH_SHORT).show());
                     }
                 });
             }
@@ -744,10 +726,10 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
     private void updateProfRating() {
         String profId = professor.id;
 
-        apiService.getProfessor(profId).enqueue(new Callback<ProfessorDetailResponse>() {
+        apiService.getProfessor(profId).enqueue(new Callback<>() {
             @Override
-            public void onResponse(Call<ProfessorDetailResponse> call,
-                                   Response<ProfessorDetailResponse> response) {
+            public void onResponse(@NonNull Call<ProfessorDetailResponse> call,
+                                   @NonNull Response<ProfessorDetailResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     ProfessorDetailResponse professorDetail = response.body();
 
@@ -756,7 +738,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
                     professor.averageRating = newAverage;
 
-                    // Room-Datenbank aktualisieren
+
                     executorService.execute(() -> {
                         SearchService searchService =
                                 Database.getInstance(requireContext()).searchService();
@@ -770,7 +752,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             }
 
             @Override
-            public void onFailure(Call<ProfessorDetailResponse> call, Throwable t) {
+            public void onFailure(@NonNull Call<ProfessorDetailResponse> call,@NonNull Throwable t) {
                 t.printStackTrace();
             }
         });
@@ -779,10 +761,10 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
     private void updateLectureRating() {
         String lectureId = lecture.id;
 
-        apiService.getLecture(lectureId).enqueue(new Callback<LectureDetailResponse>() {
+        apiService.getLecture(lectureId).enqueue(new Callback<>() {
             @Override
-            public void onResponse(Call<LectureDetailResponse> call,
-                                   Response<LectureDetailResponse> response) {
+            public void onResponse(@NonNull Call<LectureDetailResponse> call,
+                                   @NonNull Response<LectureDetailResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     LectureDetailResponse lectureDetail = response.body();
                     LectureResponse lectureResponse = lectureDetail.lecture();
@@ -800,7 +782,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
                         searchService.updateLectureRating(lectureId, newAverage);
 
-                        List<Lecture> x = searchService.getLecture(professor.id, lecture.name,
+                        searchService.getLecture(professor.id, lecture.name,
                                 lecture.semesterYear, lecture.semesterSeason);
 
                     });
@@ -808,7 +790,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             }
 
             @Override
-            public void onFailure(Call<LectureDetailResponse> call, Throwable throwable) {
+            public void onFailure(@NonNull Call<LectureDetailResponse> call, @NonNull Throwable throwable) {
                 throwable.printStackTrace();
             }
         });
@@ -843,25 +825,19 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
     private void updateLocalRatingsFromRequest(List<RatingTopicRequest> ratingRequests) {
         SearchService searchService = Database.getInstance(getContext()).searchService();
-        executorService.execute(new Runnable() {
-            @Override
-            public void run() {
-                for (RatingTopicRequest ratingResponse: ratingRequests){
-                    Rating rating = new Rating(lecture.id, ratingResponse.category(), ratingResponse.value(), Rater.USER);
-                    searchService.upsertRating(rating);
-                }
+        executorService.execute(() -> {
+            for (RatingTopicRequest ratingResponse: ratingRequests){
+                Rating rating = new Rating(lecture.id, ratingResponse.category(), ratingResponse.value(), Rater.USER);
+                searchService.upsertRating(rating);
             }
         });
     }
     private void updateLocalRatingsFromResponse(List<TopicAverageResponse> ratingResponses) {
         SearchService searchService = Database.getInstance(getContext()).searchService();
-        executorService.execute(new Runnable() {
-            @Override
-            public void run() {
-                for (TopicAverageResponse ratingResponse: ratingResponses){
-                    Rating rating = new Rating(lecture.id, ratingResponse.category(), ratingResponse.value(), Rater.AVERAGE);
-                    searchService.upsertRating(rating);
-                }
+        executorService.execute(() -> {
+            for (TopicAverageResponse ratingResponse: ratingResponses){
+                Rating rating = new Rating(lecture.id, ratingResponse.category(), ratingResponse.value(), Rater.AVERAGE);
+                searchService.upsertRating(rating);
             }
         });
     }

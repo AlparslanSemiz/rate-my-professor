@@ -61,7 +61,7 @@ public class Lecture {
 
     public double averageRating;
 
-    public Lecture(String id, String name, String code, int semesterYear, SemesterSeason semesterSeason,
+    public Lecture(@NonNull String id, String name, String code, int semesterYear, SemesterSeason semesterSeason,
                    boolean active, int commentCount, int ratingCount, double averageRating) {
         this.name = name;
         this.code = code;

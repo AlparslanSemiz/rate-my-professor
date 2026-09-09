@@ -10,14 +10,11 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.ratemyprofessor.DomainModel.Lecture;
 import com.example.ratemyprofessor.DomainModel.Semester;
-import com.example.ratemyprofessor.ServerCommunication.Database;
 import com.example.ratemyprofessor.databinding.ItemLectureSemesterWithRatingBinding;
 import com.example.ratemyprofessor.logic.RatingColorCalculator;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * The adapter for semesters (lower list) in {@link com.example.ratemyprofessor.Fragments.ProfileFragment}

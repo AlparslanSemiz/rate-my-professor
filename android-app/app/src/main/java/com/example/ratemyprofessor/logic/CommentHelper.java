@@ -11,6 +11,8 @@ import android.view.LayoutInflater;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+
 import com.example.ratemyprofessor.DomainModel.CommentType;
 import com.example.ratemyprofessor.DomainModel.VoteType;
 import com.example.ratemyprofessor.R;
@@ -24,7 +26,7 @@ import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
 import com.example.ratemyprofessor.databinding.DialogCommentReportBinding;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import java.io.IOException;
+
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -67,9 +69,9 @@ public final class CommentHelper {
             reportCall = apiService.reportReply(authToken, request);
         }
 
-        reportCall.enqueue(new Callback<BasicResponse>() {
+        reportCall.enqueue(new Callback<>() {
             @Override
-            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+            public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
                 BasicResponse body = response.body();
                 if (!response.isSuccessful() || body == null || !body.success()) {
                     Log.println(Log.DEBUG, "comment report", "failure: " + response.code());
@@ -77,7 +79,7 @@ public final class CommentHelper {
             }
 
             @Override
-            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+            public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {
                 Log.println(Log.DEBUG, "comment report", "failure: " + throwable.getMessage());
             }
         });
@@ -149,14 +151,14 @@ public final class CommentHelper {
         } else {
             call.enqueue(new Callback<>() {
                 @Override
-                public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+                public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
                     if (!response.isSuccessful()) {
                         Toast.makeText(context, "Vote couldn't be sent.", Toast.LENGTH_SHORT).show();
                     }
                 }
 
                 @Override
-                public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+                public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {
                     Toast.makeText(context, "Vote couldn't be sent.", Toast.LENGTH_SHORT).show();
                 }
             });

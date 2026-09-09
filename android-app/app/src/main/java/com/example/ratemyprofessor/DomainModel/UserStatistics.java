@@ -8,22 +8,22 @@ public class UserStatistics {
     /**
      * How many reviews the user wrote.
      */
-    public int reviewCount;
+    private int reviewCount;
 
     /**
      * How many comments the user wrote.
      */
-    public int commentCount;
+    private int commentCount;
 
     /**
-     * Upvotes divided by downvotes across all of the user's comments.
+     * Upvotes divided by downvotes across all the user's comments.
      */
-    public double upvoteDownvoteRatio;
+    private double upvoteDownvoteRatio;
 
     /**
      * Average of all grades the user gave, on a scale from 0.0 to 5.0.
      */
-    public double averageGivenGrade;
+    private double averageGivenGrade;
 
     public UserStatistics(int reviewCount, int commentCount, double upvoteDownvoteRatio, double averageGivenGrade) {
         this.reviewCount = reviewCount;

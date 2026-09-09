@@ -31,7 +31,7 @@ public class Notification {
     public boolean isRead;
 
     /**
-     * The anonymised name of the user who wrote the answer.
+     * The anonymized name of the user who wrote the answer.
      */
     public String actorUsername;
 
@@ -58,7 +58,7 @@ public class Notification {
     /**
      * Id of the answer itself, used for navigation.
      */
-    public String replyCommentId;
+    private String replyCommentId;
 
     /**
      * Creates a notification without the navigation details.

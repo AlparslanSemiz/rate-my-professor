@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * @param commentId       the id of the answer
  * @param content         the text the user wrote
  * @param status          whether the answer is visible, hidden or deleted
- * @param studentUsername the anonymised name shown next to the answer
+ * @param studentUsername the anonymized name shown next to the answer
  * @param createdAt       when the answer was written
  */
 public record AnswerResponse (

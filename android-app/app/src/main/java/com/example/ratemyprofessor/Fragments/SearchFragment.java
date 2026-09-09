@@ -57,8 +57,6 @@ public class SearchFragment extends Fragment {
 
     private FragmentSearchBinding binding;
 
-    private ControlFlowInterface flowInterface;
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -193,7 +191,7 @@ public class SearchFragment extends Fragment {
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (context instanceof ControlFlowInterface) {
-            flowInterface = (ControlFlowInterface) context;
+            ControlFlowInterface flowInterface = (ControlFlowInterface) context;
         } else {
             throw new RuntimeException(context + "must implement ControlFlowInterface");
         }
@@ -271,8 +269,7 @@ public class SearchFragment extends Fragment {
         Log.d(TAG, "closeSearchMode");
         searchModeOpen = false;
 
-        //binding.searchInput.setText("");
-        //searchViewModel.clearQuery();
+
 
         binding.searchBar.setVisibility(View.GONE);
         binding.searchBar.setTranslationY(0);

@@ -36,7 +36,7 @@ import retrofit2.http.Url;
  * <p>Retrofit generates the implementation from these annotations. Every method returns a
  * {@link Call}, which is only executed once {@code enqueue(...)} is invoked on it.</p>
  *
- * <p>Routes that require a logged in user take the auth token as an {@code Authorization}
+ * <p>Routes that require a logged-in user take the auth token as an {@code Authorization}
  * header. Use {@link LoginSession#bearerToken()} to build that value.</p>
  */
 public interface APIService {

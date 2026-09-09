@@ -1,5 +1,6 @@
 package com.example.ratemyprofessor.Fragments;
 
+import android.R.layout;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
@@ -32,13 +33,15 @@ import com.example.ratemyprofessor.ServerCommunication.APIService;
 import com.example.ratemyprofessor.ServerCommunication.AuthManager;
 import com.example.ratemyprofessor.ServerCommunication.NetworkUtils;
 import com.example.ratemyprofessor.ServerCommunication.LoginSession;
-import com.example.ratemyprofessor.ServerCommunication.ReportReason;
+
 import com.example.ratemyprofessor.ServerCommunication.Requests.BugReportRequest;
 import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
 import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
 import com.example.ratemyprofessor.databinding.DialogBugReportBinding;
 import com.example.ratemyprofessor.databinding.FragmentSettingsBinding;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import java.util.Objects;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -164,8 +167,8 @@ public class SettingsFragment extends Fragment {
         BugSeverity[] severityLevels = BugSeverity.values();
 
         ArrayAdapter<BugSeverity> adapter = new ArrayAdapter<>(
-                getContext(),
-                android.R.layout.simple_spinner_item,
+                requireContext(),
+                layout.simple_spinner_item,
                 severityLevels
         );
 
@@ -251,20 +254,20 @@ public class SettingsFragment extends Fragment {
             return;
         }
 
-        reportCall.enqueue(new Callback<BasicResponse>() {
+        reportCall.enqueue(new Callback<>() {
             @Override
-            public void onResponse(Call<BasicResponse> call, Response<BasicResponse> response) {
+            public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
                 BasicResponse body = response.body();
                 if (!response.isSuccessful() || body == null || !body.success()) {
                     Log.println(Log.DEBUG, "bug report", "failure: " + response.code());
-                    Toast.makeText(requireContext(),"Something went wrong", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Something went wrong", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 Toast.makeText(requireContext(), R.string.bug_report_submitted, Toast.LENGTH_SHORT).show();
             }
 
             @Override
-            public void onFailure(Call<BasicResponse> call, Throwable throwable) {
+            public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {
                 Log.println(Log.DEBUG, "comment report", "failure: " + throwable.getMessage());
             }
         });
@@ -305,7 +308,7 @@ public class SettingsFragment extends Fragment {
         APIService apiService = createApiService();
         Call<BasicResponse> call = apiService.logoutAllDevices(session.bearerToken());
 
-        if (!NetworkUtils.isInternetAvailable(getContext())) {
+        if (!NetworkUtils.isInternetAvailable(requireContext())) {
             Toast.makeText(getContext(), "Internet not available", Toast.LENGTH_SHORT).show();
         } else {
             call.enqueue(new Callback<>() {

@@ -20,7 +20,7 @@ import java.util.List;
  * Binds comment-reply notifications and forwards item clicks to the hosting fragment.
  *
  * <p>Unread entries are marked twice, with a dot and with a bold title, so the state is also
- * recognisable without relying on color alone.</p>
+ * recognizable without relying on color alone.</p>
  */
 public class NotificationAdapter
         extends RecyclerView.Adapter<NotificationAdapter.NotificationViewHolder> {

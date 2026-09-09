@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Locale;
+import java.util.Objects;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -40,7 +41,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
- * The screen the app starts on. Currently its only action is opening the notifications.
+ * The screen the app starts on. Currently, its only action is opening the notifications.
  */
 public class HomeFragment extends Fragment {
 
@@ -99,8 +100,8 @@ public class HomeFragment extends Fragment {
         apiService.getUserInformation(session.bearerToken()).enqueue(new Callback<>() {
             @Override
             public void onResponse(
-                    Call<StudentProfileResponse> call,
-                    Response<StudentProfileResponse> response
+                    @NonNull Call<StudentProfileResponse> call,
+                    @NonNull Response<StudentProfileResponse> response
             ) {
                 if (response.code() == 401) {
                     handleExpiredSession(session);
@@ -142,7 +143,7 @@ public class HomeFragment extends Fragment {
             }
 
             @Override
-            public void onFailure(Call<StudentProfileResponse> call, Throwable throwable) {
+            public void onFailure(@NonNull Call<StudentProfileResponse> call, @NonNull Throwable throwable) {
                 Log.e(TAG, "Profile refresh failed", throwable);
             }
         });
@@ -194,7 +195,7 @@ public class HomeFragment extends Fragment {
         apiService.downloadImage(currentPicture.replaceFirst("svg", "png"))
                 .enqueue(new Callback<>() {
                     @Override
-                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                    public void onResponse(@NonNull Call<ResponseBody> call, @NonNull Response<ResponseBody> response) {
                         if (response.isSuccessful() && response.body() != null) {
                             if (saveImageAndSetProfilePicture(response.body())) {
                                 statistics.edit()
@@ -205,7 +206,7 @@ public class HomeFragment extends Fragment {
                     }
 
                     @Override
-                    public void onFailure(Call<ResponseBody> call, Throwable throwable) {
+                    public void onFailure(@NonNull Call<ResponseBody> call, @NonNull Throwable throwable) {
                         Log.e(TAG, "Profile picture refresh failed", throwable);
                     }
                 });
@@ -239,7 +240,7 @@ public class HomeFragment extends Fragment {
                 output.write(buffer, 0, bytesRead);
             }
         } catch (IOException e) {
-            Log.println(Log.ERROR, "HomeFragment", e.getMessage());
+            Log.println(Log.ERROR, "HomeFragment", Objects.requireNonNull(e.getMessage()));
             return false;
         }
         if (binding != null) {

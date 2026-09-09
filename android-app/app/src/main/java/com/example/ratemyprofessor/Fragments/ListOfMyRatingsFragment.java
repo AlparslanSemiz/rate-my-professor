@@ -47,8 +47,6 @@ public class ListOfMyRatingsFragment extends Fragment {
 
     private ExecutorService executor;
 
-    private ListOfMyRatingsAdapter adapter;
-
     private static final String TAG = "ListOfMyRatings";
 
     public ListOfMyRatingsFragment() {
@@ -104,14 +102,15 @@ public class ListOfMyRatingsFragment extends Fragment {
 
         getRatingsCall.enqueue(new Callback<>() {
             @Override
-            public void onResponse(Call<UserRatingResponse> getRatingsCall, Response<UserRatingResponse> response) {
+            public void onResponse(@NonNull Call<UserRatingResponse> getRatingsCall, @NonNull Response<UserRatingResponse> response) {
                 UserRatingResponse body = response.body();
+                assert body != null;
                 List<UserRatingDto> ratings = body.ratings();
                 runOnUiThread(() -> showRatings(ratings));
             }
 
             @Override
-            public void onFailure(Call<UserRatingResponse> getRatingsCall, Throwable t) {
+            public void onFailure(@NonNull Call<UserRatingResponse> getRatingsCall,@NonNull Throwable t) {
                 Log.e(TAG, "Error: " + t.getMessage());
             }
         });
@@ -130,7 +129,7 @@ public class ListOfMyRatingsFragment extends Fragment {
     public void showRatings(List<UserRatingDto> ratings) {
         RecyclerView recyclerView = binding.listOfMyRatingsList;
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        adapter = new ListOfMyRatingsAdapter(ratings, this::openRating);
+        RecyclerView.Adapter<ListOfMyRatingsAdapter.UserRatingViewHolder> adapter = new ListOfMyRatingsAdapter(ratings, this::openRating);
         recyclerView.setAdapter(adapter);
     }
 

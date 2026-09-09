@@ -9,6 +9,7 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -38,8 +39,6 @@ public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "login";
 
-    private ActivityLoginBinding binding;
-    private Button enterButton;
     private EditText emailInput;
 
 
@@ -53,7 +52,7 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         EdgeToEdge.enable(this);
-        binding = ActivityLoginBinding.inflate(getLayoutInflater());
+        ActivityLoginBinding binding = ActivityLoginBinding.inflate(getLayoutInflater());
         View view = binding.getRoot();
         setContentView(view);
         ViewCompat.setOnApplyWindowInsetsListener(binding.main, (v, insets) -> {
@@ -62,7 +61,7 @@ public class LoginActivity extends AppCompatActivity {
             return insets;
         });
 
-        enterButton = binding.verifyButton;
+        Button enterButton = binding.verifyButton;
         emailInput = binding.mailInput;
 
         enterButton.setOnClickListener(v -> requestLoginToken(emailInput.getText().toString()));
@@ -114,7 +113,7 @@ public class LoginActivity extends AppCompatActivity {
         } else {
             call.enqueue(new Callback<>() {
                 @Override
-                public void onResponse(Call<ServerResponse> call, Response<ServerResponse> response) {
+                public void onResponse(@NonNull Call<ServerResponse> call, @NonNull Response<ServerResponse> response) {
                     ServerResponse body = response.body();
 
                     // A rejected request comes back without a usable body, and the server can also
@@ -143,7 +142,7 @@ public class LoginActivity extends AppCompatActivity {
                 }
 
                 @Override
-                public void onFailure(Call<ServerResponse> call, Throwable t) {
+                public void onFailure(@NonNull Call<ServerResponse> call,@NonNull Throwable t) {
                     Log.e(TAG, "request-login failed: " + t);
                     Toast.makeText(
                             LoginActivity.this,

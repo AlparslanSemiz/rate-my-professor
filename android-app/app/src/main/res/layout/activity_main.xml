@@ -36,7 +36,7 @@
             android:layout_width="90dp"
             android:layout_height="60dp"
 
-            android:layout_gravity="start|center_vertical"
+            android:layout_gravity="center"
             android:background="@drawable/bottom_nav_bubble"
             android:clickable="false"
             android:focusable="false" />
