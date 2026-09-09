@@ -97,7 +97,14 @@ export default defineConfig(({ command, mode }) => {
        */
       coverage: {
         provider: 'v8',
-        reporter: ['text', 'html', 'lcov'],
+        /**
+         * `json-summary` is what `docs/testfindings.md`'s per-directory table is aggregated
+         * from, and it was missing: three documents said the figures were generated from
+         * `coverage/coverage-summary.json` while `npm run test:coverage` never wrote one. The
+         * file on disk was a leftover from a one-off invocation, so the next person to follow
+         * the documented procedure would have re-published a stale table without knowing.
+         */
+        reporter: ['text', 'html', 'lcov', 'json-summary'],
         all: true,
         include: ['src/**'],
         exclude: ['src/main.tsx', 'src/vite-env.d.ts', '**/*.d.ts', 'src/test/**'],
