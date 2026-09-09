@@ -21,6 +21,7 @@ import com.example.ratemyprofessor.DomainModel.Notification;
 import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.RatingCategory;
 import com.example.ratemyprofessor.DomainModel.SemesterSeason;
+import com.example.ratemyprofessor.DomainModel.VoteType;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LectureResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorShortResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.TopicAverageResponse;
@@ -95,7 +96,7 @@ public class AdapterLogicTest {
         context.setTheme(R.style.Theme_RateMyProfessor);
         Comment comment = new Comment("1", "ContentA", null, "UserB", "L1", null, LocalDateTime.now(), 2, 5, Collections.emptyList());
         
-        CommentsAdapter adapter = new CommentsAdapter(context, Collections.singletonList(comment), null, CommentType.COMMENT);
+        CommentsAdapter adapter = new CommentsAdapter(context, Collections.singletonList(comment), null, CommentType.COMMENT, VoteType.UP);
         CommentsAdapter.CommentViewHolder holder = adapter.onCreateViewHolder(new FrameLayout(context), 0);
         adapter.onBindViewHolder(holder, 0);
 

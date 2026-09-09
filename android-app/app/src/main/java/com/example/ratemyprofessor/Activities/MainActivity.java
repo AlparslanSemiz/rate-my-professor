@@ -19,6 +19,7 @@ import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.Lecture;
 import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.Semester;
+import com.example.ratemyprofessor.DomainModel.VoteType;
 import com.example.ratemyprofessor.Fragments.HomeFragment;
 import com.example.ratemyprofessor.Fragments.RatingsFragment;
 import com.example.ratemyprofessor.Fragments.ProfileFragment;
@@ -177,8 +178,8 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
     }
 
     @Override
-    public void openReplyFragment(Comment comment) {
-        loadFragment(new ReplyFragment(comment), true);
+    public void openReplyFragment(Comment comment, VoteType voteType) {
+        loadFragment(new ReplyFragment(comment, voteType), true);
     }
 
 }

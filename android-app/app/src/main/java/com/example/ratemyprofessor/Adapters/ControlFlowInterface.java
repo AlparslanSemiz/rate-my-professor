@@ -4,6 +4,7 @@ import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.Lecture;
 import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.Semester;
+import com.example.ratemyprofessor.DomainModel.VoteType;
 
 /**
  * This interface is for managing the control flow of professor-lecture selection.
@@ -51,5 +52,5 @@ public interface ControlFlowInterface {
      */
     void openLectureProfile(Professor professor, Semester semester, Lecture lecture);
 
-    void openReplyFragment(Comment comment);
+    void openReplyFragment(Comment comment, VoteType voteType);
 }

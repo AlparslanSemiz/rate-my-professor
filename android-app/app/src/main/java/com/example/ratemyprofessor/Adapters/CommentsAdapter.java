@@ -1,6 +1,7 @@
 package com.example.ratemyprofessor.Adapters;
 
 import android.content.Context;
+import android.graphics.PorterDuff;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +11,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
@@ -17,6 +19,7 @@ import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.CommentType;
 import com.example.ratemyprofessor.DomainModel.VoteType;
 import com.example.ratemyprofessor.Fragments.RatingsFragment;
+import com.example.ratemyprofessor.R;
 import com.example.ratemyprofessor.ServerCommunication.AuthManager;
 import com.example.ratemyprofessor.databinding.ItemCommentBinding;
 
@@ -34,16 +37,20 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
     private final List<Comment> comments;
     private final OnCommentClickListener listener;
     private final CommentType type;
+    private final VoteType voteType;
     private final Context context;
 
     public CommentsAdapter(Context context,
                            List<Comment> comments,
                            OnCommentClickListener listener,
-                           CommentType type) {
+                           CommentType type,
+                           VoteType voteType) {
         this.context = context;
         this.comments = comments;
         this.listener = listener;
         this.type = type;
+        this.voteType = voteType;
+
     }
 
     @NonNull
@@ -67,10 +74,17 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         holder.commentContent.setText(comment.content());
         holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
         holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
+        // We currently dont have
+        if (voteType == VoteType.UP) {
+            holder.upVoteButton.setImageResource(R.drawable.upvote_icon_filled);
+        } else if (voteType == VoteType.DOWN) {
+            holder.downVoteButton.setImageResource(R.drawable.downvote_icon_filled);
+        }
 
 
-        holder.itemView.setOnClickListener(v -> openReplies(comment));
-        holder.showCommentButton.setOnClickListener(v -> openReplies(comment));
+
+        holder.itemView.setOnClickListener(v -> openReplies(comment, voteType));
+        holder.showCommentButton.setOnClickListener(v -> openReplies(comment, voteType));
         holder.upVoteButton.setOnClickListener(v -> {
             if (!AuthManager.getInstance().isLoggedIn()) {
                 Toast.makeText(context, "You are not logged in.", Toast.LENGTH_SHORT).show();
@@ -78,6 +92,8 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             }
             holder.upVoteCount.setText(String.valueOf(comment.upVotes() + 1));
             holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
+            holder.upVoteButton.setImageResource(R.drawable.upvote_icon_filled);
+            holder.downVoteButton.setImageResource(R.drawable.downvote_icon);
             listener.vote(comment.commentID(), VoteType.UP, type);
         });
 
@@ -88,6 +104,8 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             }
             holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
             holder.downVoteCount.setText(String.valueOf(comment.downVotes() + 1));
+            holder.upVoteButton.setImageResource(R.drawable.upvote_icon);
+            holder.downVoteButton.setImageResource(R.drawable.downvote_icon_filled);
             listener.vote(comment.commentID(), VoteType.DOWN, type);
         });
         if (type == CommentType.REPLY) {
@@ -108,9 +126,8 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
      * position is read from the holder instead of the bound one, because rows can be reused
      * and moved before the click happens.</p>
      */
-    private void openReplies(Comment comment) {
-        System.out.println("openReplies");
-        listener.onOpenReplies(comment);
+    private void openReplies(Comment comment, VoteType voteType) {
+        listener.onOpenReplies(comment, voteType);
     }
 
     @Override
@@ -163,7 +180,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
          *
          * @param comment  the comment whose answers are opened
          */
-        void onOpenReplies(Comment comment);
+        void onOpenReplies(Comment comment, VoteType voteType);
         /**
          * For voting on a comment or answer.
          */

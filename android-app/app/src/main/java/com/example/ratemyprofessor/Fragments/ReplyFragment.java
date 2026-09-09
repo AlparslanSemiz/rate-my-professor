@@ -23,6 +23,7 @@ import com.example.ratemyprofessor.Adapters.CommentsAdapter;
 import com.example.ratemyprofessor.DomainModel.Comment;
 import com.example.ratemyprofessor.DomainModel.CommentType;
 import com.example.ratemyprofessor.DomainModel.VoteType;
+import com.example.ratemyprofessor.R;
 import com.example.ratemyprofessor.ServerCommunication.APIService;
 import com.example.ratemyprofessor.ServerCommunication.AuthManager;
 import com.example.ratemyprofessor.ServerCommunication.LoginSession;
@@ -46,6 +47,7 @@ import retrofit2.Response;
 public class ReplyFragment extends Fragment implements CommentsAdapter.OnCommentClickListener {
 
     private Comment comment;
+    private VoteType voteType;
     private FragmentReplyBinding binding;
     private final APIService apiService;
 
@@ -53,9 +55,10 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         apiService = RetrofitClient.getClient().create(APIService.class);
         // Required empty public constructor
     }
-    public ReplyFragment(Comment comment) {
+    public ReplyFragment(Comment comment, VoteType voteType) {
         apiService = RetrofitClient.getClient().create(APIService.class);
         this.comment = comment;
+        this.voteType = voteType;
     }
 
     @Override
@@ -84,6 +87,13 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         mainComment.contentText.setText(comment.content());
         mainComment.upvotesNum.setText(String.valueOf(comment.upVotes()));
         mainComment.downvotesNum.setText(String.valueOf(comment.downVotes()));
+
+        if (voteType == VoteType.UP) {
+            mainComment.upvoteIcon.setImageResource(R.drawable.upvote_icon_filled);
+        } else if (voteType == VoteType.DOWN) {
+            mainComment.downvoteIcon.setImageResource(R.drawable.downvote_icon_filled);
+        }
+
 
         binding.cancelReply.setVisibility(INVISIBLE);
         binding.submitReply.setEnabled(false);
@@ -119,7 +129,7 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         });
 
 
-        mainComment.commentsIcon.setOnClickListener(v -> onOpenReplies(comment));
+        mainComment.commentsIcon.setOnClickListener(v -> onOpenReplies(comment, voteType));
         mainComment.upvoteIcon.setOnClickListener(v -> {
             if (!AuthManager.getInstance().isLoggedIn()) {
                 Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
@@ -127,6 +137,8 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
             }
             mainComment.upvotesNum.setText(String.valueOf(comment.upVotes() + 1));
             mainComment.downvotesNum.setText(String.valueOf(comment.downVotes()));
+            mainComment.upvoteIcon.setImageResource(R.drawable.upvote_icon_filled);
+            mainComment.downvoteIcon.setImageResource(R.drawable.downvote_icon);
             vote(comment.commentID(), VoteType.UP, CommentType.COMMENT);
         });
 
@@ -137,6 +149,8 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
             }
             mainComment.upvotesNum.setText(String.valueOf(comment.upVotes()));
             mainComment.downvotesNum.setText(String.valueOf(comment.downVotes() + 1));
+            mainComment.upvoteIcon.setImageResource(R.drawable.upvote_icon);
+            mainComment.downvoteIcon.setImageResource(R.drawable.downvote_icon_filled);
             vote(comment.commentID(), VoteType.DOWN, CommentType.COMMENT);
         });
         mainComment.commentsIcon.setOnClickListener(v -> {});
@@ -145,7 +159,7 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
 
         answerList.setLayoutManager(new LinearLayoutManager(getContext()));
         List<Comment> answers = comment.answers();
-        CommentsAdapter adapter = new CommentsAdapter(getContext(), answers, this, CommentType.REPLY);
+        CommentsAdapter adapter = new CommentsAdapter(getContext(), answers, this, CommentType.REPLY, null);
         answerList.setAdapter(adapter);
         return binding.getRoot();
     }
@@ -198,7 +212,7 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
     }
 
     @Override
-    public void onOpenReplies(Comment comment) {
+    public void onOpenReplies(Comment comment, VoteType voteType) {
     }
 
     @Override
