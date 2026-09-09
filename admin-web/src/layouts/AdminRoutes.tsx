@@ -6,6 +6,7 @@ import { routes } from '@/constants/routes'
 
 // One chunk per screen: visiting a section downloads that section, and the initial bundle is
 // the shell alone.
+const ActivityLogsPage = lazy(() => import('@/features/logs/ActivityLogsPage'))
 const AuditLogsPage = lazy(() => import('@/features/logs/AuditLogsPage'))
 const CatalogPage = lazy(() => import('@/features/catalog/CatalogPage'))
 const CommentsPage = lazy(() => import('@/features/comments/CommentsPage'))
@@ -31,6 +32,7 @@ export default function AdminRoutes() {
           <Route path={routes.comments} element={<CommentsPage />} />
           <Route path={routes.catalog} element={<CatalogPage />} />
           <Route path={routes.auditLogs} element={<AuditLogsPage />} />
+          <Route path={routes.activityLogs} element={<ActivityLogsPage />} />
           <Route path={routes.help} element={<HelpPage />} />
           <Route path="*" element={<Navigate to={routes.dashboard} replace />} />
         </Routes>

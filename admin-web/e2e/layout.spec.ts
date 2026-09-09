@@ -25,7 +25,7 @@ const NAVBAR_WIDTH = 240
 /** Widths worth measuring at, once `F-019` has taken the narrow ones away. */
 const USABLE_WIDTHS = [1024, 1440]
 /** The routes that draw a `<table>`, so an empty measurement loop cannot pass as a clean one. */
-const ROUTES_WITH_TABLES = new Set(['Users', 'Comments', 'Lectures & Professors', 'Audit Logs'])
+const ROUTES_WITH_TABLES = new Set(['Users', 'Comments', 'Lectures & Professors', 'Audit Logs', 'Activity Logs'])
 /** Where `F-019` lives. Mantine's `sm` is 48em; the navbar is uncollapsed at and below it. */
 const UNUSABLE_WIDTHS = [320, 480, 640, 768]
 const HEIGHT = 900

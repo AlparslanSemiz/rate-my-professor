@@ -10,7 +10,7 @@ import { ROUTES, open } from './routes'
  * reports nothing, and nothing reads as a pass. This is the other half of that sentence: the
  * same two rules, in Chromium, against a real layout.
  *
- * Deliberately **only** those two. Every other rule is answered in jsdom over the same eight
+ * Deliberately **only** those two. Every other rule is answered in jsdom over the same nine
  * routes far more cheaply, and running them again here would buy a second opinion on a question
  * already settled.
  *

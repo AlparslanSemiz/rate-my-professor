@@ -1,7 +1,7 @@
 import { authService } from '@/api/auth'
 import { catalogService, ratingsService } from '@/api/catalog'
 import { feedbackService } from '@/api/feedback'
-import { auditLogsService } from '@/api/logs'
+import { activityLogsService, auditLogsService } from '@/api/logs'
 import { answersService, commentsService } from '@/api/moderation'
 import { systemStatusService } from '@/api/system'
 import { usersService } from '@/api/users'
@@ -297,6 +297,39 @@ const CALLS: readonly ApiCall[] = [
     contentType: null,
     covers: ['AuditLogsService.revert', 'AuditLogRevertService.revert'],
     send: () => auditLogsService.revert('audit-1'),
+  },
+
+  // -- activity log ---------------------------------------------------------------------
+  // The same reader and the same meta service as above, pointed at the other resource, which
+  // is why `covers` names the same two methods: what these rows establish is that the second
+  // `LogResource` produces the second endpoint's path and query, not that a second class
+  // exists.
+  {
+    name: 'activityLogs.getLogs with no filters',
+    method: 'GET',
+    path: '/activity-logs',
+    query: 'limit=50',
+    contentType: null,
+    covers: ['ActivityLogsService.getLogs', 'LogReaderService.getLogs'],
+    send: () => activityLogsService.getLogs(),
+  },
+  {
+    name: 'activityLogs.getLogs sends the actor type the audit screen never asks for',
+    method: 'GET',
+    path: '/activity-logs',
+    query: 'limit=50&cursor=activity-1&actorType=USER&action=ACCESS_REFUSED',
+    contentType: null,
+    covers: ['ActivityLogsService.getLogs', 'LogReaderService.getLogs'],
+    send: () =>
+      activityLogsService.getLogs({ actorType: 'USER', action: 'ACCESS_REFUSED' }, 'activity-1'),
+  },
+  {
+    name: 'activityLogs.getMeta',
+    method: 'GET',
+    path: '/activity-logs/meta',
+    contentType: null,
+    covers: ['ActivityLogsService.getMeta', 'LogMetaService.getMeta'],
+    send: () => activityLogsService.getMeta(),
   },
 
   // -- system ---------------------------------------------------------------------------

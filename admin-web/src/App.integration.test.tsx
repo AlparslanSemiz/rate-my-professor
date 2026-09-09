@@ -178,9 +178,9 @@ describe('App routing and authentication', () => {
     // Removed 2026-08-21. `/system/status` is still read by the dashboard, the Users stat
     // cards and the GitLab button — it is the screen that went, not the endpoint.
     expect(oversightNavigation).not.toHaveTextContent('System Status')
-    // Removed 2026-09-09. `/activity-logs` is still served by the backend; the panel simply
-    // has no screen for it any more.
-    expect(oversightNavigation).not.toHaveTextContent('Activity Log')
+    // Deleted 2026-09-09 and back 2026-09-10 (ADR 0016). The endpoints never stopped serving;
+    // it was the screen that went, and the decision that took it away was reversed.
+    expect(oversightNavigation).toHaveTextContent('Activity Logs')
   })
 
   it('has no System Status route left — the path falls back to the dashboard', async () => {
@@ -193,14 +193,17 @@ describe('App routing and authentication', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/dashboard'))
   })
 
-  it('has no Activity Log route left — the path falls back to the dashboard', async () => {
+  it('serves the Activity Logs page again, rather than falling back to the dashboard', async () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(adminUser))
     window.history.pushState({}, '', '/activity-logs')
 
     render(<App />)
 
-    await waitFor(() => expect(window.location.pathname).toBe('/dashboard'))
+    // The inverse of the assertion that stood here from 2026-09-09: the path used to fall
+    // through to the dashboard like any unknown one, and a test pinned that it did.
+    expect(await screen.findByRole('heading', { name: 'Activity Logs' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/activity-logs')
   })
 
   it('names the product in the sidebar', async () => {

@@ -1,4 +1,4 @@
-import type { AuditAction } from '@/domain/auditLog'
+import { isRefusal, type AuditAction } from '@/domain/auditLog'
 import type { ContentStatus, ReportReason, ReportStatus, Severity } from '@/domain/moderation'
 import type { UserRole, UserStatus } from '@/domain/user'
 import { routes, type Route } from './routes'
@@ -183,5 +183,47 @@ export function auditActionColor(action: unknown): string {
   return (
     AUDIT_ACTION_COLORS[action as AuditAction] ??
     (action.endsWith(DELETION_ACTION_SUFFIX) ? DELETION_COLOR : DEFAULT_AUDIT_ACTION_COLOR)
+  )
+}
+
+/**
+ * The two student actions that are a session event rather than a contribution.
+ *
+ * A table again, for the same reason as its audit sibling: the named ones are exceptions and
+ * everything else is decided by the rules below.
+ */
+const ACTIVITY_ACTION_COLORS: Readonly<Record<string, string>> = Object.freeze({
+  USER_LOGIN: 'violet',
+  USER_LOGOUT: 'violet',
+  RATING_SUBMITTED: 'yellow',
+})
+
+/** A refusal is the one thing on the activity log that did not happen. */
+const REFUSAL_COLOR = 'red'
+/** Reporting something is not the same kind of act as writing something. */
+const REPORT_ACTION_SUFFIX = '_REPORT_CREATED'
+const REPORT_COLOR = 'orange'
+const DEFAULT_ACTIVITY_ACTION_COLOR = 'teal'
+
+/**
+ * The colour an activity entry's action badge is drawn in.
+ *
+ * The refusal case is the one that carries weight: everything else on that screen is something
+ * a student successfully did, so the two entries that record a door being closed have to read
+ * differently at a glance.
+ *
+ * Takes `unknown` for the reason {@link auditActionColor} does — the value is whatever the
+ * backend put in the field, and `F-028` was a colour function calling a string method on
+ * something that was not one.
+ *
+ * @param action the recorded action, as it arrived
+ * @returns a Mantine colour name; the neutral one when there is no action to colour
+ */
+export function activityActionColor(action: unknown): string {
+  if (typeof action !== 'string' || action === '') return UNKNOWN_ACTION_COLOR
+  if (isRefusal(action)) return REFUSAL_COLOR
+  return (
+    ACTIVITY_ACTION_COLORS[action] ??
+    (action.endsWith(REPORT_ACTION_SUFFIX) ? REPORT_COLOR : DEFAULT_ACTIVITY_ACTION_COLOR)
   )
 }

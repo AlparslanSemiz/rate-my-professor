@@ -7,6 +7,7 @@ export const routes = {
   catalog: '/catalog',
   feedback: '/feedback',
   auditLogs: '/audit-logs',
+  activityLogs: '/activity-logs',
   help: '/help',
 } as const
 

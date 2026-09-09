@@ -5,6 +5,7 @@ import { COMMENTS_HELP } from './comments'
 import { CATALOG_HELP } from './catalog'
 import { FEEDBACK_HELP } from './feedback'
 import { AUDIT_LOGS_HELP } from './auditLogs'
+import { ACTIVITY_LOGS_HELP } from './activityLogs'
 
 export type { HelpActionRow, HelpIcon, HelpSection, HelpValueGroup, HelpValueRow } from './types'
 
@@ -21,4 +22,5 @@ export const HELP_SECTIONS: HelpSection[] = [
   CATALOG_HELP,
   FEEDBACK_HELP,
   AUDIT_LOGS_HELP,
+  ACTIVITY_LOGS_HELP,
 ]

@@ -108,6 +108,13 @@ const ROUTES = [
   },
   { path: routes.feedback, name: 'Bug Reports', knownViolations: [] as string[], marker: /Bug reports and crash logs sent in by your users/, signedIn: true },
   { path: routes.auditLogs, name: 'Audit Logs', knownViolations: [] as string[], marker: /A trace of successful admin actions/, signedIn: true },
+  {
+    path: routes.activityLogs,
+    name: 'Activity Logs',
+    knownViolations: [] as string[],
+    marker: /Everything people do in the app/,
+    signedIn: true,
+  },
   { path: routes.help, name: 'Help', knownViolations: [] as string[], marker: /What each status means and what happens when you use a control/, signedIn: true },
 ] as const
 

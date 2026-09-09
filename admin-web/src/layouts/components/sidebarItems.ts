@@ -1,4 +1,5 @@
 import {
+  IconActivity,
   IconBug,
   IconHelpCircle,
   IconHistory,
@@ -42,13 +43,19 @@ export const MAIN_NAV_ITEMS = [
   },
 ] as const
 
-/** Oversight views: what admins did, and what the panel's controls mean. */
+/** Oversight views: what happened, who did it, and what the panel's controls mean. */
 export const OVERSIGHT_NAV_ITEMS = [
   {
     label: 'Audit Logs',
     sublabel: 'Admin activity',
     path: routes.auditLogs,
     icon: IconHistory,
+  },
+  {
+    label: 'Activity Logs',
+    sublabel: 'Everyone else',
+    path: routes.activityLogs,
+    icon: IconActivity,
   },
   {
     label: 'Help',

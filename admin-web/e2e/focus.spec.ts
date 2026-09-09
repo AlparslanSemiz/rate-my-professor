@@ -30,7 +30,7 @@ const MIN_TARGET = 24
  * raised it to 24x24 with the rule written above it — and the rule was never applied to
  * anything else. This is what that leaves:
  *
- *   - **`Sign out`, 61x21** — the sidebar, so on all seven signed-in routes. Three pixels short.
+ *   - **`Sign out`, 61x21** — the sidebar, so on all eight signed-in routes. Three pixels short.
  *   - **`See everyone →`, 90x17** — the dashboard's link out to Users. Seven pixels short.
  *   - **`22x22`, every row action on Comments** — the expand toggle and the edit and delete
  *     icons on every row. Two pixels short on both axes, and these are the panel's actual
@@ -39,7 +39,7 @@ const MIN_TARGET = 24
  * Pinned as sizes rather than labels so the fixture's names can change without touching it. A
  * new undersized control with a new box turns the route red; raising one of these does too.
  *
- * **axe passes all eight routes on `target-size`** — see `e2e/a11y.spec.ts`. That is not a
+ * **axe passes all nine routes on `target-size`** — see `e2e/a11y.spec.ts`. That is not a
  * contradiction: axe grants exceptions for spacing and for inline targets, so it permits boxes
  * this measurement reports. Two tools, two answers, and the blunter one is the one that found
  * something.
@@ -52,6 +52,9 @@ const KNOWN_UNDERSIZED: Readonly<Record<string, readonly string[]>> = {
   'Lectures & Professors': ['61x21'],
   'Bug Reports': ['61x21'],
   'Audit Logs': ['61x21'],
+  // Measured, not assumed: the run reports 11 visible buttons and one undersized box, the
+  // sidebar's own `Sign out`. The screen adds no control of its own that is short.
+  'Activity Logs': ['61x21'],
   Help: ['61x21'],
 }
 const WIDTH = 1440

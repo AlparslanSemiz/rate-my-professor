@@ -4,6 +4,7 @@ import { delay, http } from 'msw'
 import { Component, type ReactElement, type ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
+import ActivityLogsPage from '@/features/logs/ActivityLogsPage'
 import AuditLogsPage from '@/features/logs/AuditLogsPage'
 import CatalogPage from '@/features/catalog/CatalogPage'
 import CommentsPage from '@/features/comments/CommentsPage'
@@ -196,6 +197,24 @@ const SCREENS: readonly Screen[] = [
       // Fixed in `P0b` and pinned by two tests where the fix lives.
       changes: 'F-021',
       metadata: 'F-021',
+    },
+  },
+  {
+    name: 'Activity Logs',
+    element: () => <ActivityLogsPage />,
+    path: '/activity-logs',
+    heading: 'Activity Logs',
+    isList: true,
+    record: fixture.activityLogs![0] as unknown as Wire,
+    body: listBody('activityLogs'),
+    // **No `crashesOn`, and that empty is the assertion.** The audit screen carried
+    // `absent:action` and `wrongType:action` as `F-028` until both screens started reading the
+    // action through `logEnumLabel` and a guarded colour function. This row is what stops that
+    // guard being removed quietly: it goes red the moment an unknown action takes the screen
+    // down again, on the screen most likely to be handed one.
+    skip: {
+      // The same unguarded `actor` read the audit row has. One defect, recorded once.
+      actor: 'F-022',
     },
   },
   {

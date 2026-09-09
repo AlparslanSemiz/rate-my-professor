@@ -1,6 +1,16 @@
-import { auditLogsService, type AuditEntry, type AuditLog, type AuditLogFilters, type AuditMeta, type LogPage } from '@/api/logs'
-import { auditActionColor } from '@/constants/colors'
+import {
+  activityLogsService,
+  auditLogsService,
+  type AuditEntry,
+  type AuditLog,
+  type AuditLogFilters,
+  type AuditMeta,
+  type LogPage,
+} from '@/api/logs'
+import { activityActionColor, auditActionColor } from '@/constants/colors'
+import { activitySummary } from './activitySummary'
 import { logEnumLabel, type LogErrorWording } from './logModel'
+import { EMPTY_VALUE } from '@/utils/emptyValue'
 
 /**
  * What one of the two log screens needs from its service. Narrower than either service — the
@@ -88,5 +98,37 @@ export const AUDIT_SCREEN: LogScreen<AuditLog> = Object.freeze({
     unavailable:
       'The configured backend does not support audit logs yet. Deploy the audit API endpoints, then try again.',
     fallback: 'Failed to load audit logs',
+  },
+})
+
+/**
+ * What everyone else did in the app, and every request that was refused.
+ *
+ * Deleted on 2026-09-09 and back on 2026-09-10; ADR 0016 records why. The differences from the
+ * audit screen are all here and all small: the "Who" filter, because one table carries
+ * students and admins; a summary column instead of changed fields, because these entries
+ * change nothing; and no undo, anywhere, which is not a field on this record at all.
+ */
+export const ACTIVITY_SCREEN: LogScreen<AuditEntry> = Object.freeze({
+  title: 'Activity Logs',
+  description:
+    'Everything people do in the app: who signed in, what they posted or reported, and what was refused.',
+  queryKey: 'activity-logs',
+  service: activityLogsService,
+  columns: ['Time', 'Who', 'Activity', 'Target', 'Detail'],
+  summarise: (entry: AuditEntry) => activitySummary(entry.metadata),
+  emptySummary: EMPTY_VALUE,
+  actionColor: activityActionColor,
+  offersActorTypeFilter: true,
+  searchPlaceholder: 'Name, email, or target...',
+  actorFilterLabel: 'Person',
+  actorFilterPlaceholder: 'Everyone the backend lists',
+  noun: 'Activity',
+  countLabel: (count: number) => `${count} activity event${count === 1 ? '' : 's'} loaded · newest first`,
+  emptyMessage: 'No activity matches these filters.',
+  errors: {
+    unavailable:
+      'The configured backend does not track application activity yet. Deploy the activity log API endpoints, then try again.',
+    fallback: 'Failed to load activity logs',
   },
 })

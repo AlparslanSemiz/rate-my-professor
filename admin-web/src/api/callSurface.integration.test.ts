@@ -1,5 +1,6 @@
 import { http } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { activityLogsService, auditLogsService } from '@/api/logs'
 import { apiClient } from '@/api/client'
 import { commentsService } from '@/api/moderation'
 import { feedbackService } from '@/api/feedback'
@@ -212,6 +213,18 @@ describe('the keys a list arrives under', () => {
 
     // The one endpoint whose key does not match its path at all.
     await expect(feedbackService.getReports()).rejects.toThrow('bugReports')
+  })
+
+  it('reads each log under its own noun, so one `LogResource` cannot serve the other', async () => {
+    // The two logs go through one reader with the path and the key filled in from a resource
+    // record. Serving either under the other's key has to fail: a resource whose two halves
+    // could drift apart would read an empty page off a backend that is working, which is what
+    // the shared reader has to be prevented from making possible.
+    server.use(http.get(apiUrl('/activity-logs'), () => ok({ auditLogs: [] })))
+    await expect(activityLogsService.getLogs()).rejects.toThrow('activityLogs')
+
+    server.use(http.get(apiUrl('/audit-logs'), () => ok({ activityLogs: [] })))
+    await expect(auditLogsService.getLogs()).rejects.toThrow('auditLogs')
   })
 })
 

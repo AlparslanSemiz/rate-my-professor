@@ -299,6 +299,126 @@ export function demoBackend(): Partial<MswDb> {
         revertedByAuditId: null,
       },
     ],
+    activityMeta: {
+      actors: [
+        { id: 'user-1', name: 'Lena Hoffmann', email: 'u-kisi2@student.kit.edu', role: 'STUDENT' },
+        { id: 'user-3', name: 'Mira Kowalski', email: 'u-kisi3@student.kit.edu', role: 'STUDENT' },
+      ],
+      actions: [
+        'ACCESS_REFUSED',
+        'ANSWER_CREATED',
+        'COMMENT_CREATED',
+        'COMMENT_REPORT_CREATED',
+        'LOGIN_REFUSED',
+        'RATING_SUBMITTED',
+        'USER_LOGIN',
+      ],
+      targetTypes: ['ANSWER', 'COMMENT', 'COMMENT_REPORT', 'ENDPOINT', 'RATING', 'USER_SESSION'],
+      actorTypes: ['ADMIN', 'USER'],
+    },
+    /**
+     * One of each shape the activity screen has to draw, rather than a realistic distribution:
+     * a contribution with a preview, a sign-in with its method, a rating with no detail at all,
+     * a report, and both refusals. The last two are the reason the screen exists and the two
+     * nothing reaches by clicking.
+     */
+    activityLogs: [
+      {
+        id: 'activity-1',
+        action: 'COMMENT_CREATED',
+        createdAt: '2026-09-09T08:41:00Z',
+        actor: {
+          type: 'USER',
+          id: 'user-1',
+          name: 'Lena Hoffmann',
+          email: 'u-kisi2@student.kit.edu',
+          role: 'STUDENT',
+        },
+        target: { type: 'COMMENT', id: 'comment-1', label: 'Programmieren — Vorlesung' },
+        changes: {},
+        metadata: {
+          contentPreview: 'Die Übungsblätter sind gut, aber die Tutorien sind überfüllt.',
+          contentLength: 61,
+        },
+      },
+      {
+        id: 'activity-2',
+        action: 'LOGIN_REFUSED',
+        createdAt: '2026-09-09T08:12:00Z',
+        actor: {
+          type: 'USER',
+          id: 'user-3',
+          name: 'Mira Kowalski',
+          email: 'u-kisi3@student.kit.edu',
+          role: 'STUDENT',
+        },
+        target: null,
+        changes: {},
+        metadata: { reason: 'ACCOUNT_BLOCKED', method: 'EMAIL_OTP' },
+      },
+      {
+        id: 'activity-3',
+        action: 'ACCESS_REFUSED',
+        createdAt: '2026-09-09T08:11:00Z',
+        actor: {
+          type: 'USER',
+          id: 'user-1',
+          name: 'Lena Hoffmann',
+          email: 'u-kisi2@student.kit.edu',
+          role: 'STUDENT',
+        },
+        target: { type: 'ENDPOINT', id: 'endpoint-users', label: 'GET /users' },
+        changes: {},
+        metadata: { method: 'GET', path: '/users', status: 403 },
+      },
+      {
+        id: 'activity-4',
+        action: 'RATING_SUBMITTED',
+        createdAt: '2026-09-08T19:55:00Z',
+        actor: {
+          type: 'USER',
+          id: 'user-3',
+          name: 'Mira Kowalski',
+          email: 'u-kisi3@student.kit.edu',
+          role: 'STUDENT',
+        },
+        target: { type: 'RATING', id: 'rating-1', label: 'Lineare Algebra I' },
+        changes: {},
+        // Nothing recorded beyond the action, which is the case the details modal has its own
+        // sentence for.
+        metadata: {},
+      },
+      {
+        id: 'activity-5',
+        action: 'COMMENT_REPORT_CREATED',
+        createdAt: '2026-09-08T14:02:00Z',
+        actor: {
+          type: 'USER',
+          id: 'user-1',
+          name: 'Lena Hoffmann',
+          email: 'u-kisi2@student.kit.edu',
+          role: 'STUDENT',
+        },
+        target: { type: 'COMMENT_REPORT', id: 'report-1', label: 'Beleidigung eines Dozenten' },
+        changes: {},
+        metadata: { reason: 'INSULT' },
+      },
+      {
+        id: 'activity-6',
+        action: 'USER_LOGIN',
+        createdAt: '2026-09-08T07:30:00Z',
+        actor: {
+          type: 'USER',
+          id: 'user-1',
+          name: 'Lena Hoffmann',
+          email: 'u-kisi2@student.kit.edu',
+          role: 'STUDENT',
+        },
+        target: { type: 'USER_SESSION', id: 'session-9', label: 'Lena Hoffmann app session' },
+        changes: {},
+        metadata: { method: 'EMAIL_OTP', newAccount: false, api: 'APP' },
+      },
+    ],
     systemStatus: {
       status: 'OK',
       checkedAt: '2026-09-09T09:00:00Z',

@@ -7,7 +7,7 @@ import type {
 import type { Lecture, Professor } from '@/api/catalog'
 import type { BackendRating } from '@/api/catalog/ratingTypes'
 import type { BugReport } from '@/api/feedback'
-import type { AuditLog, AuditMeta } from '@/api/logs'
+import type { AuditEntry, AuditLog, AuditMeta } from '@/api/logs'
 import type { SystemStatus } from '@/api/system'
 import type { User, Warning } from '@/api/users'
 
@@ -39,6 +39,13 @@ export interface MswDb {
   ratings: BackendRating[]
   auditLogs: AuditLog[]
   auditMeta: AuditMeta | null
+  /**
+   * The other half of the same backend table. Kept as its own collection rather than one list
+   * filtered by `actor.type`, because the two endpoints are what the panel talks to and a
+   * handler that split one list would be testing the split rather than the screens.
+   */
+  activityLogs: AuditEntry[]
+  activityMeta: AuditMeta | null
   bugReports: BugReport[]
   /** Whether the backend holds GitLab credentials; the escalation control is hidden without. */
   gitlabEnabled: boolean
@@ -59,6 +66,8 @@ function emptyDb(): MswDb {
     ratings: [],
     auditLogs: [],
     auditMeta: null,
+    activityLogs: [],
+    activityMeta: null,
     bugReports: [],
     gitlabEnabled: false,
     systemStatus: null,

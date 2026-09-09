@@ -173,6 +173,34 @@ export function sweepFixture(): Partial<MswDb> {
       targetTypes: ['USER'],
       actorTypes: ['ADMIN'],
     },
+    activityLogs: [
+      {
+        id: 'activity-1',
+        // A refusal rather than a comment: it is the entry type with the most metadata and the
+        // least in common with an audit entry, so a screen that renders this one renders the
+        // rest. `changes` is empty because nothing existing was modified.
+        action: 'ACCESS_REFUSED',
+        createdAt: AT,
+        actor: {
+          type: 'USER',
+          id: 'user-1',
+          name: 'Mira Kowalski',
+          email: 'mira@student.kit.edu',
+          role: 'STUDENT',
+        },
+        target: { type: 'ENDPOINT', id: 'endpoint-1', label: 'GET /admin/users' },
+        changes: {},
+        metadata: { method: 'GET', path: '/admin/users', status: 403 },
+      },
+    ],
+    activityMeta: {
+      actors: [
+        { id: 'user-1', name: 'Mira Kowalski', email: 'mira@student.kit.edu', role: 'STUDENT' },
+      ],
+      actions: ['ACCESS_REFUSED'],
+      targetTypes: ['ENDPOINT'],
+      actorTypes: ['USER'],
+    },
     bugReports: [
       {
         id: 'report-1',

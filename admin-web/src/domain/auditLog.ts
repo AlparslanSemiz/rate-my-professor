@@ -1,10 +1,17 @@
 import { enumGuard } from './enumGuard'
 
 /**
- * Vocabulary for the log the panel reads. This file once described two endpoints —
- * `/audit-logs` and `/activity-logs` share a table and an entry shape on the backend — but
- * the panel no longer has an activity screen, so only the administrative half is modelled
- * here. The backend still serves `/activity-logs`; nothing in this repository calls it.
+ * Vocabulary for the two logs the panel reads.
+ *
+ * `/audit-logs` and `/activity-logs` share one table and one entry shape on the backend,
+ * separated by `actor.type`; they differ only in which actions they serve. Both halves are
+ * modelled here, and were until the activity screen was deleted on 2026-09-09 — the action
+ * set was narrowed to the administrative half then and is whole again now (ADR 0016).
+ *
+ * None of these lists is a filter. The dropdowns are built from `/…/meta` and the tables
+ * render whatever they are given; the lists exist to give the panel's own code a type to
+ * speak in, which is why a value the backend adds is a stale list here rather than a broken
+ * screen.
  */
 
 /** What admins did through the panel — served by `/audit-logs`. */
@@ -28,17 +35,49 @@ export const AUDIT_ACTIONS = [
   'ANSWER_REPORT_STATUS_CHANGED',
   'ANSWER_REPORT_DELETED',
   'BUG_REPORT_UPDATED',
+  'BUG_REPORT_ISSUE_CREATED',
   'BUG_REPORT_DELETED',
+  'LECTURE_CREATED',
   'LECTURE_UPDATED',
   'LECTURE_DELETED',
+  'PROFESSOR_CREATED',
   'PROFESSOR_UPDATED',
   'PROFESSOR_DELETED',
 ] as const
 
 /**
- * Every target an entry can name. Wider than the actions above on purpose: the list mirrors
- * what `/audit-logs/meta` may return, and the panel renders whatever it is given rather than
- * filtering the backend's vocabulary down to its own.
+ * What students did in the app, plus every refused request — served by `/activity-logs`.
+ *
+ * `changes` is always empty for these: nothing existing is modified, so the detail is in
+ * `metadata` instead. The two refusals are the reason this screen is not only a curiosity —
+ * `LOGIN_REFUSED` carries why a sign-in was turned down and `ACCESS_REFUSED` carries the path
+ * an authenticated caller was answered `403` on.
+ */
+export const ACTIVITY_ACTIONS = [
+  'USER_LOGIN',
+  'USER_LOGOUT',
+  'COMMENT_CREATED',
+  'ANSWER_CREATED',
+  'RATING_SUBMITTED',
+  'COMMENT_REPORT_CREATED',
+  'ANSWER_REPORT_CREATED',
+  'BUG_REPORT_CREATED',
+  'LOGIN_REFUSED',
+  'ACCESS_REFUSED',
+] as const
+
+/**
+ * The two actions that are not something someone successfully did.
+ *
+ * Their own list rather than a suffix rule: `_REFUSED` happens to fit both today, and a rule
+ * would quietly claim every future action ending that way is a refusal the panel understands.
+ */
+export const REFUSAL_ACTIONS = ['LOGIN_REFUSED', 'ACCESS_REFUSED'] as const
+
+/**
+ * Every target an entry can name. Shared by both logs, and wider than either action list on
+ * purpose: it mirrors what `/…/meta` may return, and the panel renders whatever it is given
+ * rather than filtering the backend's vocabulary down to its own.
  */
 export const AUDIT_TARGET_TYPES = [
   'ADMIN_SESSION',
@@ -56,11 +95,18 @@ export const AUDIT_TARGET_TYPES = [
   'ENDPOINT',
 ] as const
 
-/** `USER` stays: the backend reports it on `/audit-logs/meta`, so the filter must accept it. */
+/**
+ * `USER` is not only the activity log's: the audit log is backed by the same table and its
+ * meta reports both, so both filters accept both.
+ */
 export const AUDIT_ACTOR_TYPES = ['ADMIN', 'USER'] as const
 
 /** One of {@link AUDIT_ACTIONS} — what an admin did. */
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]
+/** One of {@link ACTIVITY_ACTIONS} — what a student did, or what was refused. */
+export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number]
+/** Either half. What the shared table is keyed on when it does not care which log it is. */
+export type LogAction = AuditAction | ActivityAction
 /** One of {@link AUDIT_TARGET_TYPES} — what kind of record an entry names. */
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number]
 /** One of {@link AUDIT_ACTOR_TYPES} — who acted. */
@@ -99,7 +145,7 @@ export interface AuditChange {
  */
 export interface AuditEntry {
   id: string
-  action: AuditAction
+  action: LogAction
   createdAt: string
   actor: AuditActor
   target: AuditTarget | null
@@ -136,14 +182,15 @@ export const REVERT_BLOCKED_REASONS = [
 export type RevertBlockedReason = (typeof REVERT_BLOCKED_REASONS)[number]
 
 /**
- * What `GET /audit-logs` narrows on. Every field is optional and an omitted one is not sent;
+ * What `GET /audit-logs` and `GET /activity-logs` narrow on — the same parameters, which is
+ * why one query builder serves both. Every field is optional and an omitted one is not sent;
  * `from` and `to` are inclusive ISO instants, built by {@link startOfDay} and {@link endOfDay}.
  */
 export interface AuditLogFilters {
   q?: string
   actorId?: string
   actorType?: AuditActorType
-  action?: AuditAction
+  action?: LogAction
   targetType?: AuditTargetType
   from?: string
   to?: string
@@ -151,14 +198,13 @@ export interface AuditLogFilters {
 
 
 /**
- * Filter vocabulary the audit log's dropdowns are built from. `actors` is capped rather
- * than exhaustive: /audit-logs is backed by a log table shared with the student-side
- * record, so every account that ever signed in is an actor in it — `q` is what finds
- * someone beyond the cap.
+ * Filter vocabulary a log screen's dropdowns are built from. `actors` is capped rather than
+ * exhaustive: both endpoints are backed by one log table, so every account that ever signed
+ * in is an actor in it — `q` is what finds someone beyond the cap.
  */
 export interface AuditMeta {
   readonly actors: readonly Pick<AuditActor, 'id' | 'name' | 'email' | 'role'>[]
-  readonly actions: readonly AuditAction[]
+  readonly actions: readonly LogAction[]
   readonly targetTypes: readonly AuditTargetType[]
   readonly actorTypes: readonly AuditActorType[]
 }
@@ -167,10 +213,9 @@ export interface AuditMeta {
  * The filter vocabulary before anything has been read, and while a read is failing.
  *
  * Frozen because it is a *shared* default: one object is handed to every caller that asks,
- * and `features/audit-logs/auditLogModel.ts` re-exports this very reference under a second
- * name. A `const` binding stops the name being reassigned and does nothing about the four
- * arrays inside it, so a single `push` anywhere would have added an entry to the empty meta
- * for the rest of the session.
+ * and with two log screens both of them ask. A `const` binding stops the name being
+ * reassigned and does nothing about the four arrays inside it, so a single `push` anywhere
+ * would have added an entry to the empty meta for the rest of the session, on both screens.
  */
 export const EMPTY_AUDIT_META: AuditMeta = Object.freeze({
   actors: Object.freeze([]),
@@ -181,6 +226,9 @@ export const EMPTY_AUDIT_META: AuditMeta = Object.freeze({
 
 /** @returns whether the value is an actor type this panel knows. */
 export const isAuditActorType = enumGuard(AUDIT_ACTOR_TYPES)
+
+/** @returns whether the action is one of the two refusals, which read differently everywhere. */
+export const isRefusal = enumGuard(REFUSAL_ACTIONS)
 
 /**
  * The backend takes inclusive ISO date-times; the filter form supplies `yyyy-mm-dd`, picked
