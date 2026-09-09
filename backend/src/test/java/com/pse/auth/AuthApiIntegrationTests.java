@@ -463,6 +463,39 @@ class AuthApiIntegrationTests {
     }
 
 
+
+    /**
+     * F-5's last instance, and the sweep's own honesty check.
+     *
+     * <p>{@code IdentityService.validate} had three failure branches, all answering
+     * {@code 200 {"success": false}}. Two of them cannot be reached over HTTP:
+     * {@code BearerTokenAuthenticationFilter} answers 401 for any present-but-invalid
+     * {@code Authorization} header before the controller runs, and {@code @NotBlank} on
+     * {@code email} means a missing address is a 400 from Bean Validation. They were corrected
+     * anyway so the method agrees with itself, but this is the one a client can actually
+     * observe: a **valid** token together with an address that is not its owner's.
+     */
+    @Test
+    void validatingAnAddressThatIsNotTheTokenOwnersIsRefusedRatherThanReported() throws Exception {
+        String token = login("owner@student.kit.edu");
+
+        mockMvc.perform(post("/auth/validate")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"someone-else@student.kit.edu\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Not logged in"));
+
+        // The matching address is untouched.
+        mockMvc.perform(post("/auth/validate")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"owner@student.kit.edu\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
     private String bearer(String token) {
         return "Bearer " + token;
     }

@@ -824,3 +824,20 @@ value the current code no longer understands: an enum constant that has since be
 removed, or a number that no longer parses. The entry still reports revertible: true, because
 revertibility is decided by comparing recorded values as text, so the panel draws the button
 and pressing it used to report a backend failure for what is really an unreversible entry.
+
+
+///// 9.09 (13)
+
+
+"POST /auth/validate" refuses an address that is not the token owner's.
+
+Was: 200 {"message": "Error, wrong email for auth Token", "success": false}
+Now: 401 {"message": "Not logged in", "success": false}
+
+The last route still reporting an authorization failure with 200. Everything else about the
+endpoint is unchanged: a matching address still answers
+200 {"message": "Correct auth-Token for email: ...", "success": true}.
+
+The message text changed, so anything matching on it has to change. If you were branching on
+"success" you now get a 401 for the same case, which is the same answer this endpoint already
+gave when the Authorization header was missing entirely.

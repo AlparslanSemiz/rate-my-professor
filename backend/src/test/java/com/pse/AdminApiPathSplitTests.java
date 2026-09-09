@@ -321,6 +321,32 @@ class AdminApiPathSplitTests {
     }
 
     /**
+     * A shape-5 candidate that turned out to be **unreachable**, which is worth a test
+     * precisely because reading the service alone says otherwise.
+     *
+     * <p>{@code AdminService.validateAdmin} ends in
+     * {@code new BasicResponse("Is Not Admin", false)}, which reads as another instance of
+     * F-5 — a failure reported with 200. It cannot be reached over HTTP:
+     * {@code SecurityConfig} matches {@code /admins/**} with {@code hasRole("ADMIN")}, so a
+     * caller without the role is refused **403** by the chain before the controller runs, and
+     * a caller with an invalid token is refused 401 by
+     * {@code BearerTokenAuthenticationFilter} before that.
+     *
+     * <p>Which makes it the same dead second answer {@code LectureService.addLecture} already
+     * has a comment about: "a second, weaker answer to a question already settled". Left in
+     * place rather than deleted — the route is being retired, and this test is what says the
+     * 403 is the real contract.
+     */
+    @Test
+    void adminsValidateIsRefusedByTheChainBeforeItCanReportNotAnAdmin() throws Exception {
+        String rawToken = JsonPath.read(
+                loginThrough("/auth", STUDENT_EMAIL, ""), "$.authToken");
+
+        mockMvc.perform(get("/admins/validate").header("Authorization", bearer(rawToken)))
+                .andExpect(status().isForbidden());
+    }
+
+    /**
      * The student's bug submission is the one app route with no administrative twin.
      *
      * <p>The refusal it asserts is not the mechanism the test name suggests. Two different

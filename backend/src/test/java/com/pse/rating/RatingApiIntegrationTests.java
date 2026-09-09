@@ -668,4 +668,32 @@ class RatingApiIntegrationTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
     }
+
+    /**
+     * The last surviving instance of F-5's shape, and deliberately left as it is.
+     *
+     * <p>A student who has not rated this lecture gets {@code 200} with
+     * {@code "success": false} and an empty list. The 200 and the empty list are right, and
+     * the code says why: "I have not rated this lecture" is the ordinary answer for any
+     * lecture a student has not rated, and a 404 would make the ordinary case an error. What
+     * does not follow is {@code success: false} — the request succeeded and the answer is
+     * "none", so the flag reports a failure that did not happen.
+     *
+     * <p>Changing it is a client-visible change to a field the app reads, on a route where
+     * the two readings ("no such lecture" vs "no rating yet") are already separated by the
+     * 404 above. Pinned rather than changed; the decision belongs to whoever owns the app
+     * contract, and this test is the one to invert when they make it.
+     */
+    @Test
+    void ownRatingForAnUnratedLectureIsAnEmptyListReportedAsAFailure() throws Exception {
+        Session student = createSession("unrated@student.kit.edu");
+        Lecture lecture = createLecture();
+
+        mockMvc.perform(get("/ratings/own/{lectureId}", lecture.getId())
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.ratings").isArray())
+                .andExpect(jsonPath("$.ratings", hasSize(0)));
+    }
 }
