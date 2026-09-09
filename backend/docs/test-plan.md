@@ -11,12 +11,19 @@ Testcontainers question — turned out not to be a blocker at all; see
 
 ### Where it stands
 
-**975 tests, 0 failures**, 31 skipped locally (the `@Disabled` `DemoApplicationTests`, the
+**1001 tests, 0 failures**, 31 skipped locally (the `@Disabled` `DemoApplicationTests`, the
 twenty-four PostgreSQL integration tests and the six end-to-end journeys, all of which run in
 CI).
-Bundle **96.48% LINE** (3339/3461), **92.71% BRANCH** (1004/1083). Line coverage is gated in two
-tiers — **90% mandatory, 95% target** — and BRANCH has a single floor, ratcheted to 0.88 now
-that batch 7 has cleared it.
+Bundle **96.67% LINE** (3363/3479), **93.16% BRANCH** (1022/1097) at the time of writing. Line
+coverage is gated in two tiers — **90% mandatory, 95% target** — and BRANCH has a single floor,
+ratcheted to 0.88 now that batch 7 has cleared it.
+
+> **Do not quote these two numbers from here.** They are a snapshot; the artefact is
+> `target/site/jacoco/jacoco.csv` after `./mvnw clean verify`, which is what CI reads and what
+> `jacoco:check` gates on. Every figure in this document that is not read from that file on the
+> day it is quoted is a figure that was true once — which is
+> [P-5](test-findings.md#p-5--coverage-measured-without-clean-is-not-the-coverage-ci-measures)
+> and [P-1](test-findings.md#p-1--the-coverage-baseline-number-was-wrong) both.
 
 Both figures moved on the refactor rather than on new coverage work: the denominators fell as
 duplicated code was collapsed, and the classes that came out of the split are small enough to
@@ -34,7 +41,11 @@ Line coverage has been above its target since batch 5, so `coverage:line-target`
 rather than yellow; batch 6 raised the target itself from 94 to 95 rather than banking the
 slack.
 
-**[test-findings.md](test-findings.md) has no open entry.** The twelve that were still open
+**[test-findings.md](test-findings.md) has two open entries, and neither is a defect waiting
+on a commit:** F-29 needs credentials rotated at their providers, and F-34 needs a product
+decision about a half-built feature.
+
+The batch history behind that: the twelve that were still open
 after batch 6 were closed in one pass — eleven fixed, one (P-3) closed by a recorded decision.
 Three of them changed a client-visible contract, so they are named here rather than only in the
 findings document: **F-5** (app-tier failures answer 4xx instead of 200), **F-16** (a path
@@ -53,7 +64,7 @@ document the panel team treats as authoritative.
 |---|---|
 | Unit | Batches 1–7 done. |
 | API / role | The three sweeps below. |
-| Findings | **All closed.** |
+| Findings | **Two open**, neither a defect: F-29 (needs a rotation) and F-34 (needs a product decision). |
 | Integration | **Done for the questions H2 cannot answer.** Six classes, 24 tests, one shared context against a real PostgreSQL in CI. |
 | E2E | **Done.** Six journeys over real HTTP against the same PostgreSQL, in a second Maven invocation of the same job. |
 
@@ -913,6 +924,58 @@ characterization test pinned the old behaviour it was **inverted rather than del
 F-22, one for F-28.
 
 The suite went 927 → 975 tests; LINE 95.91% → 96.65%, BRANCH 90.61% → 93.28%.
+
+## The Kontrollphase pass — the five shapes, swept to the end
+
+The 9 September pass found seven defects by taking five known defect *shapes* and looking for
+the same shape elsewhere. It proved the method and then stopped: **none of the five shapes was
+swept exhaustively.** F-23 had been searched in one class, F-26 on one field, F-21 and F-27 in
+two places each. This pass finished each one, and recorded the coverage whether or not it found
+anything — an unrecorded sweep gets repeated, or worse, assumed.
+
+| Shape | What was scanned | What it found |
+| --- | --- | --- |
+| A guard in one twin and not its neighbour (F-23) | 13 twin pairs, line by line | **F-31**, **F-32**, plus one documented-and-deliberate asymmetry |
+| A field read but never written, or written but never read (F-26) | every persistent field on all 21 entities, both baselines | **F-33**, **F-34**, plus 8 dead-data fields recorded with a verdict each |
+| An order-undefined collection reaching the client (F-21, F-27) | 5 mappers, **all 76 DTO records**, every `*Response` builder, all 15 repositories | **F-35** — four instances |
+| An unguarded parse of caller input (F-24, F-25) | all 15 parse sites in `src/main` | **F-36**, in one class. **11 of 15 already guarded both failure modes** |
+| A failure answered `200 {"success": false}` (F-5, F-22, F-28) | **every** `BasicResponse(..., false)` — 14 sites | **F-37**. 11 were already correct; 2 of the remaining 3 proved *unreachable* |
+
+Plus two gaps an earlier finding had parked: **F-38**, the size limit F-17 left "to be measured
+separately", and **P-8**, the `admin-api.md` drift.
+
+### What the sweeps taught that the fixes did not
+
+**Two shapes are now closed rather than merely searched.** The parse shape came back nearly
+clean, and the `200 {"success": false}` shape is down to one reachable instance —
+`GET /ratings/own/{lectureId}`, pinned with the reason it was left. A shape is finished when
+its coverage is written down, not when somebody stops looking.
+
+**Probing beats reading, twice.** Two candidates that read like live defects turned out to be
+unreachable, and only a probe could say so: `AdminService.validateAdmin`'s
+`"Is Not Admin"` body (the chain answers 403 first — the test was written expecting 200 and
+went red) and two of `IdentityService.validate`'s three branches (the bearer filter and
+`@NotBlank` answer first). Both are now in *Unreachable states deliberately not tested* with
+the mechanism that makes them so.
+
+**A fixture can make a sweep impossible, not just weak.** F-38's plan was to extend
+`ApiProtocolContractTests`. MockMvc has no servlet container and therefore no multipart parsing,
+so neither exception can be raised there — an oversized body answers 415 from content
+negotiation and a sweep built on it would have passed against a broken handler. `TransportLimitTests`
+drives a real container instead, at the cost of one extra Spring context, and that cost is
+written down rather than hidden.
+
+### Two new sweeps
+
+`ApiErrorMessageContractTests` asks the fifth question — **what does the API say when it
+refuses?** 189 refusals provoked; body shape and message style both conform, so it is a
+negative result that now protects a property which had been true by luck.
+
+`AdminApiDocumentationDriftTests` puts P-8 under test, in both directions, and found a
+documentation error on its first run.
+
+The suite went 977 → **1001** tests; LINE 96.65% → 96.67%, BRANCH 93.28% → 93.16% (the small
+branch dip is new guard branches, not lost coverage).
 
 ## Beyond the suite: two CI-only tools
 
