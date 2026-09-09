@@ -6,13 +6,17 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "check": "npm run lint && npm run typecheck",
+    "check": "npm run lint && npm run check:cycles && npm run check:docs && npm run typecheck",
     "lint": "eslint .",
+    "check:cycles": "node scripts/check-cycles.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
     "typecheck": "tsc -b",
+    "schema:types": "npx --yes openapi-typescript@7 docs/api/openapi.json -o src/types/api.generated.ts",
     "test": "vitest run",
     "test:unit": "vitest run .unit.test.",
     "test:integration": "vitest run .integration.test.",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -29,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -42,9 +47,15 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
+    "msw": "^2.15.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
     "vitest": "^4.1.9"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }

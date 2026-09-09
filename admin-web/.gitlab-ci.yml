@@ -5,6 +5,7 @@ workflow:
 stages:
   - check
   - test
+  - e2e
   - build
   - image
   - deploy
@@ -27,14 +28,41 @@ web:check:
   extends: .node-npm
   stage: check
   script:
-    - npm run lint
-    - npm run typecheck
+    # The whole gate, not three of its four parts. `check:cycles` fails on a cyclic import
+    # anywhere in src/, and `check:docs` on a public service, hook or domain type with no
+    # doc comment — both were added because the claims they enforce had been checked once,
+    # by hand, and had since drifted.
+    - npm run check
 
 web:test:
   extends: .node-npm
   stage: test
   script:
     - npm run test
+
+# The end-to-end layer. It runs against the in-browser mock backend, so it needs no
+# deployment — but it drives a real browser, which makes it the slowest and least stable
+# thing in the pipeline. `allow_failure` is deliberate: a flaky browser must not be able to
+# block a merge, and the report is there to be read when it goes red.
+web:e2e:
+  image: mcr.microsoft.com/playwright:v1.63.0-noble
+  stage: e2e
+  allow_failure: true
+  cache:
+    key: "npm-${CI_COMMIT_REF_SLUG}"
+    policy: pull
+    paths:
+      - .npm/
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run test:e2e
+  artifacts:
+    when: on_failure
+    expire_in: 1 week
+    paths:
+      - playwright-report/
+      - test-results/
 
 web:build:
   extends: .node-npm

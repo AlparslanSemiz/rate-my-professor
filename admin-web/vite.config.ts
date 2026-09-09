@@ -60,6 +60,11 @@ export default defineConfig(({ command, mode }) => {
       setupFiles: './src/test/setup.ts',
       css: true,
       /**
+       * `e2e/` is Playwright's, and its specs match Vitest's default `*.spec.ts` pattern —
+       * without this they would be collected here and fail on the first `page` reference.
+       */
+      exclude: ['node_modules/**', 'dist/**', 'e2e/**'],
+      /**
        * `all: true` so a file no test imports counts as zero rather than disappearing from
        * the report — the point of the baseline is to show what is uncovered.
        *
