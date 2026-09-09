@@ -841,3 +841,20 @@ endpoint is unchanged: a matching address still answers
 The message text changed, so anything matching on it has to change. If you were branching on
 "success" you now get a 401 for the same case, which is the same answer this endpoint already
 gave when the Authorization header was missing entirely.
+
+
+///// 9.09 (14)
+
+
+A request body over the upload size limit answers 413 instead of 500.
+
+Was: 500 {"message": "Unexpected backend error", "success": false}
+Now: 413 {"message": "Payload too large", "success": false}
+
+No endpoint here accepts a file upload, so this is only reachable by sending a
+"multipart/form-data" body to a route that reads JSON. It appears in the production logs, which
+is why it is being answered properly rather than left to the catch-all.
+
+A malformed multipart body is unchanged: it still answers 415, because no route in this API can
+read that media type. Nothing to change unless you were treating the 500 as a backend outage --
+it never was one.
