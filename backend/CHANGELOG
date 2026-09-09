@@ -552,3 +552,25 @@ These were the last two reads answering a failure with 200. Every other read in 
 F-5 and F-15. Both routes are public, so an unknown id was reachable without a token.
 
 A successful read is unchanged: 200 with "success": true and the payload.
+
+
+///// 9.09 (2)
+
+
+"POST /audit-logs/{id}/revert" no longer answers 500 for a refusal entry.
+
+Was: 500 {"message": "Unexpected backend error", "success": false}
+Now: 409 {"message": "LOGIN_REFUSED cannot be reversed", "success": false,
+          "reason": "ACTION_NOT_REVERTIBLE"}
+
+Applies to LOGIN_REFUSED and ACCESS_REFUSED -- the entries that record something that did NOT
+happen, and therefore carry no target id. Both reach the panel through "GET /activity-logs",
+so an operator could see one and click revert on it.
+
+Panel teams: this is the answer "GET /activity-logs" was already giving you for these rows.
+Its "revertBlockedReason" said ACTION_NOT_REVERTIBLE and the revert behind it crashed, so a
+panel that trusted the list never noticed and one that let the operator try got a 500 with
+nothing to show them. Nothing to change if you read "revertible" from the list; if you
+special-cased the 500, that can go.
+
+Every other revert answer is unchanged.

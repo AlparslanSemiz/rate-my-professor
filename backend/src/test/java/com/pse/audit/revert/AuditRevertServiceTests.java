@@ -429,6 +429,36 @@ class AuditRevertServiceTests {
         assertThat(AuditRevertContext.get()).isNull();
     }
 
+    /**
+     * The revert twin of {@code describe_refusalEntryWithoutATargetId_isRefusedWithoutThrowing}.
+     *
+     * <p>{@code describe} learned to guard the null target id -- a refusal records something
+     * that did not happen, so it carries none -- and {@code revert} never did, though the
+     * panel hands the operator both from the same list. Asking {@code Map.of()} for a null key
+     * throws, so clicking revert on a LOGIN_REFUSED row answered 500 where the contract is a
+     * 409 naming the reason.
+     */
+    @Test
+    void revert_refusalEntryWithoutATargetId_isRefusedRatherThanAnsweringAServerError() {
+        // Given
+        AuditLog refusal = log(AuditAction.LOGIN_REFUSED, new LinkedHashMap<>());
+        refusal.setTargetType(null);
+        refusal.setTargetId(null);
+        when(repository.findById(AUDIT_ID)).thenReturn(Optional.of(refusal));
+        AuditRevertService service = serviceWith(userHandler);
+
+        // When / Then
+        assertThatThrownBy(() -> service.revert(PRINCIPAL, AUDIT_ID))
+                .isInstanceOf(ApiException.class)
+                .asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.type(ApiException.class))
+                .satisfies(exception -> {
+                    assertThat(exception.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(exception.getCode())
+                            .isEqualTo(AuditRevertRefusal.ACTION_NOT_REVERTIBLE.name());
+                });
+        verify(userHandler, never()).applyInverse(any(), any(), any());
+    }
+
     @Test
     void revert_unknownAuditId_throwsNotFound() {
         // Given

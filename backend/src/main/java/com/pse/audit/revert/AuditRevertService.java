@@ -158,9 +158,18 @@ public class AuditRevertService {
                 : handler.currentValues(List.of(log.getTargetId()));
         Map<UUID, UUID> reverted = reversalsOf(List.of(auditId));
 
+        // The same guard describe() carries, and for the same reason: a refusal --
+        // LOGIN_REFUSED, ACCESS_REFUSED -- records something that did not happen and so has
+        // no target id, and asking an immutable empty map for a null key throws. describe()
+        // learned this and revert() did not, though the panel offers the operator both from
+        // one list, so clicking revert on a refusal answered 500 instead of the 409 that
+        // names the reason.
+        Map<String, Object> currentValues =
+                log.getTargetId() == null ? null : current.get(log.getTargetId());
+
         Revertability verdict = evaluate(
                 log,
-                current.get(log.getTargetId()),
+                currentValues,
                 reverted,
                 Instant.now(clock).minus(window)
         );

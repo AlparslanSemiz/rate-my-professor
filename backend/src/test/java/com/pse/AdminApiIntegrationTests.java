@@ -2546,6 +2546,33 @@ class AdminApiIntegrationTests {
                 .isTrue();
     }
 
+    /**
+     * A refusal reaches the panel through {@code GET /activity-logs} with a revert button
+     * beside it like anything else, and clicking it used to answer 500: the entry carries no
+     * target id, and {@code revert} asked an empty immutable map for a null key.
+     * {@code describe} had been fixed for exactly this and {@code revert} had not, so the
+     * list said "not revertible" while the action behind it crashed.
+     */
+    @Test
+    void revertingARefusalIsRefusedRatherThanAnsweringAServerError() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session student = createSession("refused@student.kit.edu", false);
+
+        // A student probing an admin route writes ACCESS_REFUSED, which has no target id.
+        mockMvc.perform(get("/users").header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isForbidden());
+
+        AuditLog refusal = auditOf(AuditAction.ACCESS_REFUSED);
+        assertThat(refusal.getTargetId()).as("the entry this test is about has a target id")
+                .isNull();
+
+        mockMvc.perform(post("/audit-logs/{id}/revert", refusal.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.reason").value("ACTION_NOT_REVERTIBLE"))
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
     @Test
     void revertRefusalsNameTheirCause() throws Exception {
         Session admin = createSession("admin@student.kit.edu", true);
