@@ -6,7 +6,7 @@ import { routes } from '@/constants/routes'
 
 // One chunk per screen: visiting a section downloads that section, and the initial bundle is
 // the shell alone.
-const AuditLogsPage = lazy(() => import('@/features/audit-logs/AuditLogsPage'))
+const AuditLogsPage = lazy(() => import('@/features/logs/AuditLogsPage'))
 const CatalogPage = lazy(() => import('@/features/catalog/CatalogPage'))
 const CommentsPage = lazy(() => import('@/features/comments/CommentsPage'))
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'))

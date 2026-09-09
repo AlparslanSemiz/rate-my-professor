@@ -1,9 +1,10 @@
 import { Box, Button, Group, Text, type CSSProperties } from '@mantine/core'
 import { IconFileSearch } from '@tabler/icons-react'
-import type { AuditLog } from '@/api/logs'
+import type { AuditEntry } from '@/api/logs'
 import Panel from '@/components/Panel'
 import TableHeaderRow from '@/components/TableHeaderRow'
-import AuditLogRow from './AuditLogRow'
+import LogRow from './LogRow'
+import type { LogScreen } from '../logScreen'
 import { chrome, iconSize } from '@/theme'
 
 /**
@@ -12,8 +13,6 @@ import { chrome, iconSize } from '@/theme'
  */
 const EMPTY_ICON_SIZE = 34
 
-
-const TABLE_COLUMNS = ['Time', 'Admin', 'Action', 'Target', 'Changed fields'] as const
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
 const tableStyle: CSSProperties = {
@@ -28,52 +27,55 @@ const loadMoreStyle: CSSProperties = {
   textAlign: 'center',
 }
 
-interface AuditLogsTableProps {
-  logs: AuditLog[]
+interface LogsTableProps<TEntry extends AuditEntry> {
+  screen: LogScreen<TEntry>
+  entries: TEntry[]
   /** Whether a further page exists. The cursor itself is the hook's business. */
   hasMore: boolean
   loading: boolean
   loadingMore: boolean
-  onOpen: (log: AuditLog) => void
+  onOpen: (entry: TEntry) => void
   onLoadMore: () => Promise<void>
 }
 
-export default function AuditLogsTable({
-  logs,
+export default function LogsTable<TEntry extends AuditEntry>({
+  screen,
+  entries,
   hasMore,
   loading,
   loadingMore,
   onOpen,
   onLoadMore,
-}: AuditLogsTableProps) {
+}: LogsTableProps<TEntry>) {
   return (
     <Panel style={panelStyle} aria-busy={loading}>
       <Box px={20} py={14} style={{ borderBottom: `1px solid ${chrome.border}` }}>
         <Group gap={7}>
           <IconFileSearch size={iconSize.rowAction} color={chrome.textDim} />
           <Text size="xs" c={chrome.textDim}>
-            {logs.length} audit event{logs.length === 1 ? '' : 's'} loaded · newest first
+            {screen.countLabel(entries.length)}
           </Text>
         </Group>
       </Box>
 
-      {logs.length === 0 ? (
+      {entries.length === 0 ? (
         <Box style={emptyStyle}>
           <IconFileSearch size={EMPTY_ICON_SIZE} color={chrome.iconFaint} />
           <Text c={chrome.textDim} size="sm" mt={10}>
-            No audit events match these filters.
+            {screen.emptyMessage}
           </Text>
         </Box>
       ) : (
         <div style={tableScrollStyle}>
           <table style={tableStyle}>
-            <TableHeaderRow columns={TABLE_COLUMNS} />
+            <TableHeaderRow columns={screen.columns} />
             <tbody>
-              {logs.map((log, index) => (
-                <AuditLogRow
-                  key={log.id}
-                  log={log}
-                  isLast={index === logs.length - 1 && !hasMore}
+              {entries.map((entry, index) => (
+                <LogRow
+                  key={entry.id}
+                  screen={screen}
+                  entry={entry}
+                  isLast={index === entries.length - 1 && !hasMore}
                   onOpen={onOpen}
                 />
               ))}

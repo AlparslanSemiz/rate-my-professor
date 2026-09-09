@@ -71,7 +71,7 @@ describe('AuditLogsService', () => {
       from: '2026-07-01',
       to: '2026-07-23',
     }, 'current-page')).resolves.toEqual({
-      auditLogs: [auditLog],
+      entries: [auditLog],
       nextCursor: 'next-page',
     })
 
@@ -153,7 +153,7 @@ describe('AuditLogsService', () => {
 
     const page = await createService().getLogs()
 
-    expect(page.auditLogs[0]).toMatchObject({
+    expect(page.entries[0]).toMatchObject({
       revertible: false,
       revertBlockedReason: null,
       revertedByAuditId: null,

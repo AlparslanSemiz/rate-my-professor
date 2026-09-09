@@ -1,9 +1,11 @@
 import { apiClient, type HttpTransport, type BasicResponse } from '@/api/client/ApiClient'
-import { AuditLogMetaService } from './AuditLogMetaService'
-import { AuditLogReaderService } from './AuditLogReaderService'
 import { AuditLogRevertService } from './AuditLogRevertService'
-import type { AuditLogFilters, AuditMeta } from '@/domain/auditLog'
-import type { AuditLogPage } from './auditLogTypes'
+import { LogMetaService } from './LogMetaService'
+import { LogReaderService } from './LogReaderService'
+import { toAuditLog } from './logMapper'
+import { AUDIT_LOG_RESOURCE } from './logResource'
+import type { AuditLog, AuditLogFilters, AuditMeta } from '@/domain/auditLog'
+import type { LogPage } from './logTypes'
 
 /**
  * The audit log: reading it, undoing an entry, and the vocabulary its filters offer.
@@ -11,15 +13,17 @@ import type { AuditLogPage } from './auditLogTypes'
  * Three services underneath because the three have nothing in common but the path — reading
  * pages, reverting a single edit, and fetching the filter vocabulary are separate concerns
  * with separate failure modes, and the reverts in particular carry their own refusal codes.
+ * Two of the three are shared with `ActivityLogsService`, pointed at the other resource; the
+ * reverter is not, and that asymmetry is the difference between the two screens.
  */
 export class AuditLogsService {
-  private readonly reader: AuditLogReaderService
-  private readonly metadata: AuditLogMetaService
+  private readonly reader: LogReaderService<AuditLog>
+  private readonly metadata: LogMetaService
   private readonly reverter: AuditLogRevertService
 
   constructor(client: HttpTransport) {
-    this.reader = new AuditLogReaderService(client)
-    this.metadata = new AuditLogMetaService(client)
+    this.reader = new LogReaderService(client, AUDIT_LOG_RESOURCE, toAuditLog)
+    this.metadata = new LogMetaService(client, AUDIT_LOG_RESOURCE)
     this.reverter = new AuditLogRevertService(client)
   }
 
@@ -33,7 +37,7 @@ export class AuditLogsService {
    *         panel says so rather than reporting "no entries"
    * @throws {ContractError} when the response holds no `auditLogs` list
    */
-  async getLogs(filters: AuditLogFilters = {}, cursor?: string | null): Promise<AuditLogPage> {
+  async getLogs(filters: AuditLogFilters = {}, cursor?: string | null): Promise<LogPage<AuditLog>> {
     return this.reader.getLogs(filters, cursor)
   }
 

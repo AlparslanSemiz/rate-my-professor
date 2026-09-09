@@ -3,7 +3,7 @@ import { IconArrowBackUp } from '@tabler/icons-react'
 import type { AuditLog } from '@/api/logs'
 import ErrorAlert from '@/components/ErrorAlert'
 import { chrome, iconSize } from '@/theme'
-import { revertRefusalMessage } from '../../auditLogModel'
+import { revertRefusalMessage } from '../../auditRevert'
 import DetailSection from './DetailSection'
 
 interface RevertSectionProps {

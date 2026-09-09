@@ -155,6 +155,9 @@ const DELETION_ACTION_SUFFIX = '_DELETED'
 const DELETION_COLOR = 'red'
 const DEFAULT_AUDIT_ACTION_COLOR = 'blue'
 
+/** For an entry whose action is missing or is not a string at all. */
+const UNKNOWN_ACTION_COLOR = 'gray'
+
 /**
  * The colour an audit entry's action badge is drawn in.
  *
@@ -163,15 +166,22 @@ const DEFAULT_AUDIT_ACTION_COLOR = 'blue'
  * every new thing an admin can do, and a deletion has to read as a deletion whether it removed
  * a comment, a lecture or a warning — so that half stays a rule.
  *
- * It used to be one if-chain, in the audit feature, typed on `string`. Being typed on `string`
- * meant the `AuditAction` union bought nothing: a caller could pass a typo and get blue.
+ * **Takes `unknown`, and that is a reversal worth explaining.** It was typed on the
+ * `AuditAction` union so that a caller could not pass a typo and get blue. Every caller turned
+ * out to be a log row handing over `entry.action` straight off the wire, where the union is a
+ * claim about the backend rather than about the code — and `F-028` was this function calling
+ * `.endsWith` on a value that was not a string, taking the whole screen down through the
+ * `ErrorBoundary`. The union protected a mistake nobody was making from a value nobody had
+ * checked. `AUDIT_ACTION_COLORS` stays keyed on the union, so the table still says which known
+ * actions are exceptions.
  *
- * @param action the recorded action
- * @returns a Mantine colour name
+ * @param action the recorded action, as it arrived
+ * @returns a Mantine colour name; the neutral one when there is no action to colour
  */
-export function auditActionColor(action: AuditAction): string {
+export function auditActionColor(action: unknown): string {
+  if (typeof action !== 'string' || action === '') return UNKNOWN_ACTION_COLOR
   return (
-    AUDIT_ACTION_COLORS[action] ??
+    AUDIT_ACTION_COLORS[action as AuditAction] ??
     (action.endsWith(DELETION_ACTION_SUFFIX) ? DELETION_COLOR : DEFAULT_AUDIT_ACTION_COLOR)
   )
 }

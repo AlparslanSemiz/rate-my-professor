@@ -5,15 +5,25 @@ import ErrorAlert from '@/components/ErrorAlert'
 import LoadError from '@/components/LoadError'
 import PageHeader from '@/components/PageHeader'
 import PageLoader from '@/components/PageLoader'
-import AuditLogDetails from './components/details/AuditLogDetails'
-import AuditLogFilters from './components/AuditLogFilters'
-import AuditLogsTable from './components/AuditLogsTable'
-import { useAuditLogs } from './hooks/useAuditLogs'
+import ChangeList from './components/details/ChangeList'
+import LogDetails from './components/details/LogDetails'
+import RevertSection from './components/details/RevertSection'
+import LogFilters from './components/LogFilters'
+import LogsTable from './components/LogsTable'
+import { useLogPage } from './hooks/useLogPage'
 import { useRevertAuditEntry } from './hooks/useRevertAuditEntry'
-import { enumLabel } from '@/utils/enumLabel'
+import { logEnumLabel } from './logModel'
+import { AUDIT_SCREEN } from './logScreen'
 
+/**
+ * What admins did through the panel, and the one screen that can put a field edit back.
+ *
+ * Everything except the undo is `AUDIT_SCREEN` plus the shared machinery in this folder; the
+ * undo is composed in here, as the change list and the confirmation are, rather than switched
+ * on by a flag the activity screen would have to switch off.
+ */
 export default function AuditLogsPage() {
-  const auditLogs = useAuditLogs()
+  const auditLogs = useLogPage(AUDIT_SCREEN)
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
   const [confirmingRevert, setConfirmingRevert] = useState<AuditLog | null>(null)
 
@@ -53,7 +63,8 @@ export default function AuditLogsPage() {
   return (
     <>
       <AuditPageHeader />
-      <AuditLogFilters
+      <LogFilters
+        screen={AUDIT_SCREEN}
         draft={auditLogs.draft}
         meta={auditLogs.meta}
         loading={auditLogs.loading}
@@ -62,26 +73,38 @@ export default function AuditLogsPage() {
         onClear={auditLogs.clearFilters}
       />
       <ErrorAlert message={auditLogs.tableError} />
-      <AuditLogsTable
-        logs={auditLogs.items}
+      <LogsTable
+        screen={AUDIT_SCREEN}
+        entries={auditLogs.items}
         hasMore={auditLogs.hasMore}
         loading={auditLogs.loading}
         loadingMore={auditLogs.loadingMore}
         onOpen={openLog}
         onLoadMore={auditLogs.loadMore}
       />
-      <AuditLogDetails
-        log={selectedLog}
-        reverting={reverting}
-        revertError={revertError}
-        onRevert={setConfirmingRevert}
+      <LogDetails
+        screen={AUDIT_SCREEN}
+        entry={selectedLog}
+        title="Audit Event Details"
         onClose={() => setSelectedLog(null)}
-      />
+      >
+        {selectedLog && (
+          <>
+            <ChangeList changes={selectedLog.changes} />
+            <RevertSection
+              log={selectedLog}
+              reverting={reverting}
+              revertError={revertError}
+              onRevert={setConfirmingRevert}
+            />
+          </>
+        )}
+      </LogDetails>
       {confirmingRevert && (
         <ConfirmModal
           opened
           title="Undo this change"
-          description={`Put the fields this ${enumLabel(confirmingRevert.action)} entry changed back to what they were? The undo is recorded as its own audit entry.`}
+          description={`Put the fields this ${logEnumLabel(confirmingRevert.action)} entry changed back to what they were? The undo is recorded as its own audit entry.`}
           confirmLabel="Undo the change"
           confirmColor="orange"
           onConfirm={() => confirmRevert(confirmingRevert)}
@@ -93,10 +116,5 @@ export default function AuditLogsPage() {
 }
 
 function AuditPageHeader() {
-  return (
-    <PageHeader
-      title="Audit Logs"
-      description="A trace of successful admin actions, showing who changed what and when."
-    />
-  )
+  return <PageHeader title={AUDIT_SCREEN.title} description={AUDIT_SCREEN.description} />
 }

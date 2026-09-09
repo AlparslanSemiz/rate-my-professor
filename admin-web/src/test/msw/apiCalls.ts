@@ -270,7 +270,7 @@ const CALLS: readonly ApiCall[] = [
     // `limit` is always sent, even with no filters at all: `toLogQueryParams` defaults it.
     query: 'limit=50',
     contentType: null,
-    covers: ['AuditLogsService.getLogs', 'AuditLogReaderService.getLogs'],
+    covers: ['AuditLogsService.getLogs', 'LogReaderService.getLogs'],
     send: () => auditLogsService.getLogs(),
   },
   {
@@ -279,7 +279,7 @@ const CALLS: readonly ApiCall[] = [
     path: '/audit-logs',
     query: 'limit=50&cursor=audit-1&action=USER_UPDATED',
     contentType: null,
-    covers: ['AuditLogsService.getLogs', 'AuditLogReaderService.getLogs'],
+    covers: ['AuditLogsService.getLogs', 'LogReaderService.getLogs'],
     send: () => auditLogsService.getLogs({ q: '   ', action: 'USER_UPDATED' }, 'audit-1'),
   },
   {
@@ -287,7 +287,7 @@ const CALLS: readonly ApiCall[] = [
     method: 'GET',
     path: '/audit-logs/meta',
     contentType: null,
-    covers: ['AuditLogsService.getMeta', 'AuditLogMetaService.getMeta'],
+    covers: ['AuditLogsService.getMeta', 'LogMetaService.getMeta'],
     send: () => auditLogsService.getMeta(),
   },
   {

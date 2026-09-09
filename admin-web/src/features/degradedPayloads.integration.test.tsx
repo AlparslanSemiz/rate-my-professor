@@ -4,7 +4,7 @@ import { delay, http } from 'msw'
 import { Component, type ReactElement, type ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
-import AuditLogsPage from '@/features/audit-logs/AuditLogsPage'
+import AuditLogsPage from '@/features/logs/AuditLogsPage'
 import CatalogPage from '@/features/catalog/CatalogPage'
 import CommentsPage from '@/features/comments/CommentsPage'
 import DashboardPage from '@/features/dashboard/DashboardPage'
@@ -188,10 +188,9 @@ const SCREENS: readonly Screen[] = [
     isList: true,
     record: fixture.auditLogs![0] as unknown as Wire,
     body: listBody('auditLogs'),
-    crashesOn: {
-      'absent:action': 'F-028',
-      'wrongType:action': 'F-028',
-    },
+    // No `crashesOn`. `absent:action` and `wrongType:action` were `F-028`'s two audit cases
+    // until the log row started reading the action through `logEnumLabel` and the guarded
+    // `auditActionColor` (ADR 0016). The other twelve are open, on four other screens.
     skip: {
       actor: 'F-022',
       // Fixed in `P0b` and pinned by two tests where the fix lives.

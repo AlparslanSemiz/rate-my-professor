@@ -3,7 +3,7 @@ import { Box, Text } from '@mantine/core'
 import { chrome } from '@/theme'
 import { detailCardStyle } from './detailStyles'
 
-/** A labelled block inside the audit entry modal. */
+/** A labelled block inside a log entry's details modal. */
 export default function DetailSection({
   label,
   children,

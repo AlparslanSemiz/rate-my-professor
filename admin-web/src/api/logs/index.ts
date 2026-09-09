@@ -13,4 +13,5 @@ export type {
   AuditTargetType,
   AuditValue,
 } from '@/domain/auditLog'
-export type { AuditLogPage, BackendAuditLog } from './auditLogTypes'
+export type { BackendAuditLog, BackendLogEntry, LogPage } from './logTypes'
+export type { LogResource } from './logResource'
