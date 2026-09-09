@@ -105,3 +105,52 @@ Those stay as tests.
 New decision. Supersedes the "Contract source" row of the test-strategy table in
 `docs/TODO.md`, which named "an OpenAPI schema **or** `admin-api.md`" without
 ranking them, and the Phase 7 note claiming no schema exists.
+
+## Amendment — what is in place, and what is not
+
+**Date:** 2026-09-09. Status unchanged: `Accepted — not yet implemented`.
+
+`docs/api/openapi.json` **is still not in this repository.** Everything downstream of
+it therefore does not exist either: there is no `src/types/api.generated.ts`, no
+generated type is imported by any service, and no MSW fixture is checked against the
+schema. The status line above says so, and it stays that way until the file lands —
+this record is not marked done ahead of the thing it describes.
+
+What has been done is everything that does not need the file, so that pulling it is
+the whole remaining step rather than the start of one:
+
+- `npm run schema:types` regenerates the types in one command, rather than a four-line
+  incantation living only in prose.
+- `docs/api/README.md` carries the pull procedure, and keeps its "the file is not here
+  yet" notice — to be removed in the same commit that adds the schema.
+- `README.md` says in one paragraph how the schema is refreshed and who can do it.
+
+**`openapi-typescript` is deliberately *not* a devDependency, and this is a real
+constraint rather than a preference.** Its current release peer-requires
+`typescript@^5.x`; this project is on `typescript@~6.0.2`, so `npm i -D
+openapi-typescript` fails to resolve and installs only under `--force` or
+`--legacy-peer-deps`. Forcing an unsupported pairing into the lockfile to make a
+generator available is a bad trade, so `schema:types` runs it through `npx` instead:
+the generator is a build-time tool that runs occasionally and emits a file, not
+something the project needs on its dependency graph.
+
+**One thing therefore remains genuinely unknown** and should be found out the first
+time the schema is pulled, not assumed: whether `openapi-typescript`'s **output**
+type-checks under TypeScript 6. The peer range says the tool is untested against it;
+it says nothing about the generated file, which is ordinary type declarations. If it
+does not compile, the fallback is pinning the generator's output style or generating
+under a separate `tsconfig` — an hour's work, and worth knowing about before it is
+discovered at the worst moment.
+
+**What the file's absence actually costs, stated plainly.** The panel's hand-written
+types remain unchecked against the backend, which is the whole problem this record
+opens with. In the meantime the MSW fixtures are typed against *the panel's own*
+types — so a fixture cannot drift from what the panel believes, and both can be wrong
+together. That is precisely the shape of `F-002`, and it is the gap the schema closes
+and nothing else does. `F-021` and `F-022` are the same family one level down: fields
+the panel assumes are always present, with nothing but prose saying so.
+
+The deliberate-rename check this record's package specifies — rename a field, watch
+the build break, revert — **has not been run**, because it cannot be until there is a
+generated type to rename. It is the acceptance test for the whole package, which is
+why it is recorded as outstanding rather than quietly dropped.

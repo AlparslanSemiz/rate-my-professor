@@ -1,7 +1,7 @@
 # 0009 — MSW is adopted one feature at a time, not in a big-bang rewrite
 
-**Status:** Accepted — not yet implemented
-**Date:** 2026-09-09
+**Status:** Accepted — implemented, and extended once as the rule predicted
+**Date:** 2026-09-09 (amended 2026-09-09)
 
 ## Decision
 
@@ -89,3 +89,74 @@ is the argument.
 ## Sources
 
 New decision. Supersedes the "MSW migration — Big-bang" row in `docs/TODO.md`.
+
+## Amendment — what the rule actually moved
+
+The Comments slice landed as specified: `vi.mock('@/api/moderation')` is gone, the
+page's real services run, and the assertions are on the path, the method, the JSON
+body and the `Authorization` header. The three behaviours this record names as the
+reason for choosing Comments are covered, including the half that had never been
+tested — **every status other than `ACTION_TAKEN` restores the content**, which can
+only be checked by making a request and reading what the next one returns.
+
+Five more modules followed, not because the decision changed but because the rule in
+"Consequences" applied: *a module being worked on moves*. The Entwurf pass rewrote
+how every one of them reports failure, so each was being worked on.
+
+| Module | Why it moved |
+| --- | --- |
+| `App.integration.test.tsx` | Holds the session behaviours. "The identity comes from `/auth/me` and nowhere else" was an assertion that a function had not been called; it is now "no request was addressed to the user list". |
+| `auth/LoginPage` | The admin-team check is meant to stop a code being *requested*. Only a real request layer can show that none went out. |
+| `context/AuthContext` | Rewritten by the typed-error work; also renamed `.integration.`, which is what it always was. |
+| `audit-logs/AuditLogsPage` | The one screen that filters **server-side**. What a test could prove about filtering was entirely about a query string that a service mock never built. |
+| `users/UsersPage` | Already had a hand-written backend — a mutable array, a `list` that applied `q`/`status`/`role`, `block`/`unblock` writing back. That was this decision's handlers, in one file, without the request. |
+
+**Five files still replace their service**, which is the state this record predicted
+and defended: catalogue, feedback and the dashboard were not touched, and the two
+`vi.mock`s left in unit tests isolate a single unit, which is what a unit test is
+for. `onUnhandledRequest: 'error'` is still per-file, for the reason given above.
+
+**One thing the migration found that the mocks had hidden.** The store holds warnings
+in the shape a screen reads; the handler puts them back on the wire with the issuer
+nested under `createdFrom`, because that is how they arrive. Serving the flattened
+shape would have skipped `toWarning` entirely — the same class of gap as `F-002`, in
+the same mapper layer, and it only became visible once a real response had to be
+parsed.
+
+**The handlers grew a second job.** They also serve the browser, under
+`VITE_MOCK_BACKEND`, which is what lets the Playwright layer run against no backend
+at all. That was not foreseen here and is the larger part of what the investment
+bought: one description of the contract, used by the integration tests, the
+end-to-end tests, and anybody who wants to look at the panel without a deployment.
+
+## Second amendment — where the line sits now
+
+**Date:** 2026-09-09.
+
+The rule in *Consequences* — a module being worked on moves — moved two more files,
+and both for the reason the rule names rather than by choice.
+
+| File | Why it moved |
+| --- | --- |
+| `src/layouts/AdminLayout.integration.test.tsx` (new) | The shell gained something to say — the unconfirmed-session notice (`F-013`) — and it is driven by a request. `src/layouts` had **no test of any kind** before this. |
+| `src/api/client/bodylessWrites.integration.test.ts` (new) | It asserts that five writes send **no `Content-Type`**. A header only exists once a request has been built, so `vi.mock` could not express this test at all. |
+
+**Eight files on MSW, five still replacing their service.** Named in
+`docs/testplan.md` §2, both lists, so neither can quietly grow.
+
+**The second file is the more interesting one, because it shows the rule's limit.**
+It is a test of the *client*, not of a screen, and it lives outside the slice-by-slice
+scheme entirely: the request it needs is produced by no page the suite drives. The
+GitLab escalation's own page still replaces `@/api/feedback`, so the only way to
+observe `POST /reports/{id}/gitlab-issue` was to call the service directly. A feature
+staying on `vi.mock` does not merely leave its screen untested against the wire — it
+can make a *contract* fact unobservable from anywhere, and the fact then has to be
+tested somewhere that does not correspond to a user-facing flow.
+
+**Catalogue is now the notable hole.** It is the one feature with no handlers at all,
+so nothing about its requests is exercised anywhere in the project. Feedback and the
+dashboard at least have handlers their end-to-end specs drive.
+
+**The prediction in the first amendment held.** Five files still replace their
+service, and none of them was touched by this work. That is the decision behaving as
+recorded rather than eroding.

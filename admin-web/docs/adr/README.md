@@ -42,9 +42,16 @@ The wrong turn is part of the reasoning.
 | [0006](0006-cursor-pagination.md) | Long lists page on an opaque cursor, not on an offset | Accepted |
 | [0007](0007-route-based-lazy-loading.md) | Code is split at route boundaries and nowhere else | Accepted |
 | [0008](0008-generated-schema-is-the-contract-authority.md) | The generated OpenAPI schema is the authority on the API contract | Accepted — not yet implemented |
-| [0009](0009-msw-slice-by-slice.md) | MSW is adopted one feature at a time, not in a big-bang rewrite | Accepted — not yet implemented |
+| [0009](0009-msw-slice-by-slice.md) | MSW is adopted one feature at a time, not in a big-bang rewrite | Accepted — implemented, amended twice |
 | [0010](0010-admin-email-list-in-the-bundle.md) | The admin address list ships in the frontend bundle | Accepted |
 | [0011](0011-session-in-browser-storage.md) | The session lives in browser storage, with the XSS surface that implies | Accepted |
+| [0012](0012-a-model-is-a-module-not-a-class.md) | A model is a module, not a class | Accepted |
+| [0013](0013-errors-are-types-not-status-codes.md) | Errors are types, not status codes | Accepted — applied twice since |
+| [0014](0014-public-data-is-readonly.md) | Public data is readonly, and services get a narrow transport | Accepted |
 
 0010 and 0011 are the two the panel is most likely to be challenged on. Both are
 written as defences rather than as announcements, and both state what they cost.
+
+0012 is the third: it answers a design criterion the panel deliberately does not
+meet on that criterion's own terms, and says why the module boundary is the
+encapsulation instead.
