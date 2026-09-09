@@ -1,58 +1,25 @@
-import { lazy, Suspense } from 'react'
-import { AppShell } from '@mantine/core'
-import { Routes, Route, Navigate } from 'react-router-dom'
-import ErrorBoundary from '@/components/ErrorBoundary'
-import PageLoader from '@/components/PageLoader'
+import { AppShell, type CSSProperties } from '@mantine/core'
+import AdminRoutes from './AdminRoutes'
 import Sidebar from './components/Sidebar'
-import { routes } from '@/constants/routes'
-import { chrome } from '@/theme'
 
-const AuditLogsPage = lazy(() => import('@/features/audit-logs/AuditLogsPage'))
-const CatalogPage = lazy(() => import('@/features/catalog/CatalogPage'))
-const CommentsPage = lazy(() => import('@/features/comments/CommentsPage'))
-const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'))
-const FeedbackPage = lazy(() => import('@/features/feedback/FeedbackPage'))
-const HelpPage = lazy(() => import('@/features/help/HelpPage'))
-const UsersPage = lazy(() => import('@/features/users/UsersPage'))
+const NAVBAR_WIDTH = 240
 
+/** Gutters that grow with the viewport, so a wide table is not pinned to the window edge. */
+const contentStyle: CSSProperties = {
+  padding: 'clamp(16px, 4vw, 32px)',
+  minHeight: '100vh',
+}
+
+/** The authenticated shell: the sidebar, and whatever screen is routed beside it. */
 export default function AdminLayout() {
   return (
-    <AppShell
-      navbar={{ width: 240, breakpoint: 'sm' }}
-      padding={0}
-      styles={{
-        main: {
-          background: 'transparent',
-          minHeight: '100vh',
-        },
-        navbar: {
-          background: `linear-gradient(180deg, ${chrome.pageBase} 0%, ${chrome.surfaceSunken} 100%)`,
-          borderRight: `1px solid ${chrome.borderSubtle}`,
-          boxShadow: '1px 0 0 rgba(255,255,255,0.02) inset',
-        },
-      }}
-    >
+    <AppShell navbar={{ width: NAVBAR_WIDTH, breakpoint: 'sm' }} padding={0}>
       <AppShell.Navbar>
         <Sidebar />
       </AppShell.Navbar>
       <AppShell.Main>
-        <div style={{ padding: 'clamp(16px, 4vw, 32px)', minHeight: '100vh' }}>
-          {/* Scoped to the routed page so one broken screen keeps the sidebar and the sign-out
-              control reachable. */}
-          <ErrorBoundary message="This page could not be displayed." retryLabel="Try again">
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path={routes.dashboard} element={<DashboardPage />} />
-                <Route path={routes.users} element={<UsersPage />} />
-                <Route path={routes.feedback} element={<FeedbackPage />} />
-                <Route path={routes.comments} element={<CommentsPage />} />
-                <Route path={routes.catalog} element={<CatalogPage />} />
-                <Route path={routes.auditLogs} element={<AuditLogsPage />} />
-                <Route path={routes.help} element={<HelpPage />} />
-                <Route path="*" element={<Navigate to={routes.dashboard} replace />} />
-              </Routes>
-            </Suspense>
-          </ErrorBoundary>
+        <div style={contentStyle}>
+          <AdminRoutes />
         </div>
       </AppShell.Main>
     </AppShell>

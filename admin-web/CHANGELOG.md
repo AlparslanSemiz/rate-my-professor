@@ -2,6 +2,68 @@
 
 ## [Unreleased]
 
+### Refactor step 11 — auth, layouts and help
+
+**`features/auth/LoginPage.integration.test.tsx` (new) — written first, on purpose**
+- There was no test for `LoginPage` or `useLoginFlow`. The whole two-step flow was
+  guarded only indirectly, through `App.integration.test.tsx`. Six tests were
+  added **against the old implementation** and then had to keep passing through
+  the migration: an address outside the team never reaches `request-login`, the
+  email step advances, an incomplete code cannot be submitted, a complete one
+  signs in, a refused one shows the reason **and drops the token the attempt
+  set**, and "use a different email" keeps the address so it can be corrected.
+
+**`hooks/useLoginFlow.ts` — `@mantine/form` and two mutations**
+- Five `useState` and two `try`/`catch`/`finally` blocks become one form and two
+  `useMutation`. `loading` is `isPending`.
+- `EmailStepForm` and `CodeStepForm` take the form itself and use
+  `getInputProps`, so `LoginFormsProps` loses `email`, `code`, `onEmailChange`
+  and `onCodeChange` — nine props down to six.
+- **`authenticateAdmin` is untouched.** Its second address check is deliberate:
+  the field is editable between the two steps and `/auth/login` serves students
+  too. The pre-request check in the hook is also kept, so a non-admin address
+  still causes no request at all.
+
+**`features/help/content/` (new) — `helpContent.ts` (227) split six ways**
+- A file per screen, 10 to 54 lines each, plus `types.ts` and an `index.ts` that
+  composes them in sidebar order. Each section has to stay true as its screen
+  changes, and whoever changes the screen should be able to find the paragraph
+  describing it.
+- `notes?: string[]` is dropped. It was declared on `HelpSection`, used by zero
+  sections and rendered nowhere — carrying a dead field into six files would have
+  made it look intentional.
+
+**`src/theme/components.ts` — `AppShell`**
+- The navbar's gradient, hairline and inset highlight were written at the call
+  site in `AdminLayout`. They are theme now, like `Modal` and the five inputs in
+  step 2, with an assertion in `theme.unit.test.tsx` — moving a style into the
+  theme fails quietly, and a flatter sidebar is exactly the kind of quiet.
+
+**`layouts/AdminRoutes.tsx` (new) — `AdminLayout` 60 lines to 27**
+- The seven `lazy()` imports and the route table were half of a file named after
+  the shell. `AdminLayout` is the shell now, and nothing else.
+
+**`layouts/components/` — `SidebarNavigation` 110 lines to 25**
+- It was two components and two style builders in one file, and `Sidebar` already
+  imported the second component out of it by name. Now `SidebarNavButton.tsx`,
+  `sidebarNavStyles.ts` and a list.
+- The inline `transition` on both style objects duplicated `.nav-interactive`'s
+  own in `src/interactive.css`. Dropped.
+
+**`features/audit-logs/components/LogFilterInputs.tsx` — moved**
+- It sat in `src/components/` with exactly one importer, and its doc comment
+  still described it as shared with the activity log, which was deleted in step 1.
+  Shared code is code more than one feature owns.
+
+### Changed on purpose — the sign-out button was drawn in two different reds
+
+Its label used `KIT.red` (`#c77a7b`) while its border and wash were written by
+hand as `rgba(239,68,68,…)` — `#ef4444`, a brighter red from no palette in this
+project. Both now derive from `KIT.red` through `withAlpha`. The control is
+slightly softer than it was, and it is one colour instead of two. This is the
+same class of leftover step 2 removed everywhere else; it survived because it was
+in a file that step did not reach.
+
 ### Fixed — a refused bug report deletion did nothing, loudly
 
 `deleteReport` was the one write in the feature that bypassed `runWrite`. It

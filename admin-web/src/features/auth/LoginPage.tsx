@@ -36,15 +36,12 @@ export default function LoginPage() {
   return (
     <Box style={pageStyle}>
       <Panel style={cardStyle}>
-        <LoginCardHeader step={login.step} email={login.email} />
+        <LoginCardHeader step={login.step} email={login.form.values.email} />
         <ErrorAlert message={login.error} mb={20} />
         <LoginForms
+          form={login.form}
           step={login.step}
-          email={login.email}
-          code={login.code}
           loading={login.loading}
-          onEmailChange={login.setEmail}
-          onCodeChange={login.setCode}
           onRequestCode={login.requestCode}
           onVerifyCode={login.verifyCode}
           onUseDifferentEmail={login.useDifferentEmail}

@@ -1,4 +1,5 @@
 import {
+  AppShell,
   MantineProvider,
   Modal,
   MultiSelect,
@@ -78,5 +79,20 @@ describe('panel theme', () => {
     expect(field).toHaveStyle({ fontSize: '13px' })
     // …without dropping what the theme supplies underneath it.
     expect(field).toHaveStyle({ background: chrome.surfaceSunken })
+  })
+
+  it('paints the app shell navbar without a styles prop', () => {
+    const { container } = renderThemed(
+      <AppShell navbar={{ width: 240, breakpoint: 'sm' }} padding={0}>
+        <AppShell.Navbar>sidebar</AppShell.Navbar>
+        <AppShell.Main>page</AppShell.Main>
+      </AppShell>
+    )
+
+    // The navbar's wash and hairline moved here out of `AdminLayout`. If they stop being
+    // applied the panel still renders, only flatter, so it is asserted rather than looked at.
+    expect(container.querySelector('.mantine-AppShell-navbar')).toHaveStyle({
+      borderRight: `1px solid ${chrome.borderSubtle}`,
+    })
   })
 })

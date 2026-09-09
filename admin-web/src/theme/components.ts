@@ -1,4 +1,5 @@
 import {
+  AppShell,
   Modal,
   MultiSelect,
   NumberInput,
@@ -31,6 +32,26 @@ const inputStyles = {
 } as const
 
 export const components: MantineThemeComponents = {
+  /**
+   * The authenticated shell. These were written at the call site in `AdminLayout`, which is
+   * the only place an `AppShell` appears — but that made the panel's chrome a property of one
+   * component rather than of the panel, and step 2 moved every other such style here.
+   *
+   * The navbar's wash runs from the page background down to the sunken surface, so the
+   * sidebar reads as part of the page rather than as a card laid on top of it. The inset
+   * highlight is a one-pixel catch of light on its right edge, not a shadow.
+   */
+  AppShell: AppShell.extend({
+    styles: {
+      main: { background: 'transparent', minHeight: '100vh' },
+      navbar: {
+        background: `linear-gradient(180deg, ${chrome.pageBase} 0%, ${chrome.surfaceSunken} 100%)`,
+        borderRight: `1px solid ${chrome.borderSubtle}`,
+        boxShadow: '1px 0 0 rgba(255,255,255,0.02) inset',
+      },
+    },
+  }),
+
   TextInput: TextInput.extend({ styles: inputStyles }),
   Textarea: Textarea.extend({ styles: inputStyles }),
   Select: Select.extend({ styles: inputStyles }),

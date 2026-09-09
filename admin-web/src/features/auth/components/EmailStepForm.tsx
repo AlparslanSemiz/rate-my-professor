@@ -1,26 +1,12 @@
-import { type FormEvent } from 'react'
 import { Button, Stack, TextInput } from '@mantine/core'
 import type { LoginFormsProps } from './LoginForms'
 import { LOGIN_INPUT_RADIUS, loginInputStyles, submitButtonStyle } from './loginFormStyles'
 
-type EmailStepFormProps = Pick<
-  LoginFormsProps,
-  'email' | 'loading' | 'onEmailChange' | 'onRequestCode'
->
+type EmailStepFormProps = Pick<LoginFormsProps, 'form' | 'loading' | 'onRequestCode'>
 
-export default function EmailStepForm({
-  email,
-  loading,
-  onEmailChange,
-  onRequestCode,
-}: EmailStepFormProps) {
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    void onRequestCode()
-  }
-
+export default function EmailStepForm({ form, loading, onRequestCode }: EmailStepFormProps) {
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={form.onSubmit(onRequestCode)}>
       <Stack gap={14}>
         <TextInput
           label="Email"
@@ -28,18 +14,17 @@ export default function EmailStepForm({
           type="email"
           autoComplete="email"
           autoFocus
-          value={email}
-          onChange={(event) => onEmailChange(event.currentTarget.value)}
           required
           styles={loginInputStyles}
           radius={LOGIN_INPUT_RADIUS}
+          {...form.getInputProps('email')}
         />
         <Button
           type="submit"
           fullWidth
           mt={6}
           loading={loading}
-          disabled={!email.trim()}
+          disabled={!form.values.email.trim()}
           color="green"
           radius="md"
           style={submitButtonStyle}

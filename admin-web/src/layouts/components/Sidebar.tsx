@@ -5,7 +5,8 @@ import { useAuth } from '@/context/useAuth'
 import SessionFooter from './SessionFooter'
 import SidebarHeader from './SidebarHeader'
 import { OVERSIGHT_NAV_ITEMS } from './sidebarItems'
-import SidebarNavigation, { SidebarNavButton } from './SidebarNavigation'
+import SidebarNavButton from './SidebarNavButton'
+import SidebarNavigation from './SidebarNavigation'
 
 const shellStyle: CSSProperties = { justifyContent: 'space-between' }
 

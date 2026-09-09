@@ -9,7 +9,7 @@ import {
   AuditAdminFilter,
   AuditTargetFilter,
 } from './AuditSelectFilters'
-import { DateFilterInput, SearchFilterInput } from '@/components/LogFilterInputs'
+import { DateFilterInput, SearchFilterInput } from './LogFilterInputs'
 import type { DraftSetter } from './auditFilterTypes'
 
 const panelStyle: CSSProperties = { padding: '16px 20px' }

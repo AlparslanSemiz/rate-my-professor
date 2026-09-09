@@ -1,7 +1,7 @@
 import { Accordion, Badge, Box, Group, Stack, Text, type CSSProperties } from '@mantine/core'
 import PageHeader from '@/components/PageHeader'
 import Panel from '@/components/Panel'
-import { HELP_SECTIONS, type HelpActionRow, type HelpValueGroup } from './helpContent'
+import { HELP_SECTIONS, type HelpActionRow, type HelpValueGroup } from './content'
 import { chrome } from '@/theme'
 
 const accordionStyles = {

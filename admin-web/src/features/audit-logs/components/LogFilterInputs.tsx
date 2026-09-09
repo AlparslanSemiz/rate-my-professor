@@ -11,7 +11,7 @@ interface SearchFilterInputProps {
   onChange: (value: string) => void
 }
 
-/** Free-text search box shared by the audit and activity log filter forms. */
+/** Free-text search box for the audit log filter form. */
 export function SearchFilterInput({ value, placeholder, onChange }: SearchFilterInputProps) {
   return (
     <TextInput

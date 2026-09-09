@@ -2,6 +2,7 @@ import { Box, Divider, Text, UnstyledButton, type CSSProperties } from '@mantine
 import { IconCircleFilled } from '@tabler/icons-react'
 import type { AuthUser } from '@/context/AuthContextValue'
 import { KIT } from '@/constants/colors'
+import { withAlpha } from '@/utils/color'
 import { chrome } from '@/theme'
 
 const ACTIVE_COLOR = KIT.green
@@ -12,14 +13,19 @@ const sessionRowStyle: CSSProperties = {
   gap: 10,
 }
 const sessionInfoStyle: CSSProperties = { flex: 1, minWidth: 0 }
+/**
+ * The border and wash were written as `rgba(239,68,68,…)` — `#ef4444`, a brighter red than
+ * the `KIT.red` the label itself uses. The control was drawn in two different reds. It is
+ * one now, derived from the accent, which is slightly softer than it was.
+ */
 const logoutButtonStyle: CSSProperties = {
   fontSize: 11,
   color: KIT.red,
   cursor: 'pointer',
   padding: '4px 8px',
   borderRadius: 4,
-  border: '1px solid rgba(239,68,68,0.25)',
-  background: 'rgba(239,68,68,0.06)',
+  border: `1px solid ${withAlpha(KIT.red, 0.25)}`,
+  background: withAlpha(KIT.red, 0.06),
   lineHeight: 1,
   display: 'inline-block',
 }

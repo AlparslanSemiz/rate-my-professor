@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { useForm, type UseFormReturnType } from '@mantine/form'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { apiClient } from '@/api/client'
 import { authService } from '@/api/auth'
@@ -15,16 +17,19 @@ import { attemptedPath, isCompleteLoginCode } from '../loginModel'
 
 export type LoginStep = 'email' | 'code'
 
+export interface LoginDraft {
+  email: string
+  code: string
+}
+
 const REQUEST_CODE_ERROR_FALLBACK = 'Could not send login code'
 export const SESSION_EXPIRED_MESSAGE =
   'Your session ended because the server no longer accepts it. Sign in again to continue.'
 
 export function useLoginFlow() {
+  const form = useForm<LoginDraft>({ initialValues: { email: '', code: '' } })
   const [step, setStep] = useState<LoginStep>('email')
-  const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [refusedEmail, setRefusedEmail] = useState('')
   const { login, sessionExpired, acknowledgeExpiry } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -35,76 +40,81 @@ export function useLoginFlow() {
    */
   const redirectTo = attemptedPath(location.state) ?? routes.dashboard
 
-  async function requestCode() {
-    const trimmedEmail = email.trim()
-    if (!trimmedEmail) return
+  const requestCodeMutation = useMutation({
+    // A refused request is already an ApiError: the client rejects any body reporting
+    // `success: false`, so resolving here means the code was sent.
+    mutationFn: (email: string) => authService.requestLoginCode(email),
+    onSuccess: () => setStep('code'),
+  })
+
+  const verifyCodeMutation = useMutation({
+    mutationFn: ({ email, code }: LoginDraft) => authenticateAdmin(email, code),
+    onSuccess: (authenticated) => {
+      login(authenticated.token, authenticated.user)
+      navigate(redirectTo, { replace: true })
+    },
+    onError: () => apiClient.setToken(null),
+  })
+
+  function requestCode() {
+    const email = form.values.email.trim()
+    if (!email) return
+
+    form.setFieldValue('email', email)
+    acknowledgeExpiry()
+    setRefusedEmail('')
 
     // Checked before the request is made, so an address outside the team never causes a login
-    // code to be sent. The backend is still what actually authorizes anything.
-    if (!isRequiredAdminEmail(trimmedEmail)) {
-      setEmail(trimmedEmail)
-      acknowledgeExpiry()
-      setError(NOT_AN_ADMIN_ERROR)
+    // code to be sent. The backend is still what actually authorizes anything, and
+    // `authenticateAdmin` checks again — the field is editable between the two steps.
+    if (!isRequiredAdminEmail(email)) {
+      setRefusedEmail(NOT_AN_ADMIN_ERROR)
       return
     }
 
-    acknowledgeExpiry()
-    setError('')
-    setLoading(true)
-    try {
-      // A refused request is already an ApiError: the client rejects any body reporting
-      // `success: false`, so reaching this line means the code was sent.
-      await authService.requestLoginCode(trimmedEmail)
-      setEmail(trimmedEmail)
-      setStep('code')
-    } catch (requestError: unknown) {
-      setError(getRequestCodeErrorMessage(requestError, REQUEST_CODE_ERROR_FALLBACK))
-    } finally {
-      setLoading(false)
-    }
+    requestCodeMutation.mutate(email)
   }
 
-  async function verifyCode() {
-    const trimmedEmail = email.trim()
-    const trimmedCode = code.trim()
+  function verifyCode() {
+    const email = form.values.email.trim()
+    const code = form.values.code.trim()
     // The form disables the button on the same check, so this only catches a submit that
     // reached the hook another way — an Enter press, or a caller that is not the form.
-    if (!trimmedEmail || !isCompleteLoginCode(trimmedCode)) return
+    if (!email || !isCompleteLoginCode(code)) return
 
     acknowledgeExpiry()
-    setError('')
-    setLoading(true)
-    try {
-      const authenticated = await authenticateAdmin(trimmedEmail, trimmedCode)
-      login(authenticated.token, authenticated.user)
-      navigate(redirectTo, { replace: true })
-    } catch (verificationError: unknown) {
-      setError(getLoginErrorMessage(verificationError))
-      apiClient.setToken(null)
-    } finally {
-      setLoading(false)
-    }
+    setRefusedEmail('')
+    verifyCodeMutation.mutate({ email, code })
   }
 
   function useDifferentEmail() {
     setStep('email')
-    setCode('')
-    setError('')
+    // The address is kept so it can be corrected rather than retyped.
+    form.setFieldValue('code', '')
+    setRefusedEmail('')
+    requestCodeMutation.reset()
+    verifyCodeMutation.reset()
   }
 
-  // An expiry notice is shown until something replaces it: a real login error, or the
-  // admin starting a fresh attempt.
+  const error =
+    refusedEmail ||
+    (requestCodeMutation.error
+      ? getRequestCodeErrorMessage(requestCodeMutation.error, REQUEST_CODE_ERROR_FALLBACK)
+      : '') ||
+    (verifyCodeMutation.error ? getLoginErrorMessage(verifyCodeMutation.error) : '')
+
   return {
+    form,
     step,
-    email,
-    code,
     redirectTo,
+    // An expiry notice is shown until something replaces it: a real login error, or the admin
+    // starting a fresh attempt.
     error: error || (sessionExpired ? SESSION_EXPIRED_MESSAGE : ''),
-    loading,
-    setEmail,
-    setCode,
+    loading: requestCodeMutation.isPending || verifyCodeMutation.isPending,
     requestCode,
     verifyCode,
     useDifferentEmail,
   }
 }
+
+export type LoginForm = UseFormReturnType<LoginDraft>

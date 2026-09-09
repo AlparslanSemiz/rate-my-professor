@@ -1,4 +1,3 @@
-import { type FormEvent } from 'react'
 import { Button, Stack, TextInput } from '@mantine/core'
 import { isCompleteLoginCode, LOGIN_CODE_LENGTH } from '../loginModel'
 import type { LoginFormsProps } from './LoginForms'
@@ -6,23 +5,17 @@ import { LOGIN_INPUT_RADIUS, loginInputStyles, submitButtonStyle } from './login
 
 type CodeStepFormProps = Pick<
   LoginFormsProps,
-  'code' | 'loading' | 'onCodeChange' | 'onVerifyCode' | 'onUseDifferentEmail'
+  'form' | 'loading' | 'onVerifyCode' | 'onUseDifferentEmail'
 >
 
 export default function CodeStepForm({
-  code,
+  form,
   loading,
-  onCodeChange,
   onVerifyCode,
   onUseDifferentEmail,
 }: CodeStepFormProps) {
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    void onVerifyCode()
-  }
-
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={form.onSubmit(onVerifyCode)}>
       <Stack gap={14}>
         <TextInput
           label="Login code"
@@ -31,31 +24,24 @@ export default function CodeStepForm({
           autoComplete="one-time-code"
           maxLength={LOGIN_CODE_LENGTH}
           autoFocus
-          value={code}
-          onChange={(event) => onCodeChange(event.currentTarget.value)}
           required
           styles={loginInputStyles}
           radius={LOGIN_INPUT_RADIUS}
+          {...form.getInputProps('code')}
         />
         <Button
           type="submit"
           fullWidth
           mt={6}
           loading={loading}
-          disabled={!isCompleteLoginCode(code)}
+          disabled={!isCompleteLoginCode(form.values.code)}
           color="green"
           radius="md"
           style={submitButtonStyle}
         >
           Sign in
         </Button>
-        <Button
-          type="button"
-          fullWidth
-          variant="subtle"
-          color="gray"
-          onClick={onUseDifferentEmail}
-        >
+        <Button type="button" fullWidth variant="subtle" color="gray" onClick={onUseDifferentEmail}>
           Use a different email
         </Button>
       </Stack>

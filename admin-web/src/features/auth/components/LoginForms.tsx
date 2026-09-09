@@ -1,16 +1,13 @@
-import type { LoginStep } from '../hooks/useLoginFlow'
+import type { LoginForm, LoginStep } from '../hooks/useLoginFlow'
 import CodeStepForm from './CodeStepForm'
 import EmailStepForm from './EmailStepForm'
 
 export interface LoginFormsProps {
+  form: LoginForm
   step: LoginStep
-  email: string
-  code: string
   loading: boolean
-  onEmailChange: (email: string) => void
-  onCodeChange: (code: string) => void
-  onRequestCode: () => Promise<void>
-  onVerifyCode: () => Promise<void>
+  onRequestCode: () => void
+  onVerifyCode: () => void
   onUseDifferentEmail: () => void
 }
 
