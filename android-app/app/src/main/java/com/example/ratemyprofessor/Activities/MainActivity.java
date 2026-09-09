@@ -3,24 +3,16 @@ package com.example.ratemyprofessor.Activities;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.os.Bundle;
-import android.view.Gravity;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewConfiguration;
 import android.view.animation.DecelerateInterpolator;
-import android.widget.FrameLayout;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.example.liquidglass.LiquidGlassTabBar;
-import com.example.liquidglass.LiquidGlassView;
 import com.example.ratemyprofessor.Adapters.ControlFlowInterface;
 import com.example.ratemyprofessor.Adapters.MainViewModel;
 import com.example.ratemyprofessor.DomainModel.Comment;
@@ -36,9 +28,6 @@ import com.example.ratemyprofessor.Fragments.SettingsFragment;
 import com.example.ratemyprofessor.R;
 import com.example.ratemyprofessor.databinding.ActivityMainBinding;
 
-import java.util.Arrays;
-
-import kotlin.Unit;
 
 /**
  * Hosts every screen of the logged in app. The bottom navigation and the selection flow both
@@ -49,9 +38,6 @@ import kotlin.Unit;
  */
 public class MainActivity extends AppCompatActivity implements ControlFlowInterface {
 
-    private static final int TAB_SEARCH = 0;
-    private static final int TAB_HOME = 1;
-    private static final int TAB_SETTINGS = 2;
     private AnimatorSet indicatorAnimator;
     private ActivityMainBinding binding;
 
@@ -87,7 +73,6 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
      * Connects each bottom navigation button to the screen it opens.
      */
     private void setUpBottomNavigation() {
-        binding.customBottomNav.post(() -> moveIndicatorTo(binding.navHome, false));
 
         binding.navHome.setOnClickListener(v -> {
             moveIndicatorTo(binding.navHome, true);
@@ -110,9 +95,11 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
      * @param animate
      */
     private void moveIndicatorTo(View tab, boolean animate) {
-        float targetX =
-                tab.getLeft()
-                        + (tab.getWidth() - binding.navIndicator.getWidth()) / 2f;
+        float tabCenterX = tab.getLeft() + tab.getWidth() / 2f;
+        float navigationCenterX = binding.customBottomNav.getWidth() / 2f;
+
+        float targetX = tabCenterX - navigationCenterX;
+
 
         if (!animate) {
             binding.navIndicator.setTranslationX(targetX);
