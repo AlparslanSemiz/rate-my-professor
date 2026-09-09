@@ -17,9 +17,10 @@ really recorded if it lives in a test.
 
 ## At a glance
 
-**29 findings. 26 fixed, 2 closed as a recorded decision (P-3, P-7), 1 an existing protection
-put under test (F-13).** Two of the 28 — F-7 and F-8, both behind the "approximate location does
-not work" report — are the ones a *user* reported. The other twenty-six nobody had seen.
+**37 findings. 33 fixed, 2 closed as a recorded decision (P-3, P-7), 1 an existing protection
+put under test (F-13), 1 open (F-29, which needs a rotation rather than a commit).** Two of them
+— F-7 and F-8, both behind the "approximate location does not work" report — are the ones a
+*user* reported. The other thirty-five nobody had seen.
 
 Which kind of work turned each one up, because that is the part worth knowing when deciding
 what to write next:
@@ -32,8 +33,19 @@ what to write next:
 | **Integration layer** (real PostgreSQL) | 1 | P-5 |
 | **End-to-end layer** (real HTTP, real database) | 1 | F-20 |
 | **Reading the code while writing the tests** — no test run found these | 4 | F-4, F-6, F-8, F-21 |
+| **Reading the code against a list of known defect shapes** — the 9 September pass | 7 | F-22, F-23, F-24, F-25, F-26, F-27, F-28 |
+| **Secret scanning, once the rules matched this project** | 1 | F-29 |
 | **Concurrency layer** (two requests at once, real PostgreSQL) | 0 | — see [Negative results](#negative-results) |
 | **Doing the measuring** — process findings about the suite itself, and about its own assertions | 6 | P-1, P-2, P-3, P-4, P-6, P-7 |
+
+The row of seven is the 9 September pass and it was not a new test layer: two of the seven were
+already written down in the backlog, and the other five were found by taking each one's *shape*
+— a status code that disagrees with its neighbours, an unguarded parse of caller input, a
+collection with no order — and looking for the same shape elsewhere. F-23 and F-26 are the two
+worth remembering. Both were **regressions of a fix the repository had already made**: the null
+guard existed twenty lines above the crash and had not been mirrored, and `averageRating` was
+moved to recompute on read while `ratingCount` beside it was left reading a column nothing
+writes. A defect that has been fixed once is a defect worth grepping for.
 
 That row of four is worth stopping on. It is the second-largest source, and none of those
 four would have been caught by running anything: F-6 was seven methods with no caller, F-4 was
@@ -79,6 +91,14 @@ defect; it found a different kind.
 | [F-19](#f-19--two-audit-response-fields-are-null-by-design-and-the-schema-said-otherwise) | Three audit response fields are null by design, declared non-nullable | Medium — the API contradicts its own schema | **Fixed** |
 | [F-20](#f-20--creating-a-lecture-or-a-professor-was-not-audited) | Creating a lecture or professor wrote no audit entry | Medium — a hole in the administrative record | **Fixed** |
 | [F-21](#f-21--the-professor-list-of-a-lecture-comes-back-in-a-different-order-each-time) | A lecture's professor list has no stable order | Medium — any title built from it reshuffles | **Fixed** |
+| [F-22](#f-22--the-two-catalogue-detail-reads-answer-200-for-a-row-that-is-not-there) | `GET /data/lectures/{id}` and `/data/professor/{id}` answer 200 for a missing row | Medium — F-5's direction, two routes short | **Fixed** |
+| [F-23](#f-23--reverting-a-refusal-answers-500) | Reverting a `LOGIN_REFUSED` / `ACCESS_REFUSED` entry answers 500 | High — a 500 on a button the panel shows | **Fixed** |
+| [F-24](#f-24--the-four-social-submit-routes-answer-500-for-a-bad-or-missing-id) | The four `/social` submit routes answer 500 for a bad or missing id | Medium — the caller's fault, reported as ours | **Fixed** |
+| [F-25](#f-25--two-more-unvalidated-request-bodies) | `POST /ratings/rate` and `POST /data/lectures` answer 500 for a missing field | Medium — same shape as F-24 | **Fixed** |
+| [F-26](#f-26--ratingcount-on-a-professor-is-always-0) | `ratingCount` on a professor is always 0 | Medium — a field that has never been right | **Fixed** |
+| [F-27](#f-27--the-rating-categories-come-back-in-a-different-order-each-run) | `GET /ratings/{lectureId}` orders its categories by identity hash | Medium — F-21's shape, on a public read | **Fixed** |
+| [F-28](#f-28--submitting-a-rating-for-an-unknown-lecture-answers-200) | `POST /ratings/rate` answers 200 for an unknown lecture | Low — the last route on the old convention | **Fixed** |
+| [F-29](#f-29--three-more-leaked-credentials-nobody-had-found) | Three more leaked credentials, in commits the rotation list did not name | High — unrotated, and one is in a document | **Open — needs rotation** |
 | [P-1](#p-1--the-coverage-baseline-number-was-wrong) | The coverage baseline number was wrong | Process | **Fixed** (re-measured) |
 | [P-2](#p-2--integration-tests-hide-unit-targets) | Integration tests hide unit targets | Process | **Fixed** (method changed) |
 | [P-3](#p-3--lombok-is-not-filtered-in-jacoco) | Lombok is not filtered in JaCoCo | Process | **Closed — decided against** |
@@ -1121,6 +1141,212 @@ carry no such ambiguity. Two worth naming, both in `RateLimitService` and both l
 entry: `<init>:46` (removing `setPropagationBehavior(PROPAGATION_REQUIRES_NEW)` kills nothing)
 and `consume:65` (the retry-attempt boundary). The first is load-bearing for the isolation the
 concurrency layer depends on -- see the negative result below.
+
+
+---
+
+### F-22 — The two catalogue detail reads answer 200 for a row that is not there
+
+**Where.** `LectureService.getLecture` and `ProfessorService.getProfessor`.
+
+**What happens.** Both answered `200 {"success": false, "lecture": null}` for an id that does
+not exist, while every other read in the catalogue — `GET /ratings/{lectureId}` and its
+`/categories` sibling — has answered `404` since F-5 and F-15. The lecture message also carried
+a typo (`Couldn find lecture with uuid:`), F-10's category, going out to the client.
+
+**How it was found.** Written down in the backlog of `docs/TODO.md` as work the
+single-responsibility refactor deliberately left, because the status change needs a `CHANGELOG`
+entry. Reading the module to fix it turned up the second half: the backlog says *"every other
+read in the module answers 404 through `ApiException`"*, and `ProfessorService.getProfessor`
+did not. The claim was three routes old.
+
+**Status. Fixed.** Both throw `ApiException(NOT_FOUND, ...)`. The body loses its always-null
+payload key, which is the client-visible half and is in the `CHANGELOG` — the same carve-out
+F-5 recorded for `getUserInformation`. `admin-api.md:571` had promised the old body *"rather
+than an HTTP 404"* in writing and is corrected.
+
+Pinned by four tests, all **inverted rather than deleted**:
+`LectureServiceTests.getLectureUnknownIdIsNotFoundRatherThanASuccessfulFailureBody` and its
+`ProfessorServiceTests` twin at the unit level, and one each in `LectureApiIntegrationTests`
+and `ProfessorApiIntegrationTests` over HTTP. All four were watched fail against the unfixed
+code — `Status expected:<404> but was:<200>`.
+
+---
+
+### F-23 — Reverting a refusal answers 500
+
+**Where.** `AuditRevertService.revert`, line 163.
+
+**What happens.** `LOGIN_REFUSED` and `ACCESS_REFUSED` record something that did *not* happen,
+so they carry no target id. `revert` did `current.get(log.getTargetId())` where `current` is
+`Map.of()` — and an empty immutable map calls `Objects.requireNonNull` on the key, so a null id
+throws. The catch-all turned that into **500 "Unexpected backend error"**, where the contract is
+`409 {"reason": "ACTION_NOT_REVERTIBLE"}`.
+
+Both actions reach the panel through `GET /admin/activity-logs`, so an operator could see one
+and click revert on it.
+
+**This is the same defect the repository had already fixed twenty lines up.** `describe()`
+carries the guard *and a comment explaining it* — *"Asking an immutable empty map for a null key
+throws, which turned a page holding one refusal into a 500"* — and it was never mirrored into
+`revert()`. So the list said "not revertible" while the action behind it crashed.
+
+**How it was found.** Not by a test. By scanning for the shapes the refactor could have left
+behind and reading the two methods side by side. Every existing `revert_*` test supplies a
+non-null target id, which is exactly why it survived: the tests were written from the same
+assumption the code was.
+
+**Status. Fixed.** The same one-line guard. Pinned at both levels, and both were watched fail
+first — `AuditRevertServiceTests.revert_refusalEntryWithoutATargetId_isRefusedRatherThanAnsweringAServerError`
+(`NullPointerException`) and `AdminApiIntegrationTests.revertingARefusalIsRefusedRatherThanAnsweringAServerError`
+(`Status expected:<409> but was:<500>`), the second driving a real `ACCESS_REFUSED` row over
+HTTP.
+
+---
+
+### F-24 — The four `/social` submit routes answer 500 for a bad or missing id
+
+**Where.** `CommentService:52`, `AnswerService:51`, `ContentReportService:63` and `:94`.
+
+**What happens.** Each took its id as a `String` from the request body and handed it straight to
+`UUID.fromString`. `GlobalExceptionHandler` maps neither the `IllegalArgumentException` a
+malformed value throws nor the `NullPointerException` a missing one throws, so both became 500.
+
+**Two things the backlog entry did not say.** First, the missing-id case: `UUID.fromString(null)`
+throws NPE, not `IllegalArgumentException`, so a fix catching only the latter would have left
+half the bug. Second, the four DTOs carried **no bean-validation annotations at all** and the
+four handlers had no `@Valid` — while the two vote routes in the same controller had both.
+
+**Status. Fixed**, and the rule that was missing is now in one place. The idiom already existed
+three times privately — `AuditLogService.parseUuid`, `RatingModerationService.parseLectureId`
+and `KeysetCursorCodec` guarding its own parse — and had simply never reached `social`. It is
+`com.pse.shared.util.Uuids` now, with a required and an optional entry point, and the two
+private copies call it. `UuidsTests` covers it directly; ten HTTP cases in
+`SocialApiIntegrationTests` were watched fail against the unfixed code, all
+`Status expected:<400> but was:<500>`.
+
+A rule living in three copies is a rule that holds only where somebody remembered it. That is
+the finding, more than the four routes.
+
+---
+
+### F-25 — Two more unvalidated request bodies
+
+**Where.** `RatingRequest` / `RatingController:36`, and `AddLectureRequest.professorIds`.
+
+**What happens.** `POST /ratings/rate` bound its body with a bare `@RequestBody` and neither
+field was annotated: a missing `lectureId` reached `findById(null)` — whose own assertion throws
+`IllegalArgumentException` — and a missing `topics` reached a for-each. Both 500.
+`POST /data/lectures` annotates four of its five fields and leaves `professorIds` bare, so
+omitting it reached the for-each in `addLecture`. Also 500.
+
+**The tell in the second one is the asymmetry**: `ProfessorService.addProfessor` guards the
+mirror field with an explicit null check. Two sides of the same catalogue disagreed about
+whether an omitted list means "none" or means a crash.
+
+**Status. Fixed**, in the two different directions the two routes deserve. The rating body is
+validated (`@NotNull`, and `@NotNull` on a topic's `category`) and answers 400. `professorIds`
+is read the way its sibling reads it — absent means no professors — so that route now
+**succeeds** where it used to answer 500. `topics` is `@NotNull` rather than `@NotEmpty`
+deliberately: an empty list is answered exactly as before, so only an omitted field changes.
+A topic's `value` is left unconstrained, because nothing in this repository defines the scale
+and a range here would be inventing one.
+
+---
+
+### F-26 — `ratingCount` on a professor is always 0
+
+**Where.** `ProfessorResponseMapper:51`.
+
+**What happens.** The field was read straight off the `rating_count` column, and **nothing in
+the application has ever written that column** — no setter call anywhere in `src/main`, no
+default, no trigger. So `GET /data/professor`, `GET /data/professor/{id}` and
+`GET /admin/data/professor/all` reported 0 ratings for every professor, however many they had.
+`admin-api.md` documented the field as `"ratingCount":12`.
+
+**Why it was invisible.** `averageRating` sits on the next line and *is* correct — it was
+changed to recompute on read during the refactor, and its neighbour was not. A response with a
+right average and a zero count does not look like a bug in the count.
+
+**Status. Fixed.** Counted from the same walk the average uses, `ProfessorRatings.of(professor).size()`.
+Pinned by `ProfessorResponseMapperTests.toResponse_professorWithRatings_countsThemRatherThanReadingTheStoredColumn`,
+which sets the stored column to a deliberately wrong 99 so that passing means the response
+ignores it.
+
+The `rating_count` column is now dead. Dropping it is a migration and is left for whoever wants
+it; it is named in the backlog rather than quietly carried.
+
+---
+
+### F-27 — The rating categories come back in a different order each run
+
+**Where.** `RatingService.getRatings`, the `HashMap<RatingCategory, Double>` at line 136.
+
+**What happens.** `Enum.hashCode()` is the identity hash, so a `HashMap` keyed by an enum
+buckets on where the JVM happened to put the constants. `keySet()` order therefore differs
+between two runs of the same process, and between two instances behind a load balancer
+answering the same request. `GET /ratings/{lectureId}` is public and unauthenticated.
+
+**This is F-21's defect one package over** — that one was a `Set` of professors, this one a
+`HashMap` of categories, and both reached a client as a list whose order nothing guaranteed.
+
+**Status. Fixed** with an `EnumMap`, which iterates in declaration order, always. Pinned by
+`RatingServiceTests.getRatingsAnswersItsCategoriesInADeterministicOrder`, fed five categories in
+scrambled order. Against the `HashMap` it failed with all five positions wrong, which is a
+better demonstration than the assertion deserved — whether it fails is itself up to the JVM, and
+that is the defect stated precisely. What it pins is the guarantee after the fix.
+
+---
+
+### F-28 — Submitting a rating for an unknown lecture answers 200
+
+**Where.** `RatingService.submitRating:54`.
+
+**What happens.** `200 {"message": "Error, cannot find lecture with id <uuid>", "success": false}`
+for a lecture that does not exist — while `getOwnRating` and `getRatingCategories`, the two
+methods either side of it in the same class, have answered 404 since F-15. A client calling all
+three had to handle both conventions depending on which one it hit.
+
+**How it was found.** Reading the class while fixing F-25. It is a third instance of F-5's
+direction that nobody had written down; the backlog named only `LectureService.getLecture`.
+
+**Status. Fixed.** The characterization test `submitRatingReturnsErrorWhenLectureDoesNotExist`
+was **inverted rather than deleted**, and watched fail first.
+
+---
+
+### F-29 — Three more leaked credentials nobody had found
+
+**Where.** `BackEndStructure.md:153` in commit `214ff090`, and `application.properties` in
+commits `8bc81ef` and `d4cdbde`.
+
+**What happens.** `docs/TODO.md` records five leaked credentials and says, correctly, that
+gitleaks is *"a floor, not a ceiling"* — three of the five were found by reading the file rather
+than by the scanner. Writing `.gitleaks.toml` to close that gap turned the observation around:
+rules keyed on this project's own property names find **twelve** history findings where the
+defaults find five, and three of them are in commits the rotation list does not name.
+
+| What | Where | Commit |
+| --- | --- | --- |
+| `spring.datasource.password` | **`BackEndStructure.md`** — a document, not a properties file | `214ff090` |
+| `spring.mail.password` | `application.properties` | `8bc81ef` |
+| `spring.datasource.password`, a bare value | `application.properties` | `d4cdbde` |
+
+The first is the one worth stopping on. Every credential anybody had looked for was in
+`application.properties` or `TestClient.java`, because those are the files you think to check.
+This one is in a **design document**, where the password went in as an illustration of the
+configuration — and no amount of re-reading the properties file would ever have found it. The
+SMTP password also turns out to have been public since an earlier commit than the list records.
+
+**Status. Open.** These are credentials, so nothing in a repository can close them: each has to
+be rotated at its provider, like the five already listed. They are in `.gitleaksignore` as
+commented-out fingerprints, retiring one per rotation, and in the rotation table in
+`docs/TODO.md`.
+
+**What it says about the method.** The reading found three the scanner missed, and the scanner
+has now found three the reading missed. Neither is a substitute for the other, and a green
+`secrets:history` was never evidence of anything except that the rules had not been written yet.
+
 
 ---
 

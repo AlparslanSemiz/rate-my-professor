@@ -11,7 +11,7 @@ Testcontainers question — turned out not to be a blocker at all; see
 
 ### Where it stands
 
-**927 tests, 0 failures**, 31 skipped locally (the `@Disabled` `DemoApplicationTests`, the
+**975 tests, 0 failures**, 31 skipped locally (the `@Disabled` `DemoApplicationTests`, the
 twenty-four PostgreSQL integration tests and the six end-to-end journeys, all of which run in
 CI).
 Bundle **96.48% LINE** (3339/3461), **92.71% BRANCH** (1004/1083). Line coverage is gated in two
@@ -883,11 +883,46 @@ Result: no defect. What it did establish is which mechanism holds each race, and
 fails the tests when removed — see
 [Negative results](test-findings.md#two-requests-at-once-collide-and-every-protection-holds).
 
+## The 9 September defect pass
+
+Not a new layer and not a new batch: a read of the code against a list of defect *shapes* the
+suite had already found once. Seven fixes, [F-22 to F-28](test-findings.md), of which two were
+already written down in the backlog and five were not.
+
+What it was looking for, and what each shape turned up:
+
+| Shape | Where it had been seen | What it found this time |
+| --- | --- | --- |
+| A failure answered with `200 {"success": false}` | F-5 | F-22 (two catalogue reads), F-28 |
+| Caller input parsed without a guard | F-15 | F-24 (four `/social` routes), F-25 (two bodies) |
+| A collection reaching the client with no order | F-21 | F-27 (rating categories, a `HashMap` keyed by an enum) |
+| A field written but never read, or read but never written | the refactor | F-26 (`ratingCount` always 0) |
+| A guard added in one method and not its neighbour | — | F-23 (revert of a refusal answers 500) |
+
+**The last two rows are the ones worth keeping.** Both are regressions of a fix this repository
+had already made: F-23's null guard sits twenty lines above the crash *with a comment explaining
+why it is there*, and was never mirrored into the method beside it; F-26's neighbour
+`averageRating` was moved to recompute on read during the single-responsibility refactor while
+`ratingCount` was left reading a column nothing writes. Neither is a new kind of mistake. Both
+say the same thing: **a defect that has been fixed once is worth grepping for**, because the fix
+records where the shape lives and the next instance is usually nearby.
+
+Every one of the seven was watched fail before it was fixed — for F-23 that meant seeing the 500
+over real HTTP, and for F-27 seeing all five categories in the wrong positions. Where a
+characterization test pinned the old behaviour it was **inverted rather than deleted**: four for
+F-22, one for F-28.
+
+The suite went 927 → 975 tests; LINE 95.91% → 96.65%, BRANCH 90.61% → 93.28%.
+
 ## Beyond the suite: two CI-only tools
 
-Two questions the 876 tests cannot answer, so neither is a test.
+Two questions the suite cannot answer, so neither is a test.
 
-**Secret scanning (`secrets:new`, `secrets:history`).** No test can see a credential in a
+**Secret scanning (`secrets:new`, `secrets:history`).** Both now read `.gitleaks.toml`, added
+9 September: rules keyed on this project's own property names rather than on the entropy of a
+value, because three of the five known credentials were invisible to the default rules for
+exactly that reason. It found three more nobody had — one of them in a design document rather
+than a config file — which is [F-29](test-findings.md#f-29--three-more-leaked-credentials-nobody-had-found). No test can see a credential in a
 tracked file; the bearer token in `testclient/TestClient.java` was found by a person reading it.
 gitleaks over the history found **five** leaked credentials on its first run, four of them
 previously unrecorded — see `docs/TODO.md`, which tracks the rotations. The blocking job scans

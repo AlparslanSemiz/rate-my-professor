@@ -638,6 +638,12 @@ rewrite ratings already submitted — they keep the categories they were given.
 }
 ```
 
+`ratingCount` is the number of ratings across every lecture the professor teaches, and
+`averageRating` their mean. Both are computed on read, so a rating an administrator removes is
+reflected immediately. **Until 9.09 `ratingCount` was always `0`** — it was read from a stored
+column that nothing ever wrote — so a client that concluded the field was unused was reading it
+correctly at the time. It carries a real number now.
+
 `lectureIds` is the professor's own view of the assignment that `PATCH /admin/data/professor/{id}`
 writes. Read it from here rather than reverse-indexing it out of `GET /data/lectures`: the
 lecture listing is the other direction of the same relation, and reverse-indexing it returns
