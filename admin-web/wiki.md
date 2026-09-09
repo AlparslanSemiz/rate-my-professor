@@ -103,7 +103,18 @@ instead of a second one that only exists on developer machines.
 
 ## 4. Quick start
 
-**Prerequisites:** Node.js 24 and npm, plus a reachable backend.
+**Prerequisites:** Node.js 24 and npm, plus a reachable backend — **except** for the
+test suites, which need none: both the Vitest integration tests and the Playwright
+specs run against an in-process mock of the API.
+
+For `npm run test:e2e` only, Playwright needs a Chromium it can find
+(`npx playwright install chromium`). The cache location is platform-dependent and the
+revision is pinned to the Playwright version, which is the detail that costs an
+afternoon: `~/.cache/ms-playwright` on Linux, `~/Library/Caches/ms-playwright` on
+macOS, `%USERPROFILE%\AppData\Local\ms-playwright` on Windows. Playwright **1.63**
+wants `chromium-1243`; a directory from an earlier version sitting beside it is not a
+substitute. CI installs nothing — the `web:e2e` job runs on the
+`mcr.microsoft.com/playwright:v1.63.0-noble` image.
 
 ```bash
 npm ci
@@ -552,15 +563,23 @@ npm run test:coverage
 npm run build
 ```
 
-The checks cover ESLint rules and React hook usage; TypeScript compilation under
-`strict`; unit tests for utilities, domain rules, API services, hooks and
-authentication; integration tests for routing and the main feature pages; and a
-production build including Vite's route chunk generation.
+The checks cover ESLint rules and React hook usage; a no-cyclic-imports check over
+every file in `src/`; a check that every public service, hook and domain type
+carries a doc comment; TypeScript compilation under `strict`; unit tests for
+utilities, domain rules, API services, hooks and authentication; integration tests
+for routing and the main feature pages; and a production build including Vite's
+route chunk generation.
 
-As of 2026-09-09 the suite is **37 test files and 273 tests**, green, at 91.23%
-statements / 84.16% branches / 89.03% functions / 93.49% lines. The report in
+As of 2026-09-09 the suite is **43 test files and 348 tests**, green, at 92.55%
+statements / 85.62% branches / 90.77% functions / 94.43% lines, plus **4 Playwright
+specs and 11 tests** in the end-to-end layer, which runs separately. The report in
 `coverage/` is the authority on those figures; a number written in a document is
 a dated snapshot of it.
+
+One caveat belongs with those numbers rather than beneath them: `npx vitest run
+.integration.test.` failed once and was green on the nine runs afterwards, with the
+failing test never identified. A suite that fails once in ten is not a green suite —
+`F-024` in `docs/testfindings.md`.
 
 ### What the suite does and does not establish
 
@@ -569,15 +588,18 @@ the difference matters enough to state rather than summarise:
 
 | Layer | What is replaced | What that proves |
 | --- | --- | --- |
-| API service tests | `fetch` itself, so `ApiClient` and the service run for real | The exact URL, query string, method, body and `Authorization` header a **service** produces |
-| Page tests | The whole service module, via `vi.mock` — no request is constructed at all | What a **screen** renders, and which service method it calls |
-| Model and utility tests | Nothing | Rules in isolation |
+| Eight files | **Nothing.** MSW answers the real request, so the screen, its hooks, its services and `ApiClient` all run | The path, method, query string, JSON body and `Authorization` header a **screen** produces, and what it renders from the answer |
+| Remaining API service tests | `fetch` itself, so `ApiClient` and the service run for real | The request a **service** produces, not that any screen asks for it |
+| Three remaining page tests | The whole service module, via `vi.mock` — no request is constructed | What a **screen** renders, and which service method it called |
+| Model and utility tests | Nothing to replace | Rules in isolation |
+| End-to-end | Nothing — the same MSW handlers, in a real browser | That the four main flows work, start to finish, with no backend running |
 
-**So no page test touches HTTP.** What a screen sends is asserted only against
-expectations written in this repository, which is why a field the backend renamed
-once passed every test here and still signed the operator out on every reload
-(`F-002`). Closing that by contract is `P1` in `docs/TODO.md`; a first page test
-that really sends its request is `P2`.
+**Six features touch HTTP now** — comments, routing and the session, sign-in, the
+audit log and users. A field the backend renames is the class of defect this
+closes; it once passed every test here and still signed the operator out on every
+reload (`F-002`). What the suite still cannot establish is that the panel's idea of
+the contract matches the backend's, which is `P1` in `docs/TODO.md`. Three page
+tests keep their service mocks by decision (`docs/adr/0009-msw-slice-by-slice.md`).
 
 The scope, the per-layer matrix, the known automation gaps and the manual
 end-to-end scenarios are in `docs/testplan.md`; executed results, the run log and
@@ -590,7 +612,8 @@ coverage are in `docs/testfindings.md`.
 | `npm run dev` | Start Vite using `.env` |
 | `npm run build` | Type-check and create the production bundle |
 | `npm run preview` | Preview the built `dist/` directory |
-| `npm run check` | Run lint and type checking |
+| `npm run check` | Run lint, the no-cycles check, the documentation check and type checking |
+| `npm run test:e2e` | Run the Playwright end-to-end suite against the in-browser mock backend |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run the TypeScript compiler |
 | `npm test` | Run all tests once |

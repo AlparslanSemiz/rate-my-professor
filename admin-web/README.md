@@ -97,7 +97,25 @@ instead of a second one that only exists on developer machines.
 ### Prerequisites
 
 - Node.js 24 and npm
-- A reachable backend (see the backend repository for how to run one)
+- A reachable backend (see the backend repository for how to run one) — **except** for
+  the test suites, which need none: both the Vitest integration tests and the
+  Playwright specs run against an in-process mock of the API.
+- For `npm run test:e2e` only: a Chromium that Playwright can find. `npx playwright
+  install chromium` fetches it. **The cache location is platform-dependent and the
+  revision is pinned to the Playwright version**, which is the detail that costs an
+  afternoon:
+
+  | Platform | Cache directory |
+  | --- | --- |
+  | Linux | `~/.cache/ms-playwright` |
+  | macOS | `~/Library/Caches/ms-playwright` |
+  | Windows | `%USERPROFILE%\AppData\Local\ms-playwright` |
+
+  Playwright **1.63** wants `chromium-1243`. A directory from an earlier Playwright —
+  `chromium-1234`, say — sitting beside it is not a substitute and is not used; if
+  both are present the suite still fails until 1243 is there. `PLAYWRIGHT_BROWSERS_PATH`
+  overrides the location. CI does not install anything: the `web:e2e` job runs on the
+  `mcr.microsoft.com/playwright:v1.63.0-noble` image, which ships the matching browser.
 
 ### Start the application
 
@@ -579,6 +597,17 @@ changing routes, APIs, or feature behavior.
 This code splitting is about frontend JavaScript. API data is already loaded
 independently by the relevant feature hooks.
 
+### Refreshing the API schema
+
+`docs/api/openapi.json` is the backend's own OpenAPI document and is the authority on
+request and response **shape** ([ADR 0008](docs/adr/0008-generated-schema-is-the-contract-authority.md)).
+It is pulled by hand rather than by CI, because `/v3/api-docs` sits behind
+`hasRole("ADMIN")` and so needs a running backend and an admin token. The procedure is
+four `curl` commands in [docs/api/README.md](docs/api/README.md); commit the body
+**byte for byte**, since the diff between two pulls is the record of what the backend
+changed and reformatting destroys it. `npm run schema:types` then regenerates
+`src/types/api.generated.ts`, which is never edited by hand.
+
 ## Documentation
 
 This README is the tour. Everything below is a document with one job, and each is
@@ -614,16 +643,27 @@ npm run build
 The checks cover:
 
 - ESLint rules and React hook usage.
+- **No cyclic imports** anywhere in `src/`, checked over every file rather than
+  between packages only (`scripts/check-cycles.mjs`).
+- **A doc comment on every public service, hook and domain type**
+  (`scripts/check-docs.mjs`). Private members are exempt on purpose.
 - TypeScript compilation.
 - Unit tests for utilities, domain rules, API services, hooks, and
   authentication.
 - Integration tests for routing and the main feature pages.
 - A production build, including Vite's route chunk generation.
 
-**37 test files, 273 tests, green** as of 2026-09-09, at 91.23% statements /
-84.16% branches / 89.03% functions / 93.49% lines. The report in `coverage/` is
+**43 test files, 348 tests, green** as of 2026-09-09, at 92.55% statements /
+85.62% branches / 90.77% functions / 94.43% lines, plus **4 Playwright specs and 11
+tests** in the end-to-end layer. The report in `coverage/` is
 the authority on those figures; a number written in a document is a dated
 snapshot of it.
+
+One caveat belongs with those numbers rather than beneath them: `npx vitest run
+.integration.test.` failed once and was green on the nine runs afterwards, with the
+failing test never identified. A suite that fails once in ten is not a green suite —
+`F-024` in [docs/testfindings.md](docs/testfindings.md).
+
 
 ### What the suite does and does not establish
 
@@ -632,17 +672,20 @@ layer, and the difference matters enough to state rather than summarise:
 
 | Layer | What is replaced | What that proves |
 | --- | --- | --- |
-| API service tests | `fetch` itself, so `ApiClient` and the service run for real | The exact URL, query string, method, body and `Authorization` header a **service** produces |
-| Page tests | The whole service module, via `vi.mock` — no request is constructed at all | What a **screen** renders, and which service method it calls |
-| Model and utility tests | Nothing | Rules in isolation |
+| Eight files | **Nothing.** MSW answers the real request, so the screen, its hooks, its services and `ApiClient` all run | The path, method, query string, JSON body and the `Authorization` and `Content-Type` headers a **screen** produces, and what it renders from the answer |
+| Remaining API service tests | `fetch` itself, so `ApiClient` and the service run for real | The request a **service** produces, not that any screen asks for it |
+| Three remaining page tests | The whole service module, via `vi.mock` — no request is constructed | What a **screen** renders, and which service method it called |
+| Model and utility tests | Nothing to replace | Rules in isolation |
+| End-to-end | Nothing — the same MSW handlers, in a real browser | That the four main flows work, start to finish, with no backend running |
 
-**So no page test touches HTTP.** What a screen sends is asserted only against
-expectations written in this repository, which is why a field the backend renamed
-once passed every test here and still signed the operator out on every reload
-(`F-002`). Closing that by contract is `P1` in
-[docs/TODO.md](docs/TODO.md); a first page test that really sends its request is
-`P2`. Until then, [docs/testplan.md](docs/testplan.md) §7 lists what has to be
-checked by hand.
+**Six features touch HTTP now** — comments, routing and the session, sign-in, the
+audit log and users. A field the backend renames is the class of defect this
+closes; it once passed every test here and still signed the operator out on every
+reload (`F-002`). What the suite still cannot establish is that the panel's idea of
+the contract matches the backend's, which is `P1` in
+[docs/TODO.md](docs/TODO.md). Three page tests keep their service mocks by decision
+([ADR 0009](docs/adr/0009-msw-slice-by-slice.md)), and
+[docs/testplan.md](docs/testplan.md) §7 lists what still has to be checked by hand.
 
 ## Available Commands
 
@@ -658,7 +701,8 @@ checked by hand.
 
 | Command | Description |
 | --- | --- |
-| `npm run check` | Run lint and type checking |
+| `npm run check` | Run lint, the no-cycles check, the documentation check and type checking |
+| `npm run test:e2e` | Run the Playwright end-to-end suite against the in-browser mock backend |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run the TypeScript compiler |
 | `npm test` | Run all tests once |
