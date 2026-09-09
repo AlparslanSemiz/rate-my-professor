@@ -17,10 +17,11 @@ really recorded if it lives in a test.
 
 ## At a glance
 
-**37 findings. 33 fixed, 2 closed as a recorded decision (P-3, P-7), 1 an existing protection
-put under test (F-13), 1 open (F-29, which needs a rotation rather than a commit).** Two of them
-— F-7 and F-8, both behind the "approximate location does not work" report — are the ones a
-*user* reported. The other thirty-five nobody had seen.
+**38 findings. 33 fixed, 2 closed as a recorded decision (P-3, P-7), 1 an existing protection
+put under test (F-13), 1 documented rather than changed (F-30), 1 open (F-29, which needs a
+rotation rather than a commit).** Two of them — F-7 and F-8, both behind the "approximate
+location does not work" report — are the ones a *user* reported. The other thirty-six nobody
+had seen.
 
 Which kind of work turned each one up, because that is the part worth knowing when deciding
 what to write next:
@@ -35,6 +36,7 @@ what to write next:
 | **Reading the code while writing the tests** — no test run found these | 4 | F-4, F-6, F-8, F-21 |
 | **Reading the code against a list of known defect shapes** — the 9 September pass | 7 | F-22, F-23, F-24, F-25, F-26, F-27, F-28 |
 | **Secret scanning, once the rules matched this project** | 1 | F-29 |
+| **Static analysis, run for the first time** | 1 | F-30 |
 | **Concurrency layer** (two requests at once, real PostgreSQL) | 0 | — see [Negative results](#negative-results) |
 | **Doing the measuring** — process findings about the suite itself, and about its own assertions | 6 | P-1, P-2, P-3, P-4, P-6, P-7 |
 
@@ -99,6 +101,7 @@ defect; it found a different kind.
 | [F-27](#f-27--the-rating-categories-come-back-in-a-different-order-each-run) | `GET /ratings/{lectureId}` orders its categories by identity hash | Medium — F-21's shape, on a public read | **Fixed** |
 | [F-28](#f-28--submitting-a-rating-for-an-unknown-lecture-answers-200) | `POST /ratings/rate` answers 200 for an unknown lecture | Low — the last route on the old convention | **Fixed** |
 | [F-29](#f-29--three-more-leaked-credentials-nobody-had-found) | Three more leaked credentials, in commits the rotation list did not name | High — unrotated, and one is in a document | **Open — needs rotation** |
+| [F-30](#f-30--a-rate-limiter-that-is-only-correct-because-a-clock-in-another-file-is-utc) | The rate limiter is correct only because `TimeConfig` is UTC | Low today — a landmine under an unrelated change | **Documented** |
 | [P-1](#p-1--the-coverage-baseline-number-was-wrong) | The coverage baseline number was wrong | Process | **Fixed** (re-measured) |
 | [P-2](#p-2--integration-tests-hide-unit-targets) | Integration tests hide unit targets | Process | **Fixed** (method changed) |
 | [P-3](#p-3--lombok-is-not-filtered-in-jacoco) | Lombok is not filtered in JaCoCo | Process | **Closed — decided against** |
@@ -1346,6 +1349,52 @@ commented-out fingerprints, retiring one per rotation, and in the rotation table
 **What it says about the method.** The reading found three the scanner missed, and the scanner
 has now found three the reading missed. Neither is a substitute for the other, and a green
 `secrets:history` was never evidence of anything except that the rules had not been written yet.
+
+
+
+---
+
+### F-30 — A rate limiter that is only correct because a clock in another file is UTC
+
+**Where.** `RateLimitService.isCurrentWindow` and `retryAfter`, and `TimeConfig`.
+
+**What happens.** Nothing, today — and that is the finding. Both methods do wall-clock
+arithmetic on a `LocalDateTime`: `windowStartedAt.plus(window).isAfter(now)` decides whether a
+caller is still locked out, and `Duration.between(...)` builds the `Retry-After` header. Wall
+clocks jump. The reason this is safe is in a different file: the `Clock` bean is
+`Clock.systemUTC()`, and UTC has no daylight-saving transitions.
+
+Change that one bean to `systemDefaultZone()` — a change that looks local, reasonable, and has
+nothing to do with rate limiting — and the limiter acquires a bug that appears twice a year. At
+the autumn transition the clock goes back an hour, so `isAfter` stays true for an extra hour and
+everyone rate-limited in that window stays locked out an hour longer than the policy says.
+
+**How it was found.** SonarQube, run locally against this project for the first time. It flagged
+both lines as "convert to a time zone-aware type", which read as a false positive — and is one,
+in the sense that there is no defect to fix. What makes it worth recording is the *reason* it is
+a false positive: an invariant holding two files apart, written down nowhere, that any reader of
+either file would have to guess at.
+
+**Status. Documented rather than changed**, on both methods, naming `TimeConfig` and saying what
+breaks if it moves. Converting the column to an `Instant` would also close it and is a schema
+change for a bug nobody has; the comment costs nothing and fails loudly in review instead.
+
+Two other things the same scan raised are recorded here so nobody re-triages them:
+
+- **`AuditRevertService:185`, "handler is nullable here".** Not reachable. `handler` is null only
+  when `!isFieldDiff(log)` or no handler is registered for the target type, and `evaluate()`
+  refuses both on its first line, so the throw above has already run. Written down in the method
+  — the risk was somebody "fixing" it with a null check that would swallow an unrevertible entry
+  instead of refusing it.
+- **`SecurityConfig:29`, CSRF disabled.** Correct for a stateless bearer-token API with no
+  cookie-backed session: there is no ambient credential for a cross-site request to ride on.
+
+**The scan's own numbers, for whoever creates the SonarCloud project:** 6 bugs, 1 vulnerability,
+0 security hotspots, 350 code smells, 95.8% coverage, 0.7% duplication over 10,591 lines. The
+six bugs are the two above plus four instances of the same `LocalDateTime` rule in test code.
+**None of the 350 smells is a regression** — 111 are `isZero()` suggestions, 87 are multi-invocation
+lambdas in assertions, and 55 were dead imports, which are gone. `docs/TODO.md` predicted exactly
+this shape before anyone had run it.
 
 
 ---
