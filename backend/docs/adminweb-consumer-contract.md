@@ -1309,3 +1309,69 @@ Global, not per endpoint:
 | `405` | — | No special handling; `Allow` header never read |
 | `415` | — | No special handling |
 | `503` | — | No special handling; retried as a query, not as a mutation |
+
+## The contract, as a table
+
+Everything above is prose written by the client's authors, and it stays that way. This block
+is the same claims in a shape a test can read: `ConsumerContractSweepTests` parses it and
+checks, against the running application, that every route here is mapped with this verb and
+that every field here exists in the response that route returns.
+
+It is delimited rather than derived from the prose because the prose uses a leading-dot
+shorthand for nested fields, and the two consumer documents resolve that shorthand
+differently -- one against the element root, one against the previous path. A parser would
+have to guess. Field paths here are written out in full instead, so nothing is inferred.
+
+`[]` marks a list, `[0]` a client that reads one element by index, and `*` an open map whose
+keys are data rather than schema -- resolution stops at a `*`, because there is nothing on the
+Java side to match it against. `Auth` is what the client puts on the request, not what the
+route requires.
+
+<!-- consumer-contract:start -->
+
+| Verb | Path | Auth | Fields the client reads |
+| --- | --- | --- | --- |
+| POST | /auth/request-login | none | - |
+| POST | /auth/login | none | authToken |
+| POST | /auth/logout | bearer | - |
+| GET | /auth/me | bearer | user.id, user.username, user.name, user.kitEmail, user.email, user.role, user.isSuperAdmin |
+| GET | /users | bearer | users[], users[].id, users[].username, users[].kitEmail, users[].email, users[].role, users[].status, users[].joined, users[].lastOnline, users[].biography, users[].warnings, users[].reports, users[].credibilityScore, nextCursor |
+| GET | /users/{id} | bearer | id, username, kitEmail, email, role, status, joined, lastOnline, biography, warnings, reports, credibilityScore |
+| PATCH | /users/{id} | bearer | - |
+| DELETE | /users/{id} | bearer | - |
+| PATCH | /users/{id}/block | bearer | - |
+| PATCH | /users/{id}/unblock | bearer | - |
+| GET | /users/{id}/warnings | bearer | warnings[], warnings[].id, warnings[].userID, warnings[].message, warnings[].createdAt, warnings[].createdFrom.id, warnings[].createdFrom.name |
+| POST | /users/{id}/warnings | bearer | - |
+| PATCH | /users/{id}/warnings/{warningId} | bearer | - |
+| DELETE | /users/{id}/warnings/{warningId} | bearer | - |
+| GET | /comments | bearer | comments[], comments[].id, comments[].content, comments[].status, comments[].author.id, comments[].author.name, comments[].author.role, comments[].author.warnings, comments[].author.status, comments[].postContext, comments[].answers, comments[].reports, comments[].createdAt |
+| PATCH | /comments/{id} | bearer | - |
+| DELETE | /comments/{id} | bearer | - |
+| GET | /comments/reported | bearer | comments[], comments[].id, comments[].commentId, comments[].commentContent, comments[].postContext, comments[].reportText, comments[].reportedUser.id, comments[].reportedUser.name, comments[].reportedUser.role, comments[].reportedUser.warnings, comments[].reportedUser.status, comments[].reporter.id, comments[].reporter.name, comments[].reporter.role, comments[].reporter.warnings, comments[].reporter.status, comments[].reason, comments[].status, comments[].date |
+| PATCH | /comments/reported/{id} | bearer | - |
+| DELETE | /comments/reported/{id} | bearer | - |
+| GET | /answers | bearer | answers[], answers[].id, answers[].content, answers[].status, answers[].author.id, answers[].author.name, answers[].author.role, answers[].author.warnings, answers[].author.status, answers[].commentId, answers[].commentPreview, answers[].postContext, answers[].reports, answers[].createdAt |
+| PATCH | /answers/{id} | bearer | - |
+| DELETE | /answers/{id} | bearer | - |
+| GET | /answers/reported | bearer | answers[], answers[].id, answers[].answerId, answers[].answerContent, answers[].commentContent, answers[].postContext, answers[].reportText, answers[].reportedUser.id, answers[].reportedUser.name, answers[].reportedUser.role, answers[].reportedUser.warnings, answers[].reportedUser.status, answers[].reporter.id, answers[].reporter.name, answers[].reporter.role, answers[].reporter.warnings, answers[].reporter.status, answers[].reason, answers[].status, answers[].date |
+| PATCH | /answers/reported/{id} | bearer | - |
+| DELETE | /answers/reported/{id} | bearer | - |
+| GET | /data/lectures | bearer | lectures[], lectures[].id, lectures[].name, lectures[].code, lectures[].semesterYear, lectures[].semesterSeason, lectures[].active, lectures[].lectureType, lectures[].professors[].id, lectures[].professors[].firstName, lectures[].professors[].lastName, lectures[].commentCount, lectures[].ratingCount |
+| PATCH | /data/lectures/{id} | bearer | - |
+| DELETE | /data/lectures/{id} | bearer | - |
+| GET | /data/professor | bearer | professors[], professors[].id, professors[].firstName, professors[].lastName, professors[].active, professors[].lectureIds, professors[].averageRating, professors[].ratingCount |
+| PATCH | /data/professor/{id} | bearer | - |
+| DELETE | /data/professor/{id} | bearer | - |
+| GET | /ratings | bearer | ratings[], ratings[].id, ratings[].lectureId, ratings[].author.name, ratings[].createdAt, ratings[].scores, nextCursor |
+| DELETE | /ratings/{id} | bearer | - |
+| GET | /audit-logs | bearer | auditLogs[], auditLogs[].id, auditLogs[].action, auditLogs[].createdAt, auditLogs[].actor.name, auditLogs[].actor.email, auditLogs[].actor.role, auditLogs[].target, auditLogs[].target.label, auditLogs[].target.type, auditLogs[].target.id, auditLogs[].changes, auditLogs[].changes.*.before, auditLogs[].changes.*.after, auditLogs[].metadata, auditLogs[].revertible, auditLogs[].revertBlockedReason, auditLogs[].revertedByAuditId, nextCursor |
+| GET | /audit-logs/meta | bearer | actors[], actors[].id, actors[].name, actors[].email, actions[], targetTypes[], actorTypes |
+| POST | /audit-logs/{id}/revert | bearer | message, reason |
+| GET | /system/status | bearer | counts, counts.users, counts.activeUsers, counts.admins, counts.openBugReports, gitlabEnabled |
+| GET | /reports | bearer | bugReports[], bugReports[].id, bugReports[].title, bugReports[].description, bugReports[].severity, bugReports[].status, bugReports[].reporterName, bugReports[].reportedAt, bugReports[].issueUrl |
+| PATCH | /reports/{id} | bearer | - |
+| DELETE | /reports/{id} | bearer | - |
+| POST | /reports/{id}/gitlab-issue | bearer | - |
+
+<!-- consumer-contract:end -->

@@ -989,3 +989,51 @@ and are separate from every status listed above. Three screens additionally pre-
 connectivity and skip the request entirely: `LoginActivity.java:112`,
 `EnterAuthTokenActivity.java:80`, `SettingsFragment.java:308`, plus
 `HomeFragment.java:87-88` and `MainViewModel.java:36`.
+
+## The contract, as a table
+
+Everything above is prose written by the client's authors, and it stays that way. This block
+is the same claims in a shape a test can read: `ConsumerContractSweepTests` parses it and
+checks, against the running application, that every route here is mapped with this verb and
+that every field here exists in the response that route returns.
+
+It is delimited rather than derived from the prose because the prose uses a leading-dot
+shorthand for nested fields, and the two consumer documents resolve that shorthand
+differently -- one against the element root, one against the previous path. A parser would
+have to guess. Field paths here are written out in full instead, so nothing is inferred.
+
+`[]` marks a list, `[0]` a client that reads one element by index, and `*` an open map whose
+keys are data rather than schema -- resolution stops at a `*`, because there is nothing on the
+Java side to match it against. `Auth` is what the client puts on the request, not what the
+route requires.
+
+<!-- consumer-contract:start -->
+
+| Verb | Path | Auth | Fields the client reads |
+| --- | --- | --- | --- |
+| POST | /auth/request-login | none | success, message |
+| POST | /auth/login | none | success, message, authToken |
+| POST | /auth/logout-all | bearer | success |
+| PATCH | /account/deleteAccount | bearer | success |
+| GET | /data/professor | none | professors[], professors[].id, professors[].firstName, professors[].lastName, professors[].averageRating, professors[].ratingCount |
+| GET | /data/professor/{professor_id} | none | professor.averageRating |
+| GET | /data/lectures | none | lectures[], lectures[].id, lectures[].name, lectures[].code, lectures[].semesterYear, lectures[].semesterSeason, lectures[].active, lectures[].commentCount, lectures[].ratingCount, lectures[].averageRating, lectures[].professors[].id |
+| GET | /data/lectures/{lecture_id} | none | lecture.averageRating |
+| POST | /social/comments | bearer | - |
+| GET | /social/comments/{lecture_id} | none | comments[], comments[].commentID, comments[].content, comments[].status, comments[].studentUsername, comments[].lectureID, comments[].profilePicture, comments[].createdAt, comments[].downVotes, comments[].upVotes, comments[].answers[], comments[].answers[].*, success |
+| GET | /ratings/{lectureId} | none | ratings[], ratings[].category, ratings[].value |
+| GET | /ratings/own/{lectureId} | bearer | ratings[], ratings[].category, ratings[].value |
+| GET | /ratings/{lectureId}/categories | none | categories[], categories[].category |
+| POST | /ratings/rate | bearer | - |
+| POST | /social/answers | bearer | success |
+| POST | /social/comments/vote/comment/{comment_id} | bearer | - |
+| POST | /social/comments/vote/answer/{answer_id} | bearer | - |
+| POST | /social/comments/report | bearer | success |
+| POST | /answers/report | bearer | success |
+| GET | /social/notifications | bearer | success, message, notifications[], notifications[].notificationID, notifications[].type, notifications[].message, notifications[].content, notifications[].userName, notifications[].createdAt, notifications[].ownCommentID, notifications[].lectureResponse, notifications[].lectureResponse.id, notifications[].lectureResponse.name, notifications[].lectureResponse.code, notifications[].lectureResponse.semesterSeason, notifications[].lectureResponse.semesterYear |
+| PATCH | /social/notifications/{notification_id} | bearer | success |
+| GET | /account/information | bearer | username, profilePicture, averageRating, ratingsCount, commentsWritten, credibilityScore |
+| GET | /account/ratings | bearer | ratings[], ratings[].overallRating, ratings[].lecture.name, ratings[].lecture.semesterSeason, ratings[].lecture.semesterYear, ratings[].lecture.professors[0].id |
+| POST | /reports | bearer | success |
+
+<!-- consumer-contract:end -->
