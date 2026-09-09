@@ -650,3 +650,22 @@ along and was correct, which is why this was not obvious from the response.
 
 Panel and app: if you were hiding or ignoring this field because it was always 0, it is worth
 showing now. If you were displaying it, it was wrong and now is not.
+
+
+///// 9.09 (6)
+
+
+"GET /ratings/{lectureId}" returns its categories in a fixed order.
+
+Was: "ratings" in an unspecified order that changed between restarts, and differed between
+     two instances of the service answering the same request
+Now: "ratings" in RatingCategory declaration order -- ROOM, ORGANIZATION, MATERIALS,
+     WORKLOAD, LECTURE_*, PROFESSOR_*, EXERCISE_*, TUTOR_*
+
+The averages were collected in a HashMap keyed by the enum, and an enum's hash code is its
+identity hash, so the order was whatever the JVM's object layout produced that run. The route
+is public and unauthenticated.
+
+Nothing to change if you sort or look up by category. If you were rendering the list in the
+order it arrived, it will stop reshuffling -- this is the same defect F-21 fixed for a
+lecture's professor list.

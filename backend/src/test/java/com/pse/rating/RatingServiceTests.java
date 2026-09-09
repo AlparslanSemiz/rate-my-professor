@@ -10,6 +10,7 @@ import com.pse.rating.dto.request.RatingRequest;
 import com.pse.rating.dto.request.RatingTopicRequest;
 import com.pse.rating.dto.response.RatingCategoriesResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
+import com.pse.rating.dto.response.TopicAverageResponse;
 import com.pse.rating.model.LectureType;
 import com.pse.rating.model.Rating;
 import com.pse.rating.model.RatingCategory;
@@ -371,6 +372,43 @@ class RatingServiceTests {
         verify(ratingRepository).saveAndFlush(existing);
     }
 
+
+    /**
+     * The averages came out of a {@code HashMap} keyed by the enum, and {@code Enum.hashCode}
+     * is the identity hash -- so the bucket order is decided by where the JVM happened to put
+     * the constants. Two runs of the same process disagree, and so do two instances behind a
+     * load balancer, on a public read. F-21's shape, one package over.
+     *
+     * <p>Whether this assertion fails against a {@code HashMap} is itself up to the JVM, which
+     * is the defect stated precisely. What it pins is the guarantee after the fix: declaration
+     * order, every run, whatever order the rows arrive in. The topics below are fed in
+     * deliberately scrambled order so that passing means something.
+     */
+    @Test
+    void getRatingsAnswersItsCategoriesInADeterministicOrder() {
+
+        UUID lectureId = UUID.randomUUID();
+
+        Rating rating = mock(Rating.class);
+        when(rating.getTopics()).thenReturn(List.of(
+                topic(RatingCategory.TUTOR_FEEDBACK, 3.0),
+                topic(RatingCategory.ROOM, 4.0),
+                topic(RatingCategory.PROFESSOR_ENGAGEMENT, 5.0),
+                topic(RatingCategory.ORGANIZATION, 2.0),
+                topic(RatingCategory.EXERCISE_PACE, 1.0)));
+        when(ratingRepository.findByLectureId(lectureId)).thenReturn(List.of(rating));
+
+        RatingsAverageResponse response = ratingService.getRatings(lectureId);
+
+        assertThat(response.ratings())
+                .extracting(TopicAverageResponse::category)
+                .containsExactly(
+                        RatingCategory.ROOM,
+                        RatingCategory.ORGANIZATION,
+                        RatingCategory.PROFESSOR_ENGAGEMENT,
+                        RatingCategory.EXERCISE_PACE,
+                        RatingCategory.TUTOR_FEEDBACK);
+    }
 
     @Test
     void getRatingsCalculatesAveragePerCategory() {

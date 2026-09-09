@@ -2,7 +2,7 @@ package com.pse.rating.service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -133,8 +133,13 @@ public class RatingService {
 
         List<Rating> ratings = ratingRepository.findByLectureId(lectureId);
 
-        Map<RatingCategory, Double> sums = new HashMap<>();
-        Map<RatingCategory, Double> counts = new HashMap<>();
+        // EnumMap, not HashMap: Enum.hashCode is the identity hash, so a HashMap's key order
+        // is decided by where the JVM put the constants -- different between two runs of the
+        // same process, and between two instances behind a load balancer. This read is public
+        // and its list reached the client in whatever order that came out as. An EnumMap
+        // iterates in declaration order, always. F-21's defect, one package over.
+        Map<RatingCategory, Double> sums = new EnumMap<>(RatingCategory.class);
+        Map<RatingCategory, Double> counts = new EnumMap<>(RatingCategory.class);
 
         for (Rating rating : ratings) {
 
