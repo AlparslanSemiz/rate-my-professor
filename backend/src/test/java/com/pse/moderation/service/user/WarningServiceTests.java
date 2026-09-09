@@ -168,6 +168,32 @@ import static org.mockito.Mockito.when;
     }
 
     /**
+     * The other side of the length limit. The test above pins 2001 as refused; nothing pinned
+     * 2000 as accepted, so the boundary itself was free to move -- `> 2_000` could become
+     * `>= 2_000` and the whole suite stayed green. Found by reading the mutation report: the
+     * surviving ConditionalsBoundaryMutator on this line and on the updateWarning copy of it.
+     *
+     * <p>2000 is the column width. A message of exactly that length has to be stored, or the
+     * limit the message text advertises is off by one against the limit the code enforces.
+     */
+    @Test
+    void warnStudent_messageExactlyAtTheColumnWidth_isAccepted() {
+        Student target = student(TARGET_ID, "ada", "ada@student.kit.edu");
+        when(studentRepository.findByIdForUpdate(TARGET_ID)).thenReturn(Optional.of(target));
+        when(adminRepository.existsByStudent(target)).thenReturn(false);
+        when(warningRepository.countByStudent(target)).thenReturn(0L);
+
+        String exactly = "x".repeat(2_000);
+
+        assertThat(warnings().warnStudent(caller(false), TARGET_ID, new WarningRequest(exactly))
+                .success()).isTrue();
+
+        ArgumentCaptor<Warning> warning = ArgumentCaptor.forClass(Warning.class);
+        verify(warningRepository).save(warning.capture());
+        assertThat(warning.getValue().getMessage()).hasSize(2_000);
+    }
+
+    /**
      * A warning nobody is told about is not a warning. The notification is the only
      * student-visible effect, and the account status is deliberately left alone.
      */
@@ -238,6 +264,22 @@ import static org.mockito.Mockito.when;
      * somebody else is a wrong URL rather than somebody else's warning -- and answering 404
      * rather than 403 is what stops the endpoint confirming that the id exists at all.
      */
+    /** The same boundary as warnStudent, on the copy of the check that lives in this method. */
+    @Test
+    void updateWarning_messageExactlyAtTheColumnWidth_isAccepted() {
+        Student target = student(TARGET_ID, "ada", "ada@student.kit.edu");
+        Warning warning = warning(target, "Please be civil");
+        when(warningRepository.findById(warning.getId())).thenReturn(Optional.of(warning));
+
+        String exactly = "x".repeat(2_000);
+
+        assertThat(warnings().updateWarning(
+                caller(false), TARGET_ID, warning.getId(), new WarningRequest(exactly))
+                .success()).isTrue();
+
+        assertThat(warning.getMessage()).hasSize(2_000);
+    }
+
     @Test
     void updateWarning_warningBelongingToAnotherStudent_readsAsNotFound() {
         Student other = student(CALLER_ID, "bob", "bob@student.kit.edu");
