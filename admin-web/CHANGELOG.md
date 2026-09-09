@@ -2,6 +2,156 @@
 
 ## [Unreleased]
 
+### Delivery hygiene and the documentation set — `P0`, `P6`, `P7`
+
+Two days before the Abnahme, and no new features. What was left was contract
+verification, documentation and delivery hygiene. This entry covers the packages
+that ran here; `P1` to `P5` are specified in `docs/TODO.md` and run elsewhere.
+
+**`docs/adr/` (new) — eleven architecture decision records**
+
+The panel had reasoning scattered across a 900-line changelog, a README and a set
+of code comments, and no answer to "what else did you consider?" — which is the
+question an Entwurf assessment actually asks. Each record carries the decision, the
+context that forced it, the alternatives genuinely weighed, the rationale and the
+consequences **including what got worse**.
+
+Nothing in them is invented; every record cites where its reasoning already
+existed. Two are new decisions and say so: `0008`, ranking the generated OpenAPI
+schema above the README and the backend's prose as the authority on shape, and
+`0009`, reversing this file's own recorded "big-bang" MSW migration in favour of
+one slice.
+
+`0010` and `0011` are written as defences rather than announcements, because they
+are what the panel will be challenged on. Both state a cost that is **knowingly
+accepted**, and both were checked rather than asserted: the six KIT addresses are
+in `dist/assets/adminAccess-*.js` (the first-name comments beside them are stripped
+by the minifier), and `grep` finds no `dangerouslySetInnerHTML`, `innerHTML` or
+`eval` anywhere in `src/`.
+
+**`docs/class-diagram.md` — redrawn**
+
+The old diagram predated the refactor: it still had `useAsyncData`,
+`useVisibleInterval` and `useCursorLogPage`, no `model/` packages, and it drew
+`ModerationApi` inside the `Hooks` namespace — hiding the one genuine dependency
+inversion in the codebase behind the label of the thing that consumes it.
+
+Five diagrams now, because one picture of 240 files answers nothing: packages, the
+API layer, the domain model, one feature in full, and the shell. The package
+diagram's claim that nothing depends upward and there are no cycles is **checked**:
+`src/api` holds no import of `@/features`, `@/hooks`, `@/components`, `@/layouts`
+or `@/context`, and `src/domain`, `src/utils` and `src/theme` hold no `@/` import
+at all.
+
+### Fixed — the documentation said the suite stubs `fetch`, and it does not
+
+`docs/testplan.md`, `README.md` and `wiki.md` all carried the line "tests stub
+`fetch` with controlled HTTP responses". It is misleading in the way that matters,
+and it had been repeated into three documents.
+
+There are **three** levels of substitution. Eleven files replace `fetch`, so
+`ApiClient` and the service run for real — 83 tests, and what they prove is the URL,
+query string, method, body and `Authorization` header a *service* produces. Eleven
+replace the service module outright with `vi.mock`, so **no request is ever
+constructed** — 134 tests, proving only what a *screen* renders. Sixteen touch
+neither. `src/test/http.ts` is not a fetch stub at all despite its name: it is a
+base URL and a `jsonResponse` helper.
+
+The consequence is now written where it can be read: **no page test touches HTTP.**
+What a screen sends is asserted only against expectations this repository wrote,
+which is exactly how `F-002` shipped — `/auth/me` reports `username`/`kitEmail`,
+`AuthUser` read `name`/`email`, and the panel signed the operator out on every
+reload while every test passed.
+
+`wiki.md` was also still reporting 33 files and 244 tests, a figure that had never
+matched a real run. All counts are re-derived and explicitly demoted: the coverage
+artefact is the authority, and a number in a document is a dated snapshot of it.
+
+### Fixed — `strict` was documented but not enabled
+
+`README.md` and `wiki.md` both claimed "TypeScript strict checks". `strict` was
+unset in `tsconfig.app.json` and `tsconfig.node.json`, and TypeScript's default is
+`false` — so `strictNullChecks` and `noImplicitAny` were off.
+
+Running the project under `--strict` produced **zero errors**, in the app config
+and the build config alike. So the flag is set rather than the claim softened: the
+code already met the standard and nothing was enforcing it. Without it the next
+unchecked null enters silently, and `P1` to `P4` are about to add a great deal of
+new code.
+
+### Fixed — a `.gitignore` comment that was a rule
+
+The opening comment lost its `#` on the second line, so an English sentence about
+`src/api/logs/` was an active ignore pattern. Nothing matched it, so it never did
+damage — but `git check-ignore -v` reported it as a rule, and it is the same class
+of mistake as the bare `logs` pattern it was written to explain, which did hide a
+whole directory.
+
+`playwright-report/` and `test-results/` added, because `P3` writes them.
+`docs/coursework/` is deliberately **not** ignored: PSE requires the delivery to be
+complete and the wiki claims it is archived in the repository.
+
+### Two contract findings, from reading the backend's own document
+
+Neither is fixed here. Both are behaviour changes, and both are recorded as
+findings rather than acted on.
+
+**`F-005` — the panel calls only legacy paths.** `docs/admin-api.md` states that
+every administrative route now answers under an `/admin` prefix as well, and that
+the legacy paths "are removed once [the panel] has [moved]". The panel still sends
+`/users`, `/auth/me`, `/audit-logs`, `/reports`, `/ratings`, `/system/status` and
+`/data/lectures` — every one of them. Nothing is broken today; everything breaks on
+the day they are dropped. Recorded for the backend team as `H2`, so the removal is
+not scheduled on the assumption that we have migrated.
+
+**`F-006` — `G1` was already answered.** `docs/backend-tasks.md` has been asking
+the backend for a way to read inactive catalogue records. `GET /admin/data/lectures/all`
+and `GET /admin/data/professor/all` are documented as returning "Every
+lecture/professor, active or not". The endpoint exists; the panel does not call it.
+`G1` stops being a request and becomes a note, with a request to leave both routes
+in place.
+
+Both were found by reading, not by a failing test — which is the gap `P1` exists to
+close.
+
+### The activity-log sweep found one thing
+
+A full search of `src/`, `docs/`, `README.md`, `wiki.md`, `public/`, `scripts/` and
+the CI config for remnants of the deleted screen turned up no dead route, no dead
+sidebar entry, no dead type, no dead import and no dead test. Everything else that
+mentions "activity" is a false positive or an intentional regression guard.
+
+The one stale artefact was `LogMeta`'s doc comment, which justified capping
+`actors` by reasoning from a screen that no longer exists. The cap is real and the
+reason survives the deletion — `/audit-logs` is backed by a log table shared with
+the student-side record — so the comment says that instead. `README.md` and
+`wiki.md` already had the corrected wording.
+
+### Also
+
+- **`docs/coursework/` (new)** — course-delivery documents, tracked, with
+  `demo-notes.md`: what not to touch during the live demo (the Active switch is
+  irreversible from the panel; the login rate limit is 3 per address in 15 minutes
+  and a code expires in 5), what looks like a bug and is not, the order to walk the
+  panel, and short answers to the questions that will come.
+- **`docs/api/` (new)** — where the schema goes, and the procedure for pulling it.
+  It needs a live backend and an admin token, so it cannot be automated.
+- **`README.md` gained a documentation table**, which it did not have at all; the
+  wiki's listed six files out of eleven. Each row says what that document is
+  authoritative *for*, so two documents claiming the same subject is visible rather
+  than latent.
+- **`docs/TODO.md` restructured** into done / handed over / deliberately not done,
+  with `P1`–`P5` written as executable specs and a handover note. The Notebook
+  section is byte-for-byte unchanged. The twelve-phase test strategy is replaced:
+  Phase 1 landed in refactor step 0, the rest is superseded, and the Phase 7 note
+  claiming no schema exists was simply wrong — springdoc has served one all along.
+- **`docs/testfindings.md`** gained the current per-directory coverage table beside
+  the pre-refactor baseline, and the note that seven directories are absent from the
+  text report because they are at 100% — read as a complete list, it is not one.
+
+**No behaviour changed.** The gate is unchanged throughout: 37 files, 273 tests,
+coverage 91.23 / 84.16 / 89.03 / 93.49, zero warnings, clean build.
+
 ### Refactor step 11 — auth, layouts and help
 
 **`features/auth/LoginPage.integration.test.tsx` (new) — written first, on purpose**
