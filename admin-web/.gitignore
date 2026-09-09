@@ -1,5 +1,5 @@
 # Logs. `/logs` is anchored to the repo root on purpose: a bare `logs` matches any
-directory of that name at any depth, which silently hid all of `src/api/logs/`.
+# directory of that name at any depth, which silently hid all of `src/api/logs/`.
 /logs
 *.log
 npm-debug.log*
@@ -46,5 +46,7 @@ BACKEND-PROMPT.md
 FRONTEND-TASKS.md
 ISSUES.md
 
-# Coverage reports (npm run test:coverage)
+# Coverage reports (npm run test:coverage) and Playwright's own output directories.
 coverage/
+playwright-report/
+test-results/

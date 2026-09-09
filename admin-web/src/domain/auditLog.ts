@@ -136,8 +136,10 @@ export interface LogPage {
 }
 
 /**
- * Filter vocabulary of one log. `actors` is capped rather than exhaustive — every account
- * that ever signed in is an actor in the activity log — so `q` is what finds the rest.
+ * Filter vocabulary the audit log's dropdowns are built from. `actors` is capped rather
+ * than exhaustive: /audit-logs is backed by a log table shared with the student-side
+ * record, so every account that ever signed in is an actor in it — `q` is what finds
+ * someone beyond the cap.
  */
 export interface LogMeta {
   actors: Array<Pick<LogActor, 'id' | 'name' | 'email' | 'role'>>
