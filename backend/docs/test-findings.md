@@ -1730,15 +1730,25 @@ pinned, so adding a multipart endpoint later has to be deliberate. The cost is s
 
 ---
 
-### P-8 — `admin-api.md` drifted four times and nothing noticed
+### P-8 — `admin-api.md` drifted five times and nothing noticed
 
 **What happened.** The document the panel team treats as authoritative has fallen behind the
-code four times: [F-5](#f-5--failures-come-back-with-http-200) (a status that had changed),
+code five times: [F-5](#f-5--failures-come-back-with-http-200) (a status that had changed),
 [F-16](#f-16--the-wrong-http-method-returns-404-instead-of-405) (a 404 that had become a 405),
 [F-22](#f-22--the-two-catalogue-detail-reads-answer-200-for-a-row-that-is-not-there) (a body
 that no longer existed), [F-26](#f-26--ratingcount-on-a-professor-is-always-0) (a field that had
-never been right). Each was corrected by hand. Nothing prevented the next one, and F-5's own
-writeup says the drift is what made parking that fix the wrong call.
+never been right), and now **F-44** (a CORS rule that was never true). Each was corrected by
+hand. Nothing prevented the next one, and F-5's own writeup says the drift is what made parking
+that fix the wrong call.
+
+**The fifth one is outside what the fix below can reach, and that is the point of counting it.**
+F-44's drift was not a status, a body or a field — it was a *sentence about behaviour*:
+`admin-api.md` stated that an origin had to be allow-listed "even when the panel and the API
+share it", and two probes disproved it (same host `200`, stranger origin `403`, with neither in
+the list). A contract table of `(METHOD, path) -> statuses` cannot check a claim of that shape,
+so `AdminApiDocumentationDriftTests` was never going to catch it and did not. The mechanism
+below closes the drift class it was built for; this one says how much of the document still
+rests on prose nothing checks.
 
 **Why it is a process finding rather than a defect.** Nothing in the code is wrong. What was
 missing is the same thing missing from a hand-maintained route list: a mechanism. This
@@ -2039,6 +2049,22 @@ bypass's dependency on `server.forward-headers-strategy=framework` is now record
 property itself as well as in `docs/deployment.md` — behind a proxy, Spring can only reconstruct
 the request's origin correctly while the forwarded headers are honoured.
 
+**That dependency is F-30's shape exactly**, and it is worth naming as such. F-30 is a rate
+limiter that is correct only because a `Clock` bean in a different file is UTC: nothing is wrong
+today, and the hazard is that the load-bearing fact lives one file away from the thing it holds
+up, so a reasonable-looking edit elsewhere breaks it silently. Here the panel's whole login path
+is same-origin, and same-origin is correct only while a *transport* property keeps Spring's
+reconstruction of the request URL honest. Someone removing
+`server.forward-headers-strategy=framework` as "logging and link building configuration" would
+take the panel down and see nothing in CORS code to explain it. Written beside the property, and
+beside `app.cors.allowed-origins`, for that reason.
+
+**One half of it is still unwritten.** `CorsConfig` is the class whose correctness depends on
+the property, and it says nothing about it — the invariant is on the property and in two
+documents, but not at the reader who would be editing the CORS rules. Deliberately left: this
+pass changed no application code. It is the one thing here that F-30's own rule would have
+finished.
+
 **The fix.** `VITE_API_BASE_URL` is empty in the panel's CI, so every call goes out relative and
 same-origin and CORS is not in the path. `ADMIN_FRONTEND_ORIGINS` narrows to
 `https://ratemyprofessor.dev`: what is left over for callers that are not same-origin, not the
@@ -2064,6 +2090,59 @@ now the recorded precondition rather than an open question.
 **Found by** reading the browser's network tab against the deployed bundle, then curling both
 hostnames to separate the two faults — the wrong base URL and the missing origin presented as
 one failure and were not.
+
+---
+
+### F-45 — nothing verifies that what is deployed is what was built, so a deployment that did not happen looks exactly like one that did
+
+**Not pinned by a test here**, and not a defect in this application: it is a gap in the delivery
+path. Recorded because it was found the only way it can be — by curling the deployed host to
+answer a question no automation answers.
+
+**What.** After the panel's fix was committed, the live bundle was checked. It had not changed:
+
+| Checked | Result |
+| --- | --- |
+| `/admin/` asset names | `index-CjU2LVQi.js`, `HttpService-D_uMGLro.js` — **byte-identical hashes to the pre-fix deploy** |
+| `index.html` `last-modified` | `Wed, 09 Sep 2026 22:00:47 GMT` — older than the fix, and older than the last known commit on `origin/main` |
+| the served `HttpService` chunk | still contains the bw-cloud URL, one hit |
+| cache | ruled out — `cache-control: no-store` on `index.html`, and the request was sent with `Cache-Control: no-cache` and a cache-busting query |
+
+**Why nothing caught it.** The panel's `web:deploy` job ends in a smoke check:
+
+```
+code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:${WEB_PORT:-8081}${VITE_BASE_PATH})
+test "$code" = "200"
+```
+
+That asserts *something is serving `/admin/`*. The previous container serves `/admin/` and
+answers `200` too, so the check passes for the old bundle exactly as it does for the new one.
+The image reference itself is sound — `$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA`, pinned to the
+commit, so a job that runs cannot deploy a stale image. The gap is the case where the job does
+**not** run: nothing downstream ever asks whether the artefact now being served is the artefact
+that was built. On the backend side the scheduled `health:check` has the same shape — it hits
+`/health`, which answers `200` from whatever version is up.
+
+**This is the repository's own recorded error class, applied to deployment.** The house rule
+says a green sweep and a sweep that looks at nothing are indistinguishable from outside, and
+that a sweep must be shown capable of going red. The same argument applies here and had not
+been made: a passing deploy and an absent deploy are indistinguishable from outside, because
+the only assertion is liveness.
+
+**What would close it.** An assertion on identity rather than liveness — the deploy job, or a
+scheduled check, reading the served `index.html` and comparing the asset hashes (or an embedded
+build id) against the artefact just built. Cheap, and it turns "did that land?" from a manual
+curl into a job result.
+
+**Deliberately not fixed here.** This pass changed no code, and the job in question is in the
+panel repository. It is also not the reason this particular deployment is stale — as far as
+this machine can tell the fix commit never reached `origin/main` (local `main` is 5 ahead, and
+the cached `origin/main` tip predates the commit; `git fetch` cannot run here, so that is
+evidence and not proof). The finding stands regardless of which it was: **the point is that the
+outside could not tell.**
+
+**Found by** running V3 of the deployment verification — grepping the live bundle for the URL
+that was supposed to be gone — and getting the pre-fix file back.
 
 ---
 

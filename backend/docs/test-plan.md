@@ -1175,8 +1175,9 @@ and one new `RatingCategory` would crash the app's rating screen.
 ## Where the suite stops
 
 *Deliberately uncovered* below names the **classes** nobody tests and why. This section names
-six **questions** nobody tests — four the suite was drawn around, one a sweep's own filter, and
-one that is about where the tests run rather than what they cover. That is the larger and less
+seven **questions** nobody tests — four the suite was drawn around, one a sweep's own filter,
+one that is about where the tests run rather than what they cover, and one about where the
+application runs. That is the larger and less
 visible gap: absence is not a defect, but an *unwritten* absence is — it reads as an oversight to anyone auditing this, and
 the next person either re-derives the reasoning or, worse, assumes the question was answered.
 
@@ -1302,7 +1303,39 @@ document", which is not true and is not meant to be. It stops mattering when
 that this sweep is not what would catch a new undocumented `/data` route.
 
 Recorded against the same filter in
-[test-findings.md](test-findings.md#p-8--admin-apimd-drifted-four-times-and-nothing-noticed).
+[test-findings.md](test-findings.md#p-8--admin-apimd-drifted-five-times-and-nothing-noticed).
+
+### The drift sweep is green about `/admin/**` routes that the deployment does not serve
+
+**`AdminApiDocumentationDriftTests` passing is not a claim that those routes are reachable.** It
+runs this application in-process, where `/admin/**` maps exactly as `docs/admin-api.md` says.
+The deployed host does not route them here at all.
+
+One nginx serves `https://ratemyprofessor.dev`: `/admin/` goes to the admin panel's own static
+container, everything else to this backend with the path unchanged. So on the deployment, every
+`/admin/**` API route is answered by the panel's `index.html` — `GET /admin/auth/me` and
+`GET /admin/system/status` come back `200 text/html` instead of `401` JSON, and
+`POST /admin/auth/login` comes back `405` from that nginx. Measured by curl, with the response
+headers used to name the serving layer rather than guessed at. Recorded as
+[F-43](test-findings.md); the decision to leave the routing that way is
+[F-44](test-findings.md).
+
+**Nothing is broken by it.** The panel calls the unprefixed legacy routes — `/auth/**`,
+`/users`, `/system/status`, `/data/**` — and those do reach this backend. That is the contract
+carrying production, and under the 10 September decision it is the contract permanently.
+
+**What the gap actually is.** Over 100 claims in that sweep are probed and correct *about this
+application*, and roughly half of them concern a surface no deployed client can call. The
+assertion is true and worth having — it is what keeps the document honest about the code — but
+it establishes nothing about production, and **no test in this repository can**, including the
+E2E layer, which drives this application directly rather than the host in front of it. Reading a
+green drift sweep as "the admin API works in production" is the specific misreading this
+paragraph exists to prevent. It is the same shape as F-39, F-40 and F-42: the path the client
+actually calls is the one carrying production, and the documented path is the one nobody
+exercises.
+
+Closing it would need a test that runs against the deployed host — a different thing from this
+suite, with different credentials and a different failure meaning — and that has not been built.
 
 ### Four layers do not run on a developer machine, and CI status cannot be read from here
 
