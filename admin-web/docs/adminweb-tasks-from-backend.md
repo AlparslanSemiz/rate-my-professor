@@ -4,6 +4,11 @@ Everything the admin panel repository has to do after the backend split the Admi
 from the app API. The full contract is in [admin-api.md](admin-api.md); this page is only
 the work list.
 
+**Revised 10 September 2026.** One thing is new since the last version you were sent, and it
+changes what you should do first: **tasks 1 and 2 are blocked**, because on the deployed host
+`/admin` is not this API. Read the section before task 1. Nothing else on this page moved —
+no route, no field and no response shape has changed since the last revision.
+
 ## What changed, in one paragraph
 
 The session you get now depends on **which login endpoint you called**, not on whether the
@@ -72,15 +77,92 @@ want it.
 
 ---
 
+## Read this before task 1 or task 2 — on the deployed host, `/admin` is your nginx
+
+**Both migration tasks below are blocked on a deployment decision nobody has made yet.** Do not
+move any call onto `/admin` until it is made. Everything else on this page is unaffected and
+still worth doing.
+
+On `https://server.example.org`, `/admin/` is routed
+to **your** static container, not to this backend. The bundle is built with
+`VITE_BASE_PATH=/admin/`, and your `docker/nginx.prod.conf.template` ends its location block in
+`try_files $uri $uri/ /admin/index.html` — so every path under `/admin/` is answered with your
+`index.html` and the API is never consulted. Observed by curl on 9 September, after that day's
+deployment:
+
+| Request | What `admin-api.md` claims | What the deployed host answers |
+| --- | --- | --- |
+| `GET /health` | `200` JSON | `200 {"message":"API healthy","success":true}` — the backend |
+| `GET /auth/me` | `401` JSON | `401 {"message":"Not logged in","success":false}` — the backend |
+| `GET /admin/auth/me` | `401` JSON | **`200 text/html`** — your `index.html` |
+| `GET /admin/system/status` | `401` JSON | **`200 text/html`** |
+| `POST /admin/auth/login` | `400`/`401` JSON | **`405 text/html`** from nginx |
+
+Which layer answered is read off the headers rather than guessed. The `/admin/**` responses
+carry `cache-control: no-store`, `x-content-type-options: nosniff`, `x-frame-options: DENY` and
+`referrer-policy: same-origin` — the exact set your nginx template writes — while `GET /health`
+carries Spring's `vary: Origin`, `pragma: no-cache` and `expires: 0`. The split is made upstream
+of both containers rather than inside your nginx: `GET /healthz`, which your nginx answers
+`200 ok`, comes back as the backend's `404` JSON. So `/admin/` is handed to you and everything
+else goes to the API.
+
+**Nothing is broken today.** Your deployed bundle calls `/auth/me`, `/auth/login`,
+`/auth/logout`, `/auth/request-login`, `/users`, `/system/status`, `/audit-logs`, `/ratings`,
+`/reports` and `/data/**`, with no `/admin/` prefix anywhere in it. None of those collide.
+Carrying out tasks 1 and 2 against this deployment is what would break it: reads would come back
+as your own `index.html` and fail to parse, writes would come back `405`, and the whole failure
+would read as a backend outage.
+
+This is the same shape as the `GET /auth/me` incident: an assertion that is green in our suite
+about a route the deployment shadows. Our tests run this application in-process, where
+`/admin/**` maps exactly as `admin-api.md` says. No test on either side can see the proxy in
+front of the deployed host, which is why this is written down here rather than pinned.
+
+**Two ways out, and it is one decision rather than two changes.**
+
+1. **Serve the panel from a path that does not collide** — `/panel/`, or its own host — and
+   leave `/admin/**` to the backend. That is `VITE_BASE_PATH` and the location block in your
+   repository, plus the routing rule on the host.
+2. **Expose the backend under a prefix of its own** — `/api/**` — and keep `/admin/` for the
+   panel. `admin-api.md` already covers this case: `/api` is a proxy prefix, not a backend route
+   prefix, and `VITE_API_BASE_URL=/api` is the panel's half of it. Your calls then read
+   `/api/admin/auth/login` and so on.
+
+`ADMIN_FRONTEND_ORIGINS` on the backend and `VITE_API_BASE_URL` on your side move with whichever
+is chosen. The routing rule itself lives on the deployment host and in none of the three
+repositories, which is why we cannot simply ship a fix for it.
+
+- [ ] **Whoever owns the deployment picks 1 or 2, and tells us which.** We will then put the
+      resulting paths on this page and in `admin-api.md`, and tasks 1 and 2 unblock. Until then
+      the legacy root paths stay served and nothing is deleted — see task 5.
+
+---
+
 ## 1. Move the auth calls
+
+**Blocked on the section above.** `POST /admin/auth/login` currently answers `405` from your own
+nginx, so shipping this list today locks everyone out. The list stays here because it is still
+where you are going, and it is still what closes the two bugs above — it is the timing that has
+changed, not the destination.
 
 - [ ] `POST /auth/request-login` → `POST /admin/auth/request-login`
 - [ ] `POST /auth/login` → `POST /admin/auth/login`
 - [ ] `POST /auth/logout` → `POST /admin/auth/logout`
 - [ ] `POST /auth/logout-all` → `POST /admin/auth/logout-all`
-- [x] `GET /auth/me` → `GET /admin/auth/me` — **nothing to migrate: the old path is gone.**
-      It was removed from the backend and is not coming back, so a panel still calling it gets
-      a `404`. `GET /admin/auth/me` is the only identity endpoint.
+- [ ] `GET /auth/me` → `GET /admin/auth/me`
+
+  **This line used to say the old path was gone and not coming back. It was right about the
+  code and wrong about the consequence, and it cost you the panel.** `GET /auth/me` really was
+  unmapped, and your own reading (C-01) had the effect exactly: `authenticateAdmin.ts:32-42`
+  bare-catches the `404`, hands `null` to `resolveAdminUser`, and fails the whole sign-in with
+  "your admin account could not be read". The code was accepted, the token was minted, and
+  nobody could get in. Neither side saw it, because from here it looks like a retired route and
+  from there it looks like a flaky backend.
+
+  `GET /auth/me` is **served again** as of `CHANGELOG` 9.09 (15), answering exactly what
+  `GET /admin/auth/me` answers and requiring the same admin session. You need to ship nothing
+  to sign in again. It exists only until you have migrated, and `AdminApiPathSplitTests` pins
+  the two paths to the same answer in the meantime.
 
 Do `POST /admin/auth/login` first — it is the one that changes behaviour:
 
@@ -111,7 +193,11 @@ New path = `/admin` + old path.
 | `GET /reports`, `PATCH`/`DELETE /reports/{id}` | `/admin/reports`, `/admin/reports/{id}` |
 | `POST /reports/{id}/gitlab-issue` | `POST /admin/reports/{id}/gitlab-issue` |
 
-- [ ] Set one base path (`https://<host>/admin`) and move the calls above onto it.
+- [ ] **Blocked on the section above — do not do this yet.** Set one base path
+      (`https://<host>/admin`) and move the calls above onto it. On the deployment as it stands
+      that base path is your own static server, and every call on it would be answered with
+      `index.html` or `405`. The table is accurate about the API; it is the host that does not
+      route to it yet.
 
 **The two creates answer `403`.** `POST /data/lectures` and `POST /data/professor` are both
 refused by the security chain with a plain **`403`** when the caller is not an administrator,
@@ -120,7 +206,11 @@ the handler and answer `200 {"success": false}` instead; that is fixed, so the l
 `/admin` paths no longer differ in error shape. If the panel branches on
 `success === false` for these two calls, it needs to handle the status code as well.
 
-- [ ] Handle `403` on the two catalogue creates.
+- [x] ~~Handle `403` on the two catalogue creates.~~ **Does not apply to this repository.**
+      Your audit (§3.7) establishes that the panel calls neither `POST /data/lectures` nor
+      `POST /data/professor` — `LectureCatalogService` and `ProfessorCatalogService` implement
+      only the read, the patch and the delete, and the catalogue UI offers no create control.
+      Closed from our side.
 
 ### Three things that deliberately do not move
 
@@ -132,13 +222,81 @@ the handler and answer `200 {"success": false}` instead; that is fixed, so the l
   include deactivated rows.
 - **`GET /admins/validate`** — legacy and being retired. `GET /admin/auth/me` answers the
   same question with more detail.
-  - [ ] Confirm the panel does not call `/admins/validate`, so the backend can delete it.
+  - [x] Confirmed from your audit: the panel does **not** call `/admins/validate`. The route is
+        still here — deleting it is a separate decision, tracked on our board — but the question
+        is answered and nothing is waiting on you.
+
+## 2a. Two fields the ratings tab reads that this API has never served
+
+Found by `ConsumerContractSweepTests`, which checks every field your contract says you read
+against the response the route actually returns. These two were its first run's only real
+finds, and both are silent by construction — your own null-guards turn them into wrong data
+rather than an error.
+
+`GET /ratings` serves each rating as:
+
+```json
+{"id":"...","student":{"id":"...","name":"...","role":"STUDENT","warnings":0,"status":"ACTIVE"},
+ "lectureLabel":"CS101 — Algorithms","lectureId":"...",
+ "topics":[{"category":"LECTURE_UNDERSTANDABILITY","value":4.5}],"createdAt":"..."}
+```
+
+- [ ] `src/api/catalog/ratingMapper.ts:19` reads `rating.author?.name`. The field is
+      **`student`**. Because the read is optional-chained with a fallback, **every row of the
+      ratings table shows "Unknown"** instead of failing.
+- [ ] `ratingMapper.ts:21` reads `rating.scores ?? {}`. The field is **`topics`**, and it is a
+      list of `{category, value}` rather than an open map. **The scores column is empty on
+      every row.**
+
+Neither is a backend change: `admin-api.md` has documented `student` and `topics`, with the
+worked example above, since the endpoint existed. Both are now pinned in
+`ConsumerContractSweepTests.READ_BUT_NOT_SERVED`, and that list is asserted as an exact set —
+so when you fix the mapper and update your contract document, our build goes red and the entry
+gets deleted. That is deliberate: it is how we find out.
+
+## 2b. Deactivating a lecture or professor hides it from your only list — F-42
+
+Not a backend defect, and not a field name this time: it is which of two routes you read.
+
+`GET /data/lectures` and `GET /data/professor` filter to `active = true`. That is what they
+are for — the app must not show a retired lecture. **The panel reads only those two**, so when
+an administrator sets `active: false` from the catalogue form the row leaves the list and there
+is no screen left that can see it. The `PATCH` that would set it back needs the id, and the id
+is only on the row that has just disappeared.
+
+The pair that exists for exactly this already answers:
+
+- [ ] Read `GET /data/lectures/all` and `GET /data/professor/all` on the catalogue screen —
+      `/admin/data/lectures/all` and `/admin/data/professor/all` once task 2 is done. They
+      return active and inactive rows, and every row carries `active`.
+- [ ] Add an **All / Active / Inactive** filter over that list, defaulting to Active so the
+      screen looks the way it does today. Inactive is the view that does not exist yet, and it
+      is the one that makes `PATCH {"active": true}` reachable.
+
+Nothing is lost when a row is deactivated, which is worth being precise about: the row keeps its
+id, its ratings and its comments, and `PATCH {"active": true}` restores it. The problem is only
+that the id is no longer on any screen you have, so there is nothing to aim the `PATCH` at.
+
+Your own contract document records `/data/lectures/all` and `/data/professor/all` as **"Not
+called. The panel deliberately reads the active-only public endpoints instead."** That was a
+reasonable choice while nothing could deactivate a row; the catalogue form is what changed it.
+Neither side is wrong on its own — this is a gap between two sensible decisions, which is why no
+test on either side sees it.
+
+**Until this is done, treat the `active` switch as one-way in the panel.** The backend can
+reverse it, but only through a request the panel does not currently make.
+
+**Scheduling:** this is agreed for the admin panel's deferred list, to be picked up **after
+submission**. Until then it is a known limitation rather than an open bug.
 
 ## 3. Handle a session that ends during the day
 
 Admin sessions are **one day** by default, not a year.
 
-- [ ] Read `expiresAt` from the login response. It is a UTC ISO 8601 timestamp naming the
+- [ ] Read `expiresAt` from the login response. **Still open** — your audit (C-13) confirms
+      `expiresAt` appears nowhere in `src/`, and `TokenLoginService.ts:23-27` reads exactly one
+      field off the login response, `authToken`. The field is served and has been since the
+      split. It is a UTC ISO 8601 timestamp naming the
       moment the token stops authenticating.
 - [ ] Warn before it expires, rather than letting an operator discover it as a `401` in the
       middle of a form. Losing a half-typed warning body to a silent expiry is the failure
@@ -160,3 +318,8 @@ came from. An entry with `"api": "APP"` is a panel that still logs in through `/
 - [ ] When no new `ADMIN_LOGIN` entry carries `"api": "APP"`, say so. That is the signal the
       backend waits for before deleting the legacy paths, the `sessionType` field and
       `GET /admins/validate`.
+
+Which is a signal that cannot arrive while tasks 1 and 2 are blocked, and that is fine: **the
+legacy root paths are not going anywhere.** They are what carries the panel in production today.
+Nothing is deleted until the deployment routing is decided, the migration is shipped and this
+entry stops appearing — in that order.
