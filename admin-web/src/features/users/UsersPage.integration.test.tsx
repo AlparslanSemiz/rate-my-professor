@@ -1,40 +1,34 @@
 import { MantineProvider } from '@mantine/core'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError } from '@/api/client'
-import { systemStatusService, type SystemStatus } from '@/api/system'
-import { usersService, type User, type UserQuery, type Warning } from '@/api/users'
+import { http } from 'msw'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { DEFAULT_PAGE_SIZE } from '@/api/client'
+import type { SystemStatus } from '@/api/system'
+import type { User, Warning } from '@/api/users'
 import { AuthProvider } from '@/context/AuthContext'
+import { apiUrl } from '@/test/msw/apiUrl'
+import { db, seedDb } from '@/test/msw/db'
+import { failure } from '@/test/msw/envelope'
+import { requestTo, requestsTo } from '@/test/msw/requests'
+import { server, startMockBackend } from '@/test/msw/server'
 import { withQueryClient } from '@/test/queryClient'
 import UsersPage from './UsersPage'
 
-vi.mock('@/api/auth', () => ({
-  authService: {
-    me: vi.fn().mockResolvedValue({ success: true, message: 'Signed in' }),
-  },
-}))
-
-vi.mock('@/api/system', () => ({
-  systemStatusService: {
-    getStatus: vi.fn(),
-  },
-}))
-
-vi.mock('@/api/users', () => ({
-  usersService: {
-    list: vi.fn(),
-    getById: vi.fn(),
-    getWarnings: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    block: vi.fn(),
-    unblock: vi.fn(),
-    warn: vi.fn(),
-    updateWarning: vi.fn(),
-    deleteWarning: vi.fn(),
-  },
-}))
+/**
+ * The users screen over the real request layer.
+ *
+ * This file already had a hand-written backend — a mutable `accounts` array, a `list`
+ * implementation that applied `q`, `status` and `role`, and `block`/`unblock` that wrote back
+ * to it — because a fixed response cannot express "the screen may only show what it re-read".
+ * The handlers in `src/test/msw/handlers/users.ts` are that, moved somewhere every test can
+ * use it and where the request itself is finally visible.
+ *
+ * `/auth/me` is deliberately left reporting nobody: a response that names no user is not a
+ * correction, so the session these tests put in storage — including its `isSuperAdmin` — is
+ * what the page sees.
+ */
+startMockBackend()
 
 const status: SystemStatus = {
   status: 'OK',
@@ -42,7 +36,7 @@ const status: SystemStatus = {
   startedAt: null,
   uptimeSeconds: null,
   database: { reachable: true, latencyMs: 3, error: null },
-  counts: { users: 2, activeUsers: 2, admins: 1 },
+  counts: { users: 2, activeUsers: 2, admins: 1, openBugReports: null },
   lastWrite: null,
   gitlabEnabled: false,
 }
@@ -100,46 +94,8 @@ function renderUsers(sessionUser = authUser) {
 }
 
 describe('Users page', () => {
-  // The backend owns the result of every mutation, so the fixtures record what it now holds
-  // and `getById` serves a copy of that — a screen may only show what it re-read.
-  let accounts: User[]
-
-  function accountById(id: string) {
-    const account = accounts.find((candidate) => candidate.id === id)
-    if (!account) throw new ApiError(404, 'No such user')
-    return account
-  }
-
   beforeEach(() => {
-    accounts = users.map((user) => ({ ...user }))
-    vi.mocked(systemStatusService.getStatus).mockResolvedValue(status)
-    // Stands in for the backend's own filtering, so a test that filters proves the parameters
-    // were sent and that the screen shows what came back — not that it narrowed rows itself.
-    vi.mocked(usersService.list).mockImplementation(async (query: UserQuery = {}) => ({
-      users: accounts
-        .filter((user) => !query.status || user.status === query.status)
-        .filter((user) => !query.role || user.role === query.role)
-        .filter(
-          (user) =>
-            !query.q ||
-            user.username.toLowerCase().includes(query.q.toLowerCase()) ||
-            user.kitEmail.toLowerCase().includes(query.q.toLowerCase()),
-        )
-        .map((user) => ({ ...user })),
-      nextCursor: null,
-    }))
-    vi.mocked(usersService.getById).mockImplementation(async (id) => ({ ...accountById(id) }))
-    vi.mocked(usersService.getWarnings).mockResolvedValue([])
-    vi.mocked(usersService.delete).mockResolvedValue({ success: true, message: 'Deleted' })
-    vi.mocked(usersService.block).mockImplementation(async (id) => {
-      accountById(id).status = 'BLOCKED'
-      return { success: true, message: 'Blocked' }
-    })
-    vi.mocked(usersService.unblock).mockImplementation(async (id) => {
-      accountById(id).status = 'ACTIVE'
-      return { success: true, message: 'Unblocked' }
-    })
-    vi.mocked(usersService.warn).mockResolvedValue({ success: true, message: 'Warned' })
+    seedDb({ users, systemStatus: status })
   })
 
   it('asks the backend for the page, and for the counters above it', async () => {
@@ -149,9 +105,9 @@ describe('Users page', () => {
     expect(screen.getByText('Bob Johnson')).toBeInTheDocument()
     // One page, newest first — the ordering the backend switches to as soon as it is given
     // any parameter at all.
-    expect(usersService.list).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: 50, sort: 'newest' }),
-    )
+    const listed = requestTo('GET', '/api/users').path
+    expect(listed).toContain(`limit=${DEFAULT_PAGE_SIZE}`)
+    expect(listed).toContain('sort=newest')
     expect(screen.getByText('Total users').previousElementSibling).toHaveTextContent('2')
   })
 
@@ -165,7 +121,7 @@ describe('Users page', () => {
 
     await waitFor(() => expect(screen.queryByText('Alice Smith')).not.toBeInTheDocument())
     expect(screen.getByText('Bob Johnson')).toBeInTheDocument()
-    expect(usersService.list).toHaveBeenLastCalledWith(expect.objectContaining({ q: 'bob' }))
+    expect(requestsTo('GET', '/api/users').at(-1)?.path).toContain('q=bob')
   })
 
   it('filters by status and role through the same request', async () => {
@@ -182,7 +138,7 @@ describe('Users page', () => {
 
     await waitFor(() => expect(screen.queryByText('Bob Johnson')).not.toBeInTheDocument())
     expect(screen.getByText('Alice Smith')).toBeInTheDocument()
-    expect(usersService.list).toHaveBeenLastCalledWith(expect.objectContaining({ role: 'ADMIN' }))
+    expect(requestsTo('GET', '/api/users').at(-1)?.path).toContain('role=ADMIN')
   })
 
   it('shows what the backend said was wrong with a refused filter', async () => {
@@ -190,7 +146,7 @@ describe('Users page', () => {
     renderUsers()
 
     await screen.findByText('Alice Smith')
-    vi.mocked(usersService.list).mockRejectedValueOnce(new ApiError(400, 'Invalid user status'))
+    server.use(http.get(apiUrl('/users'), () => failure(400, 'Invalid user status'), { once: true }))
     await user.click(screen.getByRole('button', { name: 'Apply filters' }))
 
     // The backend's own wording, not "Failed to apply the user filters".
@@ -199,10 +155,21 @@ describe('Users page', () => {
   })
 
   it('loads the next page onto the end of the list', async () => {
+    // A full page and one more. The handler really slices, so two fixtures would fit on the
+    // first page and there would be no second one to append.
+    // Dated so the order is not in doubt: the listing is newest-first, so Alice heads the
+    // first page, the filler fills it, and Bob is alone on the second.
+    const filler = Array.from({ length: DEFAULT_PAGE_SIZE - 1 }, (_, index) => ({
+      ...users[0],
+      id: `filler-${index}`,
+      username: `Filler ${index}`,
+      joined: '2024-01-01',
+    }))
+    seedDb({
+      users: [users[0], ...filler, { ...users[1], joined: '2020-01-01' }],
+      systemStatus: status,
+    })
     const user = userEvent.setup()
-    vi.mocked(usersService.list)
-      .mockResolvedValueOnce({ users: [{ ...users[0] }], nextCursor: 'cursor-1' })
-      .mockResolvedValueOnce({ users: [{ ...users[1] }], nextCursor: null })
     renderUsers()
 
     await screen.findByText('Alice Smith')
@@ -210,8 +177,10 @@ describe('Users page', () => {
 
     expect(await screen.findByText('Bob Johnson')).toBeInTheDocument()
     expect(screen.getByText('Alice Smith')).toBeInTheDocument()
-    expect(usersService.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ cursor: 'cursor-1' }),
+    // The cursor the first page handed back, sent straight through — an opaque value the
+    // panel does not compute, which is the contract in ADR 0006.
+    expect(requestsTo('GET', '/api/users').at(-1)?.path).toContain(
+      `cursor=${filler.at(-1)?.id}`,
     )
   })
 
@@ -225,7 +194,7 @@ describe('Users page', () => {
     await user.click(screen.getByRole('button', { name: 'Delete account' }))
     await user.click(await screen.findByRole('button', { name: 'Delete permanently' }))
 
-    await waitFor(() => expect(usersService.delete).toHaveBeenCalledWith('user-2'))
+    await waitFor(() => expect(requestsTo('DELETE', '/api/users/user-2')).toHaveLength(1))
     await waitFor(() => expect(screen.queryByText('Bob Johnson')).not.toBeInTheDocument())
     expect(screen.getByText('Alice Smith')).toBeInTheDocument()
   })
@@ -238,18 +207,18 @@ describe('Users page', () => {
     await user.click(await screen.findByRole('button', { name: 'Block' }))
     await user.click(await screen.findByRole('button', { name: 'Block user' }))
 
-    await waitFor(() => expect(usersService.block).toHaveBeenCalledWith('user-2'))
+    await waitFor(() => expect(requestsTo('PATCH', '/api/users/user-2/block')).toHaveLength(1))
     expect(await screen.findByRole('button', { name: 'Unblock' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Unblock' }))
     await user.click(await screen.findByRole('button', { name: 'Unblock user' }))
 
-    await waitFor(() => expect(usersService.unblock).toHaveBeenCalledWith('user-2'))
+    await waitFor(() => expect(requestsTo('PATCH', '/api/users/user-2/unblock')).toHaveLength(1))
     expect(await screen.findByRole('button', { name: 'Block' })).toBeInTheDocument()
   })
 
   it('keeps the user and shows an error when deletion fails', async () => {
-    vi.mocked(usersService.delete).mockRejectedValue(new Error('Deletion rejected'))
+    server.use(http.delete(apiUrl('/users/:id'), () => failure(500, 'Deletion rejected')))
     const user = userEvent.setup()
     renderUsers()
 
@@ -263,7 +232,7 @@ describe('Users page', () => {
   })
 
   it('reports a refused warning correction and keeps the editor open', async () => {
-    vi.mocked(usersService.getWarnings).mockResolvedValue([
+    db.warnings['user-2'] = [
       {
         id: 'warning-1',
         userID: 'user-2',
@@ -272,9 +241,11 @@ describe('Users page', () => {
         issuedBy: 'admin-1',
         issuedByName: 'Alparslan',
       },
-    ])
-    vi.mocked(usersService.updateWarning).mockRejectedValue(
-      new ApiError(409, 'This warning can no longer be corrected.')
+    ]
+    server.use(
+      http.patch(apiUrl('/users/:id/warnings/:warningId'), () =>
+        failure(409, 'This warning can no longer be corrected.'),
+      ),
     )
     const user = userEvent.setup()
     renderUsers()
@@ -293,7 +264,7 @@ describe('Users page', () => {
   })
 
   it('offers a retry when a profile cannot be read, rather than reporting it as missing', async () => {
-    vi.mocked(usersService.getById).mockRejectedValue(new ApiError(500, 'Database unavailable'))
+    server.use(http.get(apiUrl('/users/:id'), () => failure(500, 'Database unavailable')))
     const user = userEvent.setup()
     renderUsers()
 
@@ -305,7 +276,7 @@ describe('Users page', () => {
   })
 
   it('still reports a genuinely missing account as missing', async () => {
-    vi.mocked(usersService.getById).mockRejectedValue(new ApiError(404, 'No such user'))
+    server.use(http.get(apiUrl('/users/:id'), () => failure(404, 'No such user')))
     const user = userEvent.setup()
     renderUsers()
 
@@ -357,11 +328,8 @@ describe('Users page', () => {
   })
 
   it('sends only the fields an edit changed and shows the re-read account', async () => {
-    vi.mocked(usersService.update).mockResolvedValue({ success: true, message: 'Updated user successfully' })
-    vi.mocked(usersService.getById).mockResolvedValueOnce(users[1]).mockResolvedValueOnce({
-      ...users[1],
-      username: 'Robert Johnson',
-    })
+    // No staged responses: the handler applies the edit, so the re-read returns the new name
+    // because the write happened — which is what "may only show what it re-read" means.
     const user = userEvent.setup()
     renderUsers()
 
@@ -374,13 +342,15 @@ describe('Users page', () => {
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
 
     await waitFor(() => {
-      expect(usersService.update).toHaveBeenCalledWith('user-2', { username: 'Robert Johnson' })
+      expect(requestTo('PATCH', '/api/users/user-2').body).toEqual({
+        username: 'Robert Johnson',
+      })
     })
     expect(await screen.findAllByText('Robert Johnson')).not.toHaveLength(0)
   })
 
   it('names the admin who issued each warning and lets the backend name the issuer', async () => {
-    vi.mocked(usersService.getWarnings).mockResolvedValue([
+    db.warnings['user-2'] = [
       {
         id: 'warning-1',
         userID: 'user-2',
@@ -389,7 +359,7 @@ describe('Users page', () => {
         issuedBy: 'admin-1',
         issuedByName: 'Alparslan',
       },
-    ])
+    ]
     const user = userEvent.setup()
     renderUsers()
 
@@ -401,11 +371,15 @@ describe('Users page', () => {
     await user.click(screen.getByRole('button', { name: 'Send warning' }))
 
     // The issuer travels in the token, so the panel no longer says who it thinks it is.
-    await waitFor(() => expect(usersService.warn).toHaveBeenCalledWith('user-2', 'Test warning'))
+    await waitFor(() =>
+      expect(requestTo('POST', '/api/users/user-2/warnings').body).toEqual({
+        message: 'Test warning',
+      }),
+    )
   })
 
   it('keeps the warning form open and shows an error when warning fails', async () => {
-    vi.mocked(usersService.warn).mockRejectedValue(new Error('Warning rejected'))
+    server.use(http.post(apiUrl('/users/:id/warnings'), () => failure(500, 'Warning rejected')))
     const user = userEvent.setup()
     renderUsers()
 
@@ -419,16 +393,12 @@ describe('Users page', () => {
   })
 
   it('lowers the table count when a warning is withdrawn', async () => {
-    accounts[1].warnings = 2
+    db.users[1].warnings = 2
     const history: Warning[] = [
       { id: 'warning-1', userID: 'user-2', message: 'First', createdAt: '2026-06-01T10:00:00Z', issuedBy: 'admin-1', issuedByName: 'Alparslan' },
       { id: 'warning-2', userID: 'user-2', message: 'Second', createdAt: '2026-06-02T10:00:00Z', issuedBy: 'admin-1', issuedByName: 'Alparslan' },
     ]
-    vi.mocked(usersService.getWarnings).mockImplementation(async () => [...history])
-    vi.mocked(usersService.deleteWarning).mockImplementation(async () => {
-      history.pop()
-      return { success: true, message: 'Withdrawn' }
-    })
+    db.warnings['user-2'] = history
     const user = userEvent.setup()
     renderUsers()
 
@@ -443,15 +413,16 @@ describe('Users page', () => {
     const confirmation = await screen.findByRole('dialog', { name: 'Withdraw warning' })
     await user.click(within(confirmation).getByRole('button', { name: 'Withdraw warning' }))
 
-    await waitFor(() => expect(usersService.deleteWarning).toHaveBeenCalledWith('user-2', 'warning-2'))
+    await waitFor(() =>
+      expect(requestsTo('DELETE', '/api/users/user-2/warnings/warning-2')).toHaveLength(1),
+    )
     // The count the backend now reports, not the one the page guessed at: withdrawing used to
     // report itself as a new warning and push the row up to 3.
     await waitFor(() => expect(within(row).getByText('1')).toBeInTheDocument())
   })
 
   it('shows the credibility score and leaves it out of an edit that did not touch it', async () => {
-    accounts[1].credibilityScore = 42
-    vi.mocked(usersService.update).mockResolvedValue({ success: true, message: 'Updated' })
+    db.users[1].credibilityScore = 42
     const user = userEvent.setup()
     renderUsers()
 
@@ -468,7 +439,9 @@ describe('Users page', () => {
 
     // Re-sending the stored score would write an audit event whose before and after match.
     await waitFor(() => {
-      expect(usersService.update).toHaveBeenCalledWith('user-2', { username: 'Robert Johnson' })
+      expect(requestTo('PATCH', '/api/users/user-2').body).toEqual({
+        username: 'Robert Johnson',
+      })
     })
   })
   it('offers no moderation actions on the account the operator is signed in as', async () => {
@@ -476,7 +449,7 @@ describe('Users page', () => {
     // Same guard, reached by identity rather than by role: this account is a plain student
     // and is protected only because it is the operator's own.
     const self: User = { ...users[1], id: authUser.id, username: 'Admin User' }
-    accounts = [self]
+    seedDb({ users: [self], systemStatus: status })
     renderUsers()
 
     await user.click(await screen.findByText('Admin User'))
@@ -496,11 +469,11 @@ describe('Users page', () => {
     await user.click(await screen.findByRole('button', { name: 'Delete account' }))
 
     expect(await screen.findByText(/Permanently delete Bob Johnson/)).toBeInTheDocument()
-    expect(usersService.delete).not.toHaveBeenCalled()
+    expect(requestsTo('DELETE', '/api/users/user-2')).toHaveLength(0)
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
-    expect(usersService.delete).not.toHaveBeenCalled()
+    expect(requestsTo('DELETE', '/api/users/user-2')).toHaveLength(0)
     expect(screen.queryByText(/Permanently delete Bob Johnson/)).not.toBeInTheDocument()
     // Still listed, and the profile is still open behind the dismissed confirmation.
     expect(screen.getAllByText('Bob Johnson').length).toBeGreaterThan(0)
@@ -513,12 +486,12 @@ describe('Users page', () => {
     await user.click(await screen.findByText('Bob Johnson'))
     await screen.findByText('User Profile')
     // The block lands; only the read that follows it does not.
-    vi.mocked(usersService.getById).mockRejectedValueOnce(new ApiError(500, 'Database unavailable'))
+    server.use(http.get(apiUrl('/users/:id'), () => failure(500, 'Database unavailable'), { once: true }))
 
     await user.click(await screen.findByRole('button', { name: 'Block' }))
     await user.click(await screen.findByRole('button', { name: 'Block user' }))
 
-    await waitFor(() => expect(usersService.block).toHaveBeenCalledWith('user-2'))
+    await waitFor(() => expect(requestsTo('PATCH', '/api/users/user-2/block')).toHaveLength(1))
 
     // The confirmation closes: telling the operator nothing was saved would be untrue. What
     // is reported instead is that the profile shown is the last one that could be read.
@@ -562,7 +535,7 @@ describe('Users page', () => {
     it('still protects the operator\u2019s own account', async () => {
       const user = userEvent.setup()
       const self: User = { ...users[0], id: authUser.id, username: 'Admin User' }
-      accounts = [self]
+      seedDb({ users: [self], systemStatus: status })
       renderUsers(superAdminUser)
 
       await user.click(await screen.findByText('Admin User'))

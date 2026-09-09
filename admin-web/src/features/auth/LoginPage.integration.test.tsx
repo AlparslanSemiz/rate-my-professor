@@ -2,21 +2,27 @@ import { MantineProvider } from '@mantine/core'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { http } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/api/client'
-import { authService, type AuthUser } from '@/api/auth'
+import type { AuthUser } from '@/api/auth'
 import { AuthProvider } from '@/context/AuthContext'
 import { withQueryClient } from '@/test/queryClient'
+import { apiUrl } from '@/test/msw/apiUrl'
+import { failure } from '@/test/msw/envelope'
+import { setSessionUser } from '@/test/msw/handlers/auth'
+import { requestTo, requestsTo } from '@/test/msw/requests'
+import { server, startMockBackend } from '@/test/msw/server'
 import LoginPage from './LoginPage'
 
-vi.mock('@/api/auth', () => ({
-  authService: {
-    requestLoginCode: vi.fn(),
-    login: vi.fn(),
-    me: vi.fn(),
-    logout: vi.fn(),
-  },
-}))
+/**
+ * The sign-in flow over the real request layer.
+ *
+ * What matters here is which requests go out and which do not: the admin-list check is meant
+ * to stop a code being *requested* at all for an address outside the team, and a mocked
+ * service could only say that a function had not been called.
+ */
+startMockBackend()
 
 const ADMIN_EMAIL = 'u-kisi4@student.kit.edu'
 const adminUser: AuthUser = {
@@ -49,9 +55,13 @@ async function reachCodeStep(user: ReturnType<typeof userEvent.setup>) {
 
 describe('Login page', () => {
   beforeEach(() => {
-    vi.mocked(authService.requestLoginCode).mockResolvedValue({ success: true, message: 'Sent' })
-    vi.mocked(authService.login).mockResolvedValue({ token: 'admin-token' })
-    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'OK', user: adminUser })
+    setSessionUser({
+      id: adminUser.id,
+      username: adminUser.name,
+      kitEmail: adminUser.email,
+      role: adminUser.role,
+      isSuperAdmin: true,
+    })
   })
 
   it('never asks the backend for a code for an address outside the admin team', async () => {
@@ -62,7 +72,8 @@ describe('Login page', () => {
     await user.click(screen.getByRole('button', { name: 'Send me a code' }))
 
     expect(await screen.findByText(/no login code was sent/)).toBeInTheDocument()
-    expect(authService.requestLoginCode).not.toHaveBeenCalled()
+    // Nothing went out. The list is a usability gate, and this is the gate working.
+    expect(requestsTo('POST', '/api/auth/request-login')).toHaveLength(0)
   })
 
   it('asks for the code once the address is one of the team', async () => {
@@ -70,7 +81,7 @@ describe('Login page', () => {
     renderLogin()
 
     expect(await reachCodeStep(user)).toBeInTheDocument()
-    expect(authService.requestLoginCode).toHaveBeenCalledWith(ADMIN_EMAIL)
+    expect(requestTo('POST', '/api/auth/request-login').body).toEqual({ email: ADMIN_EMAIL })
   })
 
   it('will not submit a code that is not complete', async () => {
@@ -80,7 +91,7 @@ describe('Login page', () => {
     await user.type(await reachCodeStep(user), '123')
 
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled()
-    expect(authService.login).not.toHaveBeenCalled()
+    expect(requestsTo('POST', '/api/auth/login')).toHaveLength(0)
   })
 
   it('signs in with a complete code', async () => {
@@ -90,11 +101,20 @@ describe('Login page', () => {
     await user.type(await reachCodeStep(user), '123456')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
-    await waitFor(() => expect(authService.login).toHaveBeenCalledWith(ADMIN_EMAIL, '123456'))
+    await waitFor(() =>
+      expect(requestTo('POST', '/api/auth/login').body).toEqual({
+        email: ADMIN_EMAIL,
+        loginToken: '123456',
+      }),
+    )
   })
 
   it('reports a refused code and drops the token the attempt set', async () => {
-    vi.mocked(authService.login).mockRejectedValueOnce(new Error('That code is not valid.'))
+    server.use(
+      http.post(apiUrl('/auth/login'), () => failure(400, 'That code is not valid.'), {
+        once: true,
+      }),
+    )
     const setToken = vi.spyOn(apiClient, 'setToken')
     const user = userEvent.setup()
     renderLogin()

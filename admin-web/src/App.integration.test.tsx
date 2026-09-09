@@ -1,44 +1,38 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { type User, usersService } from '@/api/users'
-import { ApiError, apiClient } from '@/api/client'
-import { authService } from '@/api/auth'
-import { auditLogsService } from '@/api/logs'
-import { systemStatusService, type SystemStatus } from '@/api/system'
-import { moduleAccent } from './constants/colors'
+import { http, HttpResponse } from 'msw'
+import { beforeEach, describe, expect, it } from 'vitest'
+import type { User } from '@/api/users'
+import { apiClient } from '@/api/client'
+import type { SystemStatus } from '@/api/system'
+import { EMPTY_AUDIT_META } from '@/domain/auditLog'
+import { apiUrl } from '@/test/msw/apiUrl'
+import { seedDb } from '@/test/msw/db'
+import { ok } from '@/test/msw/envelope'
+import {
+  expireStoredSessionOnce,
+  rateLimitLoginCodes,
+  setSessionUser,
+} from '@/test/msw/handlers/auth'
+import { requestTo, requestsTo } from '@/test/msw/requests'
+import { server, startMockBackend } from '@/test/msw/server'
+import { accentForRoute } from './constants/colors'
 import { routes } from './constants/routes'
 import { withAlpha } from './utils/color'
 import App from './App'
 import { SESSION_EXPIRED_MESSAGE } from './features/auth/hooks/useLoginFlow'
 
-vi.mock('@/api/auth', () => ({
-  authService: {
-    requestLoginCode: vi.fn(),
-    login: vi.fn(),
-    me: vi.fn(),
-  },
-}))
-
-vi.mock('@/api/system', () => ({
-  systemStatusService: {
-    getStatus: vi.fn(),
-  },
-}))
-
-vi.mock('@/api/users', () => ({
-  usersService: {
-    getAll: vi.fn(),
-    list: vi.fn(),
-  },
-}))
-
-vi.mock('@/api/logs', () => ({
-  auditLogsService: {
-    getLogs: vi.fn(),
-    getMeta: vi.fn(),
-  },
-}))
+/**
+ * Routing and the session, over the real request layer.
+ *
+ * The three behaviours this file exists for are documented as *decisions* rather than
+ * implemented in one place, so they are the ones most worth exercising end to end: a refused
+ * token ends the session and the attempted path travels in `state.from`; an unreachable
+ * backend does **not**; and the panel's identity comes from `/auth/me` and nowhere else.
+ * Under a service mock the last of those could only be asserted as "a function was not
+ * called". Here it is asserted as "no request went to `/users`".
+ */
+startMockBackend()
 
 const adminAccount: User = {
   id: 'admin-1',
@@ -76,13 +70,21 @@ const requiredAdminUser = {
   role: 'ADMIN',
 }
 
+/**
+ * What `/auth/me` reports for an account. The backend spells these `username` and `kitEmail`
+ * on this endpoint, which is the pair the panel used to read as `name` and `email` — `F-002`.
+ */
+function sessionFor(account: User, role: string = account.role) {
+  return { id: account.id, username: account.username, kitEmail: account.kitEmail, role }
+}
+
 const systemStatus: SystemStatus = {
   status: 'OK',
   checkedAt: '2026-06-11T18:30:00Z',
   startedAt: '2026-06-01T00:00:00Z',
   uptimeSeconds: 900,
   database: { reachable: true, latencyMs: 3, error: null },
-  counts: { users: 1, activeUsers: 1, admins: 1, openBugReports: 0, comments: 0 },
+  counts: { users: 1, activeUsers: 1, admins: 1, openBugReports: 0 },
   lastWrite: null,
   gitlabEnabled: false,
 }
@@ -90,24 +92,9 @@ const systemStatus: SystemStatus = {
 describe('App routing and authentication', () => {
   beforeEach(() => {
     apiClient.setToken(null)
-    vi.mocked(authService.requestLoginCode).mockResolvedValue({ success: true, message: 'Code sent' })
-    vi.mocked(authService.login).mockResolvedValue({ token: 'mock-token-1' })
+    seedDb({ users: [adminAccount], systemStatus, auditLogs: [], auditMeta: EMPTY_AUDIT_META })
     // `/auth/me` reports the signed-in account, which is where the panel's identity comes from.
-    vi.mocked(authService.me).mockResolvedValue({
-      success: true,
-      message: 'Signed in',
-      user: adminUser,
-    })
-    vi.mocked(usersService.getAll).mockResolvedValue([adminAccount])
-    vi.mocked(usersService.list).mockResolvedValue({ users: [adminAccount], nextCursor: null })
-    vi.mocked(systemStatusService.getStatus).mockResolvedValue(systemStatus)
-    vi.mocked(auditLogsService.getLogs).mockResolvedValue({ auditLogs: [], nextCursor: null })
-    vi.mocked(auditLogsService.getMeta).mockResolvedValue({
-      actors: [],
-      actions: [],
-      targetTypes: [],
-      actorTypes: [],
-    })
+    setSessionUser(sessionFor(adminAccount))
   })
 
   it('redirects anonymous users to the login screen', async () => {
@@ -172,7 +159,7 @@ describe('App routing and authentication', () => {
     // before, every active item was the same green whatever section it led to. Asserted
     // through the token rather than a literal, so moving the palette does not break this.
     expect(active.firstElementChild).toHaveStyle({
-      background: withAlpha(moduleAccent[routes.users], 0.18),
+      background: withAlpha(accentForRoute(routes.users), 0.18),
     })
   })
 
@@ -239,10 +226,20 @@ describe('App routing and authentication', () => {
     await user.type(screen.getByPlaceholderText('Code from your email'), '123456')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
-    await waitFor(() => expect(authService.login).toHaveBeenCalledWith(adminUser.email, '123456'))
+    await waitFor(() => expect(requestsTo('POST', '/api/auth/login')).toHaveLength(1))
+    expect(requestTo('POST', '/api/auth/login').body).toEqual({
+      email: adminUser.email,
+      loginToken: '123456',
+    })
     expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
-    expect(localStorage.getItem('token')).toBe('mock-token-1')
-    expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(adminUser)
+    expect(localStorage.getItem('token')).toBe('admin-token')
+    // `isSuperAdmin` is part of the stored session and was absent from this expectation while
+    // the service was mocked — the mock returned the panel's own object rather than one built
+    // from a payload, so the mapping never ran.
+    expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual({
+      ...adminUser,
+      isSuperAdmin: false,
+    })
   })
 
   it('refuses an address outside the admin team without sending a code', async () => {
@@ -257,7 +254,8 @@ describe('App routing and authentication', () => {
     expect(await screen.findByText(
       'You do not have access to this panel. It is limited to the admin team, so no login code was sent.'
     )).toBeInTheDocument()
-    expect(authService.requestLoginCode).not.toHaveBeenCalled()
+    // No request at all: the address is checked before the backend is asked anything.
+    expect(requestsTo('POST', '/api/auth/request-login')).toHaveLength(0)
     expect(screen.queryByPlaceholderText('Code from your email')).not.toBeInTheDocument()
   })
 
@@ -279,14 +277,17 @@ describe('App routing and authentication', () => {
     expect(codeInput).toHaveValue('123456')
 
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
-    await waitFor(() => expect(authService.login).toHaveBeenCalledWith(adminUser.email, '123456'))
+    await waitFor(() =>
+      expect(requestTo('POST', '/api/auth/login').body).toEqual({
+        email: adminUser.email,
+        loginToken: '123456',
+      }),
+    )
   })
 
   it('tells the operator to wait when the code was requested too often', async () => {
     const user = userEvent.setup()
-    vi.mocked(authService.requestLoginCode).mockRejectedValue(
-      new ApiError(429, 'Request to /auth/request-login failed with status 429'),
-    )
+    server.use(rateLimitLoginCodes())
     window.history.pushState({}, '', '/login')
 
     render(<App />)
@@ -315,11 +316,9 @@ describe('App routing and authentication', () => {
 
   it('logs in the required admin email as admin even when the backend user role is student', async () => {
     const user = userEvent.setup()
-    vi.mocked(authService.me).mockResolvedValue({
-      success: true,
-      message: 'Signed in',
-      user: { ...requiredAdminUser, role: 'STUDENT' },
-    })
+    // The backend reports this account as a student; the panel promotes the six known admin
+    // addresses itself, and the role it *renders* is what this test is about.
+    setSessionUser(sessionFor(requiredAdminAccount, 'STUDENT'))
     window.history.pushState({}, '', '/login')
 
     render(<App />)
@@ -329,16 +328,24 @@ describe('App routing and authentication', () => {
     await user.type(await screen.findByPlaceholderText('Code from your email'), '123456')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
-    await waitFor(() => expect(authService.login).toHaveBeenCalledWith(requiredAdminUser.email, '123456'))
+    await waitFor(() =>
+      expect(requestTo('POST', '/api/auth/login').body).toEqual({
+        email: requiredAdminUser.email,
+        loginToken: '123456',
+      }),
+    )
     expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(requiredAdminUser)
+    expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual({
+      ...requiredAdminUser,
+      isSuperAdmin: false,
+    })
   })
 
   it('refuses the login when the session cannot say who the admin is', async () => {
     const user = userEvent.setup()
     // `/auth/me` is the only source of an id the backend actually issued. The panel used to
     // invent one from the email address and send it back as the issuer of every warning.
-    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'Signed in' })
+    server.use(http.get(apiUrl('/auth/me'), () => ok({}, 'Signed in')))
     window.history.pushState({}, '', '/login')
 
     render(<App />)
@@ -354,7 +361,6 @@ describe('App routing and authentication', () => {
 
   it('takes the admin identity from /auth/me and never reads the user list', async () => {
     const user = userEvent.setup()
-    vi.mocked(authService.me).mockResolvedValue({ success: true, message: 'Signed in', user: adminUser })
     window.history.pushState({}, '', '/login')
 
     render(<App />)
@@ -365,11 +371,23 @@ describe('App routing and authentication', () => {
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
     expect(await screen.findByText("A quick look at how your community's doing today.")).toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual(adminUser)
+    expect(JSON.parse(localStorage.getItem('user') ?? '{}')).toEqual({
+      ...adminUser,
+      isSuperAdmin: false,
+    })
+    // The identity came from `/auth/me` alone. The dashboard does read `/users`, but only
+    // for the four newest accounts; nothing asks for the whole list, which is what building
+    // an identity out of it would have needed. Under a service mock this was "a function was
+    // not called"; here it is the query string that went out.
+    const userReads = requestsTo('GET', '/api/users')
+    expect(userReads.length).toBeGreaterThan(0)
+    expect(userReads.filter((request) => request.path === '/api/users')).toHaveLength(0)
   })
+
   it('sends an expired session back to the login screen and says why', async () => {
     // The stored token is a claim, not proof. A backend that refuses it ends the session.
-    vi.mocked(authService.me).mockRejectedValueOnce(new ApiError(401, 'Token expired'))
+    // The backend refuses the stored token. Once: the operator signs in again afterwards.
+    server.use(expireStoredSessionOnce())
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(adminUser))
     window.history.pushState({}, '', '/audit-logs')
@@ -383,7 +401,8 @@ describe('App routing and authentication', () => {
 
   it('returns to the page the expired session was thrown out of', async () => {
     const user = userEvent.setup()
-    vi.mocked(authService.me).mockRejectedValueOnce(new ApiError(401, 'Token expired'))
+    // The backend refuses the stored token. Once: the operator signs in again afterwards.
+    server.use(expireStoredSessionOnce())
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(adminUser))
     window.history.pushState({}, '', '/audit-logs')
@@ -405,7 +424,9 @@ describe('App routing and authentication', () => {
     // Deliberate asymmetry: only a refusal ends a session. A network failure says nothing
     // about whether the token is still good, and signing the admin out over a blip would
     // lose their place for no reason. One careless refactor turns this into the opposite.
-    vi.mocked(authService.me).mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    // A transport failure, not a refusal: MSW's `HttpResponse.error()` is what `fetch`
+    // rejecting looks like, and the client turns it into a `NetworkError`.
+    server.use(http.get(apiUrl('/auth/me'), () => HttpResponse.error(), { once: true }))
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(adminUser))
     window.history.pushState({}, '', '/audit-logs')
