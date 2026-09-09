@@ -2,7 +2,9 @@
 
 Hand this file to the backend repository. It holds everything the admin panel
 needs from the backend and cannot do itself. Section A is the elevated operator;
-sections F and G are contract gaps the panel currently works around.
+section F is the contract gaps the panel still works around. Sections G and H
+ask for nothing — they are notices, kept here so that nobody schedules a change on
+an assumption this file can correct.
 
 ---
 
@@ -135,19 +137,33 @@ status changes.
 
 ---
 
-# G. Catalogue gaps
+# G. Catalogue
 
-## G1. Catalogue reads return active records only
+## G1. Catalogue reads return active records only — **already answered; nothing is asked for**
 
-`GET /data/lectures` and `GET /data/professor` filter on `active = true`, but
+This was a request. It is now a note, because the endpoint already exists and we
+had not noticed.
+
+`GET /data/lectures` and `GET /data/professor` filter on `active = true`, while
 both `PATCH` routes accept `active`. Switching a lecture or professor off from
-the panel therefore removes it from the only list the panel can read, with no
-way back short of a database write. The edit forms warn before the switch is
-saved, and an All / Active / Inactive filter waits on this.
+the panel therefore removes it from the only list the panel currently reads, with
+no way back short of a database write.
 
-**Asked for:** a way to read inactive records — either an `active` query
-parameter on both reads (`active=true|false|all`), or dropping the filter and
-letting the client decide.
+**But `docs/admin-api.md` documents the fix as already shipped:**
+
+| Endpoint | Documented as |
+| --- | --- |
+| `GET /admin/data/lectures/all` | Admin-only. Every lecture, active or not. |
+| `GET /admin/data/professor/all` | Admin-only. Every professor, active or not. |
+
+So there is **no backend work here**. The remaining gap is on our side: the panel
+still calls the public, active-only reads. Moving it is part of the same migration
+as `H2` below, and is a decision for the panel's maintainer rather than
+something to slip in — the edit form's inactive warning, and the All / Active /
+Inactive filter that was waiting on this, both change with it.
+
+Tracked as `F-006` in `docs/testfindings.md`. **Please leave both `…/all` routes in
+place**; the panel is going to want them.
 
 ---
 
@@ -188,3 +204,26 @@ One consequence worth knowing: `/audit-logs/meta` may still report actor type
 `USER` and target types such as `USER_SESSION` and `ENDPOINT`. The panel keeps
 accepting all of them and renders whatever it is given, so nothing needs
 filtering on the backend side.
+
+`docs/admin-api.md` still lists `/activity-logs/**` in its path-migration table,
+which is correct and is not a contradiction of the above: the endpoints move under
+`/admin` like everything else, and the panel simply is not one of their clients.
+
+## H2. The panel has not moved to the `/admin` path prefix
+
+**Nothing is asked for here either.** Recorded so that the removal of the legacy
+paths is not scheduled on the assumption that we have migrated.
+
+`docs/admin-api.md` states that every administrative route now answers under
+`/admin` as well as its old path, and that the legacy paths "are removed once
+[the panel] has [moved]". As of 2026-09-09 **the panel has not moved.** It still
+calls:
+
+`/auth/request-login`, `/auth/login`, `/auth/logout`, `/auth/me`, `/users/**`,
+`/comments/**`, `/answers/**`, `/ratings`, `/reports`, `/audit-logs/**`,
+`/system/status`, `/data/lectures`, `/data/professor`.
+
+Dropping the legacy routes today breaks the panel completely — every screen, not a
+feature. **Please tell us before they go**, and we will move first.
+
+Tracked as `F-005` in `docs/testfindings.md`.

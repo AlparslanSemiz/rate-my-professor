@@ -20,7 +20,11 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting */
+    /* Linting. `strict` is on and was already satisfied — turning it on produced zero
+       errors across src/. It is declared so that it stays that way: without the flag,
+       the next `any` or unchecked null slips in silently, and README.md and wiki.md
+       have been claiming strict checks that nothing enforced. */
+    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,

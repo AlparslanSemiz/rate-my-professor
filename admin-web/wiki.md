@@ -70,7 +70,7 @@ Engineering characteristics:
 | Errors | react-error-boundary |
 | Build tooling | Vite 8, TypeScript compiler |
 | Tests | Vitest 4, Testing Library, jsdom, V8 coverage |
-| Code quality | ESLint, TypeScript strict checks |
+| Code quality | ESLint, TypeScript under `strict` |
 | Containers | Multi-stage Docker build + Nginx (production image, built in CI/CD) |
 
 Node.js 24 is recommended because it matches the version used by the Docker
@@ -195,12 +195,14 @@ src/
 │   ├── dashboard/
 │   ├── feedback/
 │   ├── help/
-│   ├── moderation/   Content and report screens shared by comments and answers
-│   └── users/
+│   ├── moderation/   Content and report screens shared by comments and answers;
+│   │                 model/ — the content rules and the report mapping
+│   └── users/        model/ — filters, counts, access, confirmation and edit rules
 ├── hooks/        Reusable hooks without feature ownership
 ├── layouts/      Authenticated application shell and navigation
-├── test/         Shared test setup, HTTP stubs and the query-client helper
+├── test/         Test setup, the JSON response helper and the query-client wrapper
 ├── theme/        Mantine theme: KIT palette, neutral chrome, component defaults
+├── query.ts      The panel's fetching policy: staleness, retries, mutation rules
 └── utils/        Small, reusable utility functions
 ```
 
@@ -265,6 +267,12 @@ This client-side gate is a **usability boundary, not a security one**. The
 backend independently validates the token and requires an `admins` row for every
 protected endpoint; a valid non-admin token is answered with `403` regardless of
 what the frontend does.
+
+The reasoning behind both decisions — the address list living in the bundle, and
+the elevated operator staying a behaviour rather than a role — is in
+`docs/adr/0010-admin-email-list-in-the-bundle.md` and
+`docs/adr/0004-elevated-operator-is-behaviour-not-a-role.md`. The rule itself is
+stated once, as the backend contract, in `docs/backend-tasks.md` section A.
 
 ## 8. API reference
 
@@ -416,7 +424,7 @@ button and the refused one are explained the same way. The success body is
 `{ message, success }` and nothing else, so the panel **re-reads** the log
 afterwards: that is where the reversal's own entry appears.
 
-The filter dropdowns are built from the metadata endpoints, so an action added by
+The filter dropdowns are built from `/audit-logs/meta`, so an action added by
 the backend appears without a frontend release. `actors` is capped rather than
 exhaustive — every account that ever signed in is an actor in the shared log
 table — so `q` is what finds someone beyond the cap.
@@ -460,7 +468,7 @@ backend team.
 | `/system/status` has **no total bug report counter** (F1) | `counts.openBugReports` is the open ones only. The dashboard's "of N bug reports" sub-line and its "Reports handled" percentage were removed rather than kept by reading the whole `/reports` table on a timer. |
 | `/system/status` has **no blocked account counter** (F2) | `users - activeUsers` is blocked *plus* inactive, so blocked cannot be derived; with the Users table paginated it cannot be counted on screen either. That stat card is not shown. |
 | A bug report has **no `statusChangedAt`** (F3) | It carries `reportedAt` only, so the Bug Reports History tab can show when a report was *filed* but not when it was closed. |
-| The catalogue reads return **active records only** (G1) | `GET /data/lectures` and `GET /data/professor` filter on `active = true`, but both `PATCH` routes accept `active` — so switching a lecture or professor off removes it from the only list the panel can read. The edit forms warn before the switch is saved; an All/Active/Inactive filter waits on the backend. |
+| The catalogue reads the panel calls return **active records only** (G1) | `GET /data/lectures` and `GET /data/professor` filter on `active = true`, but both `PATCH` routes accept `active` — so switching a lecture or professor off removes it from the only list the panel currently reads, with no way back from the UI. The edit forms warn before the switch is saved. **This is no longer a backend gap:** `GET /admin/data/lectures/all` and `GET /admin/data/professor/all` already return every record, active or not, and the panel has not moved to them. Tracked as `F-006`. |
 
 Two contract details worth knowing rather than rediscovering: `counts.admins`
 counts accounts holding the role, not the allowlist — an address in the backend's
@@ -540,19 +548,40 @@ Run the complete local quality gate before submitting changes:
 ```bash
 npm run check
 npm test
+npm run test:coverage
 npm run build
 ```
 
-The checks cover ESLint rules and React hook usage; TypeScript compilation; unit
-tests for utilities, domain rules, API services, hooks and authentication;
-integration tests for routing and the main feature pages; and a production build
-including Vite's route chunk generation.
+The checks cover ESLint rules and React hook usage; TypeScript compilation under
+`strict`; unit tests for utilities, domain rules, API services, hooks and
+authentication; integration tests for routing and the main feature pages; and a
+production build including Vite's route chunk generation.
 
-Tests stub `fetch` with controlled HTTP responses, so the suite runs without a
-backend. As of 2026-09-08 it is **33 test files and 244 tests** — 24 unit files
-(136 tests) and 9 integration files (108 tests). The scope, the per-area coverage
-matrix, the known automation gaps and the manual end-to-end scenarios are in
-`docs/testplan.md`; executed results and defects are in `docs/testfindings.md`.
+As of 2026-09-09 the suite is **37 test files and 273 tests**, green, at 91.23%
+statements / 84.16% branches / 89.03% functions / 93.49% lines. The report in
+`coverage/` is the authority on those figures; a number written in a document is
+a dated snapshot of it.
+
+### What the suite does and does not establish
+
+It runs offline and contacts no backend. *How* it avoids one differs by layer, and
+the difference matters enough to state rather than summarise:
+
+| Layer | What is replaced | What that proves |
+| --- | --- | --- |
+| API service tests | `fetch` itself, so `ApiClient` and the service run for real | The exact URL, query string, method, body and `Authorization` header a **service** produces |
+| Page tests | The whole service module, via `vi.mock` — no request is constructed at all | What a **screen** renders, and which service method it calls |
+| Model and utility tests | Nothing | Rules in isolation |
+
+**So no page test touches HTTP.** What a screen sends is asserted only against
+expectations written in this repository, which is why a field the backend renamed
+once passed every test here and still signed the operator out on every reload
+(`F-002`). Closing that by contract is `P1` in `docs/TODO.md`; a first page test
+that really sends its request is `P2`.
+
+The scope, the per-layer matrix, the known automation gaps and the manual
+end-to-end scenarios are in `docs/testplan.md`; executed results, the run log and
+coverage are in `docs/testfindings.md`.
 
 ## 13. Commands
 
@@ -567,6 +596,7 @@ matrix, the known automation gaps and the manual end-to-end scenarios are in
 | `npm test` | Run all tests once |
 | `npm run test:unit` | Run unit tests only |
 | `npm run test:integration` | Run integration tests only |
+| `npm run test:coverage` | Run the suite and write the coverage report to `coverage/` |
 
 ## 14. Production build and deployment
 
@@ -673,8 +703,13 @@ per source IP per 15 minutes, after which the endpoint answers `429` with
 | `README.md` | The same reference as this page, for readers in the repository |
 | `wiki.md` | This page — the copy published to the GitLab wiki |
 | `CHANGELOG.md` | What changed and why, per release |
-| `docs/TODO.md` | Open work, with a notebook section reserved for the maintainer |
-| `docs/backend-tasks.md` | Requests handed to the backend team |
-| `docs/testplan.md` | Test scope, coverage matrix and manual scenarios |
-| `docs/testfindings.md` | Executed results and defects |
+| `docs/adr/` | Architecture decision records — what was decided, what else was weighed, what it costs. Authoritative on *why the design is like this* |
+| `docs/api/` | The backend's OpenAPI schema, committed unchanged, and how to refresh it. Authoritative on request and response **shape** |
+| `docs/class-diagram.md` | Package, class, domain and feature diagrams in UML |
+| `docs/DESIGN.md` | How the panel is meant to look, and the method for changing it |
+| `docs/TODO.md` | Open work: what is done, what is handed over, what is deliberately not done. A notebook section is reserved for the maintainer |
+| `docs/backend-tasks.md` | The file handed to the backend team — what the panel needs, and what it is only notifying them about |
+| `docs/testplan.md` | Test scope, the per-layer matrix and the manual scenarios |
+| `docs/testfindings.md` | Executed results, the run log and coverage |
 | `docs/deployment.md` | The full deployment guide |
+| `docs/coursework/` | Course-delivery documents — Kolloquium and demo material. **Not part of the product**, tracked because the delivery has to be complete |
