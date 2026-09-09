@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/useAuth'
+import { useAuth } from '@/context/useAuth'
 import type { ReactNode } from 'react'
-import { routes } from '../constants/routes'
+import { routes } from '@/constants/routes'
 import PageLoader from './PageLoader'
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {

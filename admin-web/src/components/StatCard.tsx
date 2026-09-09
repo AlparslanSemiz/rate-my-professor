@@ -1,6 +1,7 @@
 import { Box, Text } from '@mantine/core'
 import type { CSSProperties, ElementType } from 'react'
 import Panel from './Panel'
+import { chrome } from '@/theme'
 
 const STAT_ICON_SIZE = 36
 const STAT_ICON_RADIUS = 8
@@ -46,10 +47,10 @@ export default function StatCard({ label, value, icon, accent }: StatCardProps) 
     <Panel style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
       <StatIcon icon={icon} accent={accent} />
       <div>
-        <Text fw={700} c="#f1f5f9" style={{ fontSize: 22, lineHeight: 1 }}>
+        <Text fw={700} c={chrome.textBright} style={{ fontSize: 22, lineHeight: 1 }}>
           {value}
         </Text>
-        <Text size="xs" c="#6b7280" mt={2}>
+        <Text size="xs" c={chrome.textDim} mt={2}>
           {label}
         </Text>
       </div>
@@ -65,13 +66,13 @@ export function StatCardDetailed({ label, value, sub, icon, accent }: StatCardDe
   return (
     <Panel style={{ padding: '20px 20px', position: 'relative', overflow: 'hidden' }}>
       <StatIcon icon={icon} accent={accent} floating />
-      <Text size="xs" c="#6b7280" mb={8} tt="uppercase" fw={500} style={{ letterSpacing: '0.05em' }}>
+      <Text size="xs" c={chrome.textDim} mb={8} tt="uppercase" fw={500} style={{ letterSpacing: '0.05em' }}>
         {label}
       </Text>
-      <Text fw={700} c="#f1f5f9" mb={4} style={{ fontSize: 28, lineHeight: 1 }}>
+      <Text fw={700} c={chrome.textBright} mb={4} style={{ fontSize: 28, lineHeight: 1 }}>
         {value}
       </Text>
-      <Text size="xs" c="#4b5563">
+      <Text size="xs" c={chrome.textFaint}>
         {sub}
       </Text>
     </Panel>

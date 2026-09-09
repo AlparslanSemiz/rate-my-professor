@@ -2,7 +2,8 @@ import { Badge, Group, Text } from '@mantine/core'
 import { IconArrowRight } from '@tabler/icons-react'
 import type { CSSProperties } from 'react'
 import Panel from './Panel'
-import { activateOnEnterOrSpace } from '../utils/keyboard'
+import { activateOnEnterOrSpace } from '@/utils/keyboard'
+import { chrome } from '@/theme'
 
 interface ModuleCardProps {
   label: string
@@ -49,10 +50,10 @@ export default function ModuleCard({ label, title, description, accent, path, on
       >
         {label}
       </Badge>
-      <Text fw={600} c="#e2e8f0" size="sm" mb={6}>
+      <Text fw={600} c={chrome.textPrimary} size="sm" mb={6}>
         {title}
       </Text>
-      <Text size="xs" c="#6b7280" mb={14} lh={1.5}>
+      <Text size="xs" c={chrome.textDim} mb={14} lh={1.5}>
         {description}
       </Text>
       <Group gap={4} style={{ color: accent }}>

@@ -1,7 +1,8 @@
 import { Text } from '@mantine/core'
 import type { CSSProperties } from 'react'
-import { KIT } from '../constants/colors'
-import { withAlpha } from '../utils/color'
+import { KIT, KIT_GREEN_PUBLISHED } from '@/constants/colors'
+import { withAlpha } from '@/utils/color'
+import { chrome } from '@/theme'
 
 interface PageHeaderProps {
   title: string
@@ -13,11 +14,11 @@ export default function PageHeader({ title, description }: PageHeaderProps) {
     <header style={headerStyle}>
       <div style={accentRowStyle}>
         <span style={accentBarStyle} aria-hidden />
-        <Text component="h1" fw={700} c="#f5f6f8" style={titleStyle}>
+        <Text component="h1" fw={700} c={chrome.textBright} style={titleStyle}>
           {title}
         </Text>
       </div>
-      <Text component="p" size="sm" c="#8a93a1" m={0} style={descriptionStyle}>
+      <Text component="p" size="sm" c={chrome.textMuted} m={0} style={descriptionStyle}>
         {description}
       </Text>
     </header>
@@ -39,7 +40,7 @@ const accentBarStyle: CSSProperties = {
   width: 4,
   height: 26,
   borderRadius: 999,
-  background: `linear-gradient(180deg, ${KIT.green}, #009682)`,
+  background: `linear-gradient(180deg, ${KIT.green}, ${KIT_GREEN_PUBLISHED})`,
   boxShadow: `0 0 10px ${withAlpha(KIT.green, 0.35)}`,
   flexShrink: 0,
 }

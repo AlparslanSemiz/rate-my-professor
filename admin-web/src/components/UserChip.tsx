@@ -1,8 +1,9 @@
 import { Badge, Group, Text, UnstyledButton } from '@mantine/core'
 import type { CSSProperties, MouseEvent } from 'react'
-import { roleAccent } from '../constants/colors'
-import { enumLabel } from '../utils/enumLabel'
-import type { UserRole, UserStatus } from '../api/UsersService'
+import { roleAccent } from '@/constants/colors'
+import { enumLabel } from '@/utils/enumLabel'
+import type { UserRole, UserStatus } from '@/api/users'
+import { chrome } from '@/theme'
 
 interface UserChipProps {
   id: string
@@ -39,7 +40,7 @@ export default function UserChip({ id, name, role, warningCount, status, onClick
       onClick={handleClick}
       style={chipButtonStyle}
     >
-      <Text size="sm" fw={500} c="#e2e8f0" style={userNameStyle}>
+      <Text size="sm" fw={500} c={chrome.textPrimary} style={userNameStyle}>
         {name}
       </Text>
       <Group gap={4}>

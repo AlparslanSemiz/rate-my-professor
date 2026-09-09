@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { Modal, Text, Group, Button } from '@mantine/core'
-import type { MantineColor } from '@mantine/core'
-import { darkModalStyles } from '../constants/modalStyles'
-import { getErrorMessage } from '../utils/getErrorMessage'
+import { Modal, Text, Group, Button, type MantineColor } from '@mantine/core'
+import { getErrorMessage } from '@/utils/getErrorMessage'
 import ErrorAlert from './ErrorAlert'
+import { chrome } from '@/theme'
 
 interface ConfirmModalProps {
   opened: boolean
@@ -11,7 +10,12 @@ interface ConfirmModalProps {
   description: string
   confirmLabel: string
   confirmColor: MantineColor
-  onConfirm: () => Promise<void>
+  /**
+   * Awaited, so the button can show progress and a failure can be reported in place. A
+   * caller that closes this modal before acting — because it reports the outcome somewhere
+   * else — returns nothing instead, and gets neither.
+   */
+  onConfirm: () => void | Promise<void>
   onClose: () => void
 }
 
@@ -44,12 +48,11 @@ export default function ConfirmModal({ opened, title, description, confirmLabel,
       title={title}
       centered
       size="sm"
-      styles={darkModalStyles}
       closeOnClickOutside={!loading}
       closeOnEscape={!loading}
       withCloseButton={!loading}
     >
-      <Text size="sm" c="#9ca3af" mb={20}>
+      <Text size="sm" c={chrome.textMuted} mb={20}>
         {description}
       </Text>
       <ErrorAlert message={error} />

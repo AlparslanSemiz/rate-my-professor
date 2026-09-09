@@ -1,11 +1,12 @@
 import type { CSSProperties } from 'react'
+import { chrome } from '@/theme'
 
 interface TableHeaderRowProps {
   columns: readonly string[]
 }
 
 const headerRowStyle: CSSProperties = {
-  borderBottom: '1px solid #21262d',
+  borderBottom: `1px solid ${chrome.border}`,
 }
 
 const headerCellStyle: CSSProperties = {
@@ -13,7 +14,7 @@ const headerCellStyle: CSSProperties = {
   textAlign: 'left',
   fontSize: 11,
   fontWeight: 600,
-  color: '#6b7280',
+  color: chrome.textDim,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
   whiteSpace: 'nowrap',

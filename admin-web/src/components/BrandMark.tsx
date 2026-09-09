@@ -1,5 +1,5 @@
 import { type CSSProperties } from '@mantine/core'
-import { FULL_PANEL_NAME, LOGO_URL } from '../constants/branding'
+import { FULL_PANEL_NAME, LOGO_URL } from '@/constants/branding'
 
 /**
  * The app's launcher icon. Shown wherever the panel names itself — the sidebar header and the
