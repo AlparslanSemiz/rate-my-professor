@@ -11,8 +11,14 @@ const DEFAULT_API_TARGET =
   'https://server.example.org'
 
 /**
- * The base every test runs against. `/api` is what `.env` sets for development and what the
- * Dockerfile defaults to, so the suite exercises the shape the panel actually ships with.
+ * The base every test runs against, pinned rather than inherited.
+ *
+ * `/api` is what `.env` sets for development and what the Dockerfile still defaults to. It is
+ * deliberately *not* what CI bakes into the deployed bundle any more — that is empty, so the
+ * panel calls its own origin. The divergence is safe because the base only ever prefixes the
+ * path: what the backend sees is the same suffix either way, and the suite's request assertions
+ * need *some* fixed base to name. Pinning one here is what stops a pipeline variable from
+ * choosing it. `F-025`.
  */
 const TEST_API_BASE_URL = '/api'
 

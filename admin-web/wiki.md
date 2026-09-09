@@ -166,12 +166,18 @@ UI and the data model.
 ## 5. Configuration
 
 Vite reads `VITE_API_BASE_URL` when the development server starts or the
-production bundle is built. It is the path or URL the panel calls; `/api` means
-"whatever is serving this page", which is what keeps requests same-origin.
+production bundle is built. It is the path or URL every request is prefixed
+with.
+
+**The deployed panel builds with an empty value.** It is served from
+`https://ratemyprofessor.dev/admin/` and the backend answers on that same host,
+so an empty base sends every call to the panel's own origin, same-origin, and
+CORS never runs. Development gets the same shape a different way: `/api` plus
+the dev server's proxy, which strips the prefix before forwarding.
 
 | Variable | Read by | Purpose |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | The bundle | Path or URL every request is prefixed with |
+| `VITE_API_BASE_URL` | The bundle | Path or URL every request is prefixed with. Empty in production, `/api` in development |
 | `VITE_API_TARGET` | The dev server only | Backend the `/api` proxy forwards to |
 | `VITE_BASE_PATH` | The build | URL path the panel is served from (`/admin/` for builds, `/` for the dev server) |
 
@@ -180,9 +186,16 @@ production bundle is built. It is the path or URL the panel calls; `/api` means
 
 `.env` is the only environment file: it is what `npm run dev` reads. A real
 environment variable takes precedence over it, which is how the Docker build and
-the CI pipeline bake an absolute `VITE_API_BASE_URL` into the production bundle
-without editing `.env`. Values are read at startup or build time, so restart the
-Vite server after changing them.
+the CI pipeline set `VITE_API_BASE_URL` for the production bundle without editing
+`.env`. Values are read at startup or build time, so restart the Vite server
+after changing them.
+
+Do not put an absolute backend URL back in the production build. That is what was
+there before, and it is what made the panel unusable: the browser saw a different
+origin, preflighted, and the backend answered `403` because the panel's origin was
+not in its allowlist. `/api` is not a substitute either — the deployment host
+proxies everything below `/admin/` to the backend unchanged, so a `/api` prefix
+would reach the backend intact and `404`.
 
 ## 6. Project structure
 

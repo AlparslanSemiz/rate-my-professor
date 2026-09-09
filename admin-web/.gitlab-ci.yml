@@ -16,8 +16,24 @@ stages:
 # request assertions name absolute paths. `test.env` in vite.config.ts pins it, so the test job
 # is unaffected by whatever is set here; do not narrow these to per-job in the belief that it
 # is what makes the suite green.
+#
+# VITE_API_BASE_URL is empty on purpose, and the empty string is the whole fix. The panel is
+# served from https://ratemyprofessor.dev/admin/ and the backend answers on that same host, so
+# an empty base makes every call same-origin and CORS never runs. It used to hold the absolute
+# bw-cloud URL, which is a different origin: the browser preflighted, the backend's allow-list
+# did not contain ratemyprofessor.dev, and login died on 403 before any request reached a
+# controller.
+#
+# Not `/api`. The deployment host routes /admin/ to this container and hands everything else to
+# the backend UNCHANGED -- there is no location that strips a prefix. Measured, not assumed:
+# GET https://ratemyprofessor.dev/api/health answers 404 {"message":"Not found"}, which is the
+# backend's own body, so /api/auth/login would arrive at the backend as /api/auth/login and 404
+# the same way. `/api` only works behind the dev server, which rewrites it (vite.config.ts).
+#
+# Not `/` either: ApiRequestBuilder concatenates base and path, so `/` would build
+# `//auth/request-login`, and a browser reads a leading `//` as a protocol-relative host.
 variables:
-  VITE_API_BASE_URL: "https://server.example.org"
+  VITE_API_BASE_URL: ""
   VITE_BASE_PATH: "/admin/"
 
 .node-npm:

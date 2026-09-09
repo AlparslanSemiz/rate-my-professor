@@ -78,7 +78,7 @@ changed by restarting the container; rebuild the image when they change.
 
 | Variable | Read by | Current default or CI value |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | Browser bundle | `.env` uses `/api` for local development. CI builds with `https://server.example.org`. |
+| `VITE_API_BASE_URL` | Browser bundle | `.env` uses `/api` for local development. **CI builds with an empty value**, so the deployed panel calls its own origin. |
 | `VITE_API_TARGET` | Vite dev server only | `.env` points the `/api` proxy at `https://server.example.org`. |
 | `VITE_BASE_PATH` | Vite build and Nginx runtime template | CI sets `/admin/`. The Vite dev server serves from `/`. |
 | `PUBLIC_URL` | GitLab environment metadata | Used as the GitLab environment URL for `web:deploy`; does not configure the built app. |
@@ -158,7 +158,7 @@ Build the production image locally:
 
 ```bash
 docker build --target web-prod \
-  --build-arg VITE_API_BASE_URL=https://server.example.org \
+  --build-arg VITE_API_BASE_URL= \
   --build-arg VITE_BASE_PATH=/admin/ \
   -t admin-web-prod:local .
 ```
@@ -356,8 +356,8 @@ seed data belong to the backend repository and deployment host.
 
 | Symptom | Confirmed cause or check |
 | --- | --- |
-| App calls the wrong backend | `VITE_API_BASE_URL` was baked in at build time. Rebuild and redeploy the image. |
-| Browser requests fail with CORS errors | If the browser calls an absolute backend URL, ensure the backend `ADMIN_FRONTEND_ORIGINS` contains the exact Admin Web origin. |
+| App calls the wrong backend | `VITE_API_BASE_URL` was baked in at build time. Rebuild and redeploy the image. Grep the served bundle to see which value shipped: `curl -s https://ratemyprofessor.dev/admin/ \| grep -oE '/admin/assets/[^"]+\.js'`, then grep each for the host. |
+| Browser requests fail with CORS errors | The bundle is calling an absolute backend URL instead of its own origin. Rebuild with an empty `VITE_API_BASE_URL`. Adding the origin to the backend's `ADMIN_FRONTEND_ORIGINS` also silences it, but it treats the symptom: same-origin calls never reach the CORS check at all. |
 | Local dev server cannot reach the backend | Check `VITE_API_TARGET`; local `/api` requests are proxied there by Vite. |
 | Direct navigation to `/admin/login` returns 404 | The request is not reaching the Admin Web Nginx fallback, or `VITE_BASE_PATH` does not match the public path. |
 | `/admin/` works but hashed assets 404 | The app was built for a different `VITE_BASE_PATH`, or the reverse proxy strips/preserves the path differently than Nginx expects. |

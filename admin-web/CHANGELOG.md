@@ -2,6 +2,60 @@
 
 ## [Unreleased]
 
+### The deployed panel calls its own origin now, and can be logged into again
+
+**`Was:`** `VITE_API_BASE_URL=https://server.example.org` — an absolute URL, baked
+into the bundle by `.gitlab-ci.yml`.
+**`Now:`** empty. Every request goes out relative, to whatever origin served the page.
+**You have nothing to change** unless you build the image by hand; see below.
+
+The panel is served from `https://ratemyprofessor.dev/admin/`, so with an absolute base the
+browser was making a **cross-origin** call to a second hostname. It preflighted, and the backend
+answered `403` because `https://ratemyprofessor.dev` was not in its CORS allowlist. Nothing
+downstream of that ran: `POST /auth/request-login` never reached a controller, so no login code
+was ever sent and the panel could not be signed into at all.
+
+#### `.gitlab-ci.yml`
+
+- **Changed** `VITE_API_BASE_URL` to `""`.
+- **Why empty and not `/api`, measured rather than reasoned.** The deployment host routes
+  `/admin/` to this container and hands *everything else* to the backend **unchanged** — there is
+  no location that strips a prefix. `GET https://ratemyprofessor.dev/api/health` answers
+  `404 {"message":"Not found"}`, which is the backend's own body and not nginx's, so a `/api`
+  prefix would arrive at the backend intact and `404` exactly the same way. `/api` works in
+  development only because the dev server rewrites it.
+- **Why not `/`.** `ApiRequestBuilder.url()` concatenates without normalising
+  (`src/api/client/apiRequest.ts:70-72`), so `/` builds `//auth/request-login`, and a browser
+  reads a leading `//` as a protocol-relative host.
+- **The empty value was verified end to end, not assumed to propagate.** A build with the
+  variable empty produces a bundle whose only difference from the deployed one is the URL being
+  replaced by `''` — a one-token diff, nothing else moved. `--build-arg VITE_API_BASE_URL=`
+  overriding the `ARG …=/api` default was confirmed under **Kaniko**, the tool CI actually uses,
+  not just under a local Docker.
+
+#### `Dockerfile`
+
+- **Unchanged on purpose.** `ARG VITE_API_BASE_URL=/api` stays: it is the standalone-build
+  default and matches `.env`, and CI overrides it explicitly. It was only going to change if the
+  empty build-arg had failed to propagate, and it did not fail.
+
+#### `vite.config.ts`, `.env`, `README.md`, `wiki.md`, `docs/deployment.md`, `docs/consumer-contract.md`
+
+- **Corrected every statement that said production bakes an absolute URL.** They were true when
+  written and are now false, which is the kind of drift that costs the next reader an afternoon.
+- `TEST_API_BASE_URL` stays `/api`. The suite's request assertions name absolute paths and need
+  *some* fixed base; the base only prefixes the path, so what the backend sees is the same suffix
+  either way. `F-025` is why it is pinned here instead of inherited.
+
+### Unchanged on purpose
+
+- **The `/admin/**` backend routes stay unreachable in production.** This container answers
+  everything under `/admin/`, including paths the backend also claims, so its API routes are
+  shadowed. Nothing breaks — this panel calls the unprefixed legacy paths and always has — but
+  the backend task asking us to move every call onto `https://<host>/admin` must **not** be
+  carried out: it would aim every request at this container's own static server, and reads would
+  come back as `index.html`.
+
 ### `F-030` fixed — the dashboard's progress bars have names now
 
 **One line, and it is the only production change in this package.** `SystemPulse` draws a

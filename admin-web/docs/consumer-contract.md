@@ -28,7 +28,7 @@ normalisation (`src/api/client/apiRequest.ts:70-72`). The base URL comes from
 | Environment | `VITE_API_BASE_URL` | What the backend receives |
 | --- | --- | --- |
 | Development | `/api` (`.env:5`) | The Vite dev proxy forwards `/api/**` to the backend and **strips** `/api` (`vite.config.ts:50-56`, `rewrite: (path) => path.replace(/^\/api/, '')`). |
-| Production (CI) | `https://<backend-host>` (`.gitlab-ci.yml:13`, `Dockerfile:14`) | Origin only, no path segment. |
+| Production (CI) | **empty** (`.gitlab-ci.yml`) | Nothing is prepended: the path goes out relative, to whatever origin serves the panel. |
 
 **In both cases the backend sees the literal path written in the service file.**
 
