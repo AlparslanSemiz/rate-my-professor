@@ -658,7 +658,7 @@ The checks cover:
 - Integration tests for routing and the main feature pages.
 - A production build, including Vite's route chunk generation.
 
-**47 test files, 1137 tests and 3 skipped, green** as of 2026-09-09, at 92.96%
+**47 test files, 1138 tests and 3 skipped, green** as of 2026-09-09, at 92.96%
 statements / 86.46% branches / 91.52% functions / 94.61% lines, plus **10 Playwright
 specs and 68 tests** in the end-to-end layer. The report in `coverage/` is
 the authority on those figures; a number written in a document is a dated

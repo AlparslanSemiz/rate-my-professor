@@ -575,7 +575,7 @@ utilities, domain rules, API services, hooks and authentication; integration tes
 for routing and the main feature pages; and a production build including Vite's
 route chunk generation.
 
-As of 2026-09-09 the suite is **47 test files and 1137 tests, with 3 skipped**, green,
+As of 2026-09-09 the suite is **47 test files and 1138 tests, with 3 skipped**, green,
 at 92.96% statements / 86.46% branches / 91.52% functions / 94.61% lines, plus **10
 Playwright specs and 68 tests** in the end-to-end layer, which runs separately. The
 report in `coverage/` is the authority on those figures; a number written in a document

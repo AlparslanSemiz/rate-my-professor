@@ -2,6 +2,38 @@
 
 ## [Unreleased]
 
+### `F-030` fixed — the dashboard's progress bars have names now
+
+**One line, and it is the only production change in this package.** `SystemPulse` draws a
+`Progress` bar per metric with the visible label in a *sibling* `<Text>`, so a sighted operator
+read "Active accounts 62%" while a screen reader read an unnamed progressbar twice — axe's
+`aria-progressbar-name`, at `serious`, on both nodes.
+
+#### `src/features/dashboard/components/SystemPulse.tsx`
+
+- **Added** `aria-label={metric.label}`. No visual change: an accessible name is not painted.
+- **Where the label lands was measured, not assumed.** The violation is on the element carrying
+  `role="progressbar"`, which is `Progress.Section` and not the component's root, so passing
+  `aria-label` to `<Progress>` only works if Mantine forwards it down. It does — checked by
+  reading the rendered attribute back, rather than by reasoning about the component.
+
+#### `src/App.a11y.integration.test.tsx`
+
+- **Removed** the dashboard's pinned violation, so the route scan now expects a clean result.
+- **Added** a test asserting the two accessible names directly. The scan alone was not enough:
+  it would go equally green if the bars stopped rendering at all, and a rule that passes because
+  its subject vanished is the failure this whole package was written against.
+- Both turn red when the attribute is removed, which is how the fix was verified.
+
+### Unchanged on purpose
+
+- **Everything else on the deferred list stays there** — `F-012`, `F-019`, `F-020`, `F-022`,
+  `F-026` … `F-029`, `F-031` … `F-037`, `ErrorAlert`'s two theme divergences and the swallowed
+  `415` on sign-out. `F-030` was taken on its own because it is one line in one file with no
+  visual effect; every other item either changes behaviour, changes the theme, or wants a visual
+  pass, and none of those is a last-day change.
+
+
 ### Five test layers, built to answer the panel's own questions
 
 **The suite had every service tested and nothing sweeping.** A new service method could arrive
@@ -16,9 +48,10 @@ clear the mirrored table would carry an "API / role" row reading "not applicable
 "integration" row reading "never, by design", while the three questions that produced most of
 this round's findings would have had no row at all.
 
-**No production code changed.** Twelve findings were opened and every one of them was left
-alone — including `F-030`, which is a single `aria-label` on one line of one file with no visual
-effect, and is on the deferred list rather than in this diff.
+**No production code changed by the layers themselves.** Twelve findings were opened and every
+one was left alone at the time — including `F-030`, a single `aria-label` on one line with no
+visual effect. It was fixed afterwards, on its own and in its own entry above; every other
+finding is still on the deferred list.
 
 #### `src/api/callSurface.integration.test.ts` — new
 
@@ -156,7 +189,7 @@ Nothing. This round changed no production code, and that is the point of it.
 
 ### Tests
 
-**43 files / 348 tests → 47 files / 1137 tests and 3 skipped.** Playwright **4 specs / 11 tests →
+**43 files / 348 tests → 47 files / 1138 tests and 3 skipped.** Playwright **4 specs / 11 tests →
 10 specs / 68 tests**. Coverage **92.55 / 85.62 / 90.77 / 94.43 → 92.96 / 86.46 / 91.52 / 94.61**,
 every axis up, none of it aimed at coverage — it is the side effect of layers that walk real code
 paths.
@@ -175,12 +208,13 @@ glossed. Stryker is on the deferred list with the backend's `P-7` reading rule a
 
 ### Unchanged on purpose
 
-- **Twelve findings opened, none fixed.** `F-026` … `F-037`. Every one is in
+- **Twelve findings opened, none fixed by the layers.** `F-026` … `F-037`. Eleven are in
   [docs/TODO.md](docs/TODO.md) under *Known, measured, deliberately deferred* with what it is, how
-  it was measured, why it was not fixed, and what fixing it costs.
-- **`F-030` is a one-line change with no visual effect and it is still not made.** Ten minutes'
-  work, on the list rather than in this diff, because the rule for this round was that no
-  production code changes.
+  it was measured, why it was not fixed, and what fixing it costs. The twelfth, `F-030`, was fixed
+  afterwards in a change of its own.
+- **`F-030` was the exception, and it was taken separately.** One line, one file, no visual
+  effect. It is the entry at the top of this release rather than part of the layer work, so the
+  claim that the layers changed no production code stays exactly true.
 - **`F-012`, `F-019`, `F-020`, `F-022`, `ErrorAlert`'s two theme divergences and the swallowed
   `415` on sign-out** are all still open, and `F-019` now has a measured boundary rather than two
   screenshots.

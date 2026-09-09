@@ -88,12 +88,12 @@ own `fetch` double.
 | Layer | Pattern | Files | Tests |
 | --- | --- | --- | --- |
 | Unit | `*.unit.test.*` | 28 | 182 |
-| Integration | `*.integration.test.*` | 19 | 955 (+3 skipped) |
+| Integration | `*.integration.test.*` | 19 | 956 (+3 skipped) |
 | Routing | `src/App.integration.test.tsx` (one of the 19) | 1 | 20 |
 | End-to-end | `e2e/*.spec.ts`, Playwright, `npm run test:e2e` | 10 | 68 |
 | Static gates | — | — | `npm run lint`, `npm run check:cycles`, `npm run check:docs`, `npm run typecheck`, `npm run build` |
 
-**Total: 47 files, 1137 tests and 3 skipped, green** (2026-09-09, after the
+**Total: 47 files, 1138 tests and 3 skipped, green** (2026-09-09, after the
 five-layer test package), plus **10 Playwright specs, 68 tests** in the end-to-end
 layer, which run separately and are not counted in the Vitest total. Coverage
 **92.96 / 86.46 / 91.52 / 94.61**.
@@ -153,7 +153,7 @@ layer that does not say what it fails to answer is claiming everything.
 | **3a — Resilience, service layer** | What does the panel raise when the backend misbehaves? Nine failing statuses, a network error, an empty body, a body that is not JSON, a `2xx` refusal, and `204 No Content` — per endpoint. | Whether the backend ever behaves that way, and what a *screen* does with the answer. | Vitest + MSW, driving services directly | **Done.** `src/api/responseShapes.integration.test.ts`, 589 tests |
 | **3b — Resilience, screen layer** | What does a screen do with a payload that parsed cleanly and is still wrong? Every read field removed one at a time, nested objects nulled, scalars given the wrong type, lists of 0/1/3, a slow read. | **Detail views.** See below — this is the largest stated gap in the round. | Vitest + MSW + React Testing Library, with a boundary that records crashes | **Done.** `src/features/degradedPayloads.integration.test.tsx`, 120 tests + 3 skipped |
 | **4 — Real browser** | Does it fit, does focus behave, are the targets big enough, and what is the contrast? Everything jsdom answers *wrongly* rather than not at all. | Anything below 800px — see `F-019`. And 89% of the contrast question, which axe cannot decide against a gradient (`F-035`). | Playwright + `@axe-core/playwright`, Chromium | **Done.** `e2e/layout.spec.ts`, `e2e/focus.spec.ts`, `e2e/a11y.spec.ts`, 43 tests |
-| **5 — Accessibility** | Can the panel be operated without a mouse, and does its markup carry what colour carries? Eight routes under every axe rule that does not need layout. | `color-contrast` and `target-size`, switched off **by name** — every element in jsdom is 0x0. Handed to layer 4. Also: non-default tabs, unopened modals, and anything a real assistive technology does. | Vitest + `axe-core` driven directly — no `jest-axe` | **Done.** `src/App.a11y.integration.test.tsx`, 26 tests |
+| **5 — Accessibility** | Can the panel be operated without a mouse, and does its markup carry what colour carries? Eight routes under every axe rule that does not need layout. | `color-contrast` and `target-size`, switched off **by name** — every element in jsdom is 0x0. Handed to layer 4. Also: non-default tabs, unopened modals, and anything a real assistive technology does. | Vitest + `axe-core` driven directly — no `jest-axe` | **Done.** `src/App.a11y.integration.test.tsx`, 27 tests |
 | **6 — End-to-end** | Do two whole flows work in a browser — blocking an account, and escalating a bug report? | Anything about the real backend. It has **never** run against one. | Playwright, Chromium, against MSW | **Done.** 10 specs, 68 tests |
 | **— Mutation testing** | Would the suite notice if the code were wrong? | — | Stryker | **Not built**, deliberately. See `docs/TODO.md` |
 
@@ -279,12 +279,12 @@ fail against, so it is worth nothing until it has been shown to fail.
 | `auth/LoginPage` | 6 | The two-step flow; an address outside the team never reaches `request-login` |
 | `help/HelpPage` | 1 | Sections start collapsed and open on click |
 
-### 6.3 Shell, state and shared code — 25 files, 194 tests
+### 6.3 Shell, state and shared code — 25 files, 195 tests
 
 | Area | Files | Tests | Coverage |
 | --- | --- | --- | --- |
 | `src/App.integration.test.tsx` | 1 | 20 |
-| `src/App.a11y.integration.test.tsx` — the layer 5 scan | 1 | 26 | axe over all eight routes, focus reachability, keyboard reach to row actions, badge text, and the login field's label and error association |
+| `src/App.a11y.integration.test.tsx` — the layer 5 scan | 1 | 27 | axe over all eight routes, focus reachability, keyboard reach to row actions, badge text, and the login field's label and error association |
 | `src/context` | 1 | 16 | Session restore, a stored session carrying `isSuperAdmin`, rejection of a malformed one, withdrawal of an elevation `/auth/me` no longer reports, and a check that fails without being refused being reported rather than swallowed (`F-013`) |
 | `src/theme` | 1 | 8 | That inputs and modals are painted by the theme with no `styles` prop, and that a component-level override lands on top of it |
 | `src/features/*/model` | 6 | 32 | `feedback` (8), `catalog/edit` (6), `moderation` (6), `users/userEdit` (5), `catalog/catalog` (4), `catalog/deletion` (3) |
@@ -329,9 +329,10 @@ Stated so the matrix above is not mistaken for full coverage.
 - **The end-to-end layer proves nothing about the real backend.** It runs on MSW, in
   Chromium, at desktop widths. Section 7 states this at length because it is the claim
   most easily over-read.
-- **Nine defects are pinned as they are rather than fixed** — `F-022` (a null actor or
-  author takes the table down), the swallowed `415` on sign-out, and the seven this round
-  added: `F-026` and `F-028` … `F-032`, `F-034`, `F-037`. Those tests assert the
+- **Eight defects are pinned as they are rather than fixed** — `F-022` (a null actor or
+  author takes the table down), the swallowed `415` on sign-out, and the six this round
+  added and left: `F-026`, `F-028`, `F-029`, `F-031`, `F-032`, `F-034`, `F-037`. `F-030` was
+  pinned the same way and is now fixed, so its pin asserts the fix instead. Those tests assert the
   **current** behaviour, so a green suite is not evidence any of it is acceptable. Every
   one of them is pinned in a way that goes red in *both* directions — a new defect of the
   same shape, and a fix — so none can be quietly resolved or quietly widened. All are in
