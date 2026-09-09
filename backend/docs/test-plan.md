@@ -1015,6 +1015,114 @@ gaps that answered "nothing":
 - **No behaviour was corrected.** Everything the work turned up that is client-visible went to
   the backlog in [TODO.md](TODO.md) instead, unfixed and named.
 
+## Where the suite stops
+
+*Deliberately uncovered* below names two **classes** nobody tests and why. This section names
+four **questions** nobody tests, which is the larger and less visible gap: absence is not a
+defect, but an *unwritten* absence is — it reads as an oversight to anyone auditing this, and
+the next person either re-derives the reasoning or, worse, assumes the question was answered.
+
+Each of these is a boundary the suite was drawn to, not a hole in it. Written so that crossing
+one is a decision.
+
+### Performance and load — not measured at all
+
+There is **no** load test, no latency budget, no throughput figure and no query-count
+assertion anywhere in this repository. Nothing here says how the API behaves under
+concurrency beyond the four correctness races in `ConcurrencyPostgresTests`, and those assert
+*outcomes*, not timings.
+
+`LazyLoadingRegressionTests` is the closest thing and it is worth being precise about, because
+its name invites the wrong reading. It is **six tests over nine read paths** —
+`/account/information`, `/account/ratings`, `/data/lectures`, `/data/lectures/{id}`,
+`/data/professor`, `/data/professor/{id}`, `/ratings/{id}`, `/social/comments/{id}`,
+`/social/sync/comments` — and what it asserts is that walking a lazy collection outside a
+session does not throw `LazyInitializationException` and turn into a 500. `open-in-view` is
+disabled, so that is a real and recurring failure. It says **nothing** about how many queries
+those paths run. A route issuing one query per row would pass every assertion in that class.
+
+So the known N+1 in `SocialResponseMapper` (`docs/TODO.md`, item 15) is **unmeasured, not
+absent** — and there is no test that would notice a second one appearing. Adding one means
+counting statements, which needs a Hibernate statistics hook or a proxying `DataSource`;
+neither exists here, and neither is pretended to.
+
+### Injection and output escaping — where the protection actually comes from
+
+**SQL injection is closed structurally rather than by testing for it**, and the structure is
+worth stating because a reader cannot tell it from the absence of tests:
+
+- There are **no native queries** — `nativeQuery = true`, `createQuery` and
+  `createNativeQuery` appear **zero** times in `src/main`.
+- All 18 `@Query` annotations are JPQL with named parameters and **no string concatenation**.
+- Everything else is a derived query or a Criteria predicate, both of which bind parameters.
+- The one place a caller's text is shaped before it reaches a query is `SqlLike.escape`, used
+  in exactly two places (`AuditLogService`, `UserDirectoryService`). Even there the escaped
+  text is passed as a **bound parameter** to `builder.like(..., pattern, SqlLike.ESCAPE)`;
+  the escaping is about `%` and `_` meaning *wildcards* rather than about injection.
+
+So there is no unparameterised path for a test to attack. A test that sent `'; DROP TABLE` and
+watched nothing happen would be asserting against JPA, not against this application.
+
+**Output escaping is not this backend's responsibility, with one exception, and that exception
+is tested.** The API returns JSON; escaping for a browser belongs to whoever renders it — the
+admin panel and the Android client, in their own repositories. The exception is the mail the
+backend renders itself as HTML, where `shared/util/Html.escape` runs on every interpolated
+value in `LoginNotificationMail`, `LoginCodeMail` and `LoginMapFragment`, and
+`LoginMapFragmentTests` pins the hostile-URL case.
+
+Stated as a boundary because an unstated one reads as an oversight: **if the panel renders a
+username, a comment or a warning message as HTML without escaping it, that is a defect in the
+panel and nothing in this repository will catch it.**
+
+### Migration reversibility — forward-only, by decision
+
+`PostgreSqlMigrationSmokeTests` proves the production migrations produce a schema the
+application starts against. There is **no `undo` migration, no down-script and no rollback
+test**, and the repository has exactly one migration file (`V1__existing_schema_baseline.sql`)
+plus its H2 twin.
+
+The decision: **a bad migration is rolled forward, not back.** The consequence, so it is not
+discovered during an incident — a deployment that has to be undone needs a new migration
+written under pressure, or a restore from the backup `deployment.md` describes. Flyway's
+community edition has no `undo` anyway, so this is a decision about *process*, not a gap in
+tooling.
+
+What that costs is bounded today by there being one baseline. It gets more expensive with each
+migration added, and `docs/TODO.md` items 14 and 23 both want a `V2` — which is the point at
+which this decision should be revisited rather than inherited.
+
+### Time representation, and the invariants holding it together
+
+Two Java types, two column shapes, four paginating endpoints and one `Clock`. Nothing in the
+code says how they relate, and [F-30](test-findings.md#f-30--a-rate-limiter-that-is-only-correct-because-a-clock-in-another-file-is-utc)
+already showed what that costs: a rate limiter that is correct only because of a bean in
+another file.
+
+| Column | SQL type | Java type | Read by |
+|---|---|---|---|
+| `audit_logs.created_at` | `timestamp(6) **with time zone**` | `Instant` | `KeysetCursorCodec`'s `Instant` overload |
+| every other `*_at` — 30 columns across 13 tables | `timestamp(6)`, no zone | `LocalDateTime` | `Cursor.createdAtLocal()` |
+
+`AuditLog` is the **only** entity using `Instant` and its column is the only one carrying a
+zone. `GET /admin/audit-logs` and `GET /admin/activity-logs` page on the first row of that
+table; `GET /admin/ratings` and `GET /admin/users` on the second.
+
+**The invariants, named with the file that owns each and what breaks if it moves.** F-30 wrote
+down the first two; the sweep found three more:
+
+| Invariant | Owner | What breaks |
+|---|---|---|
+| The `Clock` bean is `Clock.systemUTC()` | `TimeConfig` | `RateLimitService.isCurrentWindow` and `retryAfter` do wall-clock arithmetic on a `LocalDateTime`. `systemDefaultZone()` gives the limiter a bug twice a year — F-30 |
+| `spring.jpa.properties.hibernate.jdbc.time_zone=UTC` | `application.properties` | it is what makes a zone-less `LocalDateTime` *mean* UTC on the wire. Change it and every stored timestamp shifts, silently, including the ones cursors are built from |
+| `timestamp(6)` **rounds**, it does not truncate | both baselines, and PostgreSQL/H2 agree | the BUG-1 hypothesis was built on truncation and could not have been right. A cursor built from an unflushed entity carries nanoseconds the column cannot store — see *Settled questions* |
+| `AuditLog.@PrePersist` fills only a **null** `createdAt`, while `@CreationTimestamp` elsewhere **overwrites** | `AuditLog` vs every other entity | it is why `CursorPaginationPostgresTests` can stamp audit rows before insert and has to stamp students and ratings afterwards through `JdbcTemplate`. A test that gets this backwards silently measures its own fixture |
+| `audit_logs.changes` / `metadata` are **`jsonb`** on PostgreSQL and **`json`** on H2 | the two baselines, which differ in exactly these two lines | `jsonb` normalises object key order, and about fifty `Map.of` call sites build those documents. `Map.of` iteration order is randomised per JVM run, so those sites are correct **only** because of the column type — and the H2 suite runs on the one type that would not save them. Array order is *not* normalised either way, which is what the 9 September sweep found and fixed |
+
+The last one is the same shape as F-30 and is recorded here for the same reason: it is true,
+nothing states it, and the file that would have to change is not the file that would break.
+
+---
+
 ## Deliberately uncovered
 
 Two classes are visibly low and neither is an oversight. Saying so here is the point: an
