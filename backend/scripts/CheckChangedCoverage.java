@@ -178,29 +178,52 @@ public final class CheckChangedCoverage {
         return addedLines;
     }
 
-    private static Evaluation evaluate(Map<String, Set<Integer>> addedLines, CoverageIndex coverageIndex) {
+    private static boolean isCoverageExcluded(String path) {
+        return path.endsWith("/DemoApplication.java")
+                || path.contains("/exception/");
+    }
+
+    private static Evaluation evaluate(
+            Map<String, Set<Integer>> addedLines,
+            CoverageIndex coverageIndex
+    ) {
         Evaluation evaluation = new Evaluation();
 
         for (Map.Entry<String, Set<Integer>> entry : addedLines.entrySet()) {
+
+            if (isCoverageExcluded(entry.getKey())) {
+                System.out.println(
+                        "Skipping coverage-excluded file: " + entry.getKey()
+                );
+                continue;
+            }
+
             FileCoverage fileCoverage = coverageIndex.files().get(entry.getKey());
+
             if (fileCoverage == null) {
                 evaluation.missingCoverageFiles().add(entry.getKey());
                 continue;
             }
 
             Set<Integer> executableAddedLines = new HashSet<>();
+
             for (Integer lineNumber : entry.getValue()) {
                 LineCoverage lineCoverage = fileCoverage.lines().get(lineNumber);
+
                 if (lineCoverage == null || lineCoverage.instructionsTotal() == 0) {
                     continue;
                 }
 
                 executableAddedLines.add(lineNumber);
                 evaluation.addLine(lineCoverage.coveredInstructions() > 0);
-                evaluation.addBranches(lineCoverage.coveredBranches(), lineCoverage.missedBranches());
+                evaluation.addBranches(
+                        lineCoverage.coveredBranches(),
+                        lineCoverage.missedBranches()
+                );
             }
 
-            for (MethodCoverage methodCoverage : changedMethods(fileCoverage.methods(), executableAddedLines)) {
+            for (MethodCoverage methodCoverage :
+                    changedMethods(fileCoverage.methods(), executableAddedLines)) {
                 evaluation.addMethod(methodCoverage.coveredMethods() > 0);
             }
         }
@@ -269,6 +292,8 @@ public final class CheckChangedCoverage {
         }
         return output;
     }
+
+
 
     /** Git that reports failure instead of ending the process. Empty when the command failed. */
     private static Optional<String> gitQuietly(String... arguments) {

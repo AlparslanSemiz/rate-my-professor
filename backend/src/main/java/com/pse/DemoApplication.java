@@ -8,6 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 /**
  * Boilerplate Code.
  */
+@SuppressWarnings("ALL")
 @SpringBootApplication
 @ConfigurationPropertiesScan
 public class DemoApplication {

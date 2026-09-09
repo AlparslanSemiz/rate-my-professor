@@ -49,7 +49,7 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, UU
         SELECT report.comment.student.id AS id, COUNT(report) AS count
         FROM CommentReport report
         GROUP BY report.comment.student.id
-    """)
+        """)
     List<IdCount> countGroupedByCommentStudent();
 
     /**
@@ -61,7 +61,7 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, UU
         SELECT report.comment.id AS id, COUNT(report) AS count
         FROM CommentReport report
         GROUP BY report.comment.id
-    """)
+        """)
     List<IdCount> countGroupedByComment();
 
     /**
