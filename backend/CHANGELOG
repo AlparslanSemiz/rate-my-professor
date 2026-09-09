@@ -900,3 +900,19 @@ Requires a session, the same as its "/social" twin.
 Nothing to change to get it working; an installed app starts filing reports as soon as this
 ships. New work only if you want it on one path: move to "POST /social/answers/report", which
 is where every other social route already is, and tell us so this one can go.
+
+
+///// 9.09 (17)
+
+
+"GET /account/ratings" returns its ratings in a defined order.
+
+Was: "ratings" in whatever order the database returned them
+Now: newest first, ties broken by id
+
+The same defect as F-21, F-27 and 9.09 (11), on the one list those sweeps did not reach. The
+lecture inside each entry was already ordered -- "lecture.professors" has been sorted by name
+since F-21 -- so the item was ordered inside and unordered outside.
+
+Nothing to change if you sort client-side. If you render the array in the order it arrives, it
+will stop reshuffling between two requests for the same account.

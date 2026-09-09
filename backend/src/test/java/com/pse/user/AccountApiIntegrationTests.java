@@ -6,11 +6,14 @@ import com.pse.auth.repository.AuthRateLimitBucketRepository;
 import com.pse.auth.repository.OneTimePasswordRepository;
 import com.pse.auth.repository.TokenRepository;
 import com.pse.auth.service.TokenGenerator;
+import com.pse.lecture.model.Lecture;
 import com.pse.lecture.repository.LectureRepository;
 import com.pse.moderation.repository.AdminRepository;
 import com.pse.moderation.repository.WarningRepository;
 import com.pse.professor.repository.ProfessorRepository;
+import com.pse.rating.model.Rating;
 import com.pse.rating.repository.RatingRepository;
+import com.pse.shared.enums.SemesterSeason;
 import com.pse.shared.enums.UserStatus;
 import com.pse.security.TokenHasher;
 import com.pse.social.repository.AnswerReportRepository;
@@ -27,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -50,6 +54,9 @@ class AccountApiIntegrationTests {
 
     @Autowired
     MockMvc mockMvc;
+
+    @Autowired
+    JdbcTemplate jdbcTemplate;
 
     @Autowired
     StudentRepository studentRepository;
@@ -262,6 +269,77 @@ class AccountApiIntegrationTests {
                 .andExpect(status().isUnauthorized());
     }
 
+
+
+    /**
+     * The order of {@code ratings[]} on {@code GET /account/ratings}.
+     *
+     * <p>F-21's shape on the one list the sweep behind F-35 did not reach.
+     * {@code Student.ratings} is a plain JPA bag, so the array came back in whatever order
+     * the database chose and could differ between two requests for the same account. The
+     * nested {@code lecture.professors} was already sorted -- it goes through
+     * {@code LectureResponseMapper}, which carries F-21's own comparator -- so the item was
+     * ordered inside and unordered outside.
+     *
+     * <p>Newest first, matching {@code CommentRepository}'s listings, with the id as a
+     * tiebreaker so two ratings written in the same instant still come out the same way
+     * twice. Written against timestamps set out of insertion order on purpose: a fixture
+     * inserted in the answer's order would pass on the bag as well and prove nothing.
+     */
+    @Test
+    void userRatingsComeBackNewestFirstRatherThanInWhateverOrderTheDatabaseChose()
+            throws Exception {
+
+        Session session =
+                createSession("rating-order@student.kit.edu");
+
+        rateLecture(session.student(), "Oldest", LocalDateTime.of(2026, 1, 1, 9, 0));
+        rateLecture(session.student(), "Newest", LocalDateTime.of(2026, 3, 1, 9, 0));
+        rateLecture(session.student(), "Middle", LocalDateTime.of(2026, 2, 1, 9, 0));
+
+        mockMvc.perform(
+                        get("/account/ratings")
+                                .header(
+                                        "Authorization",
+                                        bearer(session.rawToken())
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ratings", hasSize(3)))
+                .andExpect(jsonPath("$.ratings[0].lecture.name").value("Newest"))
+                .andExpect(jsonPath("$.ratings[1].lecture.name").value("Middle"))
+                .andExpect(jsonPath("$.ratings[2].lecture.name").value("Oldest"));
+    }
+
+
+    private void rateLecture(Student student, String lectureName, LocalDateTime writtenAt) {
+
+        Lecture lecture = new Lecture();
+
+        lecture.setName(lectureName);
+        lecture.setCode(lectureName);
+        lecture.setSemesterYear(2026);
+        lecture.setSemesterSeason(SemesterSeason.SS);
+
+        lecture = lectureRepository.saveAndFlush(lecture);
+
+        Rating rating = new Rating();
+
+        rating.setStudent(student);
+        rating.setLecture(lecture);
+
+        rating = ratingRepository.saveAndFlush(rating);
+
+        // Written straight to the column. @CreationTimestamp maps created_at as
+        // non-updatable, so setCreatedAt on the managed entity is dropped without an error
+        // and every row keeps the instant it was inserted at -- which would leave the three
+        // rows in insertion order and let this test pass on an unordered bag.
+        jdbcTemplate.update(
+                "UPDATE ratings SET created_at = ? WHERE id = ?",
+                writtenAt,
+                rating.getId()
+        );
+    }
 
 
     private Session createSession(String email) {
