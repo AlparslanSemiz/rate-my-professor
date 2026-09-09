@@ -2,6 +2,91 @@
 
 ## [Unreleased]
 
+### Refactor step 9 — the catalogue, and one form written twice
+
+`LectureEditModal` (186) and `ProfessorEditModal` (137) were the same component
+with a different field block. **All 12 of this page's tests passed unchanged**
+through the collapse and the query migration, which is the evidence it is
+behaviour-preserving; four tests were added for behaviour that had none.
+
+**`components/CatalogEditModal.tsx` (new) — 364 lines become 291**
+- The modal, the form, the submit, the Active switch and the save/cancel pair are
+  written once. A caller passes its field block, its title and its error copy.
+- The Active switch and `InactiveVisibilityNotice` moved into the shell: both
+  records have one and it means the same thing in both — saving it off takes the
+  record out of every list the panel can read.
+- The two `build*Update` / `canSave*` functions are passed in **taking the record
+  they came from**, which is what dissolves the awkward part: a professor update
+  needs the assignment the page derived and a lecture update does not, and
+  neither difference reaches the shell.
+- `hooks/useCatalogEditSubmit.ts` is deleted. It existed to share the submit
+  between the two forms; the shell is where that now lives, and `UserEditForm`
+  had already shown the pattern needs no such hook.
+- Both forms are `@mantine/form`. `build*Update` and `canSave*Edit` stay as model
+  functions for the reason step 6 recorded: sending only what changed is a
+  backend contract, not something a form library should decide.
+
+**`hooks/` — one hook became four**
+- `useCatalogLists` owns the two reads and the search over each;
+  `useCatalogActions` owns the four writes as `useMutation`; `useCatalog` is now
+  ten lines composing them and returns `{ lists, actions }` rather than sixteen
+  flat fields. The shape `useModerationPage` moved to in step 7.
+- All four writes invalidate the **whole** catalogue key, not just the list they
+  wrote. Why is now written down: a lecture edit reassigns professors and a
+  professor edit reassigns lectures, so either changes what the other tab shows,
+  and deleting a lecture takes its ratings with it.
+- The mutators still reject on a refused write. That is load-bearing — it is what
+  keeps an edit modal open showing its own error instead of closing over a change
+  the backend did not take — and it now has a test.
+- `catalogKeys.ts` scopes the cache, with the lecture filter inside the ratings
+  key so switching it is a cache lookup rather than a reload.
+
+**`hooks/useRatings.ts` — `useInfiniteQuery`**
+- The hand-managed page, cursor, `busy` flag and manual append are gone.
+  `placeholderData: keepPreviousData` so a refused lecture filter does not empty
+  the table.
+- Deleting a rating is a mutation that invalidates. The documented behaviour is
+  kept exactly: it re-reads rather than dropping the row locally, because the
+  backend decides what is left.
+- `RatingsTable` took a `nextCursor` and used it only to ask "is there more?". It
+  takes `hasMore` now; the cursor is the hook's business. Same change
+  `AuditLogsTable` had in step 5.
+
+**`model/` (new), replacing two flat files**
+- `catalogModel.ts` and `catalogEditModel.ts` are `model/catalog.ts` and
+  `model/edit.ts` behind a barrel, with their unit tests beside them — matching
+  `users/model/` and `moderation/model/`.
+- `model/deletion.ts` is new. `CatalogPage` had three `ConfirmModal`s differing
+  only in wording, and the wording is the part that matters: a lecture takes its
+  comments, answers and ratings, a professor takes only the assignment, a rating
+  is someone's own assessment. That copy is now a model function and there is one
+  dialog, in `components/CatalogDeleteModal.tsx`.
+
+**`CatalogPage.tsx` — 154 lines to 137, and five state slots to two**
+- It held five `useState<T | null>` of **whole records**. The lists are re-read
+  after every write, so a held record was the one that was clicked rather than
+  the one that now exists. It holds ids and looks the record up from what is
+  current — which is what `FeedbackPage` was already doing.
+
+**Tests — four added, none changed**
+- A refused save keeps the editor open, shows the backend's reason, and keeps
+  what was typed. This is what the rethrow above exists for and nothing covered
+  it.
+- The professors tab's search box had no test at all.
+- `model/deletion.unit.test.ts` covers all three deletions, including that a
+  professor deletion says the lectures stay.
+- `CatalogPage.integration.test.tsx` gains `withQueryClient`. That is the only
+  change to an existing test in the whole step.
+
+**Coverage: 90.34 / 82.93 / 88.13 / 92.64**, against 89.58 / 83.14 / 86.48 /
+92.12 before. Statements, functions and lines are up. Branches are 0.21 down, and
+the reason is structural rather than a missing test: the deleted hand-rolled
+state machines were dense in branches the suite did exercise, and what replaced
+them are TanStack's derived expressions — `isPending || (isFetching &&
+!isFetchingNextPage)` — whose combinations cannot all occur in a test. Three
+tests were added chasing it before that became clear; all three pin real
+behaviour and are kept.
+
 ### Refactor step 8 — the dashboard was migrated, and put back
 
 `useDashboardData` was rewritten on `useQuery` with `refetchInterval`, which

@@ -7,7 +7,7 @@ import {
   canSaveProfessorEdit,
   createLectureEditDraft,
   createProfessorEditDraft,
-} from './catalogEditModel'
+} from './edit'
 
 const lecture: Lecture = {
   id: 'lecture-1',

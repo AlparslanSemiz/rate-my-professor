@@ -4,7 +4,7 @@ import type { MouseEvent } from 'react'
 import type { Lecture } from '@/api/catalog'
 import { enumLabel } from '@/utils/enumLabel'
 import { activateOnEnterOrSpace } from '@/utils/keyboard'
-import { lectureLabel, lectureTerm, professorName } from '../catalogModel'
+import { lectureLabel, lectureTerm, professorName } from '../model'
 import {
   catalogCellStyle,
   catalogNowrapCellStyle,

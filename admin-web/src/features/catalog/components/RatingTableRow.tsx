@@ -3,7 +3,7 @@ import { IconTrash } from '@tabler/icons-react'
 import { type Lecture, type Rating } from '@/api/catalog'
 import { enumLabel } from '@/utils/enumLabel'
 import { formatDate } from '@/utils/formatDate'
-import { lectureLabel } from '../catalogModel'
+import { lectureLabel } from '../model'
 import {
   catalogCellStyle,
   catalogNowrapCellStyle,

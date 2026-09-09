@@ -1,15 +1,12 @@
-import { useState } from 'react'
-import { Button, Group, Modal, MultiSelect, Stack, Switch, TextInput } from '@mantine/core'
+import { Group, MultiSelect, TextInput } from '@mantine/core'
 import type { Lecture, Professor, ProfessorUpdate } from '@/api/catalog'
-import ErrorAlert from '@/components/ErrorAlert'
 import {
   buildProfessorUpdate,
   canSaveProfessorEdit,
   createProfessorEditDraft,
-} from '../catalogEditModel'
-import { lectureLabel } from '../catalogModel'
-import { useCatalogEditSubmit } from '../hooks/useCatalogEditSubmit'
-import InactiveVisibilityNotice from './InactiveVisibilityNotice'
+  lectureLabel,
+} from '../model'
+import CatalogEditModal from './CatalogEditModal'
 
 interface ProfessorEditModalProps {
   professor: Professor | null
@@ -20,6 +17,13 @@ interface ProfessorEditModalProps {
   onSubmit: (id: string, update: ProfessorUpdate) => Promise<void>
 }
 
+/**
+ * The professor's fields. Everything around them is `CatalogEditModal`.
+ *
+ * The three model calls are bound to `assignedLectureIds` here, because the professor
+ * endpoint does not report the assignment — it is derived from the lecture list the page
+ * already loaded, and only this component knows that.
+ */
 export default function ProfessorEditModal({
   professor,
   lectures,
@@ -28,110 +32,36 @@ export default function ProfessorEditModal({
   onSubmit,
 }: ProfessorEditModalProps) {
   return (
-    <Modal
-      opened={professor !== null}
-      onClose={onClose}
+    <CatalogEditModal
+      record={professor}
       title="Edit professor"
-      centered
-      size="lg"
+      noun="professor"
+      errorMessage="The professor could not be saved."
+      createDraft={(record) => createProfessorEditDraft(record, assignedLectureIds)}
+      buildUpdate={(record, draft) => buildProfessorUpdate(record, assignedLectureIds, draft)}
+      canSave={(record, draft) => canSaveProfessorEdit(record, assignedLectureIds, draft)}
+      onClose={onClose}
+      onSubmit={onSubmit}
     >
-      {/* Keyed on the professor so the fields are initial state rather than state kept in
-          step with a prop. */}
-      {professor && (
-        <ProfessorEditForm
-          key={professor.id}
-          professor={professor}
-          lectures={lectures}
-          assignedLectureIds={assignedLectureIds}
-          onClose={onClose}
-          onSubmit={onSubmit}
-        />
+      {(form) => (
+        <>
+          <Group grow align="flex-start">
+            <TextInput label="First name" {...form.getInputProps('firstName')} />
+            <TextInput label="Last name" {...form.getInputProps('lastName')} />
+          </Group>
+          <MultiSelect
+            label="Lectures"
+            description="Replaces the assignment — clear it to detach the professor from every lecture."
+            data={lectures.map((lecture) => ({
+              value: lecture.id,
+              label: lectureLabel(lecture),
+            }))}
+            searchable
+            clearable
+            {...form.getInputProps('lectureIds')}
+          />
+        </>
       )}
-    </Modal>
-  )
-}
-
-interface ProfessorEditFormProps {
-  professor: Professor
-  lectures: Lecture[]
-  assignedLectureIds: string[]
-  onClose: () => void
-  onSubmit: (id: string, update: ProfessorUpdate) => Promise<void>
-}
-
-function ProfessorEditForm({
-  professor,
-  lectures,
-  assignedLectureIds,
-  onClose,
-  onSubmit,
-}: ProfessorEditFormProps) {
-  const [draft, setDraft] = useState(() => createProfessorEditDraft(professor, assignedLectureIds))
-  const update = buildProfessorUpdate(professor, assignedLectureIds, draft)
-  const canSave = canSaveProfessorEdit(professor, assignedLectureIds, draft)
-
-  const { saving, error, handleSubmit } = useCatalogEditSubmit({
-    id: professor.id,
-    update,
-    canSave,
-    onClose,
-    onSubmit,
-    errorMessage: 'The professor could not be saved.',
-  })
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <Stack gap={14}>
-        <Group grow align="flex-start">
-          <TextInput
-            label="First name"
-            value={draft.firstName}
-            onChange={(event) => {
-              const firstName = event.currentTarget.value
-              setDraft((current) => ({ ...current, firstName }))
-            }}
-          />
-          <TextInput
-            label="Last name"
-            value={draft.lastName}
-            onChange={(event) => {
-              const lastName = event.currentTarget.value
-              setDraft((current) => ({ ...current, lastName }))
-            }}
-          />
-        </Group>
-        <MultiSelect
-          label="Lectures"
-          description="Replaces the assignment — clear it to detach the professor from every lecture."
-          data={lectures.map((lecture) => ({
-            value: lecture.id,
-            label: lectureLabel(lecture),
-          }))}
-          value={draft.lectureIds}
-          onChange={(lectureIds) => setDraft((current) => ({ ...current, lectureIds }))}
-          searchable
-          clearable
-        />
-        <Switch
-          label="Active"
-          checked={draft.active}
-          onChange={(event) => {
-            const active = event.currentTarget.checked
-            setDraft((current) => ({ ...current, active }))
-          }}
-          color="green"
-        />
-        {!draft.active && <InactiveVisibilityNotice noun="professor" />}
-        <ErrorAlert message={error} mb={0} />
-        <Group justify="flex-end" gap={10}>
-          <Button variant="subtle" color="gray" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button type="submit" color="green" loading={saving} disabled={!canSave}>
-            Save changes
-          </Button>
-        </Group>
-      </Stack>
-    </form>
+    </CatalogEditModal>
   )
 }

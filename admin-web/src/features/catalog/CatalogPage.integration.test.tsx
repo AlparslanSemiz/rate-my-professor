@@ -1,4 +1,5 @@
 import { MantineProvider } from '@mantine/core'
+import { withQueryClient } from '@/test/queryClient'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -65,11 +66,7 @@ const ratings: Rating[] = [
 ]
 
 function renderCatalog() {
-  return render(
-    <MantineProvider>
-      <CatalogPage />
-    </MantineProvider>
-  )
+  return render(<MantineProvider>{withQueryClient(<CatalogPage />)}</MantineProvider>)
 }
 
 describe('Catalogue page', () => {
@@ -123,6 +120,24 @@ describe('Catalogue page', () => {
     })
   })
 
+  it('keeps the editor open and shows the reason when a save is refused', async () => {
+    vi.mocked(catalogService.updateLecture).mockRejectedValueOnce(new Error('Code already in use'))
+    const user = userEvent.setup()
+    renderCatalog()
+
+    await user.click(await screen.findByRole('button', { name: 'Edit CS101 — Algorithms' }))
+    const dialog = await screen.findByRole('dialog')
+    const nameInput = within(dialog).getByRole('textbox', { name: 'Name' })
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Advanced Algorithms')
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+
+    // The modal has to stay: closing over a refused change would tell the operator it landed.
+    expect(await within(dialog).findByText('Code already in use')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(within(dialog).getByRole('textbox', { name: 'Name' })).toHaveValue('Advanced Algorithms')
+  })
+
   it('warns that deleting a lecture takes its content with it', async () => {
     const user = userEvent.setup()
     renderCatalog()
@@ -136,6 +151,17 @@ describe('Catalogue page', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Delete lecture' }))
 
     await waitFor(() => expect(catalogService.deleteLecture).toHaveBeenCalledWith('lecture-1'))
+  })
+
+  it('filters professors by name', async () => {
+    const user = userEvent.setup()
+    renderCatalog()
+
+    await user.click(await screen.findByRole('tab', { name: /Professors/ }))
+    await user.type(await screen.findByLabelText('Search professors'), 'turing')
+
+    expect(await screen.findByText('Alan Turing')).toBeInTheDocument()
+    expect(screen.queryByText('Ada Lovelace')).not.toBeInTheDocument()
   })
 
   it('shows the lectures the backend says a professor teaches', async () => {

@@ -1,91 +1,63 @@
-import { useCallback, useState } from 'react'
-import { ratingsService, type Rating } from '@/api/catalog'
-import { useAsyncData } from '@/hooks/useAsyncData'
+import { useState } from 'react'
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query'
+import { ratingsService } from '@/api/catalog'
 import { getErrorMessage } from '@/utils/getErrorMessage'
+import { catalogKeys } from './catalogKeys'
 
 const RATINGS_PAGE_SIZE = 50
-const EMPTY_PAGE = { ratings: [] as Rating[], nextCursor: null as string | null }
-
-function loadFirstPage() {
-  return ratingsService.list({ limit: RATINGS_PAGE_SIZE })
-}
 
 /**
  * The ratings listing: read and delete, never edit. Kept apart from `useCatalog` because it
  * pages on a cursor while the lecture and professor lists arrive whole.
  */
 export function useRatings() {
-  const page = useAsyncData(loadFirstPage, EMPTY_PAGE, 'Failed to load ratings')
+  const queryClient = useQueryClient()
   const [lectureId, setLectureId] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [actionError, setActionError] = useState('')
 
-  const setPage = page.setData
-
-  const read = useCallback(
-    async (nextLectureId: string | null, cursor?: string | null) => {
-      setBusy(true)
-      setActionError('')
-      try {
-        const next = await ratingsService.list({
-          limit: RATINGS_PAGE_SIZE,
-          cursor,
-          lectureId: nextLectureId ?? undefined,
-        })
-        setPage((current) =>
-          cursor
-            ? { ratings: [...current.ratings, ...next.ratings], nextCursor: next.nextCursor }
-            : next,
-        )
-      } catch (error: unknown) {
-        setActionError(getErrorMessage(error, 'The ratings could not be read.'))
-      } finally {
-        setBusy(false)
-      }
-    },
-    [setPage],
-  )
-
-  const filterByLecture = useCallback(
-    (nextLectureId: string | null) => {
-      setLectureId(nextLectureId)
-      void read(nextLectureId)
-    },
-    [read],
-  )
-
-  const loadMore = useCallback(() => {
-    if (page.data.nextCursor) void read(lectureId, page.data.nextCursor)
-  }, [lectureId, page.data.nextCursor, read])
+  const ratings = useInfiniteQuery({
+    queryKey: catalogKeys.ratings(lectureId),
+    queryFn: ({ pageParam }) =>
+      ratingsService.list({
+        limit: RATINGS_PAGE_SIZE,
+        cursor: pageParam,
+        lectureId: lectureId ?? undefined,
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (page) => page.nextCursor,
+    // Filtering by lecture is a different query. Without this the rows vanish while it runs,
+    // and a refused filter would leave the operator with an empty table.
+    placeholderData: keepPreviousData,
+  })
 
   /** Re-reads rather than dropping the row locally: the backend decides what is left. */
-  const remove = useCallback(
-    async (id: string) => {
-      setBusy(true)
-      setActionError('')
-      try {
-        await ratingsService.delete(id)
-        await read(lectureId)
-      } catch (error: unknown) {
-        setActionError(getErrorMessage(error, 'The rating could not be deleted.'))
-      } finally {
-        setBusy(false)
-      }
-    },
-    [lectureId, read],
-  )
+  const remove = useMutation({
+    mutationFn: (id: string) => ratingsService.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: catalogKeys.ratings(lectureId) }),
+  })
+
+  const loadError = ratings.error ? getErrorMessage(ratings.error, 'Failed to load ratings') : ''
 
   return {
-    ratings: page.data.ratings,
-    nextCursor: page.data.nextCursor,
+    ratings: ratings.data?.pages.flatMap((page) => page.ratings) ?? [],
+    hasMore: ratings.hasNextPage,
     lectureId,
-    loading: page.loading,
-    loadError: page.error,
-    retry: page.retry,
-    busy,
-    actionError,
-    filterByLecture,
-    loadMore,
-    remove,
+    loading: ratings.isPending || (ratings.isFetching && !ratings.isFetchingNextPage),
+    loadError,
+    actionError: remove.error
+      ? getErrorMessage(remove.error, 'The rating could not be deleted.')
+      : '',
+    busy: ratings.isFetching || remove.isPending,
+    filterByLecture: setLectureId,
+    loadMore: async () => {
+      await ratings.fetchNextPage()
+    },
+    remove: async (id: string) => {
+      await remove.mutateAsync(id)
+    },
   }
 }

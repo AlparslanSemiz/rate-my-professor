@@ -1,7 +1,7 @@
 import { Box, Button, Select, Text, type CSSProperties } from '@mantine/core'
 import { IconStar } from '@tabler/icons-react'
 import { type Lecture, type Rating } from '@/api/catalog'
-import { lectureLabel } from '../catalogModel'
+import { lectureLabel } from '../model'
 import CatalogTablePanel, { CatalogEmptyRow } from './CatalogTablePanel'
 import RatingTableRow from './RatingTableRow'
 import { chrome } from '@/theme'
@@ -16,7 +16,7 @@ interface RatingsTableProps {
   lectures: Lecture[]
   lecturesById: Map<string, Lecture>
   lectureId: string | null
-  nextCursor: string | null
+  hasMore: boolean
   busy: boolean
   onFilterByLecture: (lectureId: string | null) => void
   onLoadMore: () => void
@@ -32,7 +32,7 @@ export default function RatingsTable({
   lectures,
   lecturesById,
   lectureId,
-  nextCursor,
+  hasMore,
   busy,
   onFilterByLecture,
   onLoadMore,
@@ -62,7 +62,7 @@ export default function RatingsTable({
           clearable
         />
       }
-      footer={nextCursor && (
+      footer={hasMore && (
         <Box style={loadMoreStyle}>
           <Button variant="light" loading={busy} onClick={onLoadMore}>
             Load more

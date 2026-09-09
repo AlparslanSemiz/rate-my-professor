@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAverageRating } from './catalogModel'
+import { formatAverageRating } from './catalog'
 
 describe('formatAverageRating', () => {
   it('renders a real average to one decimal', () => {

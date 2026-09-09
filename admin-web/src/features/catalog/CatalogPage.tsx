@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Tabs } from '@mantine/core'
 import { IconSchool, IconStar, IconUserStar } from '@tabler/icons-react'
-import { type Lecture, type Professor, type Rating } from '@/api/catalog'
-import ConfirmModal from '@/components/ConfirmModal'
 import ErrorAlert from '@/components/ErrorAlert'
 import LoadError from '@/components/LoadError'
 import PageHeader from '@/components/PageHeader'
 import PageLoader from '@/components/PageLoader'
+import { useSelectedId } from '@/hooks/useSelectedId'
 import { indexById } from '@/utils/collection'
-import { lectureLabel, professorName } from './catalogModel'
+import type { CatalogDeletion } from './model'
+import CatalogDeleteModal from './components/CatalogDeleteModal'
 import CatalogStats from './components/CatalogStats'
 import LectureEditModal from './components/LectureEditModal'
 import LecturesTable from './components/LecturesTable'
@@ -21,19 +21,26 @@ import { useRatings } from './hooks/useRatings'
 const NO_LECTURES: string[] = []
 
 export default function CatalogPage() {
-  const catalog = useCatalog()
+  const { lists, actions } = useCatalog()
   const ratings = useRatings()
-  const [deletingRating, setDeletingRating] = useState<Rating | null>(null)
-  const [editingLecture, setEditingLecture] = useState<Lecture | null>(null)
-  const [deletingLecture, setDeletingLecture] = useState<Lecture | null>(null)
-  const [editingProfessor, setEditingProfessor] = useState<Professor | null>(null)
-  const [deletingProfessor, setDeletingProfessor] = useState<Professor | null>(null)
+  // Ids rather than records: the lists are re-read after every write, and a held record would
+  // still be the one that was clicked. The row is looked up again below from what is current.
+  const lectureEdit = useSelectedId()
+  const professorEdit = useSelectedId()
+  const [deleting, setDeleting] = useState<CatalogDeletion | null>(null)
 
-  const lectures = catalog.lectures
-  const lecturesById = useMemo(() => indexById(lectures), [lectures])
+  const lecturesById = useMemo(() => indexById(lists.lectures), [lists.lectures])
+  const professorsById = useMemo(() => indexById(lists.professors), [lists.professors])
 
-  if (catalog.loading) return <PageLoader />
-  if (catalog.loadError) return <LoadError message={catalog.loadError} onRetry={catalog.retry} />
+  const editingLecture = lectureEdit.opened
+    ? (lecturesById.get(lectureEdit.selectedId ?? '') ?? null)
+    : null
+  const editingProfessor = professorEdit.opened
+    ? (professorsById.get(professorEdit.selectedId ?? '') ?? null)
+    : null
+
+  if (lists.loading) return <PageLoader />
+  if (lists.loadError) return <LoadError message={lists.loadError} onRetry={lists.retry} />
 
   return (
     <>
@@ -41,16 +48,16 @@ export default function CatalogPage() {
         title="Lectures & Professors"
         description="The lectures students rate and the professors who teach them — names, terms and assignments."
       />
-      <ErrorAlert message={catalog.actionError || ratings.actionError || ratings.loadError} />
-      <CatalogStats lectures={catalog.lectures} professors={catalog.professors} />
+      <ErrorAlert message={actions.actionError || ratings.actionError || ratings.loadError} />
+      <CatalogStats lectures={lists.lectures} professors={lists.professors} />
 
       <Tabs defaultValue="lectures" keepMounted={false}>
         <Tabs.List mb={20}>
           <Tabs.Tab value="lectures" leftSection={<IconSchool size={14} />}>
-            Lectures ({catalog.lectures.length})
+            Lectures ({lists.lectures.length})
           </Tabs.Tab>
           <Tabs.Tab value="professors" leftSection={<IconUserStar size={14} />}>
-            Professors ({catalog.professors.length})
+            Professors ({lists.professors.length})
           </Tabs.Tab>
           <Tabs.Tab value="ratings" leftSection={<IconStar size={14} />}>
             Ratings
@@ -59,96 +66,72 @@ export default function CatalogPage() {
 
         <Tabs.Panel value="lectures">
           <LecturesTable
-            lectures={catalog.filteredLectures}
-            totalCount={catalog.lectures.length}
-            search={catalog.lectureSearch}
-            mutating={catalog.mutating}
-            onSearchChange={catalog.setLectureSearch}
-            onEdit={setEditingLecture}
-            onDelete={setDeletingLecture}
+            lectures={lists.filteredLectures}
+            totalCount={lists.lectures.length}
+            search={lists.lectureSearch}
+            mutating={actions.mutating}
+            onSearchChange={lists.setLectureSearch}
+            onEdit={(lecture) => lectureEdit.open(lecture.id)}
+            onDelete={(record) => setDeleting({ type: 'lecture', record })}
           />
         </Tabs.Panel>
 
         <Tabs.Panel value="professors">
           <ProfessorsTable
-            professors={catalog.filteredProfessors}
-            totalCount={catalog.professors.length}
-            search={catalog.professorSearch}
-            mutating={catalog.mutating}
+            professors={lists.filteredProfessors}
+            totalCount={lists.professors.length}
+            search={lists.professorSearch}
+            mutating={actions.mutating}
             lecturesById={lecturesById}
-            onSearchChange={catalog.setProfessorSearch}
-            onEdit={setEditingProfessor}
-            onDelete={setDeletingProfessor}
+            onSearchChange={lists.setProfessorSearch}
+            onEdit={(professor) => professorEdit.open(professor.id)}
+            onDelete={(record) => setDeleting({ type: 'professor', record })}
           />
         </Tabs.Panel>
+
         <Tabs.Panel value="ratings">
           <RatingsTable
             ratings={ratings.ratings}
-            lectures={catalog.lectures}
+            lectures={lists.lectures}
             lecturesById={lecturesById}
             lectureId={ratings.lectureId}
-            nextCursor={ratings.nextCursor}
-            busy={ratings.busy || ratings.loading}
+            hasMore={ratings.hasMore}
+            busy={ratings.busy}
             onFilterByLecture={ratings.filterByLecture}
             onLoadMore={ratings.loadMore}
-            onDelete={setDeletingRating}
+            onDelete={(record) => setDeleting({ type: 'rating', record })}
           />
         </Tabs.Panel>
       </Tabs>
 
-      {deletingRating && (
-        <ConfirmModal
-          opened
-          title="Delete rating"
-          description={`Remove this rating by ${deletingRating.authorName}? A rating is someone's own assessment, so this cannot be undone.`}
-          confirmLabel="Delete rating"
-          confirmColor="red"
-          onConfirm={async () => {
-            await ratings.remove(deletingRating.id)
-            setDeletingRating(null)
-          }}
-          onClose={() => setDeletingRating(null)}
-        />
-      )}
-
       <LectureEditModal
         lecture={editingLecture}
-        professors={catalog.professors}
-        onClose={() => setEditingLecture(null)}
-        onSubmit={catalog.updateLecture}
+        professors={lists.professors}
+        onClose={lectureEdit.close}
+        onSubmit={actions.updateLecture}
       />
 
       <ProfessorEditModal
         professor={editingProfessor}
-        lectures={catalog.lectures}
+        lectures={lists.lectures}
         assignedLectureIds={editingProfessor?.lectureIds ?? NO_LECTURES}
-        onClose={() => setEditingProfessor(null)}
-        onSubmit={catalog.updateProfessor}
+        onClose={professorEdit.close}
+        onSubmit={actions.updateProfessor}
       />
 
-      {deletingLecture && (
-        <ConfirmModal
-          opened
-          title="Delete lecture"
-          description={`Delete ${lectureLabel(deletingLecture)}? Its comments, answers and ratings go with it. This cannot be undone.`}
-          confirmLabel="Delete lecture"
-          confirmColor="red"
-          onConfirm={() => catalog.deleteLecture(deletingLecture.id)}
-          onClose={() => setDeletingLecture(null)}
-        />
-      )}
-
-      {deletingProfessor && (
-        <ConfirmModal
-          opened
-          title="Delete professor"
-          description={`Delete ${professorName(deletingProfessor)}? The lectures stay — only the assignment is dropped.`}
-          confirmLabel="Delete professor"
-          confirmColor="red"
-          onConfirm={() => catalog.deleteProfessor(deletingProfessor.id)}
-          onClose={() => setDeletingProfessor(null)}
+      {deleting && (
+        <CatalogDeleteModal
+          deletion={deleting}
+          onConfirm={deleteRecord}
+          onClose={() => setDeleting(null)}
         />
       )}
     </>
   )
+
+  function deleteRecord(deletion: CatalogDeletion) {
+    if (deletion.type === 'lecture') return actions.deleteLecture(deletion.record.id)
+    if (deletion.type === 'professor') return actions.deleteProfessor(deletion.record.id)
+    return ratings.remove(deletion.record.id)
+  }
 }

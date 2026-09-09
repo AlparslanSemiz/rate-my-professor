@@ -3,7 +3,7 @@ import { IconPencil, IconTrash } from '@tabler/icons-react'
 import type { MouseEvent } from 'react'
 import type { Lecture, Professor } from '@/api/catalog'
 import { activateOnEnterOrSpace } from '@/utils/keyboard'
-import { formatAverageRating, lectureLabel, professorName } from '../catalogModel'
+import { formatAverageRating, lectureLabel, professorName } from '../model'
 import {
   catalogCellStyle,
   catalogNowrapCellStyle,
