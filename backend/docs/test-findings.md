@@ -1909,6 +1909,164 @@ route pair rather than to a route.
 
 ---
 
+### F-43 — the deployed host serves the panel at `/admin/`, so every `/admin/**` API route is unreachable in production
+
+**Not counted in the totals above and not pinned by a test here**, for the same reason as F-42:
+the defect is in the deployment topology, not in this application. The suite runs the
+application in-process, where `/admin/**` maps exactly as `docs/admin-api.md` claims. Nothing a
+MockMvc sweep — or even the E2E layer, which drives this application directly — can assert
+reaches the proxy that fronts the deployed host.
+
+**What.** On `https://server.example.org`, `/admin/`
+is routed to the admin panel's own nginx container, which serves the static bundle built with
+`VITE_BASE_PATH=/admin/` and ends its location block in
+`try_files $uri $uri/ /admin/index.html`. Every path under `/admin/` is therefore answered with
+the panel's `index.html`, and the backend is never consulted. Observed by curl on 9 September,
+after that day's deployment:
+
+| Request | What the API contract claims | What the deployed host answers |
+| --- | --- | --- |
+| `GET /health` | `200` JSON | `200 {"message":"API healthy","success":true}` — the backend |
+| `GET /auth/me` | `401` JSON | `401 {"message":"Not logged in","success":false}` — the backend |
+| `GET /admin/system/status` | `401` JSON | **`200 text/html`** — the panel's `index.html` |
+| `GET /admin/auth/me` | `401` JSON | **`200 text/html`** |
+| `POST /admin/auth/login` | `400`/`401` JSON | **`405 text/html`** from nginx |
+
+The layer is identified by the headers, not by guessing: the `/admin/**` responses carry
+`cache-control: no-store`, `x-content-type-options: nosniff`, `x-frame-options: DENY` and
+`referrer-policy: same-origin` — the exact set written by the panel repository's
+`docker/nginx.prod.conf.template` — while `GET /health` carries Spring's `vary: Origin`,
+`pragma: no-cache` and `expires: 0`. The split is made upstream of both containers rather than
+inside the panel's nginx: `GET /healthz`, which that nginx answers `200 ok`, comes back as the
+backend's `404` JSON, so only `/admin/` is handed to the panel and everything else goes to the
+API.
+
+**Why nothing is broken today.** The panel calls the legacy root paths only — the deployed
+bundle contains `/auth/me`, `/auth/login`, `/auth/logout`, `/auth/request-login`, `/users`,
+`/system/status`, `/audit-logs`, `/ratings`, `/reports`, `/data/**` and no `/admin/` prefix at
+all. None of them collides. This is the same shape as F-39 and F-40 once more: the path the
+client actually calls is the one carrying production, and the documented path is the one nobody
+exercises.
+
+**Why it matters anyway.**
+
+1. `docs/admin-api.md` presents `/admin/**` as *the* contract, and
+   `AdminApiDocumentationDriftTests` checks it in both directions. Every one of those routes is
+   green in the suite and unreachable on the deployed host. A green in-process assertion about a
+   route the deployment shadows is precisely the gap this repository has already been bitten by.
+2. `docs/adminweb-tasks.md:196` hands the panel repository the task *"Set one base path
+   (`https://<host>/admin`) and move the calls above onto it."* Carried out against this
+   deployment, it would aim every panel call at the panel's own static server: reads would return
+   `index.html` and fail to parse, writes would return `405`. The panel would stop working
+   entirely, and the failure would read as a backend outage. Task 1 of that page carries the same
+   hazard: `POST /admin/auth/login`, the first call it asks the panel to move, is the `405`.
+
+**What the fix was, now that it is decided.** Three options were open — serve the panel from a
+path that does not collide (`/panel/`, or its own host) and leave `/admin/**` to the backend;
+expose the backend under a prefix of its own, `/api/**`, and keep `/admin/` for the panel; or
+change nothing about the routing and keep the backend on its unprefixed root paths.
+
+**On 10 September the third was taken**, and what forced it was F-44 rather than this finding.
+Fixing the panel's login required its calls to be same-origin, and the host already routes
+everything outside `/admin/` here unchanged, so an empty API base worked with no host change at
+all. `/api/**` would have needed the opposite: a new prefix-stripping rule on an nginx whose
+configuration is version controlled in none of the three repositories. Measured, not assumed —
+`GET https://ratemyprofessor.dev/api/health` answers `404 {"message":"Not found"}`, this
+backend's own body, so a `/api` prefix arrives here intact today.
+
+**So this finding does not close, it converts.** The `/admin/**` routes stay unreachable on the
+deployed host, and that is now a property of the design rather than an accident awaiting
+correction. Two consequences are worth naming, because each reads as a defect later:
+
+- `AdminApiDocumentationDriftTests` stays green about routes nobody can call. It is not wrong —
+  it checks this application against `admin-api.md` and the two agree — but it establishes
+  nothing about production, and no test on either side can. Same gap as F-39, F-40 and F-42, and
+  the reason this is written down rather than pinned.
+- The migration tasks are **withdrawn**, not deferred. `docs/adminweb-tasks.md` now carries the
+  decision and its reasoning, so nobody revives them from the task list alone.
+
+**What was changed.** `docs/adminweb-tasks.md` was going out to the panel repository with both
+migration tasks un-annotated, so the hazard was written onto it rather than held back for the
+decision: tasks 1 and 2 are marked blocked, the observations above are reproduced on that page
+with the two directions, and the decision itself is a checkbox addressed to whoever owns the
+deployment. Handing over an instruction that breaks the panel is worse than handing over an
+open question, and the question is the same either way.
+
+**Found by** curling the deployed host to confirm F-39 and F-40 had shipped. Both had — and
+`/admin/auth/me`, the same identity route on its documented path, answered `200 text/html`.
+
+---
+
+### F-44 — the deployed panel could not be logged into at all: an absolute API base URL, and an allowlist that did not know the new domain
+
+**Not counted in the totals above and not pinned by a test here**, for the same reason as F-42
+and F-43: both faults are in deployment configuration, and neither is reachable from a suite
+that runs this application in-process. The application behaved correctly throughout — it
+answered `403` to a cross-origin preflight from an origin nobody had allow-listed, which is what
+that check is for.
+
+**What.** The panel is served from `https://ratemyprofessor.dev/admin/`, and its bundle was
+calling `https://server.example.org/auth/request-login`. Two faults stacked:
+
+1. The panel repository's `.gitlab-ci.yml` baked an absolute `VITE_API_BASE_URL` into the
+   bundle. Confirmed in the shipped artefact rather than in its source — the deployed
+   `HttpService-D_uMGLro.js` held exactly one occurrence of that hostname, passed straight to
+   the API client's constructor.
+2. That made every call cross-origin, so the browser preflighted, and `ADMIN_FRONTEND_ORIGINS`
+   held only the bw-cloud hostname. `403 Invalid CORS request`, before any controller ran. No
+   login code was ever sent.
+
+**The measurement that decided the fix.** The obvious repair — add `https://ratemyprofessor.dev`
+to the allowlist — treats the symptom and leaves the panel one hostname change from the same
+outage. The probes said something better was already in place:
+
+| Probe | Result | What it establishes |
+| --- | --- | --- |
+| `GET ratemyprofessor.dev/health` | `200` JSON, `vary: Origin` + `pragma: no-cache` | this backend already answers at the root of the new domain |
+| `GET ratemyprofessor.dev/api/health` | `404 {"message":"Not found"}` — Spring's own body | `/api` reaches the backend **unstripped**; no prefix-stripping rule exists |
+| `OPTIONS /auth/request-login`, `Origin: ratemyprofessor.dev`, to the bw-cloud host | `403` | the reported failure, reproduced |
+| the same preflight to `ratemyprofessor.dev` | `200` | a same-origin caller passes |
+| the same host, `Origin: evil.example.invalid` | `403` | the allowlist does **not** contain `ratemyprofessor.dev` |
+| DNS, both hostnames | `192.0.2.10` | one server, one nginx, two `server_name`s |
+
+Rows four and five together are the load-bearing pair: the same list rejects a stranger and
+admits the page's own origin, so the admission is Spring's same-origin path and not a permit.
+**That disproves a claim this repository had been making in writing.** `docs/admin-api.md` said
+the origin had to be listed *even when the panel and the API share a host*, on the grounds that
+a browser sends `Origin` on non-`GET` requests regardless. The header is sent; Spring does not
+reject on it when it matches the request's own origin. The page has been corrected, and the
+bypass's dependency on `server.forward-headers-strategy=framework` is now recorded on the
+property itself as well as in `docs/deployment.md` — behind a proxy, Spring can only reconstruct
+the request's origin correctly while the forwarded headers are honoured.
+
+**The fix.** `VITE_API_BASE_URL` is empty in the panel's CI, so every call goes out relative and
+same-origin and CORS is not in the path. `ADMIN_FRONTEND_ORIGINS` narrows to
+`https://ratemyprofessor.dev`: what is left over for callers that are not same-origin, not the
+thing carrying the panel. **Not `/api`** — row two shows nothing strips it here. **Not `/`**
+either: the panel's request builder concatenates base and path without normalising, so `/`
+yields `//auth/request-login`, which a browser reads as a protocol-relative host.
+
+**Verified before deployment, not after.** A build with the variable empty produces a bundle
+whose only difference from the deployed one is that URL replaced by `''` — a one-token diff,
+nothing else moved. That an empty `--build-arg` overrides the `ARG …=/api` default was confirmed
+under **Kaniko**, the tool CI actually runs, rather than inferred from local Docker behaviour.
+That mattered: had the empty value been dropped silently, the bundle would have shipped with
+`/api` and failed in a new way, one hop further from the symptom.
+
+**What was deliberately not done.** The second hostname is still served and is **not** closed.
+The released Android client has it compiled in (`RetrofitClient.java:31`, recorded in
+`docs/frontend-consumer-contract.md`), and both names resolve to one address, so a `444` would
+break every installed copy. A `301` would be worse than a refusal: OkHttp downgrades a
+redirected `POST` to `GET`, so logins would fail in a shape that reads as a backend outage.
+Closing it is possible only behind a released Android client that points elsewhere, and that is
+now the recorded precondition rather than an open question.
+
+**Found by** reading the browser's network tab against the deployed bundle, then curling both
+hostnames to separate the two faults — the wrong base URL and the missing origin presented as
+one failure and were not.
+
+---
+
 ## Negative results
 
 A sweep that finds nothing is only worth something if what it covered is written down.

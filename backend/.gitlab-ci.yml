@@ -229,7 +229,14 @@ server:deploy:staging:
     # value silently wins over the defaults in application.properties. That is how the
     # panel ended up with an empty CORS allow-list and answered every browser call with
     # 403 "Invalid CORS request". Both values below therefore carry an explicit default.
-    DEFAULT_FRONTEND_ORIGINS: "https://server.example.org"
+    #
+    # One origin, and it is the address the panel is actually served from. The panel and this
+    # backend now share a host, so its calls are same-origin and never reach the CORS check --
+    # this list is what is left over for anything that is not. The bw-cloud hostname was
+    # dropped from it deliberately: it still serves the API, because the released Android
+    # client hardcodes it (docs/deployment.md), but nothing is served from it as a browser
+    # origin any more.
+    DEFAULT_FRONTEND_ORIGINS: "https://ratemyprofessor.dev"
     DEFAULT_BOOTSTRAP_EMAILS: "u-kisi4@student.kit.edu:Alparslan,u-kisi5@student.kit.edu:Bob,u-kisi6@student.kit.edu:Cem,u-kisi7@student.kit.edu:Dan,u-kisi8@student.kit.edu:Eva,u-kisi9@student.kit.edu:Fin"
     DEFAULT_SUPERUSER_EMAILS: "u-kisi4@student.kit.edu"
   before_script:
@@ -580,7 +587,7 @@ health:check:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
   cache: []
   variables:
-    HEALTH_URL: "https://server.example.org/health"
+    HEALTH_URL: "https://ratemyprofessor.dev/health"
   before_script:
     - apk add --no-cache curl
   script:

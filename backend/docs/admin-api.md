@@ -990,19 +990,42 @@ port included. A browser call from an origin outside the list is answered with
 fails and the panel cannot be logged into. An empty value falls back to the local
 development origins and logs a warning at startup; it does not disable the check.
 
-The origin has to be listed **even when the panel and the API share it**. The deployed
-setup serves the panel under `/admin/` on the same host that proxies this backend, and a
-browser still sends `Origin` on every non-`GET` request, same-origin included. The check
-looks at that header alone, so a same-origin `POST` is rejected exactly like a
-cross-origin one when the list does not contain the host. Confirm a deployment with:
+**A same-origin caller never reaches this check**, so it does not need to be listed. This
+page previously claimed the opposite — that the origin had to be listed even when the panel
+and the API shared a host, because a browser sends `Origin` on non-`GET` requests regardless.
+The header is indeed sent; Spring simply does not reject on it when the origin matches the
+request's own. Measured against the deployed host, where the allow-list did **not** contain
+`https://ratemyprofessor.dev`:
+
+| Preflight | Result |
+| --- | --- |
+| `Origin: https://ratemyprofessor.dev` → `https://ratemyprofessor.dev` | `200` |
+| `Origin: https://evil.example.invalid` → `https://ratemyprofessor.dev` | `403` |
+| `Origin: https://ratemyprofessor.dev` → the other hostname | `403` |
+
+The first two lines together are the proof: the same list rejects a stranger and admits the
+page's own origin, so the admission is the same-origin path and not a permit.
+
+This is why the deployed panel is configured with an **empty** API base URL — its calls are
+same-origin and CORS is out of the picture — and why `ADMIN_FRONTEND_ORIGINS` is best read as
+what is left over for callers that are *not* same-origin. It still matters: get it wrong and a
+panel served from anywhere else is locked out.
+
+The bypass rests on `server.forward-headers-strategy=framework`. Spring compares `Origin`
+against the request URL it reconstructs, and behind a proxy that reconstruction is only right
+while forwarded headers are honoured.
+
+To check the list itself, send an origin that is definitely not on it:
 
 ```bash
-curl -i -X POST -H "Origin: <panel origin>" -H "Content-Type: application/json" \
-  -d '{"email":"nobody@example.invalid"}' <api base>/admin/auth/request-login
+curl -i -X POST -H "Origin: https://evil.example.invalid" -H "Content-Type: application/json" \
+  -d '{"email":"nobody@example.invalid"}' <api base>/auth/request-login
 ```
 
-`400 Invalid KIT email` means the origin is accepted and the request reached the
-controller. `403 Invalid CORS request` means it did not.
+`403 Invalid CORS request` is the expected answer there. Against a listed or same-origin
+caller the same call answers `400 Invalid KIT email`, meaning it reached controller
+validation. Neither spends the login-code budget: the KIT-address check throws before the
+rate limiter runs.
 
 ### Optional integrations
 
@@ -1018,14 +1041,20 @@ With any of the three GitLab values unset the integration reports itself as disa
 `GET /admin/system/status` returns `gitlabEnabled:false` and `POST /admin/reports/{id}/gitlab-issue`
 answers `503`. Everything else works unchanged.
 
-The Admin Web setting is:
+The Admin Web setting for a backend you are running yourself is:
 
 ```dotenv
 VITE_API_BASE_URL=http://localhost:8080
 ```
 
-For a reverse proxy that exposes this backend under `/api`, use
-`VITE_API_BASE_URL=/api`; `/api` is a proxy prefix, not a backend route prefix.
+**The deployed panel sets it empty**, because it is served from the same host that proxies
+this backend and an empty base keeps every call same-origin.
+
+`VITE_API_BASE_URL=/api` is for a reverse proxy that exposes this backend under `/api` **and
+strips the prefix before forwarding** — `/api` is a proxy prefix, never a backend route
+prefix. The deployment host does no such stripping, so `/api` there would arrive as
+`/api/auth/login` and get this backend's `404`. The panel's dev server does strip it, which is
+why `/api` is right in development and wrong in production.
 
 ## Schema management
 

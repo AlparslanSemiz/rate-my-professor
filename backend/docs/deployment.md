@@ -32,11 +32,11 @@ configuration is in `.mvn/wrapper/maven-wrapper.properties`.
 | Backend API | Spring Boot application exposing authentication, account, catalogue, social, moderation, audit, health, and system status endpoints. | `src/main/java/com/pse`, `docs/admin-api.md`, `docker-compose.prod.yml` |
 | PostgreSQL database | Runtime persistence for the backend. The app uses JDBC/JPA with PostgreSQL in normal runtime and H2 in tests. | `pom.xml`, `application.properties`, `docker-compose.yml` |
 | SMTP server | Sends OTP login emails and successful-login notification emails. | `MailService`, `application.properties`, `.env.example` |
-| Admin Web origin | Browser origin allowed through CORS. CI defaults it to the BW Cloud/staging URL. | `CorsConfig`, `.gitlab-ci.yml`, `docs/admin-api.md` |
+| Admin Web | The admin panel, served by its own nginx container under `/admin/` on the same host as this API. Its calls are therefore same-origin and do not use CORS. | `CorsConfig`, `.gitlab-ci.yml`, `docs/admin-api.md` |
 | GitLab issue integration | Optional backend integration for creating GitLab issues from bug reports. | `RestClientGitLabClient`, `application.properties`, `.env.example` |
 | IPinfo and Geoapify | Optional login-location enrichment for notification emails. | `LoginLocationService`, `.env.example` |
 | GitLab Container Registry | Stores backend images built by CI. | `.gitlab-ci.yml` |
-| BW Cloud/staging host | Deployment target reached by SSH from CI and updated with Docker. | `.gitlab-ci.yml` |
+| BW Cloud/staging host | Deployment target reached by SSH from CI and updated with Docker. Answers to two hostnames on one address; see [Public address and request path](#public-address-and-request-path). | `.gitlab-ci.yml` |
 
 ## Configuration
 
@@ -57,7 +57,7 @@ Do not commit real secret values. `.env` is ignored by `.gitignore`.
 | `SPRING_DATASOURCE_PASSWORD` | PostgreSQL password. | Defaults to empty. Treat as secret. |
 | `SPRING_FLYWAY_ENABLED` | Enables versioned Flyway migrations during backend startup. | Defaults to `true`. CI staging also defaults to `true`. |
 | `SPRING_FLYWAY_BASELINE_ON_MIGRATE` | Allows the first Flyway deployment to baseline an existing non-empty database previously managed by Hibernate. | The application defaults to `true` for the pre-Flyway case. CI writes `false` for the deployed environment, which was baselined on 2026-09-05. |
-| `ADMIN_FRONTEND_ORIGINS` | Comma-separated exact browser origins allowed by CORS. | Local default is `http://localhost:5173,http://127.0.0.1:5173`. Wildcards are rejected. |
+| `ADMIN_FRONTEND_ORIGINS` | Comma-separated exact browser origins allowed by CORS. Does not apply to same-origin callers, which never reach the check. | Local default is `http://localhost:5173,http://127.0.0.1:5173`; CI deploys `https://ratemyprofessor.dev`. Wildcards are rejected. |
 | `ADMIN_BOOTSTRAP_EMAILS` | Comma-separated `email` or `email:Display Name` entries promoted to admin on startup. | `application.properties` contains project defaults; `.env.example` contains an example admin email. |
 | `ADMIN_SUPERUSER_EMAILS` | Comma-separated addresses of administrators that may also moderate other administrator accounts. | Must already be administrators; this list does not create them. Defaults to `u-kisi4@student.kit.edu`. Not a role: these accounts still report `ADMIN`. |
 | `AUTH_RATE_LIMIT_HMAC_KEY` | HMAC key for rate-limit subject hashes. | Must contain at least 32 characters or startup fails. Treat as secret. |
@@ -153,9 +153,45 @@ variables.
 | `587` | Outbound from backend | SMTP port used in `.env.example` and CI staging default. | `.env.example`, `.gitlab-ci.yml` |
 | `DEPLOY_PORT` | Inbound SSH to server | CI deployment SSH port. | `.gitlab-ci.yml` |
 
-The repository references the BW Cloud/staging HTTPS URL
-`https://server.example.org` for the
-default Admin Web origin and scheduled health check.
+## Public address and request path
+
+**The panel's address is `https://ratemyprofessor.dev`.** That is the one to use, the one CI
+health-checks, and the one in `ADMIN_FRONTEND_ORIGINS`.
+
+One nginx on the host answers for both hostnames — they resolve to the same address — and
+splits by path:
+
+| Path | Goes to |
+| --- | --- |
+| `/admin/` and everything below it | the admin panel's own nginx container, which serves its static bundle and falls back to `index.html` |
+| everything else | this backend, **with the path unchanged** |
+
+Two consequences follow from that table, and both have been got wrong before.
+
+**The panel's API base URL is empty, and must stay empty.** Because the panel is served from
+the same host that proxies this backend, an empty base makes every one of its calls
+same-origin: the browser sends them to `/auth/request-login` and CORS never runs. An absolute
+URL breaks it — that is exactly what happened, the browser preflighted a second hostname and
+this backend answered `403` because that origin was not allow-listed. `/api` breaks it too, for
+a quieter reason: nothing on this host strips the prefix, so the request arrives here as
+`/api/auth/login` and gets the backend's own `404`. Verify with
+`curl -s https://ratemyprofessor.dev/api/health` — a `{"message":"Not found"}` body is this
+backend answering, not nginx.
+
+**The bw-cloud hostname must keep serving.** It is no longer a browser origin and no longer
+appears in any default here, but it is not closed and must not be: the released Android client
+has it compiled in (`RetrofitClient.java:31`, recorded in
+[frontend-consumer-contract.md](frontend-consumer-contract.md)). Returning `444` would break
+every installed copy, and a `301` would be worse — OkHttp downgrades a redirected `POST` to
+`GET`, so logins would fail in a way that reads as a backend outage. Closing it is possible
+only after a released Android client points somewhere else.
+
+**The same-origin bypass depends on `server.forward-headers-strategy=framework`**
+(`application.properties:3`). Spring decides "same origin" by comparing the `Origin` header
+against the request URL it reconstructs, and behind this proxy that reconstruction is only
+correct while the forwarded headers are honoured. Turn that off and same-origin calls start
+failing CORS. The same note is on the property.
+
 
 ## Build Instructions
 
@@ -463,7 +499,15 @@ Use the checks that are explicitly supported by the source and CI configuration:
    unreachable, when Flyway reports a failed migration, when Flyway has pending
    migrations, or when no migration has been applied or baselined.
 
-2. For the BW Cloud/staging URL referenced by CI, confirm:
+2. Confirm the public address, which is what CI health-checks:
+
+   ```bash
+   curl -fsS https://ratemyprofessor.dev/health
+   ```
+
+   Then confirm the bw-cloud hostname still answers. It is not a browser origin any more, but
+   the released Android client is compiled against it and closing it would break every
+   installed copy:
 
    ```bash
    curl -fsS https://server.example.org/health
@@ -480,15 +524,25 @@ Use the checks that are explicitly supported by the source and CI configuration:
    about a year out, and a non-administrator address on `/admin/auth/login` should be
    refused with `403 Admin access required`.
 
-5. Verify CORS for the Admin Web origin, on the path the panel actually calls:
+5. Verify the panel's own call reaches a controller. Note the path: `/auth/request-login`, the
+   unprefixed one the panel actually calls, **not** `/admin/auth/request-login`, which the
+   panel's static server shadows on this host.
 
    ```bash
-   curl -i -X POST -H "Origin: <panel origin>" -H "Content-Type: application/json" -d '{"email":"nobody@example.invalid"}' <api base>/admin/auth/request-login
+   curl -i -X POST -H "Origin: https://ratemyprofessor.dev" -H "Content-Type: application/json" -d '{"email":"nobody@example.invalid"}' https://ratemyprofessor.dev/auth/request-login
    ```
 
-   `400 Invalid KIT email` means the origin was accepted and the request reached
-   controller validation. `403 Invalid CORS request` means the origin is not in
-   `ADMIN_FRONTEND_ORIGINS`.
+   `400 Invalid KIT email` means the request reached controller validation. `403 Invalid CORS
+   request` means it did not — the bundle is calling a different origin than the one serving
+   it, so rebuild the panel with an empty API base rather than adding an origin here.
+
+   **This costs nothing from the login-code budget.** `LoginCodeService.requestLogin` validates
+   the KIT address and throws before either `rateLimitService.consume` call, so neither the
+   per-email (3) nor the per-IP (20) bucket is touched by an invalid address.
+
+   To check the allow-list itself rather than the panel, send an origin that is definitely not
+   on it — `-H "Origin: https://evil.example.invalid"` — and expect `403`. A same-origin call
+   never reaches the check at all, so it cannot tell you whether the list is right.
 
 6. Check recent deployment logs. The CI deployment job prints the last 100 lines
    after a successful health check and the last 200 lines after a failed health

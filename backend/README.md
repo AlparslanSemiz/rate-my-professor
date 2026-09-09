@@ -9,6 +9,30 @@ year-long sessions; `/admin/**` serves the admin panel and hands out one-day ses
 session you get is decided by the endpoint you called, not by whether your account is an
 administrator — see [docs/admin-api.md](docs/admin-api.md).
 
+**Deployed, the panel calls the unprefixed routes, not `/admin/**`.** One nginx serves
+`https://ratemyprofessor.dev`: `/admin/` is the panel's own static container, everything else is
+this backend with the path unchanged. The `/admin/**` twins exist in the application and the
+suite exercises them, but on that host the panel's static server shadows them. This is settled,
+not a migration in progress — [docs/deployment.md](docs/deployment.md) has the reasoning.
+
+## The one access address, and why the panel's API base URL is relative
+
+`https://ratemyprofessor.dev` is the address. The panel is built with an **empty**
+`VITE_API_BASE_URL` so that every call it makes is same-origin, which is what keeps CORS out of
+the request path entirely — a same-origin caller never reaches the allowlist.
+
+Do not give the panel an absolute backend URL. That is what was deployed, and it made the panel
+impossible to log into: the browser saw a second hostname, preflighted, and the backend
+answered `403` because that origin was not allow-listed. `/api` is not a substitute either —
+nothing on the host strips such a prefix, so the request arrives here intact and `404`s.
+
+`ADMIN_FRONTEND_ORIGINS` still matters, for callers that are *not* same-origin. It holds exact
+origins only; wildcards are rejected at startup.
+
+A second hostname (`…ka.bw-cloud-instance.org`) resolves to the same server and still serves the
+API. It is not an access address and is not in any allowlist, but it must stay up: the released
+Android client is compiled against it. See [docs/deployment.md](docs/deployment.md).
+
 ## Build and test
 
 ```bash

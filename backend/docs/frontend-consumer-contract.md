@@ -12,6 +12,14 @@ Generated: 2026-09-09. Client revision: `748ddbb` (branch `main`).
 | Item | Value | Evidence |
 |---|---|---|
 | Base URL | `https://server.example.org/` | `RetrofitClient.java:31` |
+
+> **This hostname is compiled into released builds, so the deployment cannot close it.** It
+> resolves to the same server as `https://ratemyprofessor.dev` and still serves the API at the
+> root, but it is no longer an access address and is not in `ADMIN_FRONTEND_ORIGINS`. Returning
+> `444` there would break every installed copy of the app; a `301` would be worse, because OkHttp
+> downgrades a redirected `POST` to `GET` and logins would fail as if the backend were down.
+> Moving the base URL needs a released client first. See `docs/deployment.md`.
+
 | Path prefix | **none** | every `@GET`/`@POST`/`@PATCH` value starts with `/`, so Retrofit resolves it against the host root |
 | `/admin` prefix | **not used anywhere** | no route string in `APIService.java` contains `admin` |
 | JSON codec | Gson, default field naming (Java field name == wire name) | `RetrofitClient.java:103-113` |

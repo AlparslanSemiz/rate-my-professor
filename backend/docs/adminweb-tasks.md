@@ -4,6 +4,16 @@ Everything the admin panel repository has to do after the backend split the Admi
 from the app API. The full contract is in [admin-api.md](admin-api.md); this page is only
 the work list.
 
+**Revised 10 September 2026.** Two things are new since the last version you were sent, and
+neither is a change to the API. **Tasks 1 and 2 are withdrawn** — on the deployed host `/admin`
+is your own static server, and the decision has been taken to leave it that way, so the
+unprefixed root paths are the production contract permanently. Read the section before task 1.
+And the panel's login was broken for a different reason, now fixed in your repository: the
+bundle was built with an absolute `VITE_API_BASE_URL`, which made every call cross-origin and
+got it `403` on the preflight. It builds with an empty base now, so the calls are same-origin.
+Nothing else on this page moved — no route, no field and no response shape has changed since
+the last revision.
+
 ## What changed, in one paragraph
 
 The session you get now depends on **which login endpoint you called**, not on whether the
@@ -72,7 +82,91 @@ want it.
 
 ---
 
+## Read this before task 1 or task 2 — on the deployed host, `/admin` is your nginx
+
+**Decided on 10 September: tasks 1 and 2 are blocked permanently, not pending anything.** The
+deployment keeps `/admin/` for your static container and keeps this backend on its unprefixed
+root paths. Do not move any call onto `/admin`. Everything else on this page is unaffected and
+still worth doing. The reasoning is below; the observations that produced it are unchanged.
+
+On `https://ratemyprofessor.dev` — and on the bw-cloud hostname, which is the same server —
+`/admin/` is routed
+to **your** static container, not to this backend. The bundle is built with
+`VITE_BASE_PATH=/admin/`, and your `docker/nginx.prod.conf.template` ends its location block in
+`try_files $uri $uri/ /admin/index.html` — so every path under `/admin/` is answered with your
+`index.html` and the API is never consulted. Observed by curl on 9 September, after that day's
+deployment:
+
+| Request | What `admin-api.md` claims | What the deployed host answers |
+| --- | --- | --- |
+| `GET /health` | `200` JSON | `200 {"message":"API healthy","success":true}` — the backend |
+| `GET /auth/me` | `401` JSON | `401 {"message":"Not logged in","success":false}` — the backend |
+| `GET /admin/auth/me` | `401` JSON | **`200 text/html`** — your `index.html` |
+| `GET /admin/system/status` | `401` JSON | **`200 text/html`** |
+| `POST /admin/auth/login` | `400`/`401` JSON | **`405 text/html`** from nginx |
+
+Which layer answered is read off the headers rather than guessed. The `/admin/**` responses
+carry `cache-control: no-store`, `x-content-type-options: nosniff`, `x-frame-options: DENY` and
+`referrer-policy: same-origin` — the exact set your nginx template writes — while `GET /health`
+carries Spring's `vary: Origin`, `pragma: no-cache` and `expires: 0`. The split is made upstream
+of both containers rather than inside your nginx: `GET /healthz`, which your nginx answers
+`200 ok`, comes back as the backend's `404` JSON. So `/admin/` is handed to you and everything
+else goes to the API.
+
+**Nothing is broken today.** Your deployed bundle calls `/auth/me`, `/auth/login`,
+`/auth/logout`, `/auth/request-login`, `/users`, `/system/status`, `/audit-logs`, `/ratings`,
+`/reports` and `/data/**`, with no `/admin/` prefix anywhere in it. None of those collide.
+Carrying out tasks 1 and 2 against this deployment is what would break it: reads would come back
+as your own `index.html` and fail to parse, writes would come back `405`, and the whole failure
+would read as a backend outage.
+
+This is the same shape as the `GET /auth/me` incident: an assertion that is green in our suite
+about a route the deployment shadows. Our tests run this application in-process, where
+`/admin/**` maps exactly as `admin-api.md` says. No test on either side can see the proxy in
+front of the deployed host, which is why this is written down here rather than pinned.
+
+**Three ways out were on the table, and the third was taken.**
+
+1. **Serve the panel from a path that does not collide** — `/panel/`, or its own host — and
+   leave `/admin/**` to the backend. That is `VITE_BASE_PATH` and the location block in your
+   repository, plus the routing rule on the host.
+2. **Expose the backend under a prefix of its own** — `/api/**` — and keep `/admin/` for the
+   panel. Your calls would then read `/api/admin/auth/login` and so on.
+3. **Change nothing about the routing.** You keep `/admin/`, we keep the unprefixed root paths,
+   and the `/admin/**` API routes stay shadowed on this host.
+
+- [x] **Decided on 10 September: option 3.** What forced it was a different bug. Your bundle was
+      built with an absolute `VITE_API_BASE_URL` pointing at the bw-cloud hostname, so the
+      browser was making a cross-origin call from `https://ratemyprofessor.dev`, and this
+      backend answered `403` on the preflight — nobody could log in at all. The fix was to build
+      with an **empty** base so your calls go out same-origin, which works only because the host
+      already routes everything outside `/admin/` here unchanged. Option 2 would have required
+      the opposite: a new prefix-stripping rule on a host whose nginx config is version
+      controlled in none of the three repositories. Option 1 would have meant moving your served
+      path and breaking every bookmark. Option 3 costs one line in your CI and no host change,
+      and it is what is deployed.
+
+**What that means for this page.** Tasks 1 and 2 do not unblock later; they are withdrawn. The
+legacy root paths are the contract in production, permanently, and nothing on them is deleted —
+see task 5. `admin-api.md` still documents the `/admin/**` twins because they exist in the
+application and the suite exercises them; on this deployment they are unreachable, and that is
+now by design rather than by accident.
+
+Nor does `ADMIN_FRONTEND_ORIGINS` matter to you any more. A same-origin caller never reaches the
+CORS check, which was measured rather than assumed: with the list holding neither host, a
+preflight carrying `Origin: https://ratemyprofessor.dev` to that same host answers `200`, while
+one carrying `Origin: https://evil.example.invalid` answers `403`. Keep the base empty and CORS
+is simply not in your path.
+
+---
+
 ## 1. Move the auth calls
+
+**Withdrawn — see the section above.** `POST /admin/auth/login` answers `405` from your own
+nginx on this deployment, so shipping this list would lock everyone out. The list stays on the
+page because it is an accurate description of the API and of what the `/admin/**` twins do; it
+is no longer where you are going. The two bugs it used to close are handled on the root paths
+instead, which is where task 5 keeps them.
 
 - [ ] `POST /auth/request-login` → `POST /admin/auth/request-login`
 - [ ] `POST /auth/login` → `POST /admin/auth/login`
@@ -122,7 +216,11 @@ New path = `/admin` + old path.
 | `GET /reports`, `PATCH`/`DELETE /reports/{id}` | `/admin/reports`, `/admin/reports/{id}` |
 | `POST /reports/{id}/gitlab-issue` | `POST /admin/reports/{id}/gitlab-issue` |
 
-- [ ] Set one base path (`https://<host>/admin`) and move the calls above onto it.
+- [ ] ~~Set one base path (`https://<host>/admin`) and move the calls above onto it.~~
+      **Withdrawn — see the section above.** That base path is your own static server on this
+      deployment, and every call on it would come back as `index.html` or `405`. The table stays
+      because it is accurate about the API; it is the host that will not route to it, and that
+      is now the settled arrangement rather than a temporary one.
 
 **The two creates answer `403`.** `POST /data/lectures` and `POST /data/professor` are both
 refused by the security chain with a plain **`403`** when the caller is not an administrator,
@@ -243,3 +341,7 @@ came from. An entry with `"api": "APP"` is a panel that still logs in through `/
 - [ ] When no new `ADMIN_LOGIN` entry carries `"api": "APP"`, say so. That is the signal the
       backend waits for before deleting the legacy paths, the `sessionType` field and
       `GET /admins/validate`.
+
+Which is a signal that cannot arrive now that tasks 1 and 2 are withdrawn, and that is fine:
+**the legacy root paths are not going anywhere.** They are what carries the panel in production,
+and under the decision recorded above they are what will carry it. Nothing on them is deleted.
