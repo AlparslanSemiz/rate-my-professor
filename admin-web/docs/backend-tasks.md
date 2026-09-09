@@ -149,18 +149,27 @@ both `PATCH` routes accept `active`. Switching a lecture or professor off from
 the panel therefore removes it from the only list the panel currently reads, with
 no way back short of a database write.
 
-**But `docs/admin-api.md` documents the fix as already shipped:**
+**But it is already shipped**, and `ModerationCatalogController` says it was built
+for exactly this case:
 
-| Endpoint | Documented as |
+> `/lectures/all` and `/professor/all` exist because the public reads filter to
+> `active = true`: a deactivated lecture or professor would otherwise be unreachable
+> from the panel to correct or reactivate.
+
+| Endpoint | Returns |
 | --- | --- |
-| `GET /admin/data/lectures/all` | Admin-only. Every lecture, active or not. |
-| `GET /admin/data/professor/all` | Admin-only. Every professor, active or not. |
+| `GET /data/lectures/all`, `GET /admin/data/lectures/all` | Admin-only. Every lecture, active or not. |
+| `GET /data/professor/all`, `GET /admin/data/professor/all` | Admin-only. Every professor, active or not. |
+
+Both are mapped on the legacy path as well as under `/admin`, so this does **not**
+depend on `H2`.
 
 So there is **no backend work here**. The remaining gap is on our side: the panel
-still calls the public, active-only reads. Moving it is part of the same migration
-as `H2` below, and is a decision for the panel's maintainer rather than
-something to slip in — the edit form's inactive warning, and the All / Active /
-Inactive filter that was waiting on this, both change with it.
+still calls the public, active-only reads. It is a small change, but it is a
+behaviour change — inactive records start appearing in lists that have never shown
+them, the edit form's inactive warning stops being the whole story, and the
+All / Active / Inactive filter that was waiting on this becomes possible — so it is
+the panel maintainer's call rather than something to slip in.
 
 Tracked as `F-006` in `docs/testfindings.md`. **Please leave both `…/all` routes in
 place**; the panel is going to want them.

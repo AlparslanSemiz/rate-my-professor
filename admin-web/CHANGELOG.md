@@ -105,14 +105,22 @@ the day they are dropped. Recorded for the backend team as `H2`, so the removal 
 not scheduled on the assumption that we have migrated.
 
 **`F-006` — `G1` was already answered.** `docs/backend-tasks.md` has been asking
-the backend for a way to read inactive catalogue records. `GET /admin/data/lectures/all`
-and `GET /admin/data/professor/all` are documented as returning "Every
-lecture/professor, active or not". The endpoint exists; the panel does not call it.
-`G1` stops being a request and becomes a note, with a request to leave both routes
-in place.
+the backend for a way to read inactive catalogue records. `/data/lectures/all` and
+`/data/professor/all` return "every lecture/professor, active or not", and
+`ModerationCatalogController` says it added them for precisely this reason: "a
+deactivated lecture or professor would otherwise be unreachable from the panel to
+correct or reactivate." The endpoint exists; the panel does not call it. `G1` stops
+being a request and becomes a note, with a request to leave both routes in place.
 
-Both were found by reading, not by a failing test — which is the gap `P1` exists to
-close.
+Both were found by reading prose and then **confirmed against the backend's
+source** — the dual mappings are literal, `@RequestMapping({"/admin/users",
+"/users"})` and `@GetMapping({"/admin/data/lectures/all", "/data/lectures/all"})`.
+That second one matters: it means `F-006` is **not** blocked behind the prefix
+migration, as first recorded here. The `…/all` reads answer on the legacy path the
+panel already uses, so closing `G1` is two lines in the catalogue services — left
+undone because it is still a behaviour change, not because it is expensive.
+
+Neither was found by a failing test, which is the gap `P1` exists to close.
 
 ### The activity-log sweep found one thing
 

@@ -79,15 +79,18 @@ and decided by a person. The schema may be wrong — springdoc infers, and an
 may be wrong. Guessing produces a change that compiles and is untrue.
 
 **Two mismatches are already open and are not being fixed here**, because both are
-behaviour changes:
+behaviour changes. Both were found by reading the backend's prose and then
+**confirmed against its source** — which is the reading this record exists to stop
+being necessary:
 
 - The backend now serves every admin route under an `/admin` prefix as well as its
   old path, and says the legacy paths are removed once the panel has moved. The
   panel still calls `/users`, `/auth/me`, `/audit-logs`, `/reports`, `/ratings`,
   `/system/status` and `/data/lectures`.
-- `GET /admin/data/lectures/all` and `GET /admin/data/professor/all` already return
-  every record, active or not — which is what `G1` in `docs/backend-tasks.md` is
-  still asking for.
+- `/data/lectures/all` and `/data/professor/all` already return every record,
+  active or not — which is what `G1` in `docs/backend-tasks.md` is still asking
+  for — and they are served on the legacy path too, so that one is independent of
+  the prefix migration.
 
 **Refreshing the schema needs a live backend and an admin token**, since
 `/v3/api-docs` is behind `hasRole("ADMIN")`. It is therefore a manual step with a

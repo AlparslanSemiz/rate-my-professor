@@ -29,12 +29,13 @@ behaviour: the alternative is a switch that silently destroys the operator's acc
 to the record. Then say what is actually true about the gap, because it is a good
 answer rather than an excuse:
 
-> The backend already serves `GET /admin/data/lectures/all` and
-> `GET /admin/data/professor/all`, which return every record, active or not. The
-> panel has not moved to them, because moving means moving to the `/admin` path
-> prefix across the whole API surface, and that is a behaviour change we did not
-> make in the last two days rather than one we did not notice. It is `F-006` and
-> `F-005` in `docs/testfindings.md`.
+> The backend already serves `/data/lectures/all` and `/data/professor/all`, which
+> return every record, active or not — the controller says it added them for
+> precisely this, so a deactivated record stays reachable from the panel. We have
+> not moved to them yet: it is a small change, but inactive records would start
+> appearing in lists that have never shown them, and the All/Active/Inactive filter
+> that should come with it does not exist. It is `F-006` in
+> `docs/testfindings.md`, and it is the next thing we would do.
 
 If a switch has to be demonstrated, **switch one on**, not off. Reactivating is
 safe: the record is already in the list.
