@@ -34,17 +34,50 @@ are **three** levels of substitution in the suite, not one:
 
 | Level | Where it is cut | Files | Tests | What is therefore proven — and what is not |
 | --- | --- | --- | --- | --- |
-| **Transport stubbed** | `fetch` is replaced, so `ApiClient` and the service run for real | 11 | 83 | The URL, query string, method, body and `Authorization` header a **service** produces. Not that any screen asks for them. |
-| **Service replaced** | `vi.mock('@/api/…')`, so no request is constructed at all | 11 | 134 | What a **screen** renders, and which service method it calls with which arguments. Nothing about the wire. |
-| **Neither** | Pure functions, models, theme, `HelpPage` | 16 | 68 | Rules in isolation. |
+| **Nothing** | MSW answers the real request, so the screen, its hooks, its services and `ApiClient` all run | 8 | 113 | The path, method, query string, JSON body and the `Authorization` and `Content-Type` headers a **screen** produces, and what it renders from the answer. |
+| **Transport stubbed** | `fetch` is replaced, so `ApiClient` and the service run for real | 10 | 71 | The request a **service** produces. Not that any screen asks for it. |
+| **Service replaced** | `vi.mock('@/api/…')`, so no request is constructed at all | 5 | 49 | What a **screen** renders, and which service method it called. Nothing about the wire. |
+| **Neither** | Pure functions, models, theme, `HelpPage`, the error hierarchy | 20 | 115 | Rules in isolation. |
 
-`src/context/AuthContext.unit.test.tsx` appears in the first two rows: it stubs
-`fetch` *and* mocks a service, which is why the rows sum to more than 273.
+**Counts are a dated snapshot, per section 0.** These four were derived on 2026-09-09
+by running each group of files and reading the totals, and the groups were checked for
+overlap — no file appears in two of them. The authority for coverage is `coverage/`.
 
-**The consequence, stated plainly: no page test touches HTTP.** What a screen sends
-is asserted only in service unit tests, against expectations this same repository
-wrote. A field the backend renamed passes every test here and fails in the browser.
-That is not hypothetical — it is `F-002`.
+**Eight files now touch HTTP**, which is the sentence this section previously could
+not write. Named explicitly, because "some of them" is how a claim like this rots:
+
+| File | What only a real request could prove |
+| --- | --- |
+| `src/App.integration.test.tsx` | The identity comes from `/auth/me` and nowhere else — asserted as *no request went to the user list*, not as *a function was not called*. |
+| `src/context/AuthContext.integration.test.tsx` | A `401` ends the session, a transient failure does not, and a `404` is reported without ending it (`F-013`). |
+| `src/layouts/AdminLayout.integration.test.tsx` | The shell's own notice, and that focus returns to the main landmark when it is dismissed. |
+| `src/features/auth/LoginPage.integration.test.tsx` | The admin-team check stops a code being *requested* — provable only as an absent request. |
+| `src/features/comments/CommentsPage.integration.test.tsx` | `ACTION_TAKEN` hides content and every other status restores it, which needs the answer to the *next* request. |
+| `src/features/users/UsersPage.integration.test.tsx` | `q`/`status`/`role`/`sort` applied server-side, and block/unblock writing back. |
+| `src/features/audit-logs/AuditLogsPage.integration.test.tsx` | The one screen that filters server-side: the query string a mock never built. |
+| `src/api/client/bodylessWrites.integration.test.ts` | That five writes send **no `Content-Type`** — a header that only exists once a request is built (`F-023`). |
+
+They run against handlers that implement the contract — the envelope, cursor paging that
+really slices, `q`/`status`/`role`/`sort` applied, and the error paths. `F-002` — a
+field the backend had renamed — is the class of defect this closes, and it lived in
+exactly the gap between a service test's expectations and what a screen actually
+sends.
+
+**Five files still replace their service**, and that is a decision rather than a
+backlog. Named too, for the same reason:
+
+| File | Replaces | What it therefore cannot show |
+| --- | --- | --- |
+| `src/features/catalog/CatalogPage.integration.test.tsx` | `@/api/catalog` | Anything about the catalogue's requests. There are no catalogue handlers at all. |
+| `src/features/feedback/FeedbackPage.integration.test.tsx` | `@/api/feedback`, `@/api/system` | The GitLab escalation's request — which is why `F-023` had to exercise it at the service layer. |
+| `src/features/dashboard/DashboardPage.integration.test.tsx` | `@/api/auth`, `@/api/system`, `@/api/users` | That the two reads are independent for the reason claimed. |
+| `src/features/dashboard/hooks/useDashboardData.integration.test.tsx` | `@/api/system`, `@/api/users` | Same. |
+| `src/features/auth/authenticateAdmin.unit.test.ts` | `@/api/auth` | Nothing — it isolates one function, which is what a unit test is for. |
+
+Catalogue, feedback and the dashboard were not touched by the work that prompted the
+migration, and the last row is a unit test doing its job.
+[ADR 0009](adr/0009-msw-slice-by-slice.md) records the rule — a module being worked
+on moves; a module nobody is touching stays.
 
 `src/test/http.ts` is **not** a fetch stub, despite its name. It is two constants:
 `TEST_API_BASE_URL` and a `jsonResponse` helper. Each service unit test installs its
@@ -54,15 +87,42 @@ own `fetch` double.
 
 | Layer | Pattern | Files | Tests |
 | --- | --- | --- | --- |
-| Unit | `*.unit.test.*` | 28 | 160 |
-| Integration | `*.integration.test.tsx` | 9 | 113 |
-| Routing | `src/App.integration.test.tsx` (one of the 9) | 1 | 20 |
-| Static gates | — | — | `npm run lint`, `npm run typecheck`, `npm run build` |
+| Unit | `*.unit.test.*` | 28 | 182 |
+| Integration | `*.integration.test.*` | 15 | 166 |
+| Routing | `src/App.integration.test.tsx` (one of the 15) | 1 | 20 |
+| End-to-end | `e2e/*.spec.ts`, Playwright, `npm run test:e2e` | 4 | 11 |
+| Static gates | — | — | `npm run lint`, `npm run check:cycles`, `npm run check:docs`, `npm run typecheck`, `npm run build` |
 
-**Total: 37 files, 273 tests, green** (2026-09-09).
+**Total: 43 files, 348 tests, green** (2026-09-09, after the `P0a` and `P0b`
+packages), plus **4 Playwright specs, 11 tests** in the end-to-end layer, which run
+separately and are not counted in the Vitest total. Coverage
+**92.55 / 85.62 / 90.77 / 94.43**.
+
+Per section 0, these are a dated snapshot and **`coverage/` is the authority**. One
+caveat belongs with them rather than in a footnote: `npx vitest run .integration.test.`
+reported a single failure once and was green on the nine runs that followed, with the
+failing test never identified (`F-024` in
+[testfindings.md](testfindings.md)). A suite that fails once in ten is not a green
+suite, and the number above is worth less than this sentence.
 
 A unit test isolates one unit; it is not a scenario. End-to-end scenarios belong in
 section 6 and, once `P3` lands, in Playwright.
+
+**Four files that were not unit tests have been renamed.** `AuthContext`,
+`useDashboardData`, `theme` and `ErrorBoundary` each render a React tree and drive
+it, so each is `.integration.` now; the two scripts filter on the filename, so the
+name was the only thing deciding which suite they belonged to. The split moved from
+207/113 to 178/143, which is what it should have said all along.
+
+**Two remain arguable and are left alone.** `authenticateAdmin.unit.test.ts` and
+`users/model/userEdit.unit.test.ts` each exercise a second module that has its own
+file. They are still module-level tests of one function, so renaming them would
+say something untrue in the other direction.
+
+**Two static gates are new.** `check:cycles` walks every import in `src/` and fails
+on a cycle — the claim in [class-diagram.md](class-diagram.md) had been verified
+once, by hand, and only between packages. `check:docs` fails when a public service,
+hook or domain type has no doc comment. Both were verified by making them fail.
 
 ## 4. Commands
 
@@ -106,11 +166,13 @@ The full local gate before submitting a change:
 
 ## 6. Automated coverage
 
-Coverage as of 2026-09-09: **91.23% statements / 84.16% branches / 89.03% functions
-/ 93.49% lines.** Per-directory figures are in
-[testfindings.md](testfindings.md#coverage).
+Coverage as of 2026-09-09: **92.55% statements / 85.62% branches / 90.77% functions
+/ 94.43% lines.** Per-directory figures are in
+[testfindings.md](testfindings.md#coverage), generated from
+`coverage/coverage-summary.json` rather than transcribed. Per section 0, that report
+is the authority and every number in this document is a dated snapshot of it.
 
-### 6.1 API service layer — 10 files, 71 tests
+### 6.1 API service layer — 11 files, 82 tests
 
 Every service package has a unit test pinning the request shape and the mapping of
 the response onto the panel's types, including error paths.
@@ -123,86 +185,131 @@ the response onto the panel's types, including error paths.
 | `feedback/FeedbackService`, `logs/AuditLogsService`, `moderation/CommentsService`, `moderation/AnswersService` | 6 each |
 | `catalog/CatalogService` | 5 |
 | `catalog/RatingsService`, `system/SystemStatusService` | 4 each |
+| `client/bodylessWrites` | 11 |
 
 `ApiClient` carries the cross-cutting rules: the bearer token, `401` ending the
 session, and an unreachable backend *not* ending it. `AuthService` covers `/auth/me`
 in both the `username`/`kitEmail` and the older `name`/`email` spelling, and an
 absent `isSuperAdmin` becoming `false`.
 
-### 6.2 Feature pages — 8 files, 93 tests
+`bodylessWrites` is the odd one out and belongs here rather than with the pages: it
+runs on MSW, not on a stubbed `fetch`, because the thing it asserts — that five writes
+send **no `Content-Type`** — only exists once a real request has been built (`F-023`).
+It is also the only test in the project that has been **verified as a tripwire**: the
+client was deliberately changed to set the header always, six of its assertions went
+red, and the change was reverted. A test pinning correct behaviour has no defect to
+fail against, so it is worth nothing until it has been shown to fail.
+
+### 6.2 Feature pages — 8 files, 98 tests
 
 | Page | Tests | Notable coverage |
 | --- | --- | --- |
 | `users/UsersPage` | 25 | Search, filters, cursor paging, the profile modal, warn / block / unblock / delete, and the elevated-operator permission — including that an ordinary admin sees an admin's status locked but the credibility score editable |
-| `comments/CommentsPage` | 17 | Reported content, thread expansion, moderation actions across both tabs |
+| `comments/CommentsPage` | 19 | Reported content, thread expansion, moderation actions across both tabs |
 | `catalog/CatalogPage` | 16 | Lecture and professor editing, the warning before a record is switched inactive, a refused save keeping the editor open with what was typed |
 | `feedback/FeedbackPage` | 13 | Bug reports, the History tab, the GitLab control when `gitlabEnabled` is false, a refused deletion |
-| `audit-logs/AuditLogsPage` | 9 | Rendering and filtering, "Load more" **appending**, a revert re-reading the log, a `404` becoming "deploy the audit endpoints" |
+| `audit-logs/AuditLogsPage` | 12 | Rendering and filtering, "Load more" **appending**, a revert re-reading the log, a `404` becoming "deploy the audit endpoints", entries served without `changes` or `metadata` (`F-021`), and one entry with no actor recorded as taking the table down (`F-022`, measured not fixed) |
 | `dashboard/DashboardPage` | 6 | Stat cards, a partial read keeping the half that arrived, `counts: null` not read as zeros |
 | `auth/LoginPage` | 6 | The two-step flow; an address outside the team never reaches `request-login` |
 | `help/HelpPage` | 1 | Sections start collapsed and open on click |
 
-### 6.3 Shell, state and shared code — 19 files, 109 tests
+### 6.3 Shell, state and shared code — 24 files, 168 tests
 
 | Area | Files | Tests | Coverage |
 | --- | --- | --- | --- |
 | `src/App.integration.test.tsx` | 1 | 20 | Routing, protected routes, redirect target after sign-in, and that the removed System Status and Activity Log paths fall back to the dashboard |
-| `src/context` | 1 | 12 | Session restore, a stored session carrying `isSuperAdmin`, rejection of a malformed one, withdrawal of an elevation `/auth/me` no longer reports |
+| `src/context` | 1 | 16 | Session restore, a stored session carrying `isSuperAdmin`, rejection of a malformed one, withdrawal of an elevation `/auth/me` no longer reports, and a check that fails without being refused being reported rather than swallowed (`F-013`) |
 | `src/theme` | 1 | 8 | That inputs and modals are painted by the theme with no `styles` prop, and that a component-level override lands on top of it |
 | `src/features/*/model` | 6 | 32 | `feedback` (8), `catalog/edit` (6), `moderation` (6), `users/userEdit` (5), `catalog/catalog` (4), `catalog/deletion` (3) |
-| `src/features/auth` | 2 | 8 | `authenticateAdmin` (6), `loginModel` (2) |
+| `src/layouts` | 1 | 4 | The shell's unconfirmed-session notice, that it is announced politely rather than assertively, and that dismissing it returns focus to the main landmark instead of `document.body` |
+| `src/features/auth` | 2 | 12 | `authenticateAdmin` (10), `loginModel` (2) — including one discriminated message per way the identity read can fail (`F-014`) |
 | `src/features/dashboard/hooks` | 1 | 4 | `useDashboardData` |
-| `src/utils` | 4 | 13 | `formatDate` (5), `getErrorMessage` (4), `color` (3), `adminAccess` (1) |
+| `src/utils` | 6 | 34 | `keyboard` (11), `assert` (9), `formatDate` (5), `getErrorMessage` (5), `color` (3), `adminAccess` (1) |
 | `src/domain` | 2 | 7 | `auditLog` (5), `moderation` (2) |
-| `src/components` | 1 | 5 | `ErrorBoundary`, over `react-error-boundary` |
+| `src/components` | 2 | 12 | `ErrorBoundary` over `react-error-boundary` (5), `ClickableRow`'s activation contract (7) |
+| `src/api/client` | 1 | 16 | The eleven-class error hierarchy and `transient` (ADR 0013) |
 
 ### 6.4 Known automation gaps
 
 Stated so the matrix above is not mistaken for full coverage.
 
-- **No page test touches HTTP.** Section 2. `P2` closes it for one feature.
-- **`src/layouts` has no tests.** The authenticated shell and navigation are
-  exercised only indirectly, through the routing tests. Function coverage there is
-  the weakest in the project.
-- **`src/components`** — one tested file out of fourteen. The rest are
-  presentational and covered indirectly by the page tests.
+- **Eight files touch HTTP; five still replace their service.** Section 2 names both
+  lists. Catalogue is the notable hole — there are no catalogue handlers at all, so
+  nothing about that feature's requests is exercised anywhere.
+- **`src/layouts` has four tests, and had none until this round.** They cover the
+  shell's own notice; the sidebar and the navigation are still exercised only
+  indirectly, through the routing tests.
+- **`src/components`** — two tested files out of fifteen. The rest are presentational
+  and covered indirectly by the page tests.
 - **`src/features/moderation`** — its `model/` is covered; its components and hooks
   are reached only through the comments page.
-- **No accessibility assertions anywhere.** `P4`.
-- **No end-to-end layer.** `P3`.
+- **No accessibility assertions anywhere.** No `axe` run, no keyboard-path test beyond
+  `ClickableRow`'s own contract, no focus-order assertion except the one in
+  `src/layouts`. This is the largest single gap in the suite and it is **not** closed.
+- **Nothing is tested below 768px.** Every test runs at a desktop viewport, which is
+  why `F-019` — the sidebar covering the entire screen — was found by taking a
+  screenshot and not by the suite.
+- **The end-to-end layer proves nothing about the real backend.** It runs on MSW, in
+  Chromium, at desktop widths. Section 7 states this at length because it is the claim
+  most easily over-read.
+- **Two defects are pinned as they are rather than fixed** — `F-022` (a null actor or
+  author takes the table down) and the swallowed `415` on sign-out. Those tests assert
+  the *current* behaviour, so a green suite is not evidence either is acceptable. Both
+  are in [TODO.md](TODO.md) under *Known, measured, deliberately deferred*.
 - **`src/constants`** — no tests, and none would be useful: the files are literals.
-
-Seven directories are at **100% on all four axes** and are therefore omitted from
-the coverage text report entirely, which is worth knowing before reading it as a
-list of everything: `src/theme`, `src/hooks`, `src/constants`, `src/features/help`,
-`src/api/catalog`, `src/api/moderation`, `src/api/system`.
 
 ## 7. Manual and end-to-end scenarios
 
-These need a real backend and a browser. The automated suite cannot establish any
-of them. The right-hand column is the binding to `P3`: when a Playwright spec
-exists for a scenario, it is named here, so the manual list and the automated list
-cannot drift apart.
+The right-hand column names the spec that covers each scenario, so the manual list
+and the automated one cannot drift apart. A row still reading `—` needs a person: a
+real backend, a deployment, or a decision.
+
+### What the end-to-end layer does not establish
+
+Stated first and plainly, because it is the claim most easily over-read.
+
+**It has never run against the real backend. Not once.** `VITE_MOCK_BACKEND=true`
+serves the panel from the same MSW handlers the integration tests use. **A flow
+passing here is not evidence it passes against the deployed backend** — it is
+evidence the panel behaves correctly against *this repository's description of* the
+backend. Where that description is wrong, both sides are wrong together and the suite
+is green. `F-002` was exactly that shape, one layer down.
+
+**It runs in Chromium only.** One project is configured in `playwright.config.ts`,
+deliberately: the panel is an internal desktop tool, and a cross-browser matrix would
+buy coverage of a problem nobody has reported at the cost of a suite nobody runs.
+Nothing is known about Firefox or Safari, and nothing should be claimed.
+
+**It runs at desktop widths only.** Every spec uses the default `Desktop Chrome`
+viewport. The panel is in fact unusable below 768px — the sidebar covers the whole
+screen (`F-019`) — and no end-to-end test noticed, because none looks there.
+
+Running against no backend is a decision, not an omission: these flows are also what
+gets walked by hand at the Abnahme, and pinning them to a deployment would make them
+fail for reasons that have nothing to do with the panel at the one moment they are
+being demonstrated. The rows below that still say `—` are the ones that need a real
+backend, and **none of them has been run**.
 
 | ID | Scenario | Expected | Automated by |
 | --- | --- | --- | --- |
 | E2E-1 | **Elevated operator.** Sign in as `u-kisi4@student.kit.edu`; warn, block, unblock and delete a real admin account; edit its status and credibility score. | Every action succeeds and the audit log records it with the right actor. | — (needs a real backend) |
 | E2E-2 | **Ordinary admin against an admin target.** Repeat E2E-1 as a non-elevated admin. | Refused with `409`; status locked in the edit form, credibility score still editable. | — |
 | E2E-3 | **Self protection.** Try to block, delete or demote your own account. | The controls are not offered, and the backend refuses the request if made directly. | — |
-| E2E-4 | **Session survives a reload.** Sign in, reload the tab. | Still signed in; sidebar shows the real account name, not `Unknown account`. Regression guard for `F-002`. | `P3` — login flow |
-| E2E-5 | **Login code round trip.** Request a code with an allowed KIT address, then with one outside the list. | A code arrives for the first; the second is refused with "You do not have access to this panel" and no code is sent. | `P3` — login flow |
-| E2E-6 | **Expired or revoked token.** Let the session be revoked, then act. | A `401` ends the session, the login screen says it expired, and the visited path travels in `state.from`. | `P2` — as a handler test |
-| E2E-7 | **Backend unreachable.** Stop the backend, reload. | The session is **not** ended; the panel reports the failure instead of signing the admin out. | `P2` — as a handler test |
+| E2E-4 | **Session survives a reload.** Sign in, reload the tab. | Still signed in; sidebar shows the real account name, not `Unknown account`. Regression guard for `F-002`. | `e2e/signing-in.spec.ts` |
+| E2E-5 | **Login code round trip.** Request a code with an allowed KIT address, then with one outside the list. | A code arrives for the first; the second is refused with "You do not have access to this panel" and no code is sent. | `e2e/signing-in.spec.ts` — and the refusal is asserted as *no request*, not as an unused double |
+| E2E-6 | **Expired or revoked token.** Let the session be revoked, then act. | A `401` ends the session, the login screen says it expired, and the visited path travels in `state.from`. | `src/App.integration.test.tsx`, on MSW |
+| E2E-7 | **Backend unreachable.** Stop the backend, reload. | The session is **not** ended; the panel reports the failure instead of signing the admin out. | `src/App.integration.test.tsx`, on MSW — a real transport failure, not a rejected double |
 | E2E-8 | **Catalogue inactive toggle.** Switch a lecture or professor off. | The warning appears before saving, and the record then disappears from the list. See `G1` in [backend-tasks.md](backend-tasks.md). | — |
-| E2E-9 | **GitLab issue creation** with `gitlabEnabled: false`. | The control is hidden rather than offered and failing with `503`. | `P2` — as a handler test |
+| E2E-9 | **GitLab issue creation** with `gitlabEnabled: false`. | The control is hidden rather than offered and failing with `503`. | `e2e/triaging-a-bug-report.spec.ts` covers the enabled path; the `503` stays with `P2`'s feedback slice |
 | E2E-10 | **Production build under `/admin/`.** Build and serve the image. | Assets resolve under the base path; deep links and reloads work. See [deployment.md](deployment.md). | — |
-| E2E-11 | **Comment moderation.** Set a report to `ACTION_TAKEN`; then to any other status. | The content is hidden, then restored. | `P2` and `P3` — moderation flow |
-| E2E-12 | **Bug report status update.** Change a report's status and severity. | The report moves to History and the change survives a reload. | `P3` — bug report flow |
-| E2E-13 | **Revert a field edit from the audit log.** | The fields go back, the log is re-read, and the reversal's own entry appears. A non-revertible entry explains why. | `P3` — audit revert flow |
+| E2E-11 | **Comment moderation.** Set a report to `ACTION_TAKEN`; then to any other status. | The content is hidden, then restored. | `src/features/comments/CommentsPage.integration.test.tsx` (both halves) and `e2e/moderating-a-comment.spec.ts` |
+| E2E-12 | **Bug report status update.** Change a report's status and severity. | The report moves to History and the change survives a reload. | `e2e/triaging-a-bug-report.spec.ts` |
+| E2E-13 | **Revert a field edit from the audit log.** | The fields go back, the log is re-read, and the reversal's own entry appears. A non-revertible entry explains why. | `e2e/undoing-a-change.spec.ts` |
 
-E2E-11 to E2E-13 are new. They are flows `P3` is specified to cover, and the manual
-list had no row for any of them — so the binding column would have pointed at
-scenarios that did not exist.
+**Six of the thirteen are automated now.** The seven that are not need something the
+suite cannot provide: a real backend (E2E-1, E2E-2, E2E-3, E2E-8), a built image
+(E2E-10), or the backend's own refusal codes (E2E-9's `503`). Those rows are the
+manual list, and they are the reason section 7 still exists.
 
 ## 8. Entry and exit criteria
 
@@ -210,7 +317,9 @@ scenarios that did not exist.
 
 **Exit for a merge:** `npm run check`, `npm test` and `npm run build` pass, coverage
 has not fallen, and any scenario in section 7 that the change touches has been run
-and recorded.
+and recorded. `npm run test:e2e` is expected to pass locally; in CI it is
+`allow_failure: true` and never blocks a merge, because a flaky browser must not be
+able to.
 
 **Exit for a release:** the above, plus every scenario in section 7 run against the
 deployed backend, with each result written into [testfindings.md](testfindings.md).
