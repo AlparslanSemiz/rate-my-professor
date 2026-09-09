@@ -60,6 +60,10 @@ server:test:
     paths:
       - target/site/jacoco/
       - target/surefire-reports/
+      # The dependency:scan input. That job runs in a Trivy image with no Maven and no
+      # warm repository; this build has just resolved the whole tree, so it is the one
+      # that can write it down. See the comment on dependency:scan.
+      - target/classes/META-INF/sbom/application.cdx.json
     reports:
       junit:
         - target/surefire-reports/TEST-*.xml
@@ -453,11 +457,32 @@ secrets:history:
 # over the network and was rate-limited (429, Retry-After: 1800) from a shared IP, and OWASP
 # dependency-check needs an NVD_API_KEY nobody has created.
 #
-# What changed is that the rate limit was never really about Trivy. It is about a COLD Maven
-# cache: with a warm ~/.m2 the parent chain resolves locally and nothing is fetched. Verified
-# on 9 September against a warm cache -- it read pom.xml and reported 57 vulnerabilities, 7 of
-# them CRITICAL. This job caches .m2/repository like every other job here, and `needs:
-# server:test` puts it after a job that has just populated it.
+# The first CI run of this job went red on exactly that 429, and not on the failure this
+# comment used to tell you to suspect: Trivy's own database downloaded fine, then the scan died
+# fetching spring-integration-bom-7.0.6.pom from repo.maven.apache.org.
+#
+# The warm-cache answer the job shipped with does not hold on this runner. It read: "this job
+# caches .m2/repository like every other job here, and `needs: server:test` puts it after a job
+# that has just populated it". `needs` orders two jobs; it does not put them on one machine.
+# The runner log says "No URL provided, cache will not be downloaded from shared cache server",
+# so a cache lives on the Kubernetes node that wrote it: server:test filled .m2 on some node,
+# this job started on w3 with "Cache file does not exist", and the parent chain went to the
+# network. A cache is an optimisation that is allowed to miss; this job was treating it as an
+# input it was guaranteed to get.
+#
+# So the input is handed over as an artifact, which is not allowed to miss. server:test already
+# resolves the whole tree; cyclonedx-maven-plugin (declared in pom.xml, version managed by
+# spring-boot-starter-parent) writes it to target/classes/META-INF/sbom/application.cdx.json,
+# and `trivy sbom` reads that. Nothing here resolves a Maven coordinate any more, so a cold
+# repository cannot fail this job and the .m2 cache is gone from it.
+#
+# Verified locally on 9 September, in both directions, because a scan that looks at less than
+# it used to and a scan that cannot go red both look exactly like a pass:
+#   * it sees no less. The package list from `trivy sbom` and the list from the old
+#     `trivy fs .` are identical bar one entry -- the SBOM adds org.projectlombok:lombok, which
+#     Trivy's pom parser dropped. 107 packages, 0 vulnerabilities, the same 0 as the fs scan.
+#   * it can still go red. Rebuilding the SBOM against parent 4.0.6 -- the version 4.0.8
+#     replaced -- and scanning it exits 1 on 13 HIGH.
 #
 # Deliberately NOT allow_failure and NOT schedule-only, unlike secrets:history and pitest.
 # Those two are expected to be red; this one starts GREEN -- the same 9 September pass took the
@@ -474,25 +499,27 @@ dependency:scan:
     entrypoint: [""]
   needs:
     - job: server:test
-      artifacts: false
-  cache:
-    key: "maven-${CI_COMMIT_REF_SLUG}"
-    paths:
-      - .m2/repository/
-    policy: pull
+      artifacts: true
+  # No Maven cache: this job no longer reads a repository. `cache: []` rather than nothing,
+  # because the default at the top of this file would otherwise pull and push .m2 here.
+  cache: []
   variables:
     TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivycache"
+    SBOM: "target/classes/META-INF/sbom/application.cdx.json"
   script:
-    # The vulnerability database is Trivy's own and is fetched per run. If THAT is what gets
-    # rate-limited on a shared runner IP, the failure is a database download and not a finding
-    # -- read the job log before believing a red here.
+    # The vulnerability database is Trivy's own and is still fetched per run. If THAT is what
+    # gets rate-limited on a shared runner IP, the failure is a database download and not a
+    # finding -- read the job log before believing a red here.
     - trivy --version
+    # `trivy sbom` on a missing file fails too, with a message about the file rather than about
+    # the handover. Say which half broke.
+    - test -f "$SBOM" || { echo "no SBOM at $SBOM -- did server:test publish its artifacts?"; exit 1; }
     - >
-      trivy fs --scanners vuln --skip-dirs target
-      --format json --output trivy-report.json .
+      trivy sbom --scanners vuln
+      --format json --output trivy-report.json "$SBOM"
     - >
-      trivy fs --scanners vuln --skip-dirs target
-      --severity HIGH,CRITICAL --exit-code 1 .
+      trivy sbom --scanners vuln
+      --severity HIGH,CRITICAL --exit-code 1 "$SBOM"
   artifacts:
     when: always
     paths:
