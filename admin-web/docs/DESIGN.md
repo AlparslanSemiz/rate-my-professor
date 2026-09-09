@@ -142,6 +142,18 @@ The four that are genuinely doing something are:
 
 Each is deliberate and each is documented where it lives. **No fifth is added.**
 
+**`src/components/ErrorAlert.tsx` holds a raw `rgba()` and renders pure white.** Two
+divergences in one component, both predating its second level and both left alone
+deliberately. Its red is `rgba(239,68,68,…)` written by hand — not `KIT.red`, not a
+`chrome` token, and the one place the no-hex-literal rule is broken in a component
+rather than in a stylesheet. And Mantine's `Alert` colours the message `#ffffff`,
+against the rule above that the brightest text is `chrome.textBright` `#f1f5f9`.
+Correcting either restyles **seventeen** call sites at once, which is a visual change
+in its own right and not one to fold into an unrelated commit. The `warning` level
+added for the session notice uses `KIT.yellow` through `withAlpha`, so the new half of
+the component follows the rule; the old half is recorded here rather than quietly
+matched. `docs/TODO.md` carries it.
+
 **`src/interactive.css` still holds hex literals.** `.panel` is written with
 `#171b23`, `#14171e` and `#232935`, and `.card-interactive:hover` with `#1c212b`
 and `#181c25`. Refactor step 2 converted the TypeScript but not the stylesheet,
@@ -167,9 +179,16 @@ In order, and the first one is not optional.
 
 ## Checking your work
 
-Playwright's Chromium is available on this machine (`~/Library/Caches/ms-playwright`),
-so a visual check is possible and there is no excuse for shipping a style change
-unseen.
+Playwright's Chromium is cached per platform — `~/.cache/ms-playwright` on Linux,
+`~/Library/Caches/ms-playwright` on macOS — so a visual check is possible and there is
+no excuse for shipping a style change unseen.
+
+**A state nothing reaches by clicking is still a state that has to be looked at.** An
+alert region has to be seen while it is *showing*, and getting there used to mean
+editing a handler, screenshotting and editing it back — which is how a state gets
+signed off unseen. `?fault=<name>` on any URL under `VITE_MOCK_BACKEND` now serves a
+named failure from `src/test/msw/browser.ts`. Test-only, and absent from a production
+build with the rest of the mock backend.
 
 `src/theme/theme.unit.test.tsx` exists because moving styles into the theme fails
 **quietly** — an input that stops being themed still renders, only paler, and no

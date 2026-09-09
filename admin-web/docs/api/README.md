@@ -5,8 +5,11 @@ committed here unchanged. It is the **authority** on the contract between this
 panel and the backend — see [ADR 0008](../adr/0008-generated-schema-is-the-contract-authority.md)
 for the order of precedence and why it is that way.
 
-`src/types/api.generated.ts` is generated from this file and is not edited by
-hand. Nothing else in `src/` should restate a request or response shape that this
+`src/types/api.generated.ts` is generated from this file by `npm run schema:types`
+and is not edited by hand. The generator runs through `npx` rather than as a
+devDependency: its current release peer-requires TypeScript 5 and this project is on
+6, so installing it would need `--force`. See
+[ADR 0008](../adr/0008-generated-schema-is-the-contract-authority.md#amendment--what-is-in-place-and-what-is-not). Nothing else in `src/` should restate a request or response shape that this
 document already carries.
 
 > **The file is not here yet.** It needs a running backend and an admin token, so
@@ -42,7 +45,7 @@ curl -s "$API/v3/api-docs" \
   -H "Authorization: Bearer <authToken>" > docs/api/openapi.json
 
 # 4. Regenerate the types.
-npx openapi-typescript docs/api/openapi.json -o src/types/api.generated.ts
+npm run schema:types
 ```
 
 **Commit the body exactly as it arrives.** Do not pretty-print it, sort its keys
