@@ -36,7 +36,7 @@ export default function SystemPulse({
             <Text size="xs" c={chrome.textMuted}>{metric.label}</Text>
             <Text size="xs" fw={600} c={metric.color}>{metric.value}%</Text>
           </Group>
-          <Progress value={metric.value} color={metric.color} size="sm" radius="xl" bg={chrome.border} />
+          <Progress value={metric.value} color={metric.color} size="sm" radius="xl" bg={chrome.border} aria-label={metric.label} />
         </Box>
       ))}
     </Panel>

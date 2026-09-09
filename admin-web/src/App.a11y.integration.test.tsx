@@ -81,14 +81,7 @@ const ROUTES = [
     name: 'Dashboard',
     marker: /A quick look at how your community's doing today/,
     signedIn: true,
-    /**
-     * `F-030`, recorded and not fixed. `SystemPulse` draws two `Progress` bars whose visible
-     * label is a sibling `<Text>`, so a sighted operator reads "Active accounts 62%" and a
-     * screen reader reads an unnamed progressbar twice. Pinned by rule id rather than
-     * tolerated: a second kind of violation on this route turns it red, and naming the bars
-     * turns it red too.
-     */
-    knownViolations: ['aria-progressbar-name'],
+    knownViolations: [] as string[],
   },
   { path: routes.users, name: 'Users', knownViolations: [] as string[], marker: /Everyone who's signed up/, signedIn: true },
   {
@@ -160,6 +153,25 @@ describe('every route, scanned by axe', () => {
     // Recorded, not tolerated. Compared as a set of rule ids so the assertion reads as a claim
     // about *which* rules fail, not merely how many.
     expect(violations.map((violation) => violation.id).sort()).toEqual([...route.knownViolations].sort())
+  })
+
+  it('names both of the dashboard\'s progress bars', async () => {
+    await openRoute(ROUTES.find((route) => route.name === 'Dashboard')!)
+
+    // `F-030`, fixed. `SystemPulse` draws one `Progress` per metric with the visible label in a
+    // *sibling* `<Text>`, so a sighted operator read "Active accounts 62%" while a screen reader
+    // read an unnamed progressbar twice — axe's `aria-progressbar-name`, at `serious`.
+    //
+    // Asserted by accessible name rather than left to the route scan above, because the scan
+    // would go equally green if the bars stopped rendering at all. Mantine forwards `aria-label`
+    // from `<Progress>` onto the element that carries `role="progressbar"`, which is the part
+    // that had to be measured rather than assumed.
+    const bars = await screen.findAllByRole('progressbar')
+    expect(bars).toHaveLength(2)
+    expect(bars.map((bar) => bar.getAttribute('aria-label'))).toEqual([
+      'Active accounts',
+      'Admin share of accounts',
+    ])
   })
 
   it('says which rules it could not run, rather than counting them as passes', () => {
