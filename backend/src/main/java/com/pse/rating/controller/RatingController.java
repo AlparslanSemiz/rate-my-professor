@@ -2,6 +2,8 @@ package com.pse.rating.controller;
 
 import java.util.UUID;
 
+import jakarta.validation.Valid;
+
 import com.pse.rating.dto.response.RatingCategoriesResponse;
 import com.pse.rating.dto.response.RatingsAverageResponse;
 import com.pse.security.AuthenticatedUser;
@@ -33,7 +35,7 @@ public class RatingController {
     }
 
     @PostMapping("/rate")
-    public BasicResponse submitRating(@AuthenticationPrincipal AuthenticatedUser principal, @RequestBody  RatingRequest request) {
+    public BasicResponse submitRating(@AuthenticationPrincipal AuthenticatedUser principal, @Valid @RequestBody RatingRequest request) {
         return ratingService.submitRating(principal.student(), request);
     }
 

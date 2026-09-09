@@ -632,4 +632,40 @@ class RatingApiIntegrationTests {
             String rawToken
     ) {
     }
+
+    /**
+     * Neither field of this body was validated and the controller bound it with a bare
+     * {@code @RequestBody}. A missing lectureId reached {@code findById(null)}, whose own
+     * assertion throws IllegalArgumentException; a missing topics list reached a for-each.
+     * GlobalExceptionHandler maps neither, so both were 500 on a malformed request.
+     */
+    @Test
+    void ratingWithAMissingFieldIsABadRequestRatherThanAServerError() throws Exception {
+        Session student = createSession("incomplete@student.kit.edu");
+        Lecture lecture = createLecture();
+        String token = bearer(student.rawToken());
+
+        mockMvc.perform(post("/ratings/rate")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"topics\":[]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(post("/ratings/rate")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"lectureId\":\"" + lecture.getId() + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        // A topic with no category would reach the database as a null column.
+        mockMvc.perform(post("/ratings/rate")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"lectureId\":\"" + lecture.getId()
+                                + "\",\"topics\":[{\"value\":3.0}]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
 }

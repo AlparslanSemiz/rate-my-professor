@@ -548,4 +548,35 @@ class LectureApiIntegrationTests {
     ) {
     }
 
+
+    /**
+     * "professorIds" is the one field of this body @Valid was not checking -- the other four
+     * carry constraints -- and omitting it reached the for-each in addLecture, which answered
+     * 500. An omitted list means "no professors", the same reading addProfessor has always
+     * given the mirror field.
+     */
+    @Test
+    void addingALectureWithNoProfessorIdsFieldCreatesItWithoutProfessors() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+
+        mockMvc.perform(post("/data/lectures")
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Lecture With No Professors","code":"LWNP",
+                                 "semesterYear":2026,"semesterSeason":"SS","active":true}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        UUID created = lectureRepository.findByName("Lecture With No Professors")
+                .orElseThrow()
+                .getId();
+
+        // Read it back over the API rather than off the entity: the professor set is lazy, and
+        // what this test is about is what the route answers.
+        mockMvc.perform(get("/data/lectures/{id}", created))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lecture.professors").isEmpty());
+    }
 }

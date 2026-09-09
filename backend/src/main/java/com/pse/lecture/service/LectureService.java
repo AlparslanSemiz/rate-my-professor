@@ -124,7 +124,12 @@ public class LectureService {
         }
 
 
-        List<UUID> professorsIDs = request.professorIds();
+        // Null rather than @NotNull, which is how addProfessor already treats the mirror
+        // field: an omitted list means "no professors yet", and the assignment is writable
+        // afterwards through PATCH. Omitting it used to reach the for-each below and answer
+        // 500 -- the one field of this request that @Valid was not checking.
+        List<UUID> professorsIDs =
+                request.professorIds() == null ? List.of() : request.professorIds();
         Set<Professor> professors = new HashSet<>();
 
         //Validate professorIDs exist

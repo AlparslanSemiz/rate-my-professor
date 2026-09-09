@@ -603,3 +603,30 @@ Now: 400 for all three.
 Nothing changes for a well-formed request. If you were treating a 500 from these routes as
 "retry later", that retry was never going to work -- the request was the problem, and it now
 says so.
+
+
+///// 9.09 (4)
+
+
+Two more malformed bodies that answered 500 now answer 400.
+
+"POST /ratings/rate" -- "lectureId" and "topics" were both unvalidated:
+
+Was: 500 for {"topics":[]}                                  -- no lectureId
+Was: 500 for {"lectureId":"<uuid>"}                         -- no topics
+Was: 409 for a topic with no "category"                     -- reached the column as null
+Now: 400 {"message": "Invalid request", "success": false}   -- all three
+
+"topics" is required but may still be EMPTY: an empty list is answered exactly as before, so
+only a body that omits the field entirely changes. A topic's "value" is still unconstrained --
+nothing in the backend defines the scale, so nothing here invents one.
+
+"POST /data/lectures" and "POST /admin/data/lectures" -- "professorIds" omitted:
+
+Was: 500 {"message": "Unexpected backend error", "success": false}
+Now: 200, the lecture is created with no professors
+
+This one is the opposite direction on purpose. The field is optional -- the assignment is
+writable afterwards through "PATCH /admin/data/professor/{id}" -- and "POST /data/professor"
+has always read its mirror field that way. Sending "professorIds": [] was already accepted and
+is unchanged; only omitting the key was broken.
