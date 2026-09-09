@@ -1,7 +1,10 @@
+import { enumGuard } from './enumGuard'
+
 /**
- * Vocabulary shared by the two log endpoints. `/audit-logs` and `/activity-logs` read the
- * same table and return the same entry shape; they differ only in which actions they serve,
- * so the entry types live here and each service names its own slice of the action set.
+ * Vocabulary for the log the panel reads. This file once described two endpoints —
+ * `/audit-logs` and `/activity-logs` share a table and an entry shape on the backend — but
+ * the panel no longer has an activity screen, so only the administrative half is modelled
+ * here. The backend still serves `/activity-logs`; nothing in this repository calls it.
  */
 
 /** What admins did through the panel — served by `/audit-logs`. */
@@ -32,20 +35,11 @@ export const ADMINISTRATIVE_ACTIONS = [
   'PROFESSOR_DELETED',
 ] as const
 
-/** What users did in the student app, plus every refused request — served by `/activity-logs`. */
-export const ACTIVITY_ACTIONS = [
-  'USER_LOGIN',
-  'USER_LOGOUT',
-  'COMMENT_CREATED',
-  'ANSWER_CREATED',
-  'RATING_SUBMITTED',
-  'COMMENT_REPORT_CREATED',
-  'ANSWER_REPORT_CREATED',
-  'BUG_REPORT_CREATED',
-  'LOGIN_REFUSED',
-  'ACCESS_REFUSED',
-] as const
-
+/**
+ * Every target an entry can name. Wider than the actions above on purpose: the list mirrors
+ * what `/audit-logs/meta` may return, and the panel renders whatever it is given rather than
+ * filtering the backend's vocabulary down to its own.
+ */
 export const LOG_TARGET_TYPES = [
   'ADMIN_SESSION',
   'USER_SESSION',
@@ -62,11 +56,10 @@ export const LOG_TARGET_TYPES = [
   'ENDPOINT',
 ] as const
 
+/** `USER` stays: the backend reports it on `/audit-logs/meta`, so the filter must accept it. */
 export const LOG_ACTOR_TYPES = ['ADMIN', 'USER'] as const
 
-export type AdministrativeAction = (typeof ADMINISTRATIVE_ACTIONS)[number]
-export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number]
-export type LogAction = AdministrativeAction | ActivityAction
+export type LogAction = (typeof ADMINISTRATIVE_ACTIONS)[number]
 export type LogTargetType = (typeof LOG_TARGET_TYPES)[number]
 export type LogActorType = (typeof LOG_ACTOR_TYPES)[number]
 export type LogValue = string | number | boolean | null
@@ -160,9 +153,7 @@ export const EMPTY_LOG_META: LogMeta = {
   actorTypes: [],
 }
 
-export function isLogActorType(value: string | null): value is LogActorType {
-  return value === 'ADMIN' || value === 'USER'
-}
+export const isLogActorType = enumGuard(LOG_ACTOR_TYPES)
 
 /**
  * The backend takes inclusive ISO date-times; the filter form supplies `yyyy-mm-dd`, picked

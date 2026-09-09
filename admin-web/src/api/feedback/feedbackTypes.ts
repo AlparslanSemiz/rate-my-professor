@@ -1,4 +1,4 @@
-import type { ReportStatus, Severity } from '../domain/moderation'
+import type { ReportStatus, Severity } from '@/domain/moderation'
 
 export type { ReportStatus, Severity }
 

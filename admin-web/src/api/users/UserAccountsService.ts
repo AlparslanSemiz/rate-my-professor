@@ -1,19 +1,14 @@
-import { expectArray, type ApiClient, type BasicResponse } from './ApiClient'
+import { expectArray, type BasicResponse } from '@/api/client/ApiClient'
+import { HttpService } from '@/api/client/HttpService'
 import type { User, UserPage, UserQuery, UserUpdate } from './userTypes'
-import { withRequiredAdminRole } from '../utils/adminAccess'
+import { withRequiredAdminRole } from '@/utils/adminAccess'
 
 interface UserListResponse extends BasicResponse {
   users: User[]
   nextCursor?: string | null
 }
 
-export class UserAccountsService {
-  private readonly client: ApiClient
-
-  constructor(client: ApiClient) {
-    this.client = client
-  }
-
+export class UserAccountsService extends HttpService {
   /**
    * One page of the listing. A bad parameter is answered with a `400` carrying a usable
    * message — `A cursor requires a limit`, `Invalid user status` — which the client turns

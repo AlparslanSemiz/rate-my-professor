@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, type ApiClient, type BasicResponse } from '@/api/client/ApiClient'
 import { UserAccountsService } from './UserAccountsService'
 import { UserWarningsService } from './UserWarningsService'
 import type { User, UserPage, UserQuery, UserUpdate, Warning } from './userTypes'

@@ -1,4 +1,4 @@
-import type { BasicResponse } from './ApiClient'
+import type { BasicResponse } from '@/api/client/ApiClient'
 import type { SystemStatus } from './systemStatusTypes'
 
 export interface SystemStatusResponse extends BasicResponse, SystemStatus {}

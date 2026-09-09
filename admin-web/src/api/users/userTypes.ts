@@ -1,4 +1,4 @@
-import type { UserRole, UserStatus } from '../domain/user'
+import type { UserRole, UserStatus } from '@/domain/user'
 
 export type { UserRole, UserStatus }
 

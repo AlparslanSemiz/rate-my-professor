@@ -1,43 +1,18 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
-import { AnswerContentService } from './AnswerContentService'
-import { AnswerReportsService } from './AnswerReportsService'
-import type { AnswerReportStatus, ManagedAnswer, ReportedAnswer } from './answerTypes'
-import type { ContentUpdate } from './contentTypes'
+import { apiClient, type ApiClient } from '@/api/client/ApiClient'
+import { ModerationService } from './ModerationService'
+import type { ManagedAnswer, ReportedAnswer } from './answerTypes'
 
 export type { AnswerReportStatus, ManagedAnswer, ReportedAnswer } from './answerTypes'
 export type { ContentUpdate } from './contentTypes'
 
-export class AnswersService {
-  private readonly content: AnswerContentService
-  private readonly reports: AnswerReportsService
-
+/**
+ * Answers and the reports against them. Answers are replies to a comment rather than a feed
+ * of their own, which is why they are worked from the Comments screen; deleting one removes
+ * only that answer.
+ */
+export class AnswersService extends ModerationService<ManagedAnswer, ReportedAnswer> {
   constructor(client: ApiClient) {
-    this.content = new AnswerContentService(client)
-    this.reports = new AnswerReportsService(client)
-  }
-
-  async getAll(): Promise<ManagedAnswer[]> {
-    return this.content.getAll()
-  }
-
-  async getReported(): Promise<ReportedAnswer[]> {
-    return this.reports.getReported()
-  }
-
-  update(id: string, update: ContentUpdate): Promise<BasicResponse> {
-    return this.content.update(id, update)
-  }
-
-  delete(id: string): Promise<BasicResponse> {
-    return this.content.delete(id)
-  }
-
-  updateStatus(id: string, status: AnswerReportStatus): Promise<BasicResponse> {
-    return this.reports.updateStatus(id, status)
-  }
-
-  deleteReport(id: string): Promise<BasicResponse> {
-    return this.reports.deleteReport(id)
+    super(client, 'answers')
   }
 }
 

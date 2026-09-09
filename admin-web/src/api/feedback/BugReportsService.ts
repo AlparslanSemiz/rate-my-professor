@@ -1,17 +1,12 @@
-import { expectArray, type ApiClient, type BasicResponse } from './ApiClient'
+import { expectArray, type BasicResponse } from '@/api/client/ApiClient'
+import { HttpService } from '@/api/client/HttpService'
 import type { BugReport, BugReportUpdate } from './feedbackTypes'
 
 interface BugReportsResponse extends BasicResponse {
   bugReports: BugReport[]
 }
 
-export class BugReportsService {
-  private readonly client: ApiClient
-
-  constructor(client: ApiClient) {
-    this.client = client
-  }
-
+export class BugReportsService extends HttpService {
   /** Reads technical bug reports filed from the app. */
   async getReports(): Promise<BugReport[]> {
     const response = await this.client.get<BugReportsResponse>('/reports')

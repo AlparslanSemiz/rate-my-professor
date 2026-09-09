@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, type ApiClient, type BasicResponse } from '@/api/client/ApiClient'
 import { AuthSessionService } from './AuthSessionService'
 import { LoginCodeService } from './LoginCodeService'
 import { TokenLoginService } from './TokenLoginService'

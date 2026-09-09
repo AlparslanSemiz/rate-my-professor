@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from './AuthContext'
 import { useAuth } from './useAuth'
-import { authService } from '../api/AuthService'
-import { apiClient } from '../api/ApiClient'
-import { jsonResponse } from '../test/http'
+import { authService } from '@/api/auth'
+import { apiClient } from '@/api/client'
+import { jsonResponse } from '@/test/http'
 
-vi.mock('../api/AuthService', () => ({
+vi.mock('@/api/auth', () => ({
   authService: {
     logout: vi.fn(),
     me: vi.fn(),

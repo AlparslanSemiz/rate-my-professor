@@ -1,15 +1,10 @@
-import { ApiError, type ApiClient } from './ApiClient'
+import { ApiError } from '@/api/client/ApiClient'
+import { HttpService } from '@/api/client/HttpService'
 import type { LoginResponse } from './authTypes'
 
 const MISSING_TOKEN_MESSAGE = 'The server accepted the login but returned no token.'
 
-export class TokenLoginService {
-  private readonly client: ApiClient
-
-  constructor(client: ApiClient) {
-    this.client = client
-  }
-
+export class TokenLoginService extends HttpService {
   /**
    * Exchanges an email + one-time code for an auth token. A refusal is already an `ApiError`
    * by the time it gets here — the client rejects anything reporting `success: false` — so

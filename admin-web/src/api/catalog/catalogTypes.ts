@@ -1,4 +1,4 @@
-import type { LectureType, SemesterSeason } from '../domain/catalog'
+import type { LectureType, SemesterSeason } from '@/domain/catalog'
 
 export interface ProfessorRef {
   id: string

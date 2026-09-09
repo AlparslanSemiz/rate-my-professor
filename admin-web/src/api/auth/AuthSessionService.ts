@@ -1,14 +1,9 @@
-import type { ApiClient, BasicResponse } from './ApiClient'
+import type { BasicResponse } from '@/api/client/ApiClient'
+import { HttpService } from '@/api/client/HttpService'
 import { toAuthUser } from './authUserMapper'
 import type { SessionPayload, SessionResponse } from './authTypes'
 
-export class AuthSessionService {
-  private readonly client: ApiClient
-
-  constructor(client: ApiClient) {
-    this.client = client
-  }
-
+export class AuthSessionService extends HttpService {
   /** Revokes the current admin session. */
   logout(): Promise<BasicResponse> {
     return this.client.post<BasicResponse>('/auth/logout')

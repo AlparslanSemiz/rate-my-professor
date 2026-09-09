@@ -1,4 +1,5 @@
-import { expectArray, type ApiClient, type BasicResponse } from './ApiClient'
+import { expectArray, type BasicResponse } from '@/api/client/ApiClient'
+import { HttpService } from '@/api/client/HttpService'
 import { toRating } from './ratingMapper'
 import type { BackendRating, RatingPage, RatingQuery } from './ratingTypes'
 
@@ -7,13 +8,7 @@ interface RatingsResponse extends BasicResponse {
   nextCursor?: string | null
 }
 
-export class RatingReadService {
-  private readonly client: ApiClient
-
-  constructor(client: ApiClient) {
-    this.client = client
-  }
-
+export class RatingReadService extends HttpService {
   async list(query: RatingQuery = {}): Promise<RatingPage> {
     const response = await this.client.get<RatingsResponse>('/ratings', {
       limit: query.limit,

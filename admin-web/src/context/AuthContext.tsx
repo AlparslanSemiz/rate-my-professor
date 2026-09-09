@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { ApiError, apiClient } from '../api/ApiClient'
-import { authService } from '../api/AuthService'
+import { ApiError, apiClient } from '@/api/client'
+import { authService } from '@/api/auth'
 import { AuthContext, type AuthUser } from './AuthContextValue'
 import {
   clearStoredSession,

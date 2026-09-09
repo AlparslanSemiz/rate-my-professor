@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, type ApiClient, type BasicResponse } from '@/api/client/ApiClient'
 import { AuditLogMetaService } from './AuditLogMetaService'
 import { AuditLogReaderService } from './AuditLogReaderService'
 import { AuditLogRevertService } from './AuditLogRevertService'

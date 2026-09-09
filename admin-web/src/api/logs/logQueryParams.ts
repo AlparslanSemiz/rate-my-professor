@@ -1,4 +1,4 @@
-import { endOfDay, startOfDay, type LogFilters } from '../domain/auditLog'
+import { endOfDay, startOfDay, type LogFilters } from '@/domain/auditLog'
 
 const DEFAULT_LOG_PAGE_SIZE = 50
 

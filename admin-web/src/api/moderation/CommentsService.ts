@@ -1,8 +1,6 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
-import { CommentContentService } from './CommentContentService'
-import { CommentReportsService } from './CommentReportsService'
-import type { ContentUpdate } from './contentTypes'
-import type { CommentReportStatus, ManagedComment, ReportedComment } from './commentTypes'
+import { apiClient, type ApiClient } from '@/api/client/ApiClient'
+import { ModerationService } from './ModerationService'
+import type { ManagedComment, ReportedComment } from './commentTypes'
 
 export type { ContentUpdate } from './contentTypes'
 export type {
@@ -15,37 +13,15 @@ export type {
   UserStatus,
 } from './commentTypes'
 
-export class CommentsService {
-  private readonly content: CommentContentService
-  private readonly reports: CommentReportsService
-
+/**
+ * Comments and the reports against them.
+ *
+ * Deleting a comment takes the thread of answers under it with it — the backend cascades,
+ * and this is the one place the two resources genuinely differ in what an operation means.
+ */
+export class CommentsService extends ModerationService<ManagedComment, ReportedComment> {
   constructor(client: ApiClient) {
-    this.content = new CommentContentService(client)
-    this.reports = new CommentReportsService(client)
-  }
-
-  async getAll(): Promise<ManagedComment[]> {
-    return this.content.getAll()
-  }
-
-  async getReported(): Promise<ReportedComment[]> {
-    return this.reports.getReported()
-  }
-
-  update(id: string, update: ContentUpdate): Promise<BasicResponse> {
-    return this.content.update(id, update)
-  }
-
-  delete(id: string): Promise<BasicResponse> {
-    return this.content.delete(id)
-  }
-
-  updateStatus(id: string, status: CommentReportStatus): Promise<BasicResponse> {
-    return this.reports.updateStatus(id, status)
-  }
-
-  deleteReport(id: string): Promise<BasicResponse> {
-    return this.reports.deleteReport(id)
+    super(client, 'comments')
   }
 }
 

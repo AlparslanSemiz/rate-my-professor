@@ -1,12 +1,7 @@
-import type { ApiClient, BasicResponse } from './ApiClient'
+import type { BasicResponse } from '@/api/client/ApiClient'
+import { HttpService } from '@/api/client/HttpService'
 
-export class AuditLogRevertService {
-  private readonly client: ApiClient
-
-  constructor(client: ApiClient) {
-    this.client = client
-  }
-
+export class AuditLogRevertService extends HttpService {
   /**
    * Undoes the field edit an entry recorded. The caller must re-read the log afterwards:
    * that is where the reversal's own entry appears.

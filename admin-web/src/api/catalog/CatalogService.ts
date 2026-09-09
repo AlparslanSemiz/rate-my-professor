@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, type ApiClient, type BasicResponse } from '@/api/client/ApiClient'
 import { LectureCatalogService } from './LectureCatalogService'
 import { ProfessorCatalogService } from './ProfessorCatalogService'
 import type { Lecture, LectureUpdate, Professor, ProfessorUpdate } from './catalogTypes'

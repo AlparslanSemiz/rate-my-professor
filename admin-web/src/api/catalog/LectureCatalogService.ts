@@ -1,17 +1,12 @@
-import { expectArray, type ApiClient, type BasicResponse } from './ApiClient'
+import { expectArray, type BasicResponse } from '@/api/client/ApiClient'
+import { HttpService } from '@/api/client/HttpService'
 import type { Lecture, LectureUpdate } from './catalogTypes'
 
 interface LecturesResponse extends BasicResponse {
   lectures: Lecture[]
 }
 
-export class LectureCatalogService {
-  private readonly client: ApiClient
-
-  constructor(client: ApiClient) {
-    this.client = client
-  }
-
+export class LectureCatalogService extends HttpService {
   /** Public lecture catalogue read, backed by the same `/data` endpoint the student app uses. */
   async getAll(): Promise<Lecture[]> {
     const response = await this.client.get<LecturesResponse>('/data/lectures')

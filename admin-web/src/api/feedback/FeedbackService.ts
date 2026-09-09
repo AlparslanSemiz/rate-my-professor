@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, type ApiClient, type BasicResponse } from '@/api/client/ApiClient'
 import { BugReportsService } from './BugReportsService'
 import { GitlabIssueService } from './GitlabIssueService'
 import type { BugReport, BugReportUpdate, GitlabIssueResponse } from './feedbackTypes'

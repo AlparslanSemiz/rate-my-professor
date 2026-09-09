@@ -1,4 +1,4 @@
-import type { BasicResponse } from './ApiClient'
+import type { BasicResponse } from '@/api/client/ApiClient'
 
 export interface AuthUser {
   id: string

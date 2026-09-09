@@ -1,5 +1,5 @@
-import type { ContentStatus, ReportReason, ReportStatus } from '../domain/moderation'
-import type { UserReference, UserRole, UserStatus } from '../domain/user'
+import type { ContentStatus, ReportReason, ReportStatus } from '@/domain/moderation'
+import type { UserReference, UserRole, UserStatus } from '@/domain/user'
 
 export type CommentReportStatus = ReportStatus
 export type CommentUserRef = UserReference

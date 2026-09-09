@@ -1,4 +1,4 @@
-import type { BasicResponse } from './ApiClient'
+import type { BasicResponse } from '@/api/client/ApiClient'
 import {
   ADMINISTRATIVE_ACTIONS,
   LOG_TARGET_TYPES,
@@ -11,7 +11,7 @@ import {
   type LogTargetType,
   type LogValue,
   type RevertableLogEntry,
-} from '../domain/auditLog'
+} from '@/domain/auditLog'
 
 export const AUDIT_ACTIONS = ADMINISTRATIVE_ACTIONS
 export const AUDIT_TARGET_TYPES = LOG_TARGET_TYPES

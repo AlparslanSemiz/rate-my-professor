@@ -1,13 +1,8 @@
-import { expectArray, type ApiClient } from './ApiClient'
+import { expectArray } from '@/api/client/ApiClient'
+import { HttpService } from '@/api/client/HttpService'
 import type { AuditAction, AuditMeta, AuditMetaResponse, AuditTargetType } from './auditLogTypes'
 
-export class AuditLogMetaService {
-  private readonly client: ApiClient
-
-  constructor(client: ApiClient) {
-    this.client = client
-  }
-
+export class AuditLogMetaService extends HttpService {
   async getMeta(): Promise<AuditMeta> {
     const response = await this.client.get<AuditMetaResponse>('/audit-logs/meta')
     return {

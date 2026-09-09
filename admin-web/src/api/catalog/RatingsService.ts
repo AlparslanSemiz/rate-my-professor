@@ -1,4 +1,4 @@
-import { apiClient, type ApiClient, type BasicResponse } from './ApiClient'
+import { apiClient, type ApiClient, type BasicResponse } from '@/api/client/ApiClient'
 import { RatingDeletionService } from './RatingDeletionService'
 import { RatingReadService } from './RatingReadService'
 import type { RatingPage, RatingQuery } from './ratingTypes'

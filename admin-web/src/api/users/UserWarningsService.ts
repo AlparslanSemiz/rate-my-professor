@@ -1,4 +1,5 @@
-import { expectArray, type ApiClient, type BasicResponse } from './ApiClient'
+import { expectArray, type BasicResponse } from '@/api/client/ApiClient'
+import { HttpService } from '@/api/client/HttpService'
 import { toWarning, type BackendWarning } from './userWarningMapper'
 import type { Warning } from './userTypes'
 
@@ -6,13 +7,7 @@ interface WarningHistoryResponse extends BasicResponse {
   warnings: BackendWarning[]
 }
 
-export class UserWarningsService {
-  private readonly client: ApiClient
-
-  constructor(client: ApiClient) {
-    this.client = client
-  }
-
+export class UserWarningsService extends HttpService {
   /**
    * The target comes from the path and the issuer from the auth token, so the body is the
    * message and nothing else.

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AnswersService } from './AnswersService'
-import { ApiClient } from './ApiClient'
-import { jsonResponse, TEST_API_BASE_URL } from '../test/http'
+import { ApiClient } from '@/api/client/ApiClient'
+import { jsonResponse, TEST_API_BASE_URL } from '@/test/http'
 
 const fetchMock = vi.fn()
 
