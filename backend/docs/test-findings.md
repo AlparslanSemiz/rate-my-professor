@@ -1320,7 +1320,7 @@ was **inverted rather than deleted**, and watched fail first.
 **Where.** `BackEndStructure.md:153` in commit `214ff090`, and `application.properties` in
 commits `8bc81ef` and `d4cdbde`.
 
-**What happens.** `docs/TODO.md` records five leaked credentials and says, correctly, that
+**What happens.** `docs/TODO.md` recorded five leaked credentials at the time, and said, correctly, that
 gitleaks is *"a floor, not a ceiling"* — three of the five were found by reading the file rather
 than by the scanner. Writing `.gitleaks.toml` to close that gap turned the observation around:
 rules keyed on this project's own property names find **twelve** history findings where the
