@@ -7,6 +7,7 @@ import android.os.Looper;
 import androidx.fragment.app.Fragment;
 
 import com.example.liquidglass.LiquidGlassTabBar;
+import com.example.liquidglass.LiquidGlassView;
 import com.example.ratemyprofessor.Activities.MainActivity;
 import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.Fragments.HomeFragment;
@@ -42,7 +43,7 @@ public class MainActivitySmokeTest {
     public void bottomNavigationSwitchesFragments() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.setup().get();
-        LiquidGlassTabBar tabBar = activity.findViewById(R.id.custom_bottom_nav);
+        LiquidGlassView tabBar = activity.findViewById(R.id.custom_bottom_nav);
 
         // We can't easily click the custom tab bar tabs without knowing the internal structure,
         // but we can verify the activity's response to the interface methods it implements.
