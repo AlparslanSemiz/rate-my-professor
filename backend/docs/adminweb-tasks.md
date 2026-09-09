@@ -78,9 +78,20 @@ want it.
 - [ ] `POST /auth/login` → `POST /admin/auth/login`
 - [ ] `POST /auth/logout` → `POST /admin/auth/logout`
 - [ ] `POST /auth/logout-all` → `POST /admin/auth/logout-all`
-- [x] `GET /auth/me` → `GET /admin/auth/me` — **nothing to migrate: the old path is gone.**
-      It was removed from the backend and is not coming back, so a panel still calling it gets
-      a `404`. `GET /admin/auth/me` is the only identity endpoint.
+- [ ] `GET /auth/me` → `GET /admin/auth/me`
+
+  **This line used to say the old path was gone and not coming back. It was right about the
+  code and wrong about the consequence, and it cost you the panel.** `GET /auth/me` really was
+  unmapped, and your own reading (C-01) had the effect exactly: `authenticateAdmin.ts:32-42`
+  bare-catches the `404`, hands `null` to `resolveAdminUser`, and fails the whole sign-in with
+  "your admin account could not be read". The code was accepted, the token was minted, and
+  nobody could get in. Neither side saw it, because from here it looks like a retired route and
+  from there it looks like a flaky backend.
+
+  `GET /auth/me` is **served again** as of `CHANGELOG` 9.09 (15), answering exactly what
+  `GET /admin/auth/me` answers and requiring the same admin session. You need to ship nothing
+  to sign in again. It exists only until you have migrated, and `AdminApiPathSplitTests` pins
+  the two paths to the same answer in the meantime.
 
 Do `POST /admin/auth/login` first — it is the one that changes behaviour:
 
@@ -120,7 +131,11 @@ the handler and answer `200 {"success": false}` instead; that is fixed, so the l
 `/admin` paths no longer differ in error shape. If the panel branches on
 `success === false` for these two calls, it needs to handle the status code as well.
 
-- [ ] Handle `403` on the two catalogue creates.
+- [x] ~~Handle `403` on the two catalogue creates.~~ **Does not apply to this repository.**
+      Your audit (§3.7) establishes that the panel calls neither `POST /data/lectures` nor
+      `POST /data/professor` — `LectureCatalogService` and `ProfessorCatalogService` implement
+      only the read, the patch and the delete, and the catalogue UI offers no create control.
+      Closed from our side.
 
 ### Three things that deliberately do not move
 
@@ -132,13 +147,46 @@ the handler and answer `200 {"success": false}` instead; that is fixed, so the l
   include deactivated rows.
 - **`GET /admins/validate`** — legacy and being retired. `GET /admin/auth/me` answers the
   same question with more detail.
-  - [ ] Confirm the panel does not call `/admins/validate`, so the backend can delete it.
+  - [x] Confirmed from your audit: the panel does **not** call `/admins/validate`. The route is
+        still here — deleting it is a separate decision, tracked on our board — but the question
+        is answered and nothing is waiting on you.
+
+## 2a. Two fields the ratings tab reads that this API has never served
+
+Found by `ConsumerContractSweepTests`, which checks every field your contract says you read
+against the response the route actually returns. These two were its first run's only real
+finds, and both are silent by construction — your own null-guards turn them into wrong data
+rather than an error.
+
+`GET /ratings` serves each rating as:
+
+```json
+{"id":"...","student":{"id":"...","name":"...","role":"STUDENT","warnings":0,"status":"ACTIVE"},
+ "lectureLabel":"CS101 — Algorithms","lectureId":"...",
+ "topics":[{"category":"LECTURE_UNDERSTANDABILITY","value":4.5}],"createdAt":"..."}
+```
+
+- [ ] `src/api/catalog/ratingMapper.ts:19` reads `rating.author?.name`. The field is
+      **`student`**. Because the read is optional-chained with a fallback, **every row of the
+      ratings table shows "Unknown"** instead of failing.
+- [ ] `ratingMapper.ts:21` reads `rating.scores ?? {}`. The field is **`topics`**, and it is a
+      list of `{category, value}` rather than an open map. **The scores column is empty on
+      every row.**
+
+Neither is a backend change: `admin-api.md` has documented `student` and `topics`, with the
+worked example above, since the endpoint existed. Both are now pinned in
+`ConsumerContractSweepTests.READ_BUT_NOT_SERVED`, and that list is asserted as an exact set —
+so when you fix the mapper and update your contract document, our build goes red and the entry
+gets deleted. That is deliberate: it is how we find out.
 
 ## 3. Handle a session that ends during the day
 
 Admin sessions are **one day** by default, not a year.
 
-- [ ] Read `expiresAt` from the login response. It is a UTC ISO 8601 timestamp naming the
+- [ ] Read `expiresAt` from the login response. **Still open** — your audit (C-13) confirms
+      `expiresAt` appears nowhere in `src/`, and `TokenLoginService.ts:23-27` reads exactly one
+      field off the login response, `authToken`. The field is served and has been since the
+      split. It is a UTC ISO 8601 timestamp naming the
       moment the token stops authenticating.
 - [ ] Warn before it expires, rather than letting an operator discover it as a `401` in the
       middle of a form. Losing a half-typed warning body to a silent expiry is the failure

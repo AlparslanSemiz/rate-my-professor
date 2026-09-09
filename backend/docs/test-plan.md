@@ -1078,6 +1078,73 @@ gaps that answered "nothing":
 - **No behaviour was corrected.** Everything the work turned up that is client-visible went to
   the backlog in [TODO.md](TODO.md) instead, unfixed and named.
 
+## The consumer contract layer
+
+**The question it answers:** does what this API serves match what the two client repositories
+actually read?
+
+That is not the question any other layer here asks. The unit, API, contract, integration and
+E2E layers all ask whether a route behaves correctly, and every one of them was green while
+`GET /auth/me` was unmapped and the admin panel could not sign anybody in
+([F-39](test-findings.md#f-39--get-authme-was-unmapped-and-the-admin-panel-could-not-sign-anybody-in)),
+and while `POST /answers/report` answered 405 to every report the Android app has ever filed
+([F-40](test-findings.md#f-40--post-answersreport-was-never-served-and-every-report-from-the-app-failed-silently)).
+Correct behaviour on the routes that exist says nothing about the routes a client calls.
+
+### What it reads
+
+Two documents in `docs/`, each an audit written **in the consumer's own repository** against its
+own call sites: `adminweb-consumer-contract.md` (42 routes) and `frontend-consumer-contract.md`
+(24 called routes). Each ends in a delimited `consumer-contract` block — verb, path, whether the
+client sends a session, and every field that client reads, written out in full. The prose above
+the block is the clients' own and is not generated from anything.
+
+The block exists for the reason [ADR 0012](adr/0012-documentation-under-test.md) gave for
+`admin-api.md`'s contract table, and [ADR 0013](adr/0013-consumer-expectations-in-the-backend-repo.md)
+records why it is hand-written rather than parsed out of the prose: the two documents use a
+leading-dot shorthand for nested fields and resolve it differently, so a parser has to guess —
+and did guess wrong, on `ratings[].lecture.semesterSeason`.
+
+### What it checks
+
+`ConsumerContractSweepTests`, in three directions:
+
+| Check | Fails when |
+| --- | --- |
+| Route and verb | A consumer calls something this application does not map. Each one is a broken call in a shipped client. |
+| **Field names** | A field the client reads is not in the response type that route returns. |
+| Routes claimed by nobody | The count of application routes no consumer lists moves — a new undocumented surface, or a consumer list gone stale. |
+
+**The field check is the part that did not exist anywhere.** Status agreement is covered three
+times over; field-name agreement was covered nowhere, and it is the failure both clients describe
+as silent. The panel's `expectArray` verifies arrayness and casts the elements without checking
+them, so a renamed field inside a list renders as an empty cell; Gson leaves an unmatched field
+`null`. A rename reaches a user as a blank column, and no test, log line or error report says so.
+
+Fields are resolved by reflection against the handler's return type rather than against a live
+response. That reaches every field of every route with no fixture per endpoint, including nested
+ones a probe would not populate. It found two on its first run — the panel's ratings tab reads
+`author` and `scores` where this API serves `student` and `topics` — and both had been wrong for
+as long as the endpoint had existed.
+
+Alongside it, `ConsumerEnumContractTests` pins the eight enums that cross the wire by constant
+name, at the unit layer, because Gson maps an unrecognised value to `null` rather than failing
+and one new `RatingCategory` would crash the app's rating screen.
+
+### What it does not answer
+
+- **Whether the client is right about itself.** The blocks record what each client reads, taken
+  from that client's own audit. If an audit is wrong about its own source, this layer inherits
+  the error. Those audits live in the repositories that can check them.
+- **Whether a field's *value* is correct.** It compares names and shapes. That a `createdAt` is
+  the right instant, or that an average is the right number, is what each endpoint's own tests
+  are for.
+- **Whether a client handles what it receives.** Both audits are explicit that they mostly do
+  not — 34 of the panel's 42 calls branch on no status, and the app inspects no status but 401 —
+  and no test here can fix a `catch` in another repository.
+- **Anything about a third consumer.** Two are inventoried. A client nobody has audited is
+  invisible to this layer, and the routes-claimed-by-nobody count is the only hint it gives.
+
 ## Where the suite stops
 
 *Deliberately uncovered* below names two **classes** nobody tests and why. This section names

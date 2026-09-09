@@ -17,11 +17,17 @@ really recorded if it lives in a test.
 
 ## At a glance
 
-**47 findings. 41 fixed, 2 closed as a recorded decision (P-3, P-7), 1 an existing protection
+**50 findings. 44 fixed, 2 closed as a recorded decision (P-3, P-7), 1 an existing protection
 put under test (F-13), 1 documented rather than changed (F-30), 2 open — F-29, which needs a
 rotation rather than a commit, and F-34, which needs a product decision.** Two of them — F-7
 and F-8, both behind the "approximate location does not work" report — are the ones a *user*
-reported. The other forty-five nobody had seen.
+reported. The other forty-eight nobody had seen.
+
+**Two of the last three had been shipped and broken for the whole life of the product**, and
+neither produced a signal anywhere: F-39 left the admin panel unable to sign anybody in, and F-40
+meant every answer report the Android app ever filed was refused while the user was told it had
+been sent. Both were found by reading the two consumer repositories' audits against this code,
+with the suite green the entire time. That gap is what the consumer contract layer now covers.
 
 Which kind of work turned each one up, because that is the part worth knowing when deciding
 what to write next:
@@ -37,6 +43,7 @@ what to write next:
 | **Reading the code against a list of known defect shapes** — the 9 September pass | 7 | F-22, F-23, F-24, F-25, F-26, F-27, F-28 |
 | **Sweeping those same shapes to the end** — the Kontrollphase pass | 7 | F-31, F-32, F-33, F-34, F-35, F-36, F-37 |
 | **Measuring a gap an earlier finding had parked** | 1 | F-38 |
+| **Consumer contract audit** — the two client repositories' contracts, read against this code | 3 | F-39, F-40, F-41 |
 | **Secret scanning, once the rules matched this project** | 1 | F-29 |
 | **Static analysis, run for the first time** | 1 | F-30 |
 | **Concurrency layer** (two requests at once, real PostgreSQL) | 0 | — see [Negative results](#negative-results) |
@@ -126,6 +133,9 @@ defect; it found a different kind.
 | [F-36](#f-36--an-audit-value-the-code-no-longer-understands-crashes-the-revert) | An unreadable audit value answers 500 on revert | Medium — F-23's failure, one refactor away | **Fixed** |
 | [F-37](#f-37--post-authvalidate-reported-an-authorization-failure-with-200) | `POST /auth/validate` reported an authorization failure with 200 | Medium — F-5's last instance | **Fixed** |
 | [F-38](#f-38--a-body-over-the-upload-size-limit-answered-500) | A body over the upload size limit answered 500 | Medium — wrong status, seen in production logs | **Fixed** |
+| [F-39](#f-39--get-authme-was-unmapped-and-the-admin-panel-could-not-sign-anybody-in) | `GET /auth/me` was unmapped; the admin panel could not sign anybody in | **Blocker** — a shipped client locked out, silently | **Fixed** |
+| [F-40](#f-40--post-answersreport-was-never-served-and-every-report-from-the-app-failed-silently) | `POST /answers/report` was never served; every report from the app failed silently | **High** — a feature that has never worked on any release | **Fixed** |
+| [F-41](#f-41--get-accountratings-served-its-ratings-in-no-defined-order) | `GET /account/ratings` served its ratings in no defined order | Medium — F-21's shape, on the list its sweep missed | **Fixed** |
 | [P-8](#p-8--admin-apimd-drifted-four-times-and-nothing-noticed) | `admin-api.md` drifted from the code four times with no mechanism | Process | **Fixed** (under test) |
 | [P-6](#p-6--a-sweep-asserted-not-refused-which-a-404-also-satisfies) | A sweep asserted "not refused", which a `404` also satisfies | Process | **Fixed** |
 
@@ -1749,9 +1759,110 @@ claiming `401`/`403` for the caller's session, when those are answers about the 
 the body*; the document's own preamble draws that line and the table had flattened it.
 
 **What it does not catch**, found by trying to make it fail: the `404` probe needs an id to
-invent, so a `404` claimed on a route with no path variable is carried and never checked. 87
+invent, so a `404` claimed on a route with no path variable is carried and never checked. 88
 claimed statuses are unprovoked here — `200`, `400`, `409`, `429`, `502`, `503` — and that
 number is itself asserted so it cannot grow quietly.
+
+---
+
+### F-39 — `GET /auth/me` was unmapped, and the admin panel could not sign anybody in
+
+**Where.** `AuthController`. A route that had been removed on the assumption its only caller had
+migrated.
+
+**What happens.** `AuthController` maps five POSTs and no `/me`; `GET /me` exists only on
+`AdminAuthController` under `/admin/auth`. `SecurityConfig` ends in `anyRequest().permitAll()`,
+so `GET /auth/me` was not a `401` — it was an unmapped path answering **404 `Not found`**.
+
+The panel calls it in two places. On page load the `404` is ignored, because only `401` is acted
+on, and the stored session simply stops refreshing. **After a login it is fatal:**
+`authenticateAdmin.ts:32-42` bare-catches it, `null` reaches `resolveAdminUser`, and that raises
+`IdentityUnavailableError`, which fails the entire sign-in with "Signed in, but your admin
+account could not be read." The code was accepted, the token was minted, and the operator could
+not get in.
+
+**Why nobody saw it.** Two documents in this repository disagreed and each was believed by the
+side it suited. `docs/adminweb-tasks.md:81-83` said the path was gone — correct about the code —
+and the panel's own copy of an older findings file said nothing was broken. Neither statement was
+attached to a test, so both survived. **This is the case for the consumer contract layer**: the
+suite was fully green throughout.
+
+**Status. Fixed.** `AuthController.me` is a legacy alias delegating to the same
+`IdentityService.me` its twin calls, with `SecurityConfig` matching `GET /auth/me` as
+`hasRole("ADMIN")` so it carries the admin guard rather than the surrounding `permitAll()`.
+`CHANGELOG` 9.09 (15).
+
+**Test.** `AdminApiPathSplitTests.theLegacyIdentityPathAnswersWhatTheAdminPathAnswers`, which
+asserts the alias against the admin path's own response rather than a literal so the two cannot
+drift, and `theLegacyIdentityPathRefusesAnAnonymousCallerAndAStudent`. Both were watched fail
+with `404 {"message":"Not found","success":false}` before the mapping existed. The guard was
+proved separately by deleting the matcher and watching
+`ApiAuthorizationMatrixTests.everyRouteIsEitherDeclaredPublicOrRefusesAnonymousCallers` name
+`GET /auth/me -> 500`.
+
+---
+
+### F-40 — `POST /answers/report` was never served, and every report from the app failed silently
+
+**Where.** `SocialController` maps `/answers/report` under a class-level `/social`. The Android
+client has always sent it unprefixed.
+
+**What happens.** `POST /answers/report` matched `/answers/{id}` on `ModerationAnswerController`,
+which maps `PATCH` and `DELETE` and no `POST`, so it was answered **405 `Method not allowed`**
+with `Allow: DELETE, PATCH`. **Reporting an answer from the Android app has never worked**, on
+any release.
+
+**Why nobody saw it, on either side.** `logic/CommentHelper.java:86-88` shows "report submitted"
+and dismisses the dialog immediately after `enqueue`, before the response arrives; the real
+outcome only ever reached logcat. And from this side it looked like a naming inconsistency
+rather than a dead route — the client's own audit files it under F-3.8 as "the only social route
+without the `/social` prefix", which reads as cosmetic. `git log -S` settles it: commit `4f1d807`
+introduced the mapping already prefixed, so the path the client calls never existed.
+
+**How it was found.** Not by the sweep. It fell out of a full route inventory taken while writing
+the consumer contract layer, by reading the client's route table against this application's
+mapping — which is precisely what `ConsumerContractSweepTests` now does mechanically, and would
+have caught on any run.
+
+**Status. Fixed.** `LegacyAnswerReportController`, one handler and no class-level mapping,
+delegating to the same `ContentReportService.submitAnswerReport`. Its own class because a method
+path is relative to its class prefix, and widening `SocialController` to serve an unprefixed
+path would alias `/comments`, `/answers` and `/notifications` onto the moderation controllers
+that already map them. `SecurityConfig` matches `POST /answers/report` as authenticated — the
+`/answers/**` matchers cover only `PATCH` and `DELETE`, so it would otherwise have been
+anonymous. `CHANGELOG` 9.09 (16).
+
+**Test.** `SocialApiIntegrationTests.answerReportsAreAlsoServedOnTheUnprefixedPathTheAppCalls`
+and `theUnprefixedAnswerReportPathRefusesAnAnonymousCaller`. Both watched fail at **405** with
+`Allow: DELETE, PATCH` first, which is the evidence for the diagnosis and not just for the fix.
+
+---
+
+### F-41 — `GET /account/ratings` served its ratings in no defined order
+
+**Where.** `Student.ratings`, an unannotated JPA bag, serialised straight out by
+`StudentService.getUserRatings`.
+
+**What happens.** F-21's defect, on the one list the F-35 sweep did not reach. That sweep covered
+`Rating.topics`, `Comment.answers` and the comment listings; `Student.ratings` is the same shape
+and was missed. The nested `lecture.professors` inside each entry **was** already correct — it
+maps through `LectureResponseMapper`, which carries F-21's own comparator — so the item was
+ordered inside and unordered outside.
+
+**Status. Fixed.** `@OrderBy("createdAt DESC, id ASC")`, following the shape commit `6269ed5`
+used for `Comment.answers` rather than sorting in the mapper. Newest first to match the comment
+listings; the id breaks a tie so two ratings written in the same instant come out the same way
+twice. `CHANGELOG` 9.09 (17).
+
+**Test.** `AccountApiIntegrationTests.userRatingsComeBackNewestFirstRatherThanInWhateverOrderTheDatabaseChose`,
+watched fail with `Oldest` where `Newest` was expected, and watched fail again with the
+`@OrderBy` removed.
+
+**One thing the fixture got wrong first, worth recording.** The first version set `createdAt` on
+the managed entity after insert. `@CreationTimestamp` maps the column as non-updatable, so the
+write was dropped without an error and all three rows kept their insertion instants — which
+would have made the test pass on an unordered bag. The timestamps are written with `jdbcTemplate`
+now. A fixture that cannot express the disorder it is testing for is a test that asserts nothing.
 
 ---
 
@@ -1759,6 +1870,126 @@ number is itself asserted so it cannot grow quietly.
 
 A sweep that finds nothing is only worth something if what it covered is written down.
 Otherwise the next person repeats it, or worse, assumes it was never done.
+
+### The consumer contract audit — what came back clean, and how far each check looked
+
+Three real breaks came out of reading the two consumer audits against this code
+([F-39](#f-39--get-authme-was-unmapped-and-the-admin-panel-could-not-sign-anybody-in),
+[F-40](#f-40--post-answersreport-was-never-served-and-every-report-from-the-app-failed-silently),
+[F-41](#f-41--get-accountratings-served-its-ratings-in-no-defined-order)). Everything else both
+clients raised as a risk was checked and is fine. Each is written with what was looked at,
+because that is the half that makes a clean result worth anything.
+
+**Bodyless writes are accepted with no `Content-Type` header.** Both audits asked this, and it
+was the highest-count risk either raised: five panel calls and three app calls send no
+`Content-Type`, because both clients build the header only when there is a body. If F-17's 415
+caught them, eight client calls break at once — and `POST /auth/logout` fails *silently*, since
+the panel swallows its failures, leaving a live token behind an operator who believes they signed
+out.
+
+It does not, and the reason is structural rather than lucky: Spring raises
+`HttpMediaTypeNotSupportedException` only when something has to read the body, which needs a
+`@RequestBody` or a `consumes`, and **no mapping in this application declares `consumes` at all**
+(`grep -rn "consumes\s*=" src/main/java` returns nothing). Scope: all **35** mapped non-GET
+routes that declare no `@RequestBody`, generated as the complement of `bodyReadingRoutes()` so a
+new one arrives on its own —
+`ApiProtocolContractTests.everyRouteThatReadsNoBodyIsAnsweredWithoutAContentTypeHeader`.
+
+Why nothing pinned this before is worth stating: `ApiProtocolContractTests`,
+`ApiErrorMessageContractTests` and `AdminApiDocumentationDriftTests` all gate on
+`readsBody(handler)`, so these 35 routes were skipped by all three **by construction**.
+
+*Proved it can fail, and the first attempt could not.* With `consumes` added to two routes the
+sweep named only one, because the loop authenticated as a single admin and
+`PATCH /account/deleteAccount` answers 200 and deletes that account — after which every remaining
+route answers 401, which is not 415. It now mints a fresh account per route and names both. A
+sweep whose own fixture destroys its session is looking at a fraction of its subject and reading,
+from outside, exactly like one that checked everything.
+
+**Audit entries always carry `changes`, `metadata` and `actor`.** The panel enumerates `changes`
+with `Object.keys` on every row of the audit table and reads `actor.name` unguarded, so an absent
+key blanks the screen rather than spoiling one row. Three layers guarantee presence: field
+initialisers on `AuditLog`, `AuditWriter.persist` normalising null to `{}`, and `jsonb NOT NULL`
+columns. Jackson's default inclusion is `ALWAYS` — there is no `spring.jackson.*` key anywhere
+and the only `@JsonInclude` in `src/main` is on `ApiErrorResponse`. Scope: every entry returned
+by both `/admin/audit-logs` and `/admin/activity-logs`, asserted as **key presence** rather than
+non-nullness, because `jsonPath` cannot tell a null from a key that was never written —
+`AdminApiIntegrationTests.everyAuditEntryCarriesChangesMetadataAndAnActor`. Proved it can fail by
+putting `NON_EMPTY` inclusion on `AuditLogResponse`, which dropped `metadata` from the
+`USER_DELETED` entry exactly as predicted.
+
+**`actor` cannot be null, and there is no system-originated entry.** Five `NOT NULL` actor
+columns, one persistence path (`AuditWriter.persist`, the only place an `AuditLog` is saved
+outside the revert service), and `AuditActorType` declares only `ADMIN` and `USER` — there is no
+`SYSTEM`. Both refusal writers return early when there is no known account:
+`AccessRefusalAuditor` when the principal is not an `AuthenticatedUser`, and
+`SessionIssuer.auditLoginRefusal` on an unknown address. The rule is stated in `AuditAction`'s
+own comment: an anonymous 401 has no actor and would let anyone fill the table.
+
+**No comment, answer or report can arrive without an author.** Deletion anonymises in place —
+`StudentLifecycleService` scrubs the username to `"Deleted user <8-hex>"`, sets the address to an
+`@invalid.local` form and the status to `DELETED`, and keeps the row so every foreign key stays
+valid. The app-tier comment and answer DTOs carry no author object at all, only a flat
+`studentUsername`, behind `@ManyToOne(optional = false)`. Scope: the four moderation DTOs that do
+nest a `UserReferenceResponse`, plus an end-to-end check that a comment survives its author's
+deletion with a renderable author —
+`AdminApiIntegrationTests.contentOfADeletedAccountStillCarriesAnAuthor`. The two genuine nulls in
+this area are elsewhere and both are already handled by the panel: `WarningResponse.createdFrom`,
+which is nullable by design, and `BugReport.reporter`, which the mapper turns into `"Unknown"`.
+
+**A 2xx login always carries `authToken`.** There is exactly one `new LoginResponse(...)` in
+`src/main`, at `SessionIssuer:192`, and every other exit from the login path throws
+`ApiException`. Already pinned before this pass by `AuthApiIntegrationTests`, which asserts
+`$.authToken` `.isString()` — recorded here rather than duplicated, because the panel raises
+`ContractError` without it and the app writes `null` and then sends `Bearer null` on every
+later request.
+
+**`own` is not captured as a lecture id.** `/ratings/own/{lectureId}` is three segments and
+`/ratings/{lectureId}` is two; they cannot collide. The neighbour that can is real and already
+recorded — `GET /ratings/rate` falls into `/ratings/{lectureId}` and answers 400 — which is why
+this is pinned rather than argued: `ApiProtocolContractTests.theOwnRatingsSegmentIsNotCapturedAsALectureId`
+asserts the two reachable handlers by their different answers, and that the two-segment form
+`/ratings/own` is refused for not being a UUID.
+
+**An empty trailing path segment is not a route.** Both clients can produce one — the app sends
+`PATCH /social/notifications/` when a notification id is missing, and the panel interpolates ids
+without escaping, so an empty id gives `/users/`. Both answer **404 `Not found`**, not 500 and
+not the collection route; the collection paths themselves answer 405 for those verbs, so the two
+mechanisms stay distinguishable from the response.
+`ApiProtocolContractTests.anEmptyTrailingSegmentIsNotFoundRatherThanTheCollectionRoute`.
+
+**`POST /social/comments` and `POST /ratings/rate` have no `200 {"success": false}` path left.**
+Both throw `ApiException(NOT_FOUND)` for an unknown lecture (F-28's fix, and the same shape one
+service over). This matters more than it looks: the app reads neither response body, so a failure
+that answered 2xx would show the user "Your comment is sent." The only `BasicResponse(..., false)`
+returned from a controller in `src/main` is `AdminService`'s, behind `GET /admins/validate`, and
+it is unreachable — the chain answers 403 first, pinned by `AdminApiPathSplitTests`.
+
+**Every list key both clients bind to is served under that name**, including the three that do
+not match their path: `GET /reports` → `bugReports`, `GET /comments/reported` → `comments`,
+`GET /answers/reported` → `answers`. So are the three the app binds with `@SerializedName` —
+`notificationID`, `ownCommentID` and `lectureResponse` — and the two spellings its profile
+payload depends on, `ratingsCount` and `commentsWritten`. These are not separate tests: they are
+consumer-read fields, so `ConsumerContractSweepTests` covers them along with the other 300-odd,
+and a rename of any one of them names it. Two keys neither client listed are served and worth
+knowing about: `activityLogs` (the activity endpoint re-wraps specifically to rename the array)
+and `actorTypes`, a fourth key on `/audit-logs/meta`.
+
+**What the sweep found that reading had not:** two fields the admin panel reads from
+`GET /ratings` that this API has never served — `author` (the field is `student`) and `scores`
+(the field is `topics`). Both reads are optional-chained on the panel side, so they degrade
+rather than fail: the author column shows "Unknown" on every row and the scores column is empty
+on every row. `docs/admin-api.md` has documented `student` and `topics`, with a worked example,
+since the endpoint existed, so this is the panel's to fix; it is reported in
+`docs/adminweb-tasks.md` and held in `READ_BUT_NOT_SERVED`, which is asserted as an exact set so
+the entry has to be deleted when the panel moves.
+
+**One scope limit found while doing this, not a finding but worth knowing.**
+`AdminApiDocumentationDriftTests.everyAdministrativeRouteTheApplicationMapsIsInTheDocument`
+filters on `route.contains(" /admin")`. Its reverse direction therefore covers only
+`/admin`-prefixed routes — the entire legacy surface the panel actually calls is outside it. That
+is why adding `GET /auth/me` did not make it red, and it is part of the case for the consumer
+sweep covering the legacy paths by name.
 
 ### Batch 6 raised no finding
 

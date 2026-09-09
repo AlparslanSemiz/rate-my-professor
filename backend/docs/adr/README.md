@@ -25,3 +25,4 @@ instead; a plausible-sounding reconstruction is worse than an admission.
 | [0010](0010-405-over-404-for-a-wrong-verb.md) | 405 with `Allow` instead of 404 for a verb a path does not map |
 | [0011](0011-narrow-exception-handlers.md) | Narrow `@ExceptionHandler`s over `ResponseEntityExceptionHandler` |
 | [0012](0012-documentation-under-test.md) | The admin API document is tested against the code |
+| [0013](0013-consumer-expectations-in-the-backend-repo.md) | Consumer expectations live here, as a generated list under test |
