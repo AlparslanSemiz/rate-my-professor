@@ -1,8 +1,9 @@
 import { Box, Text, type CSSProperties } from '@mantine/core'
-import BrandMark from '../../components/BrandMark'
-import { PANEL_NAME, PRODUCT_NAME } from '../../constants/branding'
+import BrandMark from '@/components/BrandMark'
+import { PANEL_NAME, PRODUCT_NAME } from '@/constants/branding'
+import { chrome } from '@/theme'
 
-const BORDER_COLOR = '#1e2028'
+const BORDER_COLOR = chrome.borderSubtle
 const brandRowStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -15,10 +16,10 @@ export default function SidebarHeader() {
       <div style={brandRowStyle}>
         <BrandMark />
         <div>
-          <Text fw={600} size="sm" c="#f1f5f9" lh={1.2}>
+          <Text fw={600} size="sm" c={chrome.textBright} lh={1.2}>
             {PRODUCT_NAME}
           </Text>
-          <Text size="xs" c="#6b7280" lh={1.2}>
+          <Text size="xs" c={chrome.textDim} lh={1.2}>
             {PANEL_NAME}
           </Text>
         </div>

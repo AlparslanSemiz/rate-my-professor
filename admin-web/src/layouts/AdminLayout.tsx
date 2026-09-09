@@ -1,19 +1,19 @@
 import { lazy, Suspense } from 'react'
 import { AppShell } from '@mantine/core'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import ErrorBoundary from '../components/ErrorBoundary'
-import PageLoader from '../components/PageLoader'
+import ErrorBoundary from '@/components/ErrorBoundary'
+import PageLoader from '@/components/PageLoader'
 import Sidebar from './components/Sidebar'
-import { routes } from '../constants/routes'
+import { routes } from '@/constants/routes'
+import { chrome } from '@/theme'
 
-const ActivityLogsPage = lazy(() => import('../features/activity-logs/ActivityLogsPage'))
-const AuditLogsPage = lazy(() => import('../features/audit-logs/AuditLogsPage'))
-const CatalogPage = lazy(() => import('../features/catalog/CatalogPage'))
-const CommentsPage = lazy(() => import('../features/comments/CommentsPage'))
-const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'))
-const FeedbackPage = lazy(() => import('../features/feedback/FeedbackPage'))
-const HelpPage = lazy(() => import('../features/help/HelpPage'))
-const UsersPage = lazy(() => import('../features/users/UsersPage'))
+const AuditLogsPage = lazy(() => import('@/features/audit-logs/AuditLogsPage'))
+const CatalogPage = lazy(() => import('@/features/catalog/CatalogPage'))
+const CommentsPage = lazy(() => import('@/features/comments/CommentsPage'))
+const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'))
+const FeedbackPage = lazy(() => import('@/features/feedback/FeedbackPage'))
+const HelpPage = lazy(() => import('@/features/help/HelpPage'))
+const UsersPage = lazy(() => import('@/features/users/UsersPage'))
 
 export default function AdminLayout() {
   return (
@@ -26,8 +26,8 @@ export default function AdminLayout() {
           minHeight: '100vh',
         },
         navbar: {
-          background: 'linear-gradient(180deg, #12151c 0%, #0f1217 100%)',
-          borderRight: '1px solid #1b1f27',
+          background: `linear-gradient(180deg, ${chrome.pageBase} 0%, ${chrome.surfaceSunken} 100%)`,
+          borderRight: `1px solid ${chrome.borderSubtle}`,
           boxShadow: '1px 0 0 rgba(255,255,255,0.02) inset',
         },
       }}
@@ -48,7 +48,6 @@ export default function AdminLayout() {
                 <Route path={routes.comments} element={<CommentsPage />} />
                 <Route path={routes.catalog} element={<CatalogPage />} />
                 <Route path={routes.auditLogs} element={<AuditLogsPage />} />
-                <Route path={routes.activityLogs} element={<ActivityLogsPage />} />
                 <Route path={routes.help} element={<HelpPage />} />
                 <Route path="*" element={<Navigate to={routes.dashboard} replace />} />
               </Routes>

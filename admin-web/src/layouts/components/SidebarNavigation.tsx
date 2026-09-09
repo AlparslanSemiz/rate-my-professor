@@ -1,12 +1,13 @@
 import { Box, Stack, Text, UnstyledButton, type CSSProperties } from '@mantine/core'
-import { DEFAULT_ACCENT, moduleAccent } from '../../constants/colors'
-import { withAlpha } from '../../utils/color'
+import { DEFAULT_ACCENT, moduleAccent } from '@/constants/colors'
+import { withAlpha } from '@/utils/color'
 import {
   MAIN_NAV_ITEMS,
   type NavigationItem,
 } from './sidebarItems'
+import { chrome } from '@/theme'
 
-const INACTIVE_ICON_COLOR = '#6b7280'
+const INACTIVE_ICON_COLOR = chrome.textDim
 
 const buttonBaseStyle: CSSProperties = {
   display: 'flex',
@@ -97,10 +98,10 @@ export function SidebarNavButton({
         <Icon size={16} color={active ? accent : INACTIVE_ICON_COLOR} />
       </Box>
       <div>
-        <Text size="sm" fw={active ? 600 : 400} c={active ? '#f1f5f9' : '#9ca3af'} lh={1.2}>
+        <Text size="sm" fw={active ? 600 : 400} c={active ? chrome.textBright : chrome.textMuted} lh={1.2}>
           {item.label}
         </Text>
-        <Text size="xs" c="#4b5563" lh={1.3}>
+        <Text size="xs" c={chrome.textFaint} lh={1.3}>
           {item.sublabel}
         </Text>
       </div>

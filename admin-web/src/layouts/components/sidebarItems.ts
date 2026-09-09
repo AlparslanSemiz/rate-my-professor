@@ -1,5 +1,4 @@
 import {
-  IconActivity,
   IconBug,
   IconHelpCircle,
   IconHistory,
@@ -8,7 +7,7 @@ import {
   IconSchool,
   IconUsers,
 } from '@tabler/icons-react'
-import { routes } from '../../constants/routes'
+import { routes } from '@/constants/routes'
 
 export const MAIN_NAV_ITEMS = [
   {
@@ -43,19 +42,13 @@ export const MAIN_NAV_ITEMS = [
   },
 ] as const
 
-/** Oversight views: what happened, who did it, and whether the backend is keeping up. */
+/** Oversight views: what admins did, and what the panel's controls mean. */
 export const OVERSIGHT_NAV_ITEMS = [
   {
     label: 'Audit Logs',
     sublabel: 'Admin activity',
     path: routes.auditLogs,
     icon: IconHistory,
-  },
-  {
-    label: 'Activity Log',
-    sublabel: 'Everyone else',
-    path: routes.activityLogs,
-    icon: IconActivity,
   },
   {
     label: 'Help',

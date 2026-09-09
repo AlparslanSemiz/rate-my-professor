@@ -1,10 +1,11 @@
 import { Box, Divider, Text, UnstyledButton, type CSSProperties } from '@mantine/core'
 import { IconCircleFilled } from '@tabler/icons-react'
-import type { AuthUser } from '../../context/AuthContextValue'
-import { KIT } from '../../constants/colors'
+import type { AuthUser } from '@/context/AuthContextValue'
+import { KIT } from '@/constants/colors'
+import { chrome } from '@/theme'
 
 const ACTIVE_COLOR = KIT.green
-const BORDER_COLOR = '#1e2028'
+const BORDER_COLOR = chrome.borderSubtle
 const sessionRowStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'flex-start',
@@ -39,17 +40,17 @@ export default function SessionFooter({
             <IconCircleFilled size={8} color={ACTIVE_COLOR} />
           </Box>
           <div style={sessionInfoStyle}>
-            <Text size="xs" c="#4b5563" lh={1.3}>
+            <Text size="xs" c={chrome.textFaint} lh={1.3}>
               Signed in as
             </Text>
             {/* The name the backend reports, refreshed from `/auth/me` on every load. When it
                 reports none, the email is shown instead — the old fallback was the literal
                 word "Admin", which the backend never said and which read as a real name. */}
-            <Text size="xs" fw={500} c="#d1fae5" lh={1.3} truncate>
+            <Text size="xs" fw={500} c={KIT.green} lh={1.3} truncate>
               {user?.name || user?.email || 'Unknown account'}
             </Text>
             {user?.name && (
-              <Text size="xs" c="#374151" lh={1.3} mt={4} truncate>
+              <Text size="xs" c={chrome.iconFaint} lh={1.3} mt={4} truncate>
                 {user.email}
               </Text>
             )}
