@@ -60,6 +60,10 @@ server:test:
     paths:
       - target/site/jacoco/
       - target/surefire-reports/
+      # The KIT Kubernetes runners do not have a shared cache backend. Trivy runs in a
+      # different pod, so the normal GitLab cache is not reliable across jobs. Pass the
+      # warm Maven repository explicitly to dependency:scan as an artifact instead.
+      - .m2/repository/
     reports:
       junit:
         - target/surefire-reports/TEST-*.xml
@@ -454,10 +458,10 @@ secrets:history:
 # dependency-check needs an NVD_API_KEY nobody has created.
 #
 # What changed is that the rate limit was never really about Trivy. It is about a COLD Maven
-# cache: with a warm ~/.m2 the parent chain resolves locally and nothing is fetched. Verified
-# on 9 September against a warm cache -- it read pom.xml and reported 57 vulnerabilities, 7 of
-# them CRITICAL. This job caches .m2/repository like every other job here, and `needs:
-# server:test` puts it after a job that has just populated it.
+# repository: with a warm .m2/repository the parent chain resolves locally and nothing is
+# fetched. The KIT Kubernetes runners have no shared cache backend, so a cache created by
+# server:test may live on a different node and be invisible here. server:test therefore
+# publishes .m2/repository as an artifact and this job downloads it through `needs`.
 #
 # Deliberately NOT allow_failure and NOT schedule-only, unlike secrets:history and pitest.
 # Those two are expected to be red; this one starts GREEN -- the same 9 September pass took the
@@ -474,12 +478,10 @@ dependency:scan:
     entrypoint: [""]
   needs:
     - job: server:test
-      artifacts: false
-  cache:
-    key: "maven-${CI_COMMIT_REF_SLUG}"
-    paths:
-      - .m2/repository/
-    policy: pull
+      artifacts: true
+  # Do not rely on the runner cache here: the KIT Kubernetes runners may execute this job
+  # on another node. The Maven repository arrives via server:test's artifact above.
+  cache: []
   variables:
     TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.trivycache"
   script:
