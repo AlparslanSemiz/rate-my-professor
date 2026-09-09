@@ -35,12 +35,12 @@ dist-ssr
 # Local GitLab Wiki draft (publish when the project is final)
 docs/gitlab-wiki/
 docs/gitlab-wiki-publishing.md
-TODO.md
 
-# Local working notes for AI agents (see CLAUDE.md); kept out of history on purpose
+# Local working notes for AI agents (see CLAUDE.md); kept out of history on purpose.
+# The project's own working notes are tracked instead, under docs/: TODO.md,
+# backend-tasks.md, testplan.md, testfindings.md.
 CLAUDE.md
 STATUS.md
-BACKEND-TASKS.md
 BACKEND-PROMPT.md
 FRONTEND-TASKS.md
 ISSUES.md
