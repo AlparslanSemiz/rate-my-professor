@@ -79,8 +79,8 @@ public class SocialResponseMapper {
                 ProfilePictureGenerator.generateProfilePicture(commentAuthor),
                 comment.getLecture().getId(),
                 comment.getCreatedAt(),
-                commentVoteRepository.countByCommentAndVote(comment, VoteType.DOWN),
-                commentVoteRepository.countByCommentAndVote(comment, VoteType.UP),
+                commentVoteRepository.countByCommentAndVoteAndStudentStatus(comment, VoteType.DOWN, UserStatus.ACTIVE),
+                commentVoteRepository.countByCommentAndVoteAndStudentStatus(comment, VoteType.UP, UserStatus.ACTIVE),
                 userVote,
                 answersOf(comment, student)
         );
@@ -119,8 +119,8 @@ public class SocialResponseMapper {
                 username,
                 ProfilePictureGenerator.generateProfilePicture(answerAuthor),
                 answer.getCreatedAt(),
-                answerVoteRepository.countByAnswerAndVote(answer, VoteType.DOWN),
-                answerVoteRepository.countByAnswerAndVote(answer, VoteType.UP),
+                answerVoteRepository.countByAnswerAndVoteAndStudentStatus(answer, VoteType.DOWN, UserStatus.ACTIVE),
+                answerVoteRepository.countByAnswerAndVoteAndStudentStatus(answer, VoteType.UP, UserStatus.ACTIVE),
                 userVote
         );
     }
