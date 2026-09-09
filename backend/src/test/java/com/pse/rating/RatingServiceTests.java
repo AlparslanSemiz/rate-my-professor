@@ -57,8 +57,14 @@ class RatingServiceTests {
     private RatingService ratingService;
 
 
+    /**
+     * Inverted from {@code submitRatingReturnsErrorWhenLectureDoesNotExist}, which pinned the
+     * old {@code 200 {"success": false}}. The two reads either side of this write --
+     * {@code getOwnRating} and {@code getRatingCategories} -- have answered 404 for the same
+     * unknown id since F-15, so this was the last route in the module disagreeing.
+     */
     @Test
-    void submitRatingReturnsErrorWhenLectureDoesNotExist() {
+    void submitRatingUnknownLectureIsNotFoundRatherThanASuccessfulFailureBody() {
 
         Student student = mock(Student.class);
         RatingRequest request = mock(RatingRequest.class);
@@ -72,17 +78,16 @@ class RatingServiceTests {
                 .thenReturn(null);
 
 
-        BasicResponse response =
-                ratingService.submitRating(
-                        student,
-                        request
-                );
+        ApiException thrown = catchThrowableOfType(
+                ApiException.class,
+                () -> ratingService.submitRating(student, request));
 
 
-        assertThat(response.success()).isFalse();
+        assertThat(thrown).as("nothing was thrown").isNotNull();
 
-        assertThat(response.message()).isEqualTo("Error, cannot find lecture with id "
-                        + lectureId);
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        assertThat(thrown.getMessage()).isEqualTo("Lecture not found");
 
         verify(ratingRepository, never()).save(any());
 

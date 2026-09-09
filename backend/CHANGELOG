@@ -669,3 +669,20 @@ is public and unauthenticated.
 Nothing to change if you sort or look up by category. If you were rendering the list in the
 order it arrived, it will stop reshuffling -- this is the same defect F-21 fixed for a
 lecture's professor list.
+
+
+///// 9.09 (7)
+
+
+"POST /ratings/rate" answers 404 for a lecture that does not exist.
+
+Was: 200 {"message": "Error, cannot find lecture with id <uuid>", "success": false}
+Now: 404 {"message": "Lecture not found", "success": false}
+
+The last route in the ratings module still reporting a failure with 200. The two reads either
+side of it -- "GET /ratings/{lectureId}" and "GET /ratings/{lectureId}/categories" -- have
+answered 404 for the same unknown id since F-15, so a client had to handle both conventions
+depending on which of the three it called.
+
+The message text changed, so anything matching on it has to change. A successful submission is
+untouched.

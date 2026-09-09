@@ -50,8 +50,11 @@ public class RatingService {
 
         Lecture lecture = lectureService.getById(request.lectureId());
 
+        // The same answer getOwnRating and getRatingCategories give below, and the last route
+        // in this module that did not: a lecture that does not exist is a 404, not a 200
+        // reporting failure in its body.
         if (lecture == null) {
-            return new BasicResponse("Error, cannot find lecture with id " + request.lectureId(), false);
+            throw new ApiException(HttpStatus.NOT_FOUND, "Lecture not found");
         }
 
         //Check if User already has Rating
