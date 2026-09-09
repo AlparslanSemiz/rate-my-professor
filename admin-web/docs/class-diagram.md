@@ -42,6 +42,33 @@ classDiagram
       +delete(path)
     }
 
+    class HttpService {
+      <<abstract>>
+      #client
+    }
+
+    class ModerationService {
+      <<abstract>>
+      +getAll()
+      +getReported()
+      +update(id, update)
+      +delete(id)
+      +updateStatus(id, status)
+      +deleteReport(id)
+    }
+
+    class ContentService~TItem~ {
+      +getAll()
+      +update(id, update)
+      +delete(id)
+    }
+
+    class ReportsService~TReport~ {
+      +getReported()
+      +updateStatus(id, status)
+      +deleteReport(id)
+    }
+
     class AuthService {
       +requestLoginCode(email)
       +login(email, code)
@@ -68,21 +95,11 @@ classDiagram
     }
 
     class CommentsService {
-      +getAll()
-      +getReported()
-      +update(id, update)
-      +delete(id)
-      +updateStatus(id, status)
-      +deleteReport(id)
+      +resource = "comments"
     }
 
     class AnswersService {
-      +getAll()
-      +getReported()
-      +update(id, update)
-      +delete(id)
-      +updateStatus(id, status)
-      +deleteReport(id)
+      +resource = "answers"
     }
 
     class RatingsService {
@@ -101,11 +118,6 @@ classDiagram
       +getLogs(filters, cursor)
       +getMeta()
       +revert(id)
-    }
-
-    class ActivityLogsService {
-      +getLogs(filters, cursor)
-      +getMeta()
     }
 
     class SystemStatusService {
@@ -143,10 +155,6 @@ classDiagram
     }
 
     class AuditLogsPage {
-      <<component>>
-    }
-
-    class ActivityLogsPage {
       <<component>>
     }
   }
@@ -197,11 +205,9 @@ classDiagram
 
     class useModerationPage {
       <<hook>>
-      +filteredContent
-      +filteredReports
-      +editContent()
-      +deleteContent()
-      +changeReportStatus()
+      +content
+      +reports
+      +actions
     }
 
     class ModerationApi {
@@ -221,7 +227,7 @@ classDiagram
       +deleteReport()
     }
 
-    class useCursorLogPage {
+    class useAuditLogs {
       <<hook>>
       +applyFilters()
       +clearFilters()
@@ -338,16 +344,20 @@ classDiagram
   useLoginFlow --> AuthService : requests and verifies login
   useLoginFlow --> AuthProvider : stores session
 
-  AuthService --> ApiClient
-  UsersService --> ApiClient
-  CatalogService --> ApiClient
-  CommentsService --> ApiClient
-  AnswersService --> ApiClient
-  RatingsService --> ApiClient
-  FeedbackService --> ApiClient
-  AuditLogsService --> ApiClient
-  ActivityLogsService --> ApiClient
-  SystemStatusService --> ApiClient
+  HttpService --> ApiClient : holds
+  AuthService --|> HttpService
+  UsersService --|> HttpService
+  CatalogService --|> HttpService
+  RatingsService --|> HttpService
+  FeedbackService --|> HttpService
+  AuditLogsService --|> HttpService
+  SystemStatusService --|> HttpService
+
+  ModerationService --|> HttpService
+  ModerationService --> ContentService : composes
+  ModerationService --> ReportsService : composes
+  CommentsService --|> ModerationService
+  AnswersService --|> ModerationService
 
   LoginPage --> useLoginFlow
   DashboardPage --> useDashboardData
@@ -358,8 +368,7 @@ classDiagram
   CommentsPage --> ModerationPage
   ModerationPage --> useModerationPage
   FeedbackPage --> useFeedbackReportActions
-  AuditLogsPage --> useCursorLogPage
-  ActivityLogsPage --> useCursorLogPage
+  AuditLogsPage --> useAuditLogs
 
   useDashboardData --> SystemStatusService
   useDashboardData --> UsersService
@@ -369,8 +378,7 @@ classDiagram
   useRatings --> RatingsService
   useModerationPage --> ModerationApi
   useFeedbackReportActions --> FeedbackService
-  useCursorLogPage --> AuditLogsService
-  useCursorLogPage --> ActivityLogsService
+  useAuditLogs --> AuditLogsService
 
   CommentsPage ..|> ModerationApi : adapts comments and answers
   CommentsPage --> CommentsService
@@ -388,7 +396,6 @@ classDiagram
   CommentsService ..> ReportItem : mapped to
   AnswersService ..> ReportItem : mapped to
   AuditLogsService ..> RevertableLogEntry : returns
-  ActivityLogsService ..> LogEntry : returns
   useDashboardData ..> DashboardStats : derives
 
   User "1" --> "0..*" Warning : has
@@ -399,7 +406,15 @@ classDiagram
 
 ## How To Read It
 
-- `API` contains the service classes that talk to the backend through `ApiClient`.
+- `API` contains the service classes that talk to the backend through `ApiClient`,
+  grouped into one package per domain (`client`, `auth`, `users`, `moderation`,
+  `catalog`, `logs`, `feedback`, `system`), each with a barrel. Every service
+  extends `HttpService`, which holds the client.
+- `CommentsService` and `AnswersService` are the same generic `ModerationService`
+  with their noun filled in; comments and answers are the same endpoints under a
+  different resource name.
+- Data loading is TanStack Query on the audit log, users and moderation screens.
+  The dashboard, catalogue and feedback still use the hand-rolled `useAsyncData`.
 - `Hooks` contain stateful page logic. Most feature pages delegate data loading and mutation
   flows to these hooks.
 - `Features` are the top-level screens and reusable page components.

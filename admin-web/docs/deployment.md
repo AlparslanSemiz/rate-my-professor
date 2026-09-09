@@ -42,7 +42,7 @@ the host reverse-proxy configuration that exposes the container publicly.
 
 | Component | Role | Confirmed source |
 | --- | --- | --- |
-| Admin Web SPA | Browser application for login, dashboard, users, content moderation, bug reports, catalogue editing, audit logs, activity logs, and system status. | `src/`, `README.md` |
+| Admin Web SPA | Browser application for login, dashboard, users, content moderation, bug reports, catalogue editing, and audit logs. | `src/`, `README.md` |
 | API client | Sends JSON requests to `VITE_API_BASE_URL`; attaches bearer tokens after login. | `src/api/ApiClient.ts` |
 | Vite dev proxy | Forwards local `/api/*` requests to `VITE_API_TARGET` and rewrites the path. | `vite.config.ts`, `.env` |
 | Production image | Builds static files and serves them from Nginx under `VITE_BASE_PATH`. | `Dockerfile`, `docker/nginx.prod.conf.template` |
@@ -63,7 +63,7 @@ panel currently calls these backend path groups:
 | Catalogue | `/data/lectures`, `/data/lectures/:id`, `/data/professor`, `/data/professor/:id` |
 | Ratings | `/ratings`, `/ratings/:id` |
 | Bug reports | `/reports`, `/reports/:id`, `/reports/:id/gitlab-issue` |
-| Logs | `/audit-logs`, `/audit-logs/meta`, `/audit-logs/:id/revert`, `/activity-logs`, `/activity-logs/meta` |
+| Logs | `/audit-logs`, `/audit-logs/meta`, `/audit-logs/:id/revert` |
 | Status | `/system/status` |
 
 Changing the backend API can break the panel even when the static deployment

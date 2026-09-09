@@ -41,7 +41,6 @@ that.
 | Lectures & Professors | Edit and remove lectures and professors, reassign who teaches what, and remove individual ratings |
 | Bug Reports | Review submitted problems, rewrite the title or description, update status or severity, delete, and open a GitLab issue |
 | Audit Logs | Filter and inspect administrative actions, including before/after values, and undo a field edit |
-| Activity Log | Filter and inspect what users did in the student app, plus every refused request |
 
 Additional engineering features include:
 
@@ -56,8 +55,12 @@ Additional engineering features include:
 | Layer | Technologies |
 | --- | --- |
 | Frontend | React 19, TypeScript, React Router, Mantine, Tabler Icons |
+| Data loading | TanStack Query — caching, cursor paging, refetch after a write |
+| Forms and state | Mantine Form, Mantine Hooks |
+| Validation | Zod, for the stored session |
+| Errors | react-error-boundary |
 | Build tooling | Vite 8, TypeScript compiler |
-| Tests | Vitest, Testing Library, jsdom |
+| Tests | Vitest, Testing Library, jsdom, V8 coverage |
 | Code quality | ESLint, TypeScript strict checks |
 | Containers | Multi-stage Docker build + Nginx (production image, built in CI/CD) |
 
@@ -142,8 +145,7 @@ The following short flow demonstrates the important project capabilities:
 5. Open **Bug Reports** and update a report's status or severity.
 6. Open **Audit Logs** and locate the actions performed in the previous steps.
 7. Inspect an audit event to compare its before and after values.
-8. Open **Activity Log** to see what students did and what the backend refused.
-9. Sign out and verify that protected routes return to the login page.
+8. Sign out and verify that protected routes return to the login page.
 
 State-changing operations are recorded in the audit log only when they
 succeed. This makes the final steps useful for demonstrating both the UI and
@@ -185,13 +187,20 @@ The frontend is organized by ownership and responsibility:
 
 ```text
 src/
-├── api/          HTTP client and typed backend service contracts
+├── api/          One package per backend domain, each behind a barrel
+│   ├── client/       ApiClient, request building, response parsing, HttpService
+│   ├── auth/
+│   ├── users/
+│   ├── moderation/   Comments and answers — one generic service, two nouns
+│   ├── catalog/      Lectures, professors and ratings
+│   ├── logs/         Audit log
+│   ├── feedback/     Bug reports and the GitLab issue control
+│   └── system/
 ├── components/   Reusable, feature-independent UI components
-├── constants/    Routes, colors, layout values, and shared styles
+├── constants/    Routes, KIT accent colours, layout values
 ├── context/      Application-wide authentication state
-├── domain/       Shared domain types and moderation rules
-├── features/     Feature-owned pages, components, hooks, and tests
-│   ├── activity-logs/
+├── domain/       Shared domain types, enums and their guards
+├── features/     Feature-owned pages, components, hooks, model and tests
 │   ├── audit-logs/
 │   ├── auth/
 │   ├── catalog/
@@ -203,7 +212,8 @@ src/
 │   └── users/
 ├── hooks/        Reusable hooks without feature ownership
 ├── layouts/      Authenticated application shell and navigation
-├── test/         Shared test setup and HTTP test helpers
+├── test/         Shared test setup, HTTP stubs and the query-client helper
+├── theme/        Mantine theme: KIT palette, neutral chrome, component defaults
 └── utils/        Small, reusable utility functions
 ```
 
@@ -396,19 +406,17 @@ endpoint answers `503` until the backend is given `GITLAB_BASE_URL`,
 `GITLAB_PROJECT_ID` and `GITLAB_TOKEN`, so the panel hides the control while
 `/system/status` reports `gitlabEnabled: false`.
 
-### Audit logs and activity log
+### Audit log
 
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/audit-logs` | Filtered, cursor-paginated administrative history |
 | `GET` | `/audit-logs/meta` | Actors, actions, target types and actor types for that log |
 | `POST` | `/audit-logs/:id/revert` | Undo the field edit an entry recorded |
-| `GET` | `/activity-logs` | The same for student activity and refused requests |
-| `GET` | `/activity-logs/meta` | Filter vocabulary for that log |
 
-Both endpoints read the same table and take the same parameters, differing only
-in which actions they serve and whether the array is called `auditLogs` or
-`activityLogs`:
+The backend also serves `/activity-logs` from the same table, with the same
+parameters, for what students did in the app. The panel has no screen for it and
+does not call it. `/audit-logs` returns its array as `auditLogs`:
 
 | Query parameter | Meaning |
 | --- | --- |
@@ -435,8 +443,8 @@ a backend setting and is deliberately not recomputed here.
 
 The filter dropdowns are built from the metadata endpoints, so an action added
 by the backend appears without a frontend release. `actors` is capped rather
-than exhaustive — every account that ever signed in is an actor in the activity
-log — so `q` is what finds someone beyond the cap.
+than exhaustive — every account that ever signed in is an actor in the shared
+log table — so `q` is what finds someone beyond the cap.
 
 ### System status
 
@@ -527,15 +535,10 @@ they did, **which record** they affected, and **what changed**.
 One table holds both logs, split by the scope an action belongs to.
 `/audit-logs` serves what admins did through the panel — sign-in and sign-out,
 user edits, warnings, blocks and deletions, content and report moderation,
-bug report changes, and catalogue edits. `/activity-logs` serves what students
-did in the app (`USER_LOGIN`, `COMMENT_CREATED`, `RATING_SUBMITTED`, …) plus
-the two refusals, `LOGIN_REFUSED` and `ACCESS_REFUSED`. The split is by action
-rather than by actor, so a refused admin login sits next to every other
-refusal. `src/domain/auditLog.ts` holds both vocabularies.
-
-For student activity, `changes` is empty — nothing existing was modified — and
-`metadata` carries the detail, such as the first 120 characters of the
-submitted text.
+bug report changes, and catalogue edits. The other half, `/activity-logs`, is
+what students did in the app plus the refusals; the panel had a screen for it
+until 2026-09-09 and no longer does, so `src/domain/auditLog.ts` models the
+administrative vocabulary only.
 
 Audit entries contain snapshots of their actor and target labels. They
 therefore remain understandable even if the original user or report is later
@@ -556,7 +559,7 @@ boundaries:
 
 - The login and authenticated application layout are separate chunks.
 - Dashboard, Users, Comments, Lectures & Professors, Bug Reports, Audit Logs,
-  Activity Log and Help are separate page chunks.
+  and Help are separate page chunks.
 - `PageLoader` provides feedback while a requested chunk is loading.
 
 As a result, the initial production bundle contains only the application shell

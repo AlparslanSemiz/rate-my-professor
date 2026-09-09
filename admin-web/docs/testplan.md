@@ -4,8 +4,12 @@ How this panel is tested, what the automated suite actually covers, and what has
 to be checked by hand against a real backend. Results and defects are recorded
 in `docs/testfindings.md`.
 
-Figures below were taken from a passing run and are exact as of 2026-09-08:
-**33 test files, 244 tests.**
+Figures below were taken from a passing run and are exact as of 2026-09-09:
+**36 test files, 260 tests.** The 33 / 244 recorded on 2026-09-08 never matched a
+real run; it was re-derived while establishing the refactor baseline (37 / 263),
+and the suite has since lost the Activity Log's 11 tests and
+`useCursorLogPage`'s, and gained the theme's 7 and one covering that the Activity
+Log route is gone.
 
 ## 1. Scope
 
@@ -52,7 +56,7 @@ npm run build`.
 
 ## 5. Automated coverage
 
-### 5.1 API service layer — 11 files, 76 tests
+### 5.1 API service layer — 10 files, 71 tests
 
 Every service in `src/api` has a unit test. They pin the request shape (method,
 path, query, body, `Authorization` header) and the mapping of the response onto
@@ -64,7 +68,7 @@ the panel's types, including error paths.
 | `UsersService.unit.test.ts` | 11 |
 | `AuthService.unit.test.ts` | 10 |
 | `AnswersService` / `AuditLogsService` / `CommentsService` / `FeedbackService` | 6 each |
-| `ActivityLogsService` / `CatalogService` | 5 each |
+| `CatalogService.unit.test.ts` | 5 |
 | `RatingsService` / `SystemStatusService` | 4 each |
 
 `ApiClient` carries the cross-cutting rules: the bearer token, `401` ending the
@@ -72,7 +76,7 @@ session, and an unreachable backend *not* ending it. `AuthService` covers
 `/auth/me` in both the `username` / `kitEmail` and the older `name` / `email`
 spelling, and an absent `isSuperAdmin` becoming `false`.
 
-### 5.2 Feature pages — 8 files, 89 tests
+### 5.2 Feature pages — 7 files, 83 tests
 
 | Page | Tests | Notable coverage |
 | --- | --- | --- |
@@ -81,21 +85,21 @@ spelling, and an absent `isSuperAdmin` becoming `false`.
 | `catalog/CatalogPage` | 14 | Lecture and professor editing, the warning before a record is switched inactive |
 | `feedback/FeedbackPage` | 11 | Bug reports, the history tab, the GitLab control when `gitlabEnabled` is false |
 | `audit-logs/AuditLogsPage` | 9 | Actor / action / target rendering and filtering |
-| `activity-logs/ActivityLogsPage` | 6 | Filtering and paging |
 | `dashboard/DashboardPage` | 6 | Stat cards and their loading and error states |
-| `help/HelpPage` | 1 | Renders |
+| `help/HelpPage` | 1 | Sections start collapsed and open on click |
 
-### 5.3 Shell, state and shared code — 14 files, 79 tests
+### 5.3 Shell, state and shared code — 19 files, 106 tests
 
 | Area | Files | Tests | Coverage |
 | --- | --- | --- | --- |
-| `src/App.integration.test.tsx` | 1 | 19 | Routing, protected routes, redirect target after sign-in |
+| `src/App.integration.test.tsx` | 1 | 20 | Routing, protected routes, redirect target after sign-in, and that the removed System Status and Activity Log paths fall back to the dashboard |
 | `src/context` | 1 | 12 | Session restore, a stored session carrying `isSuperAdmin`, rejection of a malformed one, withdrawal of an elevation `/auth/me` no longer reports |
-| `src/features/*` unit | 3 | 14 | `authenticateAdmin` (6), `catalogModel` (4), `useDashboardData` (4) |
+| `src/features/*` unit | 7 | 33 | `authenticateAdmin` (6), `catalogEditModel` (6), `moderationModel` (6), `userEditModel` (5), `catalogModel` (4), `useDashboardData` (4), `loginModel` (2) |
 | `src/utils` | 4 | 13 | `formatDate` (5), `getErrorMessage` (4), `color` (3), `adminAccess` (1) |
 | `src/hooks` | 2 | 9 | `useVisibleInterval` (7), `useAsyncData` (2) |
 | `src/domain` | 2 | 7 | `auditLog` (5), `moderation` (2) |
-| `src/components` | 1 | 5 | `ErrorBoundary` |
+| `src/components` | 1 | 5 | `ErrorBoundary`, now over `react-error-boundary` |
+| `src/theme` | 1 | 7 | That inputs and modals are painted by the theme with no `styles` prop, and that a component-level override lands on top of it |
 
 ### 5.4 Known automation gaps
 
@@ -106,8 +110,11 @@ they are carried as a follow-up in `docs/TODO.md`.
   only indirectly, through the routing tests.
 - `src/components` — one tested file out of fourteen. The rest are presentational
   and are covered indirectly by the page tests.
-- `src/features/moderation` — no tests of its own; covered through the comments
-  and answers pages.
+- **No page test touches HTTP.** Unchanged by the refactor: the nine integration
+  files still mock the service modules, so what a screen *sends* is asserted only
+  in the service unit tests. Phase 2 of the test strategy is what closes this.
+- `src/features/moderation` — has `moderationModel.unit.test.ts` (6 tests); its
+  components and hooks are still covered only through the comments page.
 - `src/constants` — no tests, and none are useful: the files are literals.
 - `src/utils/adminAccess.unit.test.ts` is down to a single test. The
   `isSuperAdminEmail` suite went away with the function when the permission moved

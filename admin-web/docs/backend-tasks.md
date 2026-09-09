@@ -163,3 +163,28 @@ rediscovered as bugs:
 - `POST /users/{id}/warnings` accepts the old `userID` + `createdFrom` body
   permanently, not as a temporary shim, so the two repositories deploy in any
   order.
+
+---
+
+# H. Notice, not a request
+
+## H1. The panel no longer calls `/activity-logs`
+
+**Nothing is asked for here.** This is recorded only so the endpoint is not
+assumed to have a client in this repository.
+
+As of 2026-09-09 the admin panel has no Activity Log screen. It no longer calls
+`GET /activity-logs` or `GET /activity-logs/meta`, and its copy of the student
+action vocabulary (`USER_LOGIN`, `COMMENT_CREATED`, `RATING_SUBMITTED`,
+`LOGIN_REFUSED`, `ACCESS_REFUSED`, …) is gone with it.
+
+**Please do not remove or change those endpoints on our account.** They are
+still written to, they remain the record of what students did, and the Android
+client or a future panel screen may want them. The audit half — `/audit-logs`,
+`/audit-logs/meta` and `/audit-logs/:id/revert` — is unaffected and is still the
+panel's only log source.
+
+One consequence worth knowing: `/audit-logs/meta` may still report actor type
+`USER` and target types such as `USER_SESSION` and `ENDPOINT`. The panel keeps
+accepting all of them and renders whatever it is given, so nothing needs
+filtering on the backend side.
