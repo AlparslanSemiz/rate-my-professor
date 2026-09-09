@@ -57,7 +57,9 @@ Engineering characteristics:
 - A shared, typed API client with consistent error handling.
 - Feature-based source organization with small, focused components and hooks.
 - Route-level lazy loading to keep the initial JavaScript download small.
-- Unit and integration tests with Vitest and Testing Library.
+- Unit and integration tests with Vitest and Testing Library, in six layers.
+- Accessibility checks with `axe-core` in jsdom, and with `@axe-core/playwright` in
+  Chromium for the two rules jsdom cannot answer.
 
 ## 2. Technology stack
 
@@ -69,7 +71,7 @@ Engineering characteristics:
 | Validation | Zod, for the stored session |
 | Errors | react-error-boundary |
 | Build tooling | Vite 8, TypeScript compiler |
-| Tests | Vitest 4, Testing Library, jsdom, V8 coverage |
+| Tests | Vitest 4, Testing Library, jsdom, V8 coverage, `axe-core` |
 | Code quality | ESLint, TypeScript under `strict` |
 | Containers | Multi-stage Docker build + Nginx (production image, built in CI/CD) |
 
@@ -573,16 +575,22 @@ utilities, domain rules, API services, hooks and authentication; integration tes
 for routing and the main feature pages; and a production build including Vite's
 route chunk generation.
 
-As of 2026-09-09 the suite is **43 test files and 348 tests**, green, at 92.55%
-statements / 85.62% branches / 90.77% functions / 94.43% lines, plus **4 Playwright
-specs and 11 tests** in the end-to-end layer, which runs separately. The report in
-`coverage/` is the authority on those figures; a number written in a document is
-a dated snapshot of it.
+As of 2026-09-09 the suite is **47 test files and 1137 tests, with 3 skipped**, green,
+at 92.96% statements / 86.46% branches / 91.52% functions / 94.61% lines, plus **10
+Playwright specs and 68 tests** in the end-to-end layer, which runs separately. The
+report in `coverage/` is the authority on those figures; a number written in a document
+is a dated snapshot of it.
 
-One caveat belongs with those numbers rather than beneath them: `npx vitest run
-.integration.test.` failed once and was green on the nine runs afterwards, with the
-failing test never identified. A suite that fails once in ten is not a green suite —
-`F-024` in `docs/testfindings.md`.
+The suite is organised into **layers named for the questions this panel has** — call
+surface, contract, resilience, accessibility, real browser, end-to-end. They are
+deliberately *not* the backend's five; ADR 0015 says why, and `docs/testplan.md` §3a
+gives each layer's question **and what it does not answer**, which is the column worth
+reading.
+
+One caveat belongs with those numbers rather than beneath them: the suite has failed once
+in ten full runs, in `src/App.integration.test.tsx:109`, and the end-to-end suite once in
+four. Both tests are identified; neither cause is. A suite that fails once in ten is not
+a green suite — `F-024` and `F-033` in `docs/testfindings.md`.
 
 ### What the suite does and does not establish
 
@@ -595,7 +603,18 @@ the difference matters enough to state rather than summarise:
 | Remaining API service tests | `fetch` itself, so `ApiClient` and the service run for real | The request a **service** produces, not that any screen asks for it |
 | Three remaining page tests | The whole service module, via `vi.mock` — no request is constructed | What a **screen** renders, and which service method it called |
 | Model and utility tests | Nothing to replace | Rules in isolation |
-| End-to-end | Nothing — the same MSW handlers, in a real browser | That the four main flows work, start to finish, with no backend running |
+| End-to-end | Nothing — the same MSW handlers, in a real browser | That six flows work start to finish with no backend running, plus what only a real browser can measure: layout at 1024 and 1440, focus traps, touch-target sizes and colour contrast |
+
+**The end-to-end suite really does contact nothing, and that is checked rather than
+assumed.** `e2e/mock-backend.spec.ts` reads `Response.fromServiceWorker()` on every
+`/api/` response across all eight routes. It was not true before: the mock backend had no
+catalogue handlers, so three endpoints fell through to the deployed backend from a suite
+whose premise is that it contacts nothing.
+
+**Every Playwright spec runs in Chromium only, and against MSW only.** It has never run
+against the real backend, so a passing flow is evidence that the panel agrees with *this
+repository's* description of the backend — and where that description is wrong, both are
+wrong together.
 
 **Six features touch HTTP now** — comments, routing and the session, sign-in, the
 audit log and users. A field the backend renames is the class of defect this

@@ -48,6 +48,7 @@ The wrong turn is part of the reasoning.
 | [0012](0012-a-model-is-a-module-not-a-class.md) | A model is a module, not a class | Accepted |
 | [0013](0013-errors-are-types-not-status-codes.md) | Errors are types, not status codes | Accepted — applied twice since |
 | [0014](0014-public-data-is-readonly.md) | Public data is readonly, and services get a narrow transport | Accepted |
+| [0015](0015-panel-test-layers-answer-the-panels-own-questions.md) | The panel's test layers answer the panel's questions, not the backend's | Accepted |
 
 0010 and 0011 are the two the panel is most likely to be challenged on. Both are
 written as defences rather than as announcements, and both state what they cost.

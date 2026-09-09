@@ -2,6 +2,248 @@
 
 ## [Unreleased]
 
+### Five test layers, built to answer the panel's own questions
+
+**The suite had every service tested and nothing sweeping.** A new service method could arrive
+with no test at all and nothing would notice, because nothing looked at the surface as a whole.
+The backend answers that question by reading its route table out of Spring's mapping registry;
+this panel has no registry, so the list is read out of the modules themselves.
+
+Five layers were added — call surface, resilience, accessibility, real browser, end-to-end — and
+[ADR 0015](docs/adr/0015-panel-test-layers-answer-the-panels-own-questions.md) records why they
+are **not** the backend's five. Mirroring those names was tried first and abandoned once it was
+clear the mirrored table would carry an "API / role" row reading "not applicable" and an
+"integration" row reading "never, by design", while the three questions that produced most of
+this round's findings would have had no row at all.
+
+**No production code changed.** Twelve findings were opened and every one of them was left
+alone — including `F-030`, which is a single `aria-label` on one line of one file with no visual
+effect, and is on the deferred list rather than in this diff.
+
+#### `src/api/callSurface.integration.test.ts` — new
+
+- **Added** the call-surface sweep and its ratchet. 46 calls verify path, verb, `Authorization`,
+  whether a `Content-Type` was set at all, body fields and query string, across all **42
+  endpoints**. The endpoint list is discovered by `import.meta.glob` walking the prototype chain
+  of every exported class in `src/api/**` — **106 methods** — so the list is the filesystem's and
+  not a transcription.
+- **The ratchet is the part that matters more than any single row.** Every discovered method is
+  either exercised or named in an exemption list with a reason; a new method fails the suite
+  until somebody classifies it. Two further tests keep the list honest in the other direction: a
+  `covers` entry naming a method that no longer exists fails, and an exemption naming a class
+  discovery never returns fails.
+- **The exemption list was corrected against observation.** It was going to exempt the eleven
+  `ApiError` subclasses; discovery never returns them, because they declare no prototype methods,
+  so exempting them would have claimed to have considered something that is not on the list.
+  Four transport classes are exempt, and nothing else.
+- **Verified as a tripwire, five ways**, each seen red and reverted: renaming `/users/{id}/block`
+  turns one row red; adding an unclassified method turns the ratchet red with the method's name;
+  making `withQueryString` keep the empty string turns two rows red with `q=` in the URL; making
+  the client always set `Content-Type` turns **34 of 54** red; and hard-coding `ContentService`'s
+  response key turns the generic-derivation test red.
+- **Found nothing.** That is the result: on all forty-two endpoints the panel sends what
+  `docs/consumer-contract.md` says it sends.
+
+#### `src/test/msw/handlers/catalog.ts` — new, and it closed a hole nobody knew was open
+
+- **Added** the catalogue slice — `/data/lectures`, `/data/professor`, `/ratings` and their
+  writes. Eight of the forty-two endpoints had no handler at all.
+- **The end-to-end suite had been contacting the deployed backend.** The browser worker starts
+  with `onUnhandledRequest: 'bypass'` — it has to, because the panel asks for its own assets and
+  Vite's client — so those eight paths fell through the worker to the Vite proxy and out to the
+  real backend, from a suite whose entire premise is that it contacts nothing. Nobody noticed
+  because no spec opened the catalogue. `e2e/mock-backend.spec.ts` now reads
+  `Response.fromServiceWorker()` on every `/api/` response across all eight routes and asserts
+  none escaped; removing the handlers again turns it red.
+
+#### `src/api/responseShapes.integration.test.ts` and `src/features/degradedPayloads.integration.test.tsx` — new
+
+- **Added** the resilience layer, split along the axis where the failure actually happens. A
+  `503` is decided once, in `ApiResponseParser`, so it is asked once **per endpoint** — asking
+  eight screens would be the same answer eight times at the cost of eight renders. A **missing
+  field** passes the parser without complaint and breaks in a component, so it is asked of a
+  **rendered screen**.
+- **546 status and shape cases are clean** — nine failing statuses, a network error, an empty
+  body, a body that is not JSON and a `2xx` refusal, per endpoint, each raising the right typed
+  error with the right `transient` and a non-empty message.
+- **The Dashboard is clean on every degraded-payload case.** Its code comments claim it defends
+  against a missing counter, and it does.
+- **Four findings**: `F-026` (a `204` throws a `TypeError` in four services), `F-027` (there is no
+  request timeout anywhere), `F-028` (an unknown enum value takes the whole screen down — three
+  mechanisms, one cause) and `F-029` (two unguarded `.length` reads).
+- **The three mechanisms behind `F-028` were told apart by measurement, not by reading.** Guarding
+  `enumLabel` turned only **10 of the 14** cases green; the other four are
+  `auditActionColor`'s `action.endsWith` and `reportStatusIcon[status]` used as a JSX element
+  type. A finding that had blamed `enumLabel` for all fourteen would have been wrong and would
+  have looked right.
+
+#### `src/App.a11y.integration.test.tsx` and `src/test/a11y.ts` — new
+
+- **Added** the first accessibility measurements this panel has ever had. `docs/testplan.md` §6.4
+  called this "the largest single gap in the suite"; it is measured now.
+- **`axe-core` directly, no `jest-axe`** — its Vitest 4 compatibility is unverified, and a matcher
+  that swallows the result object would also swallow the readable dump that gets delivered.
+- **`color-contrast` and `target-size` are switched off by name, with the reason on each.** Every
+  element in jsdom is 0x0 and no style is composited, so those rules return nothing — and nothing
+  reads as a pass. They are measured in Chromium instead. **This is the whole difference between
+  a report and a claim.**
+- **A false green was caught and is worth recording.** The route markers were page *titles* at
+  first, and every title is also a sidebar link — so `/Comments/` matched the navigation while the
+  screen was still a spinner. The file reported **eight clean routes** while two of them had not
+  finished loading. Switching to page descriptions turned up `F-032` immediately. The file's own
+  comment warns about exactly this; the person who wrote the comment then did it.
+- **Three findings**: `F-030`, `F-031`, `F-032`.
+
+#### `e2e/` — six new specs
+
+- **Added** `a11y.spec.ts`, `layout.spec.ts`, `focus.spec.ts`, `mock-backend.spec.ts`,
+  `blocking-a-user.spec.ts`, `escalating-a-bug-report.spec.ts`, and `routes.ts` as the shared
+  route list. **4 specs / 11 tests → 10 specs / 68 tests.**
+- **`F-019` has a boundary now.** Its record was two screenshots described as "below the `sm`
+  breakpoint". The navbar is measured against the viewport at seven widths: at **320, 480, 640
+  and 768** the navbar *is* the viewport; from **800** it is 240. The dead zone is four widths
+  wide, not two. So the layout figures are taken at **1024 and 1440**, and everything narrower is
+  recorded as **not measured — which is not the same as passed**.
+- **Every table fits exactly at 1440px** (1134 = 1134) and **all four overflow at 1024px**, by
+  382, 282, 182 and 162 pixels. That is `F-036`.
+- **The first version of the overflow test was wrong**, and it was caught by trying to make it go
+  red and failing: it did `if (table.scrollable) continue`, which skips every table that
+  overflows — so it measured only the tables that could not fail, and reported 24 green.
+- **`F-037` was found by a blunter tool than the standard one.** axe's `target-size` passes all
+  eight routes; a plain `getBoundingClientRect` over every visible button finds `Sign out` at
+  **61x21**, `See everyone →` at **90x17**, and **every row action on Comments at 22x22**. axe
+  grants exceptions for spacing and inline targets. Running one tool and reporting its green
+  would have been wrong in a way nothing in the report would have shown.
+- **Contrast is 46 nodes of 407.** `F-035`: axe returns **361 `incomplete`** because
+  `interactive.css` paints its surfaces with a gradient and no ratio can be computed against one.
+  Help is 0 determined of 28. Saying "contrast passes in Chromium" would have claimed about eight
+  times what was measured; the specs print the three counts per route so the figure is read off a
+  run.
+- **Two new flows, and only two.** Blocking and unblocking with the boundaries — including a
+  `409` refusal reaching the screen with the backend's own sentence — and the GitLab escalation's
+  **unconfigured** variant, where the control is withheld *and no request reaches the endpoint*.
+  That second assertion is the contract claim `FeedbackService` documents; a panel that offered
+  the button and handled the refusal would look identical in a screenshot and be wrong.
+
+#### `src/test/msw/browser.ts`
+
+- **Changed** `FAULTS` to return `HttpHandler[]` rather than one handler, so a fault can span
+  endpoints, and **added** three: `long-content` (the longest label, username, lecture title and
+  comment the columns can be handed), `gitlab-disabled` and `block-refused`. The demo data is
+  chosen to look like a real backend at the Abnahme, so measuring against it reports the width of
+  the fixture rather than the width of the column.
+
+#### `vite.config.ts`
+
+- **Added** `json-summary` to the coverage reporters. It was missing while
+  `docs/testplan.md`, `docs/testfindings.md` and this file all said the per-directory table was
+  generated from `coverage/coverage-summary.json`. The file on disk was a leftover from a one-off
+  invocation, so the next person to follow the documented procedure would have re-published a
+  stale table without knowing.
+
+#### `tsconfig.e2e.json` — deliberately unchanged
+
+- `DOM` is still absent from `lib`, because a spec runs in Node and drives a browser and a
+  top-level `document` should not compile. The two specs that measure layout carry
+  `/// <reference lib="dom" />` **per file**, with the reason above it: `page.evaluate` bodies are
+  serialised and run *in the page*, so they are browser code living in a Node file and TypeScript
+  cannot tell the two apart. Widening the shared config would have removed the guard for every
+  other spec.
+
+### Fixed
+
+Nothing. This round changed no production code, and that is the point of it.
+
+### Tests
+
+**43 files / 348 tests → 47 files / 1137 tests and 3 skipped.** Playwright **4 specs / 11 tests →
+10 specs / 68 tests**. Coverage **92.55 / 85.62 / 90.77 / 94.43 → 92.96 / 86.46 / 91.52 / 94.61**,
+every axis up, none of it aimed at coverage — it is the side effect of layers that walk real code
+paths.
+
+**The unit count did not move at all**: 28 files, 182 tests, exactly as before. All 792 new tests
+are integration tests, because every layer added here asks what happens when two things meet.
+
+**`tsc` caught five type errors the test runner did not** — a wrong `BugReport` status, two wrong
+`ReportStatus` values, an unexported type, and `node:fs`. Vitest does not type-check, so
+`npm run check` earns its place in the gate rather than duplicating `npm test`.
+
+**Every layer was shown to go red on a deliberate break, and each break is recorded** in
+`docs/worklog.md` with the failure message it produced. That is the property mutation testing
+exists to establish, obtained more cheaply — and less completely, which is said rather than
+glossed. Stryker is on the deferred list with the backend's `P-7` reading rule attached.
+
+### Unchanged on purpose
+
+- **Twelve findings opened, none fixed.** `F-026` … `F-037`. Every one is in
+  [docs/TODO.md](docs/TODO.md) under *Known, measured, deliberately deferred* with what it is, how
+  it was measured, why it was not fixed, and what fixing it costs.
+- **`F-030` is a one-line change with no visual effect and it is still not made.** Ten minutes'
+  work, on the list rather than in this diff, because the rule for this round was that no
+  production code changes.
+- **`F-012`, `F-019`, `F-020`, `F-022`, `ErrorAlert`'s two theme divergences and the swallowed
+  `415` on sign-out** are all still open, and `F-019` now has a measured boundary rather than two
+  screenshots.
+- **The theme, `AppShell` and every design token are untouched.** `F-034` and `F-036` are both
+  waiting on the same visual pass as `F-012`, and [DESIGN.md](docs/DESIGN.md) §Method applies to
+  all three.
+- **Nine defects are pinned in tests that assert the *current* behaviour**, each going red in both
+  directions — a new defect of the same shape, and a fix. A green suite is not evidence any of
+  them is acceptable.
+- **No layer is self-verifying.** The ratchet would pass over an empty discovery list, the axe
+  specs would pass on a rule that never ran, and the overflow test skipped every table that could
+  fail in its first version. Each was found by trying to make the layer go red and failing, and
+  each now carries a guard — but the deliberate break is what establishes it, and it has to be
+  repeated whenever a layer is extended.
+
+
+### The suite pins the API base instead of inheriting it
+
+**CI was red on thirty tests that pass on every developer machine.** The cause was not
+the tests and not the code: `.gitlab-ci.yml` declares `VITE_API_BASE_URL` as a global
+variable — `web:build` bakes it into the bundle and `web:image` passes it to Kaniko —
+and a global variable is set for `web:test` too.
+
+**Why that was almost invisible.** `ApiClient` and `src/test/msw/apiUrl.ts` both derive
+their base from that one variable, which is deliberate — `apiUrl.ts` says so — and it
+means they never disagree. So the mock backend still answered, the screens still
+rendered, and **every assertion about the screen passed**. Only the assertions about the
+*request* failed, because those name absolute paths: `requestsTo('POST',
+'/api/auth/login')` finds nothing when the base is the deployed URL and the request went
+out as `/auth/login`. The failure said `expected [] to have a length of 1` and pointed at
+nothing.
+
+The signature is the part worth keeping. Every assertion expecting a request failed;
+every assertion expecting *no* request passed, because zero was already the answer. And
+`bodylessWrites.integration.test.ts` — the one file that builds its expected path from
+`apiUrl` rather than typing `/api` — was green in the same run.
+
+#### `vite.config.ts`
+
+- **Added** `test.env: { VITE_API_BASE_URL: '/api' }`. Vitest's `env` wins over an
+  inherited process variable, so the suite now runs against a base it fixes itself. `/api`
+  is what `.env` sets for development and what the `Dockerfile` defaults to, so nothing
+  about what the tests exercise changed — what changed is that it no longer depends on
+  what the surrounding environment happens to export. This is the same reason
+  `src/test/http.ts` stubs the network: a suite whose result depends on the machine it
+  runs on is not a suite.
+- Locally the tests were green because the tracked `.env` sets `VITE_API_BASE_URL=/api`.
+  That made `.env` quietly load-bearing for `npm test`, and it no longer is.
+
+#### `.gitlab-ci.yml`
+
+- **Unchanged on purpose:** the two globals stay global — `web:build`, `web:image` and
+  `web:deploy` read them. A comment now says that, and says that scoping them per job is
+  *not* what makes the suite green, so the pin is not removed later as redundant.
+
+### Tests
+
+No test was added, removed or changed; 43 files and 348 tests, as before. The fix was
+verified by reproduction rather than by argument: exporting the pipeline's value locally
+reproduced CI's failures by name, and the full suite passes with that variable exported
+once the pin is in place. Recorded as `F-025` in [docs/testfindings.md](docs/testfindings.md).
+
+
 ### The end-to-end job is manual now
 
 **`web:e2e` is `when: manual`.** It was already `allow_failure: true`, so it could
