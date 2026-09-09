@@ -16,7 +16,7 @@ import java.util.List;
  *
  * <p>Works on lecture titles rather than on {@link com.example.ratemyprofessor.DomainModel.Lecture}
  * objects: the same lecture is stored once per semester, and this list shows every title only
- * once. The concrete offering is picked afterwards in the semester list.</p>
+ * once. The concrete offering is picked afterward in the semester list.</p>
  */
 public class ProfileLectureAdapter extends RecyclerView.Adapter<ProfileLectureAdapter.LectureViewHolder> {
 

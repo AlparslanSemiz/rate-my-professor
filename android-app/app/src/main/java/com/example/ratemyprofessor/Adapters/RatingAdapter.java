@@ -32,13 +32,13 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
      */
     private static final String RATING_FORMAT = "%.1f";
 
-    private ArrayList<TopicAverageResponse> ratings;
-    private ArrayList<TopicAverageResponse> userRatings;
+    private final ArrayList<TopicAverageResponse> ratings;
+    private final ArrayList<TopicAverageResponse> userRatings;
 
     /**
      * Used to keep track of changes the User made to his ratings, so they can be submitted later
      */
-    private Map<RatingCategory, Double> changedRatings;
+    private final Map<RatingCategory, Double> changedRatings;
 
     /**
      * Constructor for the rating adapter. Removes "overall" rating from each list

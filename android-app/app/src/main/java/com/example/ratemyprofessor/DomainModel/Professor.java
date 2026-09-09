@@ -4,8 +4,6 @@ import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * A professor that can be searched for and rated.
@@ -37,7 +35,7 @@ public class Professor {
      */
     public int ratingCount;
 
-    public Professor(String id, String firstName, String lastName, float averageRating, int ratingCount) {
+    public Professor(@NonNull String id, String firstName, String lastName, float averageRating, int ratingCount) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;

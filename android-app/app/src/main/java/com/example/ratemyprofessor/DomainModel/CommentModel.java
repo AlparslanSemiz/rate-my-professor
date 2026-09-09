@@ -3,7 +3,7 @@ package com.example.ratemyprofessor.DomainModel;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.room.Entity;
-import androidx.room.ForeignKey;
+
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
 

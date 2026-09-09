@@ -75,15 +75,15 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
     private void setUpBottomNavigation() {
 
         binding.navHome.setOnClickListener(v -> {
-            moveIndicatorTo(binding.navHome, true);
+            moveIndicatorTo(binding.navHome);
             loadFragment(new HomeFragment(), false);
         });
         binding.navSearch.setOnClickListener(v -> {
-            moveIndicatorTo(binding.navSearch, true);
+            moveIndicatorTo(binding.navSearch);
             loadFragment(new SearchFragment(), false);
         });
         binding.navSettings.setOnClickListener(v -> {
-            moveIndicatorTo(binding.navSettings, true);
+            moveIndicatorTo(binding.navSettings);
             loadFragment(new SettingsFragment(), false);
         });
 
@@ -91,20 +91,15 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
 
     /**
      * This is used to make the animations of the menu bar indicator when switching between home, search and settings
+     *
      * @param tab
-     * @param animate
      */
-    private void moveIndicatorTo(View tab, boolean animate) {
+    private void moveIndicatorTo(View tab) {
         float tabCenterX = tab.getLeft() + tab.getWidth() / 2f;
         float navigationCenterX = binding.customBottomNav.getWidth() / 2f;
 
         float targetX = tabCenterX - navigationCenterX;
 
-
-        if (!animate) {
-            binding.navIndicator.setTranslationX(targetX);
-            return;
-        }
 
         if (indicatorAnimator != null) {
             indicatorAnimator.cancel();

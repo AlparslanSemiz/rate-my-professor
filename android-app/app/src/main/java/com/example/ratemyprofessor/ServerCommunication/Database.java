@@ -3,6 +3,7 @@ package com.example.ratemyprofessor.ServerCommunication;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import androidx.room.TypeConverters;
@@ -179,9 +180,9 @@ public abstract class Database extends RoomDatabase {
     ) {
         // retrofit2.Callback has to be written out here: RoomDatabase brings its own nested
         // Callback class along, which would shadow the imported one.
-        call.enqueue(new retrofit2.Callback<R>() {
+        call.enqueue(new retrofit2.Callback<>() {
             @Override
-            public void onResponse(Call<R> call, Response<R> response) {
+            public void onResponse(@NonNull Call<R> call, @NonNull Response<R> response) {
                 // A failed request has no body at all, so both checks are needed before reading it.
                 if (!response.isSuccessful() || response.body() == null) {
                     Log.d(TAG, "Update of " + label + " failed: response not successful");
@@ -210,7 +211,7 @@ public abstract class Database extends RoomDatabase {
             }
 
             @Override
-            public void onFailure(Call<R> call, Throwable throwable) {
+            public void onFailure(@NonNull Call<R> call, @NonNull Throwable throwable) {
                 Log.d(TAG, "Update of " + label + " failed: " + throwable.getMessage());
                 updateFinished.accept(false);
             }

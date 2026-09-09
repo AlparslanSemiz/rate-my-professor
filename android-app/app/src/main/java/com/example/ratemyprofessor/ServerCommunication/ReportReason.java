@@ -1,5 +1,7 @@
 package com.example.ratemyprofessor.ServerCommunication;
 
+import androidx.annotation.NonNull;
+
 public enum ReportReason {
     SPAM("Spam"),
     INSULT("Insult"),
@@ -16,6 +18,7 @@ public enum ReportReason {
         this.displayName = displayName;
     }
 
+    @NonNull
     @Override
     public String toString() {
         return displayName;
