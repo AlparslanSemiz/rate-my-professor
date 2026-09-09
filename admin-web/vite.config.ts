@@ -11,6 +11,12 @@ const DEFAULT_API_TARGET =
   'https://server.example.org'
 
 /**
+ * The base every test runs against. `/api` is what `.env` sets for development and what the
+ * Dockerfile defaults to, so the suite exercises the shape the panel actually ships with.
+ */
+const TEST_API_BASE_URL = '/api'
+
+/**
  * The deployed panel is served from `/admin/` on the same host as the API, so production
  * builds need that prefix baked into their asset URLs. The dev server keeps serving from the
  * root. Override with VITE_BASE_PATH when deploying under a different path.
@@ -59,6 +65,22 @@ export default defineConfig(({ command, mode }) => {
       environment: 'jsdom',
       setupFiles: './src/test/setup.ts',
       css: true,
+      /**
+       * The API base the suite runs against, pinned rather than inherited.
+       *
+       * Both `ApiClient` and the MSW handlers derive their base from
+       * `VITE_API_BASE_URL`, so any value keeps them matching and every assertion about
+       * the *screen* passes. The assertions about the *request* do not: they name absolute
+       * paths like `/api/auth/login`, and those only exist while the base contributes
+       * `/api`. CI sets `VITE_API_BASE_URL` to the deployed backend for `web:build` and
+       * `web:image`, that global reached `web:test` as well, and thirty request assertions
+       * failed there while passing locally — each reporting nothing more useful than
+       * "expected [] to have a length of 1", because the requests had gone out under
+       * `/auth/login` instead. Pinning it here makes the suite independent of whatever the
+       * surrounding environment happens to export, which is the same reason `src/test/http.ts`
+       * stubs the network.
+       */
+      env: { VITE_API_BASE_URL: TEST_API_BASE_URL },
       /**
        * `e2e/` is Playwright's, and its specs match Vitest's default `*.spec.ts` pattern —
        * without this they would be collected here and fail on the first `page` reference.

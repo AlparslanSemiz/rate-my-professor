@@ -10,6 +10,12 @@ stages:
   - image
   - deploy
 
+# These are the deployed panel's build inputs: `web:build` bakes them into the bundle and
+# `web:image` passes them to Kaniko. They are global because three jobs read them, which also
+# means they reach `web:test` — where a pinned base is what the suite needs instead, since its
+# request assertions name absolute paths. `test.env` in vite.config.ts pins it, so the test job
+# is unaffected by whatever is set here; do not narrow these to per-job in the belief that it
+# is what makes the suite green.
 variables:
   VITE_API_BASE_URL: "https://server.example.org"
   VITE_BASE_PATH: "/admin/"
