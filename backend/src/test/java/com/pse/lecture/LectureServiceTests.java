@@ -289,6 +289,59 @@ class LectureServiceTests {
         assertThat(savedLecture.getProfessors().contains(professor)).isTrue();
     }
 
+    /**
+     * {@code addProfessor} trims both name parts before storing them and this did not, which
+     * is the twin asymmetry the shape sweep was looking for. {@code @NotBlank} passes
+     * {@code "  Algorithmen 1  "}, so the padding reached the column -- and then
+     * {@code LectureModerationService} trims the incoming PATCH name before comparing it to
+     * the stored one, so the very first admin edit of such a lecture recorded a name change
+     * nobody made and wrote a LECTURE_UPDATED entry for it.
+     */
+    @Test
+    void addLectureStoresTheNameAndCodeTrimmed() {
+
+        Student student = mock(Student.class);
+        AddLectureRequest request = mock(AddLectureRequest.class);
+
+        when(request.name()).thenReturn("  Lineare Algebra 1  ");
+        when(request.code()).thenReturn("  LA1  ");
+
+        when(lectureRepository.findByName("Lineare Algebra 1")).thenReturn(Optional.empty());
+
+        ArgumentCaptor<Lecture> lectureCaptor = ArgumentCaptor.forClass(Lecture.class);
+
+        BasicResponse response = lectureService.addLecture(principalFor(student), request);
+
+        assertThat(response.success()).isTrue();
+        verify(lectureRepository).save(lectureCaptor.capture());
+
+        assertThat(lectureCaptor.getValue().getName()).isEqualTo("Lineare Algebra 1");
+        assertThat(lectureCaptor.getValue().getCode()).isEqualTo("LA1");
+    }
+
+    /**
+     * The other half of the same rule: what is stored trimmed has to be checked trimmed, or
+     * the uniqueness constraint is one space away from being bypassed.
+     */
+    @Test
+    void addLectureRefusesANameThatDiffersFromAnExistingOneOnlyByWhitespace() {
+
+        Student student = mock(Student.class);
+        AddLectureRequest request = mock(AddLectureRequest.class);
+
+        when(request.name()).thenReturn("  Lineare Algebra 1  ");
+
+        when(lectureRepository.findByName("Lineare Algebra 1"))
+                .thenReturn(Optional.of(new Lecture()));
+
+        assertThatThrownBy(() -> lectureService.addLecture(principalFor(student), request))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getStatus())
+                .isEqualTo(HttpStatus.CONFLICT);
+
+        verify(lectureRepository, never()).save(any());
+    }
+
     @Test
     void getByIdReturnsNullWhenLectureDoesNotExist() {
 

@@ -117,10 +117,17 @@ public class LectureService {
     @Transactional
     public BasicResponse addLecture(AuthenticatedUser principal, AddLectureRequest request) {
 
-        if (lectureRepository.findByName(request.name()).isPresent()) {
+        // Trim once, then check and store the same value. addProfessor already stored the
+        // trimmed name and this did not, so "  Algorithmen 1  " reached the column past
+        // @NotBlank -- and LectureModerationService, which trims the incoming PATCH before
+        // comparing, then read the very first admin edit as a name change nobody made.
+        String name = trimmed(request.name());
+        String code = trimmed(request.code());
+
+        if (lectureRepository.findByName(name).isPresent()) {
             throw new ApiException(
                     HttpStatus.CONFLICT,
-                    "Lecture already exists: " + request.name());
+                    "Lecture already exists: " + name);
         }
 
 
@@ -150,8 +157,8 @@ public class LectureService {
 
         Lecture lecture = new Lecture();
 
-        lecture.setName(request.name());
-        lecture.setCode(request.code());
+        lecture.setName(name);
+        lecture.setCode(code);
         lecture.setSemesterYear(request.semesterYear());
         lecture.setSemesterSeason(request.semesterSeason());
         lecture.setActive(true);
@@ -217,4 +224,9 @@ public class LectureService {
 
 
 
+
+    /** Null-tolerant so a unit test's unstubbed field cannot turn a trim into an NPE. */
+    private static String trimmed(String value) {
+        return value == null ? null : value.trim();
+    }
 }

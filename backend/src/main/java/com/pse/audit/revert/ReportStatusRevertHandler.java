@@ -45,12 +45,27 @@ public final class ReportStatusRevertHandler {
             return AuditTargetType.COMMENT_REPORT;
         }
 
+        /**
+         * Two keys, not one. {@code updateReportStatus} records {@code commentStatus} beside
+         * {@code status} whenever the report's new status changes the comment's visibility,
+         * and {@link AuditRevertService} refuses an entry carrying a key this map does not
+         * offer. Publishing only {@code status} therefore made every {@code ACTION_TAKEN}
+         * transition unrevertible -- which is the exact set this handler exists for.
+         *
+         * <p>{@code applyInverse} still replays the status alone: {@code updateReportStatus}
+         * derives visibility from it, so restoring the status restores the comment. What the
+         * second key buys is the check -- if somebody moved the comment in the meantime, the
+         * revert is refused as {@code VALUE_CHANGED} instead of silently overwriting them.
+         *
+         * <p>{@code comment_id} is {@code NOT NULL}, so the dereference cannot fail.
+         */
         @Override
         public Map<UUID, Map<String, Object>> currentValues(Collection<UUID> targetIds) {
             Map<UUID, Map<String, Object>> values = new HashMap<>();
             for (CommentReport report : reportRepository.findAllById(targetIds)) {
                 Map<String, Object> current = new LinkedHashMap<>();
                 current.put("status", report.getStatus().name());
+                current.put("commentStatus", report.getComment().getStatus().name());
                 values.put(report.getId(), current);
             }
             return values;
@@ -89,12 +104,14 @@ public final class ReportStatusRevertHandler {
             return AuditTargetType.ANSWER_REPORT;
         }
 
+        /** The answer-side mirror of the two-key map above, and for the same reason. */
         @Override
         public Map<UUID, Map<String, Object>> currentValues(Collection<UUID> targetIds) {
             Map<UUID, Map<String, Object>> values = new HashMap<>();
             for (AnswerReport report : reportRepository.findAllById(targetIds)) {
                 Map<String, Object> current = new LinkedHashMap<>();
                 current.put("status", report.getStatus().name());
+                current.put("answerStatus", report.getAnswer().getStatus().name());
                 values.put(report.getId(), current);
             }
             return values;

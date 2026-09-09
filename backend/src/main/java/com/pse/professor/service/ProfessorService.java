@@ -106,13 +106,19 @@ public class ProfessorService {
      */
     public BasicResponse addProfessor(AuthenticatedUser principal, ProfessorAddRequest request) {
 
-    if (getProfessorID(request.firstName(), request.lastName()) != null) {
+    // The other half of addLecture's rule. This side already STORED the trimmed name (see
+    // below) but checked uniqueness on the raw one, so " Stefan" / "Kuehnlein " walked past
+    // this 409 and created a second row holding exactly the name the first one holds.
+    String firstName = request.firstName() == null ? null : request.firstName().trim();
+    String lastName = request.lastName() == null ? null : request.lastName().trim();
+
+    if (getProfessorID(firstName, lastName) != null) {
         throw new ApiException(
                 HttpStatus.CONFLICT,
                 "Professor already exists: "
-                        + request.firstName()
+                        + firstName
                         + " "
-                        + request.lastName());
+                        + lastName);
     }
 
     List<Lecture> lectures = new ArrayList<>();
@@ -132,8 +138,8 @@ public class ProfessorService {
         }
 
         Professor professor = new Professor();
-        professor.setFirstName(request.firstName().trim());
-        professor.setLastName(request.lastName().trim());
+        professor.setFirstName(firstName);
+        professor.setLastName(lastName);
 
         for (Lecture lecture : lectures) {
             lecture.getProfessors().add(professor);

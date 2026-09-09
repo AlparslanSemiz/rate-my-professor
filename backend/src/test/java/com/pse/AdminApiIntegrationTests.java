@@ -1960,6 +1960,72 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.comments", hasSize(1)));
     }
 
+    /**
+     * The test above is named for reverting and does not use the revert endpoint -- it toggles
+     * the report back with a second PATCH. This is the one that presses the button the panel
+     * shows, on the transition the handler's own javadoc calls the reason it exists.
+     *
+     * <p>{@code updateReportStatus} records two changed fields whenever visibility flips --
+     * {@code status} and {@code commentStatus} -- while the handler's {@code currentValues}
+     * offered only {@code status}, and {@code AuditRevertService} refuses an entry carrying a
+     * key the handler does not know. So every {@code ACTION_TAKEN} transition, which is
+     * exactly the set worth reverting, was permanently unrevertible.
+     */
+    @Test
+    void anActionTakenReportStatusIsRevertibleThroughTheAuditEntry() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Student reported = createStudent("revert-author@student.kit.edu");
+        Student reporter = createStudent("revert-reporter@student.kit.edu");
+        Lecture lecture = createLecture();
+        Comment comment = new Comment();
+        comment.setContent("Offending content");
+        comment.setStudent(reported);
+        comment.setLecture(lecture);
+        comment = commentRepository.saveAndFlush(comment);
+        CommentReport report = new CommentReport();
+        report.setComment(comment);
+        report.setReporter(reporter);
+        report.setReason(ReportReason.HARASSMENT);
+        report = commentReportRepository.saveAndFlush(report);
+
+        mockMvc.perform(patch("/comments/reported/{id}", report.getId())
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"ACTION_TAKEN\"}"))
+                .andExpect(status().isOk());
+        assertThat(commentRepository.findById(comment.getId()).orElseThrow().getStatus())
+                .isEqualTo(ContentStatus.HIDDEN);
+
+        AuditLog audit = auditLogRepository.findAll().stream()
+                .filter(log -> log.getAction() == AuditAction.COMMENT_REPORT_STATUS_CHANGED)
+                .findFirst()
+                .orElseThrow();
+        assertThat(audit.getChanges()).containsKeys("status", "commentStatus");
+
+        // The panel decides whether to draw the button from this flag, so it has to agree
+        // with what the button does.
+        mockMvc.perform(get("/audit-logs")
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$.auditLogs[?(@.action == 'COMMENT_REPORT_STATUS_CHANGED')].revertible")
+                        .value(hasItem(true)));
+
+        mockMvc.perform(post("/audit-logs/{id}/revert", audit.getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+
+        // Restoring the report status has to restore the visibility it took away, because
+        // that is the damage the operator is undoing.
+        assertThat(commentReportRepository.findById(report.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReportStatus.OPEN);
+        assertThat(commentRepository.findById(comment.getId()).orElseThrow().getStatus())
+                .isEqualTo(ContentStatus.VISIBLE);
+        mockMvc.perform(get("/social/comments/{id}", lecture.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comments", hasSize(1)));
+    }
+
     @Test
     void deleteAnonymizesTheAccountButKeepsContentAndAuditHistory() throws Exception {
         Session admin = createSession("admin@student.kit.edu", true);
@@ -2822,6 +2888,56 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.auditLogs[0].revertible").value(false))
                 .andExpect(jsonPath("$.auditLogs[0].revertBlockedReason")
                         .value("ACTION_NOT_REVERTIBLE"));
+    }
+
+    /**
+     * Characterization, not a defect. {@code UserResponse.reports} is built from
+     * {@code CommentReportRepository.countByCommentStudent} alone, and
+     * {@code AnswerReportRepository} has no per-author count at all -- neither the scalar nor
+     * the grouped one its comment-side twin carries.
+     *
+     * <p>The asymmetry turned up in the twin-pair sweep and is **documented**:
+     * {@code docs/admin-api.md} says "reports counts reports against comments authored by the
+     * user". So the code matches its contract and the field is narrower than its name, which
+     * is a product question rather than a bug. Pinned here so that widening it later is a
+     * deliberate act with a test to invert, not a silent change to a number the panel shows.
+     */
+    @Test
+    void theUserReportCountCountsCommentReportsAndNotAnswerReports() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session author = createSession("counted-author@student.kit.edu", false);
+        Session reporter = createSession("counted-reporter@student.kit.edu", false);
+        Lecture lecture = createLecture();
+
+        Comment comment = new Comment();
+        comment.setContent("Reported comment");
+        comment.setStudent(author.student());
+        comment.setLecture(lecture);
+        comment = commentRepository.saveAndFlush(comment);
+
+        CommentReport commentReport = new CommentReport();
+        commentReport.setComment(comment);
+        commentReport.setReporter(reporter.student());
+        commentReport.setReason(ReportReason.SPAM);
+        commentReportRepository.saveAndFlush(commentReport);
+
+        // Two reports on this author's answer, and none of them is counted.
+        Answer answer = new Answer();
+        answer.setContent("Reported answer");
+        answer.setStudent(author.student());
+        answer.setComment(comment);
+        answer = answerRepository.saveAndFlush(answer);
+
+        AnswerReport answerReport = new AnswerReport();
+        answerReport.setAnswer(answer);
+        answerReport.setReporter(reporter.student());
+        answerReport.setReason(ReportReason.SPAM);
+        answerReportRepository.saveAndFlush(answerReport);
+
+        mockMvc.perform(get("/users/{id}", author.student().getId())
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reports").value(1));
     }
 
     private Session createSession(String email, boolean adminRole) {

@@ -252,6 +252,36 @@ class ProfessorServiceTests {
     }
 
 
+    /**
+     * The mirror of {@code addLectureStoresTheNameAndCodeTrimmed}: this side already stored
+     * the trimmed name but ran its uniqueness check on the raw one, so {@code " Stefan"} /
+     * {@code "Kuehnlein "} walked past the 409 and created a second row holding exactly the
+     * name the first one holds. Each twin had one half of "trim, then check, then store".
+     */
+    @Test
+    void addProfessorRefusesANameThatDiffersFromAnExistingOneOnlyByWhitespace() {
+
+        Professor existingProfessor = createProfessor("Stefan", "Kuehnlein", true);
+        existingProfessor.setId(UUID.randomUUID());
+
+        ProfessorAddRequest request = new ProfessorAddRequest(
+                " Stefan",
+                "Kuehnlein ",
+                null
+        );
+
+        when(professorRepository.findByFirstNameAndLastName("Stefan", "Kuehnlein"))
+                .thenReturn(Optional.of(existingProfessor));
+
+        assertThatThrownBy(() -> professorService.addProfessor(principal, request))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getStatus())
+                .isEqualTo(HttpStatus.CONFLICT);
+
+        verify(professorRepository, never()).save(any());
+    }
+
+
     @Test
     void addProfessorDoesNotSaveWhenLectureDoesNotExist() {
 

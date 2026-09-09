@@ -686,3 +686,53 @@ depending on which of the three it called.
 
 The message text changed, so anything matching on it has to change. A successful submission is
 untouched.
+
+
+///// 9.09 (8)
+
+
+"POST /admin/audit-logs/{id}/revert" now works on a report status change that hid content.
+
+Was: 409 {"message": "COMMENT_REPORT_STATUS_CHANGED cannot be reversed",
+          "success": false, "reason": "ACTION_NOT_REVERTIBLE"}
+Now: 200 -- the report goes back to its previous status and the comment or answer it hid
+     becomes visible again
+
+The listing said so too: "revertible" was false on those entries and "revertBlockedReason"
+read ACTION_NOT_REVERTIBLE, so a panel drawing the button from that flag correctly did not
+draw it. Both now report revertible: true.
+
+Only the entries that changed visibility were affected -- that is, every transition into or
+out of ACTION_TAKEN, which is the whole reason the revert exists for this action. Those
+entries record two changed fields ("status" and "commentStatus"/"answerStatus") and the
+revert handler published only the first, so the service refused the entry as carrying a
+field it could not restore.
+
+Panel: entries you were hiding the revert button on will now offer it. Nothing to change if
+you read "revertible" from the response, which is what it is there for.
+
+
+///// 9.09 (9)
+
+
+"POST /admin/data/lectures" stores the name and code trimmed, and refuses a duplicate that
+differs only by whitespace.
+
+Was: "  Algorithmen 1  " stored with its padding, and accepted alongside an existing
+     "Algorithmen 1"
+Now: stored as "Algorithmen 1", and the second one answers
+     409 {"message": "Lecture already exists: Algorithmen 1", "success": false}
+
+"POST /admin/data/professor" already stored the trimmed name but ran its uniqueness check on
+the untrimmed one, so " Stefan" / "Kuehnlein " walked past the 409 and created a second
+professor holding exactly the name the first one holds. It now checks what it stores.
+
+Was: 200, a duplicate professor row
+Now: 409 {"message": "Professor already exists: Stefan Kuehnlein", "success": false}
+
+Nothing to change if you already trim in the form. If you were relying on padding to create
+near-duplicate rows, that no longer works -- which was the point.
+
+One side effect worth knowing: a lecture created with a padded name used to record a bogus
+"name" change in the audit log on its first admin edit, because the PATCH path trims before
+comparing and the stored value did not. New lectures cannot get into that state.
