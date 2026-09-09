@@ -524,3 +524,31 @@ answers. Those tests were inverted rather than deleted, so they state the new co
 
 Nothing else on either route changed. A successful create still answers 200 with
 "success": true, and an invalid body is still 400 {"message": "Invalid request"}.
+
+
+///// 9.09
+
+
+The two catalogue detail reads answer 404 for a row that is not there.
+
+"GET /data/lectures/{id}":
+
+Was: 200 {"message": "Couldn find lecture with uuid: <uuid>", "success": false, "lecture": null}
+Now: 404 {"message": "Lecture not found", "success": false}
+
+"GET /data/professor/{id}":
+
+Was: 200 {"message": "Couldn't find prof with uuid: <uuid>", "success": false, "professor": null}
+Now: 404 {"message": "Professor not found", "success": false}
+
+Note the SECOND line of each, not only the status. The error body is the project's standard
+{"message", "success"}, so the "lecture" / "professor" key is now ABSENT rather than null. A
+client reading `body.lecture == null` is unaffected -- a missing key deserialises to null in
+Jackson, Moshi and Gson alike. A client that checks whether the key is present has to change.
+The message text changed too, so anything matching on it has to change.
+
+These were the last two reads answering a failure with 200. Every other read in the catalogue
+-- "GET /ratings/{lectureId}", "GET /ratings/{lectureId}/categories" -- has answered 404 since
+F-5 and F-15. Both routes are public, so an unknown id was reachable without a token.
+
+A successful read is unchanged: 200 with "success": true and the payload.

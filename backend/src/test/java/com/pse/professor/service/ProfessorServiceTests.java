@@ -38,6 +38,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -197,7 +198,7 @@ class ProfessorServiceTests {
 
 
     @Test
-    void getProfessorReturnsFailureWhenProfessorDoesNotExist() {
+    void getProfessorUnknownIdIsNotFoundRatherThanASuccessfulFailureBody() {
 
         UUID professorId = UUID.randomUUID();
 
@@ -205,14 +206,13 @@ class ProfessorServiceTests {
                 .thenReturn(Optional.empty());
 
 
-        ProfessorDetailResponse response =
-                professorService.getProfessor(professorId);
+        ApiException thrown = catchThrowableOfType(
+                ApiException.class,
+                () -> professorService.getProfessor(professorId));
 
-
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Couldn't find prof with uuid: " + professorId);
-
-        assertThat(response.professor()).isNull();
+        assertThat(thrown).as("nothing was thrown").isNotNull();
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(thrown.getMessage()).isEqualTo("Professor not found");
     }
 
 

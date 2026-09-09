@@ -194,17 +194,19 @@ class ProfessorApiIntegrationTests {
 
 
     @Test
-    void getProfessorReturnsFailureWhenProfessorDoesNotExist()
+    void getProfessorUnknownIdIsNotFoundRatherThanASuccessfulFailureBody()
             throws Exception {
 
         UUID professorId = UUID.randomUUID();
 
+        // "professor" is absent rather than null: the error body is ApiErrorResponse.
         mockMvc.perform(
                         get("/data/professor/{id}", professorId)
                 )
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.professor").isEmpty());
+                .andExpect(jsonPath("$.message").value("Professor not found"))
+                .andExpect(jsonPath("$.professor").doesNotExist());
     }
 
 

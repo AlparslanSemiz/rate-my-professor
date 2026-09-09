@@ -34,6 +34,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.ArgumentMatchers.any;
@@ -76,16 +77,19 @@ class LectureServiceTests {
     }
 
     @Test
-    void getLectureReturnsFailureWhenLectureDoesNotExist() {
+    void getLectureUnknownIdIsNotFoundRatherThanASuccessfulFailureBody() {
 
         UUID lectureId = UUID.randomUUID();
 
         when(lectureRepository.findById(lectureId)).thenReturn(Optional.empty());
 
-        LectureDetailResponse response = lectureService.getLecture(lectureId);
+        ApiException thrown = catchThrowableOfType(
+                ApiException.class,
+                () -> lectureService.getLecture(lectureId));
 
-        assertThat(response.success()).isFalse();
-        assertThat(response.lecture()).isNull();
+        assertThat(thrown).as("nothing was thrown").isNotNull();
+        assertThat(thrown.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(thrown.getMessage()).isEqualTo("Lecture not found");
 
         verify(lectureRepository).findById(lectureId);
     }

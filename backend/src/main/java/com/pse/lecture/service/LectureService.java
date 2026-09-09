@@ -70,7 +70,14 @@ public class LectureService {
     }
 
     /**
-     * Retrieves a Lecture with a given ID
+     * Retrieves a Lecture with a given ID.
+     *
+     * <p>An unknown id is a 404, the answer {@code RatingService} gives for the same question
+     * two routes away. It used to be {@code 200 {"success": false, "lecture": null}} -- F-5's
+     * direction applied to the last read that had not moved. The error body is
+     * {@code ApiErrorResponse}, so {@code lecture} is absent rather than null; that is the
+     * client-visible half and it carries a CHANGELOG entry.
+     *
      * @param lectureId UUID
      * @return LectureDetailResponse
      */
@@ -79,8 +86,8 @@ public class LectureService {
 
         Lecture lecture = lectureRepository.findById(lectureId).orElse(null);
 
-        if(lecture == null){
-            return new LectureDetailResponse("Couldn find lecture with uuid: " + lectureId, false, null);
+        if (lecture == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Lecture not found");
         }
 
         LectureResponse lectureResponse = LectureResponseMapper.toResponse(lecture);

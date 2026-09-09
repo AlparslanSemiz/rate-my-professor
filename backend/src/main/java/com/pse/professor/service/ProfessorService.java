@@ -74,12 +74,17 @@ public class ProfessorService {
 
 
 
+    /**
+     * An unknown id is a 404, for the reason {@code LectureService.getLecture} gives: this
+     * read and that one were the last two answering {@code 200 {"success": false}} to a
+     * question every other read in the catalogue answers with a status code.
+     */
     @Transactional(readOnly = true)
     public ProfessorDetailResponse getProfessor(UUID professor_id) {
 
         Professor professor = professorRepository.findWithLecturesById(professor_id).orElse(null);
-        if(professor == null) {
-            return new ProfessorDetailResponse("Couldn't find prof with uuid: " + professor_id, false, null);
+        if (professor == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Professor not found");
         }
 
 

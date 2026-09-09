@@ -198,17 +198,21 @@ class LectureApiIntegrationTests {
     }
 
     @Test
-    void getLectureReturnsFailureWhenLectureDoesNotExist()
+    void getLectureUnknownIdIsNotFoundRatherThanASuccessfulFailureBody()
             throws Exception {
 
         UUID lectureId = UUID.randomUUID();
 
+        // The error body is ApiErrorResponse -- {message, success} -- so "lecture" is absent
+        // rather than null. That is the client-visible half of this change and the reason it
+        // carries a CHANGELOG entry.
         mockMvc.perform(
                         get("/data/lectures/{id}", lectureId)
                 )
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.lecture").isEmpty());
+                .andExpect(jsonPath("$.message").value("Lecture not found"))
+                .andExpect(jsonPath("$.lecture").doesNotExist());
     }
 
 
