@@ -1,2 +1,7 @@
 export { FeedbackService, feedbackService } from './FeedbackService'
-export type { BugReport, BugReportUpdate } from './feedbackTypes'
+export type {
+  BugReport,
+  BugReportUpdate,
+  GitlabIssueResponse,
+  IssueState,
+} from './feedbackTypes'

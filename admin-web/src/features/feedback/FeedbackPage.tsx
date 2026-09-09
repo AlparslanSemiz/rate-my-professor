@@ -1,52 +1,24 @@
 import { useMemo } from 'react'
 import { Tabs } from '@mantine/core'
 import { IconArchive, IconInbox } from '@tabler/icons-react'
-import { feedbackService, type BugReport } from '@/api/feedback'
-import { systemStatusService } from '@/api/system'
 import ConfirmModal from '@/components/ConfirmModal'
 import LoadError from '@/components/LoadError'
 import PageHeader from '@/components/PageHeader'
 import PageLoader from '@/components/PageLoader'
-import { useAsyncData } from '@/hooks/useAsyncData'
 import { useSelectedId } from '@/hooks/useSelectedId'
 import BugReportModal from './components/BugReportModal'
 import FeedbackStats from './components/FeedbackStats'
 import ReportQueue from './components/ReportQueue'
-import { closedReports, openReports } from './feedbackModel'
+import { closedReports, openReports } from './model'
 import { useFeedbackReportActions } from './hooks/useFeedbackReportActions'
-
-const LOAD_ERROR_MESSAGE = 'Failed to load bug reports'
-const EMPTY_REPORTS: BugReport[] = []
-
-function loadReports() {
-  return feedbackService.getReports()
-}
-
-/**
- * Whether the backend holds GitLab credentials. Read once, and a failure reads as "off": the
- * endpoint answers `503` without them, and offering a button that cannot work is worse than
- * not offering one.
- */
-async function loadGitlabEnabled() {
-  return (await systemStatusService.getStatus()).gitlabEnabled
-}
+import { useFeedbackReports } from './hooks/useFeedbackReports'
 
 export default function FeedbackPage() {
-  const {
-    data: reports,
-    setData: setReports,
-    loading,
-    error,
-    retry,
-  } = useAsyncData(loadReports, EMPTY_REPORTS, LOAD_ERROR_MESSAGE)
-  const { data: gitlabEnabled } = useAsyncData(loadGitlabEnabled, false, '')
+  const { reports, gitlabEnabled, loading, error, retry } = useFeedbackReports()
   const reportDetails = useSelectedId()
   const queue = useMemo(() => openReports(reports), [reports])
   const history = useMemo(() => closedReports(reports), [reports])
-  const reportActions = useFeedbackReportActions({
-    setReports,
-    onDeleted: reportDetails.close,
-  })
+  const reportActions = useFeedbackReportActions({ onDeleted: reportDetails.close })
 
   function openReport(id: string) {
     reportDetails.open(id)

@@ -4,7 +4,7 @@ import { reportStatusColor, severityAccent } from '@/constants/colors'
 import { activateOnEnterOrSpace } from '@/utils/keyboard'
 import { enumLabel } from '@/utils/enumLabel'
 import { formatDate } from '@/utils/formatDate'
-import { reportStatusIcon } from '../feedbackModel'
+import { reportStatusIcon } from '../model'
 import { chrome } from '@/theme'
 
 const severityBarStyle: CSSProperties = {

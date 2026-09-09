@@ -1,4 +1,5 @@
 import { MantineProvider } from '@mantine/core'
+import { withQueryClient } from '@/test/queryClient'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -11,6 +12,7 @@ vi.mock('@/api/feedback', () => ({
     getReports: vi.fn(),
     updateReport: vi.fn(),
     createGitlabIssue: vi.fn(),
+    deleteReport: vi.fn(),
   },
 }))
 
@@ -57,11 +59,7 @@ const reports: BugReport[] = [
 ]
 
 function renderFeedback() {
-  return render(
-    <MantineProvider>
-      <FeedbackPage />
-    </MantineProvider>
-  )
+  return render(<MantineProvider>{withQueryClient(<FeedbackPage />)}</MantineProvider>)
 }
 
 describe('Feedback page', () => {
@@ -81,6 +79,10 @@ describe('Feedback page', () => {
     vi.mocked(feedbackService.getReports).mockImplementation(async () =>
       queue.map((report) => ({ ...report }))
     )
+    vi.mocked(feedbackService.deleteReport).mockImplementation(async (id) => {
+      queue = queue.filter((report) => report.id !== id)
+      return { success: true, message: 'Deleted' }
+    })
     vi.mocked(feedbackService.updateReport).mockImplementation(async (id, update) => {
       const stored = queue.find((report) => report.id === id)
       if (stored) Object.assign(stored, update)
@@ -220,6 +222,46 @@ describe('Feedback page', () => {
     expect(await screen.findByText(/reading it back failed/)).toHaveTextContent('Database unavailable')
     expect(screen.queryByText(/The change was not saved/)).not.toBeInTheDocument()
   })
+  it('deletes a report and drops it from the queue', async () => {
+    const user = userEvent.setup()
+    renderFeedback()
+
+    await user.click(await screen.findByText('Crash on login'))
+    await user.click(await screen.findByRole('button', { name: 'Delete report' }))
+    // Both the trigger and the confirmation say "Delete report", so the second is scoped to
+    // the confirmation dialog rather than picked by position.
+    const confirmation = within(await screen.findByRole('dialog', { name: 'Delete bug report' }))
+    await user.click(confirmation.getByRole('button', { name: 'Delete report' }))
+
+    await waitFor(() => expect(feedbackService.deleteReport).toHaveBeenCalledWith('report-1'))
+    await waitFor(() => expect(screen.queryByText('Crash on login')).not.toBeInTheDocument())
+  })
+
+  it('keeps the report and says so when the backend refuses the delete', async () => {
+    vi.mocked(feedbackService.deleteReport).mockRejectedValueOnce(
+      new Error('The report is referenced by an open issue.')
+    )
+    const user = userEvent.setup()
+    renderFeedback()
+
+    await user.click(await screen.findByText('Crash on login'))
+    await user.click(await screen.findByRole('button', { name: 'Delete report' }))
+    // Both the trigger and the confirmation say "Delete report", so the second is scoped to
+    // the confirmation dialog rather than picked by position.
+    const confirmation = within(await screen.findByRole('dialog', { name: 'Delete bug report' }))
+    await user.click(confirmation.getByRole('button', { name: 'Delete report' }))
+
+    // Before this the rejection escaped unhandled and the row vanished anyway.
+    expect(
+      await screen.findByText('The report is referenced by an open issue.')
+    ).toBeInTheDocument()
+    // The row is still in the queue. The title also appears in the open modals, so this asks
+    // the list itself rather than matching the text anywhere on screen.
+    expect(
+      screen.getByRole('button', { name: 'Open bug report: Crash on login' })
+    ).toBeInTheDocument()
+  })
+
   it('creates a GitLab issue and then shows the link the backend reported', async () => {
     const user = userEvent.setup()
     renderFeedback()

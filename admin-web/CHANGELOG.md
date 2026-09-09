@@ -2,6 +2,83 @@
 
 ## [Unreleased]
 
+### Fixed — a refused bug report deletion did nothing, loudly
+
+`deleteReport` was the one write in the feature that bypassed `runWrite`. It
+awaited the request with no `try` at all, so a rejected delete produced an
+unhandled rejection — and then removed the row locally anyway, telling the
+operator a deletion had happened that the backend had refused.
+`feedbackService.deleteReport` was also absent from the test file's `vi.mock`, so
+nothing exercised the path in either direction.
+
+It is a `useMutation` now, which gives it the error handling for free. A refusal
+is reported by `ConfirmModal`, in place, next to the button that was pressed —
+deliberately *not* also in the detail modal behind it, which would say it twice.
+The optimistic local filter is gone with it: the queue is re-read, consistently
+with the rest of the feature. Two tests, one for each outcome.
+
+### Refactor step 10 — feedback, and the end of `useAsyncData`
+
+**All 11 of this page's tests passed unchanged**, including the two awkward ones:
+that a status change moves a report to History, and that a change the backend
+accepted is reported as saved even when the re-read afterwards fails.
+
+**`hooks/useFeedbackReports.ts` (new)**
+- The queue and the GitLab flag are two `useQuery`. The flag keeps its documented
+  behaviour — a failure reads as "off", because the endpoint answers `503`
+  without credentials and offering a button that cannot work is worse than not
+  offering one — by catching inside the `queryFn`, the shape `useUsersPage`'s
+  `fetchCounts` uses.
+- The `initialError` / `tableError` split arrives here for the reason it exists
+  elsewhere: **a first load that produced nothing takes over the page, a failure
+  with the queue already on screen must not.** Without it the migration broke the
+  stale-read test — every write re-reads, so a failed re-read would have replaced
+  the operator's list with a full-page error reporting a change that had in fact
+  been accepted.
+
+**`hooks/useFeedbackReportActions.ts` — 95 lines, and no more injected setter**
+- It took `setReports: Dispatch<SetStateAction<BugReport[]>>` as a prop so the
+  writes could refresh the list themselves. Three `useMutation` and a query key
+  replace that.
+- `runWrite`'s two-stage `try` is kept, and why is now written at the code: a
+  failed read-back is **not** a failed write, so the refetch is awaited here with
+  `throwOnError` rather than left to `invalidateQueries`. An invalidation cannot
+  tell the two apart, and reporting an accepted change as refused is the worse of
+  the two errors.
+
+**`model/` (new)**
+- `feedbackModel.ts` is `model/reports.ts`, and `model/edit.ts` is new.
+  `BugReportEditForm` had the trim-and-diff inlined by hand — the same sparse
+  object and the same `Object.keys(update).length > 0` gate as the catalogue and
+  user models, but extracted nowhere and tested nowhere.
+- The rule that a title may not be emptied while a description may is now stated
+  where it can be read, and tested: clearing a description that was noise is a
+  legitimate edit; a report with no title cannot be found again.
+
+**`components/BugReportEditForm.tsx` — `@mantine/form`**
+- Three `useState` and two hand-written `onChange` become `getInputProps`. It
+  keeps having no local `saving` — the parent's mutation owns it — and keeps not
+  closing itself, which `BugReportDetails` does.
+
+**`FeedbackPage.tsx` — 135 lines to 107**
+
+**Deleted: `src/hooks/useAsyncData.ts`** and its unit test. Its last caller is
+gone. `src/hooks/` is down to `useSearch`, `useSelectedId` and
+`useVisibleInterval`, and the last of those goes in step 8.
+
+**Also**: `@/api/feedback`'s barrel exported `BugReport` and `BugReportUpdate`
+only, while `GitlabIssueResponse` and `IssueState` were re-exported from the
+service and unreachable from the package.
+
+**Tests — eight added.** The feature had **no unit tests at all**;
+`model/model.unit.test.ts` covers the queue split and the edit rules. Two cover
+the delete fix above. `FeedbackPage.integration.test.tsx` gains
+`withQueryClient` and a working `deleteReport` mock; nothing else in it changed.
+
+**Coverage: 91.23 / 83.95 / 88.97 / 93.45**, against 89.58 / 83.14 / 86.48 /
+92.12 before the refactor — now up on all four axes, including the branch figure
+that step 9 left slightly down.
+
 ### Refactor step 9 — the catalogue, and one form written twice
 
 `LectureEditModal` (186) and `ProfessorEditModal` (137) were the same component

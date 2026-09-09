@@ -1,95 +1,116 @@
-import { useState, type Dispatch, type SetStateAction } from 'react'
-import { feedbackService, type BugReport, type BugReportUpdate } from '@/api/feedback'
+import { useCallback, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { feedbackService, type BugReportUpdate } from '@/api/feedback'
 import { getErrorMessage, getStaleAfterWriteMessage } from '@/utils/getErrorMessage'
+import { feedbackKeys } from './feedbackKeys'
 
 const UPDATE_ERROR_MESSAGE = 'Failed to update the report. The change was not saved.'
 const ISSUE_ERROR_MESSAGE = 'The issue could not be created. Nothing was opened on the board.'
 const RE_READ_ERROR_FALLBACK = 'the report queue could not be read back'
 
 interface FeedbackReportActionsOptions {
-  setReports: Dispatch<SetStateAction<BugReport[]>>
   onDeleted: () => void
 }
 
-export function useFeedbackReportActions({
-  setReports,
-  onDeleted,
-}: FeedbackReportActionsOptions) {
-  const [reportUpdating, setReportUpdating] = useState(false)
-  const [updateError, setUpdateError] = useState('')
+/**
+ * The writes the bug report screen can make.
+ *
+ * Every one of them re-reads the queue, because the backend owns the result: it is free to
+ * trim a title or reject part of an update, and merging the request locally would put a value
+ * on screen that nobody confirmed. There is no read for a single report, so the queue is
+ * re-read whole.
+ */
+export function useFeedbackReportActions({ onDeleted }: FeedbackReportActionsOptions) {
+  const queryClient = useQueryClient()
+  const [staleMessage, setStaleMessage] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
-  function clearUpdateError() {
-    setUpdateError('')
-  }
-
   /**
-   * Writes the edit, then shows what the backend now holds rather than what was sent: it is
-   * free to trim a title or reject part of an update, and merging the request locally would
-   * put a value on screen that nobody confirmed. There is no read for a single report, so the
-   * queue is re-read whole.
-   *
-   * A failed re-read does not fail the action: the write already succeeded. The report stays
-   * as last read and the modal says the view may be out of date.
+   * A failed read-back does not fail the write — the write already succeeded. The report
+   * stays as last read and the modal says only that the view may be out of date. This is why
+   * the refetch is awaited here rather than left to `invalidateQueries`: an invalidation
+   * cannot tell the two apart, and reporting an accepted change as refused is the worse
+   * error of the two.
    */
-  async function runWrite(write: () => Promise<unknown>, failureMessage: string) {
-    setReportUpdating(true)
-    setUpdateError('')
+  const readBack = useCallback(async () => {
     try {
-      await write()
-    } catch (writeFailure: unknown) {
-      setUpdateError(getErrorMessage(writeFailure, failureMessage))
-      setReportUpdating(false)
-      throw writeFailure
-    }
-
-    try {
-      setReports(await feedbackService.getReports())
+      // `throwOnError` because a refetch resolves quietly by default, and this needs to
+      // know: a failed read-back is reported differently from a failed write.
+      await queryClient.refetchQueries({ queryKey: feedbackKeys.reports() }, { throwOnError: true })
+      setStaleMessage('')
     } catch (readFailure: unknown) {
-      setUpdateError(getStaleAfterWriteMessage(readFailure, RE_READ_ERROR_FALLBACK))
-    } finally {
-      setReportUpdating(false)
+      setStaleMessage(getStaleAfterWriteMessage(readFailure, RE_READ_ERROR_FALLBACK))
     }
-  }
+  }, [queryClient])
 
-  function applyUpdate(id: string, update: BugReportUpdate) {
-    return runWrite(() => feedbackService.updateReport(id, update), UPDATE_ERROR_MESSAGE)
-  }
+  const updateReport = useMutation({
+    mutationFn: ({ id, update }: { id: string; update: BugReportUpdate }) =>
+      feedbackService.updateReport(id, update),
+    onSuccess: readBack,
+  })
 
   /**
    * The call is idempotent, so a second press is safe. The queue is re-read rather than
    * patched with the response: the report's own `issueUrl` and `issueState` are what the rest
    * of the screen reads, and they should come from a read like every other field does.
    */
-  function createIssue(id: string) {
-    void runWrite(() => feedbackService.createGitlabIssue(id), ISSUE_ERROR_MESSAGE).catch(
-      () => undefined,
-    )
-  }
+  const createIssue = useMutation({
+    mutationFn: (id: string) => feedbackService.createGitlabIssue(id),
+    onSuccess: readBack,
+  })
 
-  function handleReportUpdate(id: string, update: BugReportUpdate) {
-    // The status and severity selects fire and forget: the alert in the modal reports a
-    // failure, and the value shown stays whatever the list still holds.
-    void applyUpdate(id, update).catch(() => undefined)
-  }
+  const deleteReport = useMutation({
+    mutationFn: (id: string) => feedbackService.deleteReport(id),
+    onSuccess: async () => {
+      setConfirmingDelete(false)
+      onDeleted()
+      await readBack()
+    },
+  })
 
-  async function deleteReport(id: string) {
-    await feedbackService.deleteReport(id)
-    setReports((current) => current.filter((report) => report.id !== id))
-    setConfirmingDelete(false)
-    onDeleted()
-  }
+  // A refused delete is deliberately absent here. `ConfirmModal` awaits `deleteReport` and
+  // reports a refusal in place, next to the button that was pressed — reporting it a second
+  // time in the detail modal behind it would say it twice.
+  const failure = updateReport.error ?? createIssue.error
+
+  const messageFor = () =>
+    updateReport.error
+      ? getErrorMessage(updateReport.error, UPDATE_ERROR_MESSAGE)
+      : getErrorMessage(createIssue.error, ISSUE_ERROR_MESSAGE)
+
+  const clearUpdateError = useCallback(() => {
+    setStaleMessage('')
+    updateReport.reset()
+    createIssue.reset()
+    deleteReport.reset()
+    // `reset` is stable on a mutation result, so this only ever runs on an explicit clear.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return {
-    reportUpdating,
-    updateError,
+    reportUpdating: updateReport.isPending || createIssue.isPending,
+    updateError: failure ? messageFor() : staleMessage,
     confirmingDelete,
     clearUpdateError,
-    applyUpdate,
-    handleReportUpdate,
-    createIssue,
+    /** Awaited by the edit form, which keeps itself open when the write is refused. */
+    applyUpdate: async (id: string, update: BugReportUpdate) => {
+      await updateReport.mutateAsync({ id, update })
+    },
+    /**
+     * Fire-and-forget: the status and severity selects are driven by the reloaded queue, so a
+     * refusal needs no rollback — the select keeps showing what the backend still holds, and
+     * the alert in the modal reports the failure.
+     */
+    handleReportUpdate: (id: string, update: BugReportUpdate) => {
+      updateReport.mutate({ id, update })
+    },
+    createIssue: (id: string) => {
+      createIssue.mutate(id)
+    },
     requestDelete: () => setConfirmingDelete(true),
     cancelDelete: () => setConfirmingDelete(false),
-    deleteReport,
+    deleteReport: async (id: string) => {
+      await deleteReport.mutateAsync(id)
+    },
   }
 }
