@@ -839,3 +839,70 @@ Calls after: `GET /api/data/lectures/all`, `GET /api/data/professor/all`, `PATCH
 
 **Closed by 11.2:** `F-006`. **Opened and closed by 11.2:** `F-085`.
 
+## 11.3 Refuted: opening a detail view does not move the page behind it
+
+The brief says the background shifts "in some places". It does not, in any of them. This
+extends §2.1, which sampled seven anchors on **six** modals at 1440: here it is **eleven**
+surfaces - `e2e/surfaces.ts`'s whole registry - at **1440 and 1024**, with two anchors added
+that §2.1 never sampled.
+
+Anchors: `pageTitle`, `pageDescription`, `tabList`, **`cardRow`**, **`filterStrip`**,
+`tableFirstRow`, `sidebarFirstItem`, `sidebarLastItem`, `main`. Sampled before opening, while
+open, and after Escape. Tolerance 1px.
+
+| | surfaces | anchors each | readings | over tolerance |
+| --- | --- | --- | --- | --- |
+| 1440x900 | 11 | 9 | 297 | **0** |
+| 1024x900 | 11 | 9 | 297 | **0** |
+
+Dialog widths, measured again and unchanged: **620** for the nine editors and detail panels,
+**380** for the confirmations. Two values, as §2.1 found.
+
+### The scrollbar question, asked again and answered the same way
+
+| Measurement | before open | while open |
+| --- | --- | --- |
+| `window.innerWidth - documentElement.clientWidth` | **0** | **0** |
+| `getComputedStyle(documentElement).scrollbarGutter` | `auto` | `auto` |
+| `body` overflow | `visible` | `hidden` |
+
+Mantine locks the body while a dialog is open, and this Chromium's scrollbar is an overlay
+taking no width, so there is nothing for the lock to compensate for and nothing moves. **The
+brief pre-authorised `scrollbar-gutter: stable` and said to write it down instead if the
+measurement came back zero. It came back zero.** `F-062` still stands, unfixed, for the same
+reason it did in §2.6: it needs a browser with classic scrollbars to confirm.
+
+### One number that was not zero, and was mine
+
+The first run reported `tableFirstRow` moving **-382px** on Comments, **-282** on the
+catalogue, **-142** on Professors and **-42** on Ratings at 1024, on open *and* still after
+close - and only on dialogs opened from a row-action button, never from a row click. Those are
+`F-036`'s overflow figures exactly. The cause was the measurement: Playwright scrolls an
+element into view before clicking it, so the reading charged the modal for a scroll the click
+had caused. Bringing the opener into view **before** taking the `before` sample gives zero on
+all 22 combinations.
+
+It is still real for an operator, though, and is recorded as `F-086` in 11.4 rather than
+thrown away.
+
+**Opened by 11.3:** nothing. **Refuted by 11.3:** the premise.
+
+## 11.4 Reaching a row action at 1024 scrolls the table sideways, and it stays scrolled (`F-086`)
+
+| Table | holder overflow at 1024 | `scrollLeft` before | while the dialog is open | after Escape |
+| --- | --- | --- | --- | --- |
+| Comments | 382 | 0 | **382** | **382** |
+| Lectures | 282 | 0 | **282** | **282** |
+| Users | 162 | 0 | 0 | 0 |
+| Audit Logs | 182 | 0 | 0 | 0 |
+
+At 1440 every holder overflows by 0 and nothing moves.
+
+Users and Audit Logs hold still because **they have no row-action column** - nothing in them
+sits far enough right to have to be scrolled to. The two that move are the two whose actions
+live in the last column of a table `F-036` says is wider than its holder.
+
+The cost is not the scroll, it is that it does not come back: the operator closes the dialog
+and the table is still scrolled fully right, with the Content and Lecture columns - the ones
+that say what the row *is* - off the left edge.
+

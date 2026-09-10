@@ -2,6 +2,39 @@
 
 ## [Unreleased]
 
+### The background does not move when a detail view opens (`F-086` opened)
+
+Item 3 of seven. **Measurement only; nothing was changed.** Numbers in
+[docs/coursework/layout-audit.md](docs/coursework/layout-audit.md) §11.3 and §11.4.
+
+The brief said the page behind a dialog shifts "in some places". It does not, in any of them.
+§2.1 had measured seven anchors on six modals at 1440; this is **eleven** surfaces - the whole
+`e2e/surfaces.ts` registry - at **1440 and 1024**, with the card row and the filter strip added
+as anchors. **594 readings, none over the 1px tolerance**, on open and on close. The two dialog
+widths are still 620 and 380.
+
+**Refuted, and recorded so it is not re-reported:** the first run showed `tableFirstRow` moving
+382px on Comments and 282 on the catalogue at 1024, which are `F-036`'s overflow figures
+exactly. That was the measurement's own doing - Playwright scrolls a control into view before
+clicking it, so the reading charged the modal for a scroll the click caused. Sampling after
+bringing the opener into view gives **zero on all 22 combinations**.
+
+**Opened** `F-086` **Minor** - the click effect is real for an operator even though the dialog
+is innocent. Reaching an Edit control at 1024 scrolls its table fully right (Comments 0 to 382,
+the catalogue 0 to 282) and **closing the dialog leaves it there**, with the columns that say
+what the row is off the left edge. Users and Audit Logs hold at 0, because they have no
+row-action column. Downstream of `F-036`; deferral entry with its cost in
+[docs/TODO.md](docs/TODO.md).
+
+### Unchanged on purpose
+
+- **`scrollbar-gutter: stable` was pre-authorised and is still not applied.**
+  `window.innerWidth - documentElement.clientWidth` measured **0** before and during every one
+  of the eleven dialogs, at both widths: Mantine locks the body while a dialog is open, and this
+  Chromium's scrollbar is an overlay taking no width, so there is nothing to compensate for. The
+  brief said to write it down if the measurement came back zero. It came back zero. `F-062`
+  stands unfixed for the reason §2.6 gave - it needs a browser with classic scrollbars first.
+
 ### A deactivated lecture can be found again (`F-006`, `F-085`)
 
 Item 2 of seven, and the backend raised the same thing as `F-42`. Numbers in
