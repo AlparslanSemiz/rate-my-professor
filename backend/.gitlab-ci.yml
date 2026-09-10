@@ -58,8 +58,13 @@ server:test:
   artifacts:
     when: always
     paths:
+      # Required by SonarCloud for precise Java analysis.
+      - target/classes/
+      - target/test-classes/
+
       - target/site/jacoco/
       - target/surefire-reports/
+
       # The dependency:scan input. That job runs in a Trivy image with no Maven and no
       # warm repository; this build has just resolved the whole tree, so it is the one
       # that can write it down. See the comment on dependency:scan.
@@ -125,6 +130,9 @@ sonarcloud:
     # Reuses server:test's JaCoCo XML through `needs: artifacts` rather than re-running the
     # suite: sonar.coverage.jacoco.xmlReportPaths in the pom points at exactly that file, so
     # Sonar and jacoco:check report the same number by construction.
+    #
+    # target/classes and target/test-classes are also received from server:test so
+    # SonarJava can analyse the compiled production and test bytecode.
     - >
       ./mvnw -B -ntp sonar:sonar
       -Dsonar.host.url="${SONAR_HOST_URL:-https://sonarcloud.io}"

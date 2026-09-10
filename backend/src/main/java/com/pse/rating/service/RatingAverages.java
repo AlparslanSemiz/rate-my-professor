@@ -7,6 +7,7 @@ import java.util.Collection;
 import com.pse.rating.model.Rating;
 import com.pse.rating.model.RatingCategory;
 import com.pse.rating.model.RatingTopic;
+import com.pse.shared.enums.UserStatus;
 
 /**
  * The three averages this application computes over ratings, in one place.
@@ -78,6 +79,13 @@ public final class RatingAverages {
         int count = 0;
 
         for (Rating rating : ratings) {
+
+            // Ignore ratings from deleted users, but allow test ratings without a student.
+            if (rating.getStudent() != null
+                    && rating.getStudent().getStatus() == UserStatus.DELETED) {
+                continue;
+            }
+
             for (RatingTopic topic : rating.getTopics()) {
                 if (topic.getCategory() == RatingCategory.OVERALL) {
                     sum += topic.getValue();
