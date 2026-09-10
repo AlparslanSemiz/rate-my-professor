@@ -1,7 +1,9 @@
 package com.pse.social.mapper;
 
 import com.pse.lecture.model.Lecture;
+import com.pse.shared.enums.UserStatus;
 import com.pse.shared.enums.VoteType;
+import com.pse.shared.util.ProfilePictureGenerator;
 import com.pse.social.dto.request.*;
 import com.pse.social.model.*;
 import com.pse.social.repository.*;
@@ -48,6 +50,15 @@ import static org.mockito.Mockito.*;
         Student student = new Student();
         student.setId(UUID.randomUUID());
         student.setUsername("ada");
+        student.setStatus(UserStatus.ACTIVE);
+        return student;
+    }
+
+    private static Student deletedStudent() {
+        Student student = new Student();
+        student.setId(UUID.randomUUID());
+        student.setUsername("ada");
+        student.setStatus(UserStatus.DELETED);
         return student;
     }
 
@@ -177,4 +188,78 @@ import static org.mockito.Mockito.*;
         // answer's id -- a misleading name in a client-visible contract, left alone here.
         assertThat(response.answers().getFirst().commentID()).isEqualTo(visible.getId());
     }
+
+    @Test
+    void deletedCommentAuthorIsShownAsDeletedUser() {
+        Comment comment = comment(ContentStatus.VISIBLE);
+        comment.setStudent(deletedStudent());
+
+        CommentResponse response = mapper.toResponse(comment, null);
+
+        assertThat(response.studentUsername())
+                .isEqualTo("Deleted User");
+    }
+
+    @Test
+    void deletedCommentAuthorUsesDeletedUserProfilePicture() {
+        Comment comment = comment(ContentStatus.VISIBLE);
+        Student deleted = deletedStudent();
+        comment.setStudent(deleted);
+
+        CommentResponse response = mapper.toResponse(comment, null);
+
+        assertThat(response.profilePicture())
+                .isEqualTo(ProfilePictureGenerator.generateProfilePicture(deleted));
+
+        assertThat(response.profilePicture())
+                .contains("seed=DeletedUser");
+    }
+
+    @Test
+    void deletedAnswerAuthorIsShownAsDeletedUser() {
+        Answer answer = answer(ContentStatus.VISIBLE);
+        answer.setStudent(deletedStudent());
+
+        var response = mapper.toResponse(answer, null);
+
+        assertThat(response.studentUsername())
+                .isEqualTo("Deleted User");
+    }
+
+    @Test
+    void deletedAnswerAuthorUsesDeletedUserProfilePicture() {
+        Answer answer = answer(ContentStatus.VISIBLE);
+        Student deleted = deletedStudent();
+        answer.setStudent(deleted);
+
+        var response = mapper.toResponse(answer, null);
+
+        assertThat(response.profilePicture())
+                .isEqualTo(ProfilePictureGenerator.generateProfilePicture(deleted));
+
+        assertThat(response.profilePicture())
+                .contains("seed=DeletedUser");
+    }
+
+    @Test
+    void activeCommentAuthorKeepsUsername() {
+        Comment comment = comment(ContentStatus.VISIBLE);
+
+        CommentResponse response = mapper.toResponse(comment, null);
+
+        assertThat(response.studentUsername())
+                .isEqualTo("ada");
+    }
+
+    @Test
+    void activeAnswerAuthorKeepsUsername() {
+        Answer answer = answer(ContentStatus.VISIBLE);
+
+        var response = mapper.toResponse(answer, null);
+
+        assertThat(response.studentUsername())
+                .isEqualTo("ada");
+    }
+
+
 }
