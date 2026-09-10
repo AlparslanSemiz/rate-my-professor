@@ -6,8 +6,9 @@ import { EMPTY_VALUE } from '@/utils/emptyValue'
 import { formatDate } from '@/utils/formatDate'
 import { chrome } from '@/theme'
 import ClickableRow from '@/components/ClickableRow'
+import { tableCellPadding } from '@/constants/layout'
 
-const cellStyle: CSSProperties = { padding: '14px 20px', verticalAlign: 'middle' }
+const cellStyle: CSSProperties = { padding: tableCellPadding, verticalAlign: 'middle' }
 const nowrapCellStyle: CSSProperties = { ...cellStyle, whiteSpace: 'nowrap' }
 
 function rowStyle(isLast: boolean): CSSProperties {

@@ -480,3 +480,24 @@ Surfaced by the re-measurement and also not a defect: at 1024 Comments' cards st
 **y=138.8** against **117.8** elsewhere, because its longer page description wraps to a
 second line at that width. Content, not layout.
 
+## Step 5 - one row-height token (`F-069`)
+
+Vertical cell padding, before: **13px** Users, **14px** catalogue and both logs, **16px**
+moderation content and reports. After: **14px** everywhere, via `tableCellPadding`.
+
+| Table | Row height before | after |
+| --- | --- | --- |
+| Users | 51.8 | **53.8** |
+| Catalog / Ratings | 54.3 | 54.3 |
+| Catalog / Lectures | 66.1 | 66.1 |
+| Audit Logs | 66.1 | 66.1 |
+| Activity Logs | 66.1 | 66.1 |
+| Catalog / Professors | 69.6 | 69.6 |
+| Comments | 94.4 | **90.4** |
+
+14px was chosen because it is what the majority already used, so the fewest rows move.
+
+**The remaining spread is content and stays.** A Comments row draws a two-line excerpt and
+an author chip; Professors lists every lecture. Equalising those means truncating content,
+not aligning a layout - so the token decides the padding, not the height.
+

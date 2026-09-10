@@ -9,10 +9,11 @@ import type { ModeratedItem, ReportItem } from '../model'
 import ReportedContentPreview from './ReportedContentPreview'
 import ReportStatusSelect from './ReportStatusSelect'
 import { chrome, iconSize } from '@/theme'
+import { tableCellPadding } from '@/constants/layout'
 
-const contentCellStyle: CSSProperties = { padding: '16px 20px', maxWidth: 340 }
-const userCellStyle: CSSProperties = { padding: '16px 20px', whiteSpace: 'nowrap' }
-const cellStyle: CSSProperties = { padding: '16px 20px' }
+const contentCellStyle: CSSProperties = { padding: tableCellPadding, maxWidth: 340 }
+const userCellStyle: CSSProperties = { padding: tableCellPadding, whiteSpace: 'nowrap' }
+const cellStyle: CSSProperties = { padding: tableCellPadding }
 const dateCellStyle: CSSProperties = { ...cellStyle, whiteSpace: 'nowrap' }
 
 function rowStyle(isLast: boolean): CSSProperties {

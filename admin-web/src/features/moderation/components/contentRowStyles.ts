@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react'
 import { chrome } from '@/theme'
+import { tableCellPadding } from '@/constants/layout'
 
-export const contentCellStyle: CSSProperties = { padding: '16px 20px', maxWidth: 360 }
-export const cellStyle: CSSProperties = { padding: '16px 20px' }
+export const contentCellStyle: CSSProperties = { padding: tableCellPadding, maxWidth: 360 }
+export const cellStyle: CSSProperties = { padding: tableCellPadding }
 export const nowrapCellStyle: CSSProperties = { ...cellStyle, whiteSpace: 'nowrap' }
 export const breakWordStyle: CSSProperties = { wordBreak: 'break-word' }
 export const replyIndentStyle: CSSProperties = { paddingLeft: 20 }

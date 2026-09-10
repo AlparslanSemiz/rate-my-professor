@@ -2,6 +2,42 @@
 
 ## [Unreleased]
 
+### One table cell padding, decided once
+
+`F-069`. Seven tables carried **three** different vertical paddings - 13px on Users, 14px on
+the catalogue and both logs, 16px on the moderation content and report rows. Three answers to
+one question.
+
+- **Added** `tableCellPadding` to `src/constants/layout.ts`, set to **14px 20px** - the value
+  the majority already used, so the fewest rows move. Users gains 2px, the two moderation
+  tables lose 4px.
+- **Changed** five row-style modules to use it. `TableHeaderRow` keeps its own smaller
+  padding on purpose.
+- Row heights measured after: **53.8 / 54.3 / 66.1 / 66.1 / 66.1 / 69.6 / 90.4**.
+
+**The remaining spread is content, and stays.** A Comments row draws a two-line excerpt and
+an author chip; Professors lists every lecture. Equalising those would mean truncating
+content, not aligning a layout - so the token decides the padding, not the height.
+
+### `F-033` reproduced again, and cost time again
+
+The step-5 gate reported `4 failed | 173 passed`. **All four were the same
+`browserContext.close: ENOENT ... .trace`, and the run contained zero assertion failures** -
+grepping the log for `expect(` returns nothing. The identical suite with `--trace=off` gives
+**177/177 in 1.8 minutes**, against 3.5 with tracing on.
+
+Third independent confirmation of the same diagnosis, and the second time it has briefly read
+as a regression in unrelated work. That is the real cost of leaving it open; the fix is still
+a config change estimated at ~20 minutes.
+
+### Tests
+
+- **Added** `src/constants/tableCellPadding.unit.test.ts`, red first on `expected '16px 20px'
+  to be '14px 20px'`. It compares the row-style modules directly rather than a rendered row:
+  a rendered assertion would pass just as well with the value copied into each module, which
+  is precisely what had happened.
+
+
 ### The card row needed nothing, and that is a measurement
 
 `F-068` closed **without a code change.** Re-measured after the tab-strip fix: at 1440 every

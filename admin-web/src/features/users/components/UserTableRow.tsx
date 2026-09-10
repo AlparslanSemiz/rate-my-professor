@@ -6,8 +6,9 @@ import { enumLabel } from '@/utils/enumLabel'
 import { formatDate } from '@/utils/formatDate'
 import { chrome } from '@/theme'
 import ClickableRow from '@/components/ClickableRow'
+import { tableCellPadding } from '@/constants/layout'
 
-const cellStyle: CSSProperties = { padding: '13px 20px' }
+const cellStyle: CSSProperties = { padding: tableCellPadding }
 const dateTextStyle: CSSProperties = { whiteSpace: 'nowrap' }
 
 function rowStyle(isLast: boolean): CSSProperties {

@@ -39,3 +39,20 @@ export const searchFieldWidth = { flex: '1 1 240px', maxWidth: 320 } as const
  * could not be scrolled back into view.
  */
 export const LOGIN_CARD_MAX_WIDTH = 400
+
+/**
+ * The padding inside a table body cell, and so the height of a row whose content is one line.
+ *
+ * `F-069`: seven tables carried three different vertical values - 13px on Users, 14px on the
+ * catalogue and the two logs, 16px on the moderation content and report rows - which produced
+ * row heights of 51.8, 54.3, 66.1, 69.6 and 94.4px. Some of that spread is content and stays:
+ * a Comments row draws a two-line excerpt and an author chip, so it is legitimately taller.
+ * What was not legitimate was three paddings for one decision.
+ *
+ * 14px is the value the majority already used, so adopting it moves the fewest rows: Users
+ * gains 2px and the two moderation tables lose 4px.
+ *
+ * The header has its own, smaller padding on purpose - see `TableHeaderRow`.
+ */
+export const tableCellPadding = '14px 20px'
+
