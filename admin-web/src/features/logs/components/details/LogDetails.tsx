@@ -5,7 +5,7 @@ import { chrome } from '@/theme'
 import { logEnumLabel } from '../../logModel'
 import type { LogScreen } from '../../logScreen'
 import ActorSummary from './ActorSummary'
-import DetailSection from './DetailSection'
+import DetailSection from '@/components/DetailSection'
 import MetadataList from './MetadataList'
 
 interface LogDetailsProps<TEntry extends AuditEntry> {

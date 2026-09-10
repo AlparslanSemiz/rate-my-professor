@@ -5,6 +5,7 @@ import TableHeaderRow from '@/components/TableHeaderRow'
 import type { ReportStatus } from '@/domain/moderation'
 import type { ModeratedItem, ReportItem } from '../model'
 import ReportRow from './ReportRow'
+import { EMPTY_STATE_PADDING } from '@/constants/layout'
 import { chrome, iconSize } from '@/theme'
 
 const TABLE_COLUMNS = [
@@ -19,7 +20,7 @@ const TABLE_COLUMNS = [
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const panelHeaderStyle: CSSProperties = { borderBottom: `1px solid ${chrome.border}` }
-const emptyStateStyle: CSSProperties = { textAlign: 'center' }
+const emptyStateStyle: CSSProperties = { padding: EMPTY_STATE_PADDING, textAlign: 'center' }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
 const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse', minWidth: 960 }
 
@@ -57,7 +58,7 @@ export default function ReportsTable({
       </Box>
 
       {reports.length === 0 ? (
-        <Box py={60} style={emptyStateStyle}>
+        <Box style={emptyStateStyle}>
           <IconMessageReport size={iconSize.emptyState} color={chrome.iconFaint} style={{ marginBottom: 12 }} />
           <Text c={chrome.textFaint} size="sm">
             Nothing here. No reports match these filters.

@@ -133,6 +133,9 @@ const KNOWN_CONTRAST: Readonly<Record<string, ContrastTally>> = {
   'the professor editor': { passed: 12, notPassing: 0 },
   'the delete-lecture confirmation': { passed: 3, notPassing: 1 },
   'the delete-rating confirmation': { passed: 3, notPassing: 1 },
+  // The same four tokens the two log detail panels are pinned on, in the same card: this view
+  // reuses `DetailSection` and `chrome`'s dim text rather than introducing a colour. `F-038`.
+  'the rating details': { passed: 9, notPassing: 4 },
   'the bug report': { passed: 11, notPassing: 4 },
   'the audit detail panel': { passed: 10, notPassing: 10 },
   'the undo confirmation': { passed: 12, notPassing: 12 },
@@ -162,6 +165,12 @@ const KNOWN_UNNAMED_IN: Readonly<Record<string, readonly string[]>> = {
   'the professor editor': ['BUTTON', 'BUTTON'],
 }
 
+/**
+ * The only movement `DESIGN.md` §Motion permits anywhere in the panel: the dashboard module
+ * card's 2px hover lift. "Nothing else moves, and nothing moves further than this."
+ */
+const MAX_MOVEMENT = 2
+
 test.describe('every modal', () => {
   for (const surface of SURFACES) {
     test(`${surface.name} opens a dialog with an accessible name`, async ({ page }) => {
@@ -174,6 +183,33 @@ test.describe('every modal', () => {
       const dialog = page.getByRole('dialog').last()
       await dialog.waitFor()
       await expect(dialog).toHaveAccessibleName(surface.dialogName)
+    })
+
+    /**
+     * **State** — one dialog, at the moment it is asked to open.
+     * **Action** — sample its box every frame until it settles.
+     * **Expected** — it does not move.
+     *
+     * `DESIGN.md` §Motion allows exactly one movement in the panel, the dashboard card's
+     * `translateY(-2px)`, and says "nothing else moves, and nothing moves further than this".
+     * The tolerance here is that number.
+     */
+    test(`${surface.name} does not move while it opens`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: HEIGHT })
+      await surface.reach(page)
+      const dialog = page.getByRole('dialog').last()
+      await dialog.waitFor()
+
+      const tops: number[] = []
+      for (let frame = 0; frame < 20; frame += 1) {
+        const box = await dialog.boundingBox()
+        if (box) tops.push(Math.round(box.y))
+        await page.waitForTimeout(40)
+      }
+
+      const travel = Math.max(...tops) - Math.min(...tops)
+      console.log(`motion ${surface.name}: top travelled ${travel}px over ${new Set(tops).size} positions`)
+      expect(travel, `${surface.name} slides while opening`).toBeLessThanOrEqual(MAX_MOVEMENT)
     })
 
     test(`${surface.name} holds focus, closes on Escape and gives focus back`, async ({ page }) => {

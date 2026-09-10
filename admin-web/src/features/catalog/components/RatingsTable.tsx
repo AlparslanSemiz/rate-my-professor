@@ -15,6 +15,7 @@ interface RatingsTableProps {
   hasMore: boolean
   busy: boolean
   onLoadMore: () => void
+  onOpen: (rating: Rating) => void
   onDelete: (rating: Rating) => void
 }
 
@@ -28,6 +29,7 @@ export default function RatingsTable({
   hasMore,
   busy,
   onLoadMore,
+  onOpen,
   onDelete,
 }: RatingsTableProps) {
   return (
@@ -59,6 +61,7 @@ export default function RatingsTable({
             lecture={rating.lectureId ? lecturesById.get(rating.lectureId) : undefined}
             isLast={index === ratings.length - 1}
             busy={busy}
+            onOpen={onOpen}
             onDelete={onDelete}
           />
         ))

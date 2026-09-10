@@ -4,6 +4,114 @@
 
 ### The numbers this round was measured on
 
+Re-derived from the runs, per [testplan.md](docs/testplan.md) §0.
+
+- **Updated** the coverage block in [testfindings.md](docs/testfindings.md) - **93.21 / 86.58 /
+  91.79 / 94.86**, generated from `coverage/coverage-summary.json`, previous block kept below it.
+  Branches fell **0.16** and it is not a regression: `toScores` and the rating detail's
+  empty-category branch are new code with a branch each, and the suite covers the populated
+  path.
+- **Updated** [testplan.md](docs/testplan.md) §3a: Layer 4 was 156 and is **174** (surfaces 71
+  to **89** - eleven motion tests and the twelfth surface); the Playwright suite was 187 and is
+  **205 tests in 15 specs**.
+- **Added** a run-log row: check clean at **286 files, 967 edges**; **51 test files, 1221 tests,
+  3 skipped**; **205 Playwright tests in 3.3 minutes**; build in 386ms.
+
+### The ratings columns now hold the backend's data, and open (`F-089`, `F-083` half)
+
+Mapper first, view second, because a detail view built on the old mapper would have shown
+`Unknown` and `-` in every field it has.
+
+#### `src/api/catalog/ratingTypes.ts`, `ratingMapper.ts`
+
+- **Changed** `BackendRating` to the shape the backend actually serves: `student` and
+  `topics: [{category, value}]`, not the `author` and `scores` the panel invented. **Added**
+  `toScores`, which folds the ordered list into the map the screens read - insertion order, so
+  the backend's category order survives, and an entry missing either half is dropped rather
+  than written as `undefined`, which would render as a category scored "-".
+- **Red first, and exactly as predicted:** pointed at the documented payload, the existing test
+  failed `"Alice Smith" -> "Unknown"` and `{CONTENT: 5} -> {}`.
+
+#### The rest of the stack, which was consistently wrong with it
+
+- **Changed** `RatingsService.unit.test.ts`, `sweepFixture.ts`, `demoData.ts` and the MSW
+  handler's data to `student` and `topics`.
+- **`fixtureEnums.unit.test.ts` went red on the way, and that is the sweep working.** It
+  hard-coded a `scores:` literal to search for and reported `no 'scores' literal was found to
+  check`. It now sweeps `category:` literals and asserts the same thing about the same values.
+
+#### `src/features/catalog/components/RatingDetailsModal.tsx` - new
+
+- **Added** a read-only view of one rating: every category and its score, the student, the date.
+  Opened by the row through `ClickableRow`, which closes half of `F-083` - the ratings row was
+  one of the two in the panel that answered a click with nothing.
+- **Read-only by contract, not for simplicity.** The panel's whole call surface holds
+  `ratings.list` and `ratings.delete` and no write, and both repositories say a rating can be
+  removed and never rewritten. There is no editor to build. Deletion stays on the row.
+- **Moved** `DetailSection` and `detailStyles` to `src/components` when this became their second
+  caller, rather than importing a log component into the catalogue.
+- **Registered** as the twelfth surface in `e2e/surfaces.ts`, so it is measured for fit, focus,
+  naming and contrast with the other eleven.
+
+### The tab strip is in the same place again (`F-087`, and a correction to `F-065`)
+
+- **Moved** the catalogue's filter bar below its tab strip, where Comments has always rendered
+  its own. Tab strip **306.6 -> 220.6**, equal on all three tabbed screens; filter strip and
+  table panel now equal on both screens that have them (276.6 and 362.6). The `Tabs.List`
+  margin went 16 to 20 in the same pass, because 16 left it 4px short of Comments and near
+  equality is the whole subject of this finding.
+- **Corrected the `F-065` record.** It was closed on "the tab strip starts in the same place on
+  every screen", and that stopped being true when `F-067` landed. Its row now says so, and says
+  what put it back.
+- **Aligned** the two row-action groups whose cell is wider than their content, so all five
+  tables end their actions at **1387** - 21px from a panel edge that is 1408 everywhere. Was
+  1361.6 on Comments and 1356.7 on Ratings.
+- **Added** `EMPTY_STATE_PADDING` and used it in all six empty states, which carried three
+  paddings between them. The logs' hand-written 34px icon is now `iconSize.emptyState`, and
+  Users gained an icon so the six read the same.
+
+### No dialog moves as it opens (`F-090`)
+
+- **Opened and fixed** `F-090`. Every dialog entered with Mantine's `fade-down`, a **30px**
+  `translateY` - measured on six, sampled every 40ms from the click, height unchanged
+  throughout, so travel rather than growth. `DESIGN.md` §Motion allows one movement in the
+  panel, `translateY(-2px)`, and says nothing moves further. `transitionProps: { transition:
+  'fade' }` in the `Modal` theme: **0px, one position, all twelve.**
+- **Why §11.3 missed it:** that sweep sampled the page's anchors 700ms after opening. The
+  background genuinely does not move; the dialog does, and nothing had measured it.
+- Pinned twice on purpose - frame sampling in `e2e/surfaces.spec.ts`, which caught seven of
+  eleven and let four pass by luck, and a declaration check in `theme.integration.test.tsx`,
+  which cannot.
+
+### The log filter bars fill their width (`F-088`, partly)
+
+Not collapsed to one row - that stays deferred with its four costed options. The dead space is
+gone: right-hand gap **0 at 1024, 1152, 1280, 1366 and 1440 on both bars**, down from 923 and
+741 at 1440.
+
+- **Added** `wrappingFilterFieldWidth`, the same three shapes without the upper bound, used only
+  by the two bars that wrap. The four that never wrap keep their caps, because removing those
+  would stretch two controls across 1094px - the growth `F-067` added the bound to stop.
+- **Grouped** the two date fields into one flex item. Without it, filling the row made Audit's
+  second row a single **1094px** date field, worse than the gap it replaced. As a pair they
+  never split, so no row is left holding one control.
+- This closes `F-088`'s documentation half: both bars now wrap the date pair, which is the shape
+  `F-067`'s record already claimed.
+- **Cost, recorded:** each date box is about 541px, wider than its content needs.
+
+### `docs/class-diagram.md`
+
+- **Added** a rendered PNG above each of the six Mermaid blocks, with the source kept beneath in
+  a collapsed `<details>`. The coursework is handed in as a PDF and a PDF renders no Mermaid, so
+  a reader of the export would otherwise get six code blocks where the diagrams should be.
+- Rendered with Mermaid in the Chromium Playwright already caches - **no new dependency, and no
+  puppeteer download**. The renderer lives in the session scratchpad, like the layout audit's
+  measuring spec.
+- **Corrected** the cycle count in its prose from 276 files / 899 edges to **286 / 967**, per
+  [testplan.md](docs/testplan.md) §0.
+
+### The numbers this round was measured on
+
 Re-derived from the runs rather than carried forward, per [testplan.md](docs/testplan.md) §0.
 
 - **Updated** the coverage block in [testfindings.md](docs/testfindings.md) - **93.21 / 86.74 /

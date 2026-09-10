@@ -6,12 +6,7 @@ import TableHeaderRow from '@/components/TableHeaderRow'
 import LogRow from './LogRow'
 import type { LogScreen } from '../logScreen'
 import { chrome, iconSize } from '@/theme'
-
-/**
- * This table's empty state, drawn a touch larger than `iconSize.emptyState` because it fills
- * a full-width row rather than a card. Recorded as drift, not unified without a visual pass.
- */
-const EMPTY_ICON_SIZE = 34
+import { EMPTY_STATE_PADDING } from '@/constants/layout'
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
@@ -20,7 +15,7 @@ const tableStyle: CSSProperties = {
   minWidth: 900,
   borderCollapse: 'collapse',
 }
-const emptyStyle: CSSProperties = { padding: '56px 20px', textAlign: 'center' }
+const emptyStyle: CSSProperties = { padding: EMPTY_STATE_PADDING, textAlign: 'center' }
 const loadMoreStyle: CSSProperties = {
   borderTop: `1px solid ${chrome.border}`,
   padding: 16,
@@ -60,7 +55,7 @@ export default function LogsTable<TEntry extends AuditEntry>({
 
       {entries.length === 0 ? (
         <Box style={emptyStyle}>
-          <IconFileSearch size={EMPTY_ICON_SIZE} color={chrome.iconFaint} />
+          <IconFileSearch size={iconSize.emptyState} color={chrome.iconFaint} />
           <Text c={chrome.textDim} size="sm" mt={10}>
             {screen.emptyMessage}
           </Text>

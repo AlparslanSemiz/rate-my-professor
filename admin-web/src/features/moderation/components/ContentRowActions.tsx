@@ -18,7 +18,10 @@ export default function ContentRowActions({
   onDelete,
 }: ContentRowActionsProps) {
   return (
-    <Group gap={4} wrap="nowrap">
+    // `F-087`: right-aligned because this cell is a percentage of the table rather than
+    // sized to its content, so left-aligned icons ended 46.4px from the panel edge where the
+    // catalogue's end 21px in. One inset, decided by the cell padding.
+    <Group gap={4} wrap="nowrap" justify="flex-end">
       <Tooltip label="Edit text or visibility" withArrow>
         <ActionIcon
           variant="subtle"

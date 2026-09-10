@@ -5,6 +5,8 @@ import { signIn } from './signIn'
 /**
  * Every modal the panel can open, and how to get to it.
  *
+ * Twelve since 2026-09-10: the ratings row opens a read-only detail view (`F-083`, `F-089`).
+ *
  * `docs/worklog.md` names the gap this closes: *"Layer 3b does not reach detail views… A
  * missing field inside any of them is caught by nothing in this suite. This is the round's
  * largest stated gap."* The modals are where the panel's actual work happens — editing a
@@ -107,6 +109,16 @@ export const SURFACES: readonly Surface[] = [
     },
     dialogName: 'Edit professor',
     openerLabel: /^Edit /,
+  },
+  {
+    name: 'the rating details',
+    route: 'Lectures & Professors',
+    reach: async (page) => {
+      await goTo(page, 'Lectures & Professors')
+      await page.getByRole('tab', { name: /^Ratings/ }).click()
+      await page.getByRole('row', { name: /^Open the rating by / }).first().click()
+    },
+    dialogName: 'Rating',
   },
   {
     name: 'the delete-rating confirmation',

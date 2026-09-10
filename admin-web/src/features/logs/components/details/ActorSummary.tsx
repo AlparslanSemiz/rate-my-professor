@@ -3,7 +3,7 @@ import type { AuditEntry } from '@/api/logs'
 import { chrome } from '@/theme'
 import { logEnumLabel } from '../../logModel'
 import { formatDate } from '@/utils/formatDate'
-import { detailCardStyle } from './detailStyles'
+import { detailCardStyle } from '@/components/detailStyles'
 
 interface ActorSummaryProps {
   entry: AuditEntry

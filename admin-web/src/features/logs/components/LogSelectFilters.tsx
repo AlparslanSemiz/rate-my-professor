@@ -9,7 +9,7 @@ import {
   type FilterDraft,
 } from '../logModel'
 import type { DraftSetter } from './logFilterTypes'
-import { filterFieldWidth } from '@/constants/layout'
+import { wrappingFilterFieldWidth } from '@/constants/layout'
 
 interface LogSelectFilterProps {
   meta: AuditMeta
@@ -42,7 +42,7 @@ export function ActorFilter({ value, label, placeholder, meta, onDraftChange }: 
       onChange={(actorId) => onDraftChange((current) => ({ ...current, actorId }))}
       searchable
       clearable
-      style={filterFieldWidth.select}
+      style={wrappingFilterFieldWidth.select}
     />
   )
 }
@@ -67,7 +67,7 @@ export function ActionFilter({ value, meta, onDraftChange }: ActionFilterProps) 
         }))
       }}
       clearable
-      style={filterFieldWidth.select}
+      style={wrappingFilterFieldWidth.select}
     />
   )
 }
@@ -92,7 +92,7 @@ export function TargetFilter({ value, meta, onDraftChange }: TargetFilterProps) 
         }))
       }}
       clearable
-      style={filterFieldWidth.select}
+      style={wrappingFilterFieldWidth.select}
     />
   )
 }
@@ -121,7 +121,7 @@ export function ActorTypeFilter({ value, meta, onDraftChange }: ActorTypeFilterP
         }))
       }}
       clearable
-      style={filterFieldWidth.select}
+      style={wrappingFilterFieldWidth.select}
     />
   )
 }

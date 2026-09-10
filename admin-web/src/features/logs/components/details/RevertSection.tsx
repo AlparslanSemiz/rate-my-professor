@@ -4,7 +4,7 @@ import type { AuditLog } from '@/api/logs'
 import ErrorAlert from '@/components/ErrorAlert'
 import { chrome, iconSize } from '@/theme'
 import { revertRefusalMessage } from '../../auditRevert'
-import DetailSection from './DetailSection'
+import DetailSection from '@/components/DetailSection'
 
 interface RevertSectionProps {
   log: AuditLog

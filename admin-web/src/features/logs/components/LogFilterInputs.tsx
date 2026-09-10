@@ -1,7 +1,7 @@
 import { TextInput } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
 import { chrome, iconSize } from '@/theme'
-import { filterFieldWidth } from '@/constants/layout'
+import { wrappingFilterFieldWidth } from '@/constants/layout'
 
 interface SearchFilterInputProps {
   value: string
@@ -18,7 +18,7 @@ export function SearchFilterInput({ value, placeholder, onChange }: SearchFilter
       value={value}
       onChange={(event) => onChange(event.currentTarget.value)}
       leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
-      style={filterFieldWidth.search}
+      style={wrappingFilterFieldWidth.search}
     />
   )
 }
@@ -38,7 +38,7 @@ export function DateFilterInput({ label, ariaLabel, value, onChange }: DateFilte
       aria-label={ariaLabel}
       value={value}
       onChange={(event) => onChange(event.currentTarget.value)}
-      style={filterFieldWidth.date}
+      style={wrappingFilterFieldWidth.date}
     />
   )
 }

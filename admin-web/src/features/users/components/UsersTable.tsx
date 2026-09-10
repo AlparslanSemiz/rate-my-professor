@@ -1,10 +1,12 @@
 import { Box, Button, Text, type CSSProperties } from '@mantine/core'
+import { IconUsers } from '@tabler/icons-react'
 import type { User } from '@/api/users'
 import Panel from '@/components/Panel'
 import TableHeaderRow from '@/components/TableHeaderRow'
 import UsersTableHeader from './UsersTableHeader'
 import UserTableRow from './UserTableRow'
-import { chrome } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+import { EMPTY_STATE_PADDING } from '@/constants/layout'
 
 const TABLE_COLUMNS = [
   'Name',
@@ -20,7 +22,8 @@ const TABLE_COLUMNS = [
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
 const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse' }
-const emptyCellStyle: CSSProperties = { padding: '40px 20px', textAlign: 'center' }
+const emptyCellStyle: CSSProperties = { padding: EMPTY_STATE_PADDING, textAlign: 'center' }
+const emptyIconStyle: CSSProperties = { marginBottom: 12 }
 const loadMoreStyle: CSSProperties = { padding: '14px 20px', textAlign: 'center' }
 
 interface UsersTableProps {
@@ -80,6 +83,7 @@ function EmptyUsersRow() {
   return (
     <tr>
       <td colSpan={TABLE_COLUMNS.length} style={emptyCellStyle}>
+        <IconUsers size={iconSize.emptyState} color={chrome.iconFaint} style={emptyIconStyle} />
         <Text c={chrome.textFaint} size="sm">
           No users found
         </Text>

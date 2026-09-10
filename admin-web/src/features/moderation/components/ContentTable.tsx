@@ -6,6 +6,7 @@ import Panel from '@/components/Panel'
 import TableHeaderRow from '@/components/TableHeaderRow'
 import type { ModeratedItem } from '../model'
 import ContentRow from './ContentRow'
+import { EMPTY_STATE_PADDING } from '@/constants/layout'
 import { chrome, iconSize } from '@/theme'
 
 const TABLE_COLUMNS = ['Content', 'Author', 'Lecture', 'Visibility', 'Reports', 'Posted', ''] as const
@@ -23,7 +24,7 @@ const COLUMN_WIDTHS = ['28%', '14%', '15%', '9%', '7%', '17%', '10%'] as const
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const panelHeaderStyle: CSSProperties = { borderBottom: `1px solid ${chrome.border}` }
-const emptyStateStyle: CSSProperties = { textAlign: 'center' }
+const emptyStateStyle: CSSProperties = { padding: EMPTY_STATE_PADDING, textAlign: 'center' }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
 const tableStyle: CSSProperties = {
   width: '100%',
@@ -80,7 +81,7 @@ export default function ContentTable({
       </Box>
 
       {items.length === 0 ? (
-        <Box py={60} style={emptyStateStyle}>
+        <Box style={emptyStateStyle}>
           <IconMessage size={iconSize.emptyState} color={chrome.iconFaint} style={{ marginBottom: 12 }} />
           <Text c={chrome.textFaint} size="sm">
             Nothing here. No {noun}s match these filters.

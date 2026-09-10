@@ -11,8 +11,12 @@ function createRatingsService() {
 
 /**
  * Read and delete only: a rating is someone's own assessment, so there is no edit call to
- * cover. The listing's field names come from the backend's brief and have not been read from
- * a live response yet, which is why the mapper tolerates their absence.
+ * cover.
+ *
+ * **The payloads below are the ones `docs/admin-api.md` documents and the backend serves.**
+ * They were not, until 2026-09-10: this file, the mapper, both fixtures and the MSW handler
+ * all used `author` and `scores`, names the panel invented and the backend has never sent, so
+ * the whole stack agreed with itself and disagreed with the API. `F-089`.
  */
 describe('RatingsService', () => {
   beforeEach(() => {
@@ -28,9 +32,10 @@ describe('RatingsService', () => {
         {
           id: 'rating-1',
           lectureId: 'lecture-1',
+          lectureLabel: 'CS101 - Algorithms',
           createdAt: '2026-06-01T10:00:00Z',
-          author: { id: 'user-1', name: 'Alice Smith' },
-          scores: { CONTENT: 5 },
+          student: { id: 'user-1', name: 'Alice Smith', role: 'STUDENT', warnings: 0, status: 'ACTIVE' },
+          topics: [{ category: 'CONTENT', value: 5 }],
         },
       ],
       nextCursor: 'cursor-1',

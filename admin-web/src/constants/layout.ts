@@ -57,6 +57,19 @@ export const LOGIN_CARD_MAX_WIDTH = 400
 export const tableCellPadding = '14px 20px'
 
 /**
+ * The padding around a list's empty state, and so how tall the block is.
+ *
+ * `F-087`: six empty states carried three paddings - `40px 20px` on Users and the catalogue,
+ * `py={60}` on the two moderation tables and the bug queue, `56px 20px` on the two logs -
+ * which drew the same "nothing here" message as a 101px box on one screen and a 191px box on
+ * the next. 60px is the value the largest group already used.
+ *
+ * The icon beside the message is `iconSize.emptyState` everywhere for the same reason; the
+ * logs drew theirs at 34 and recorded it as drift.
+ */
+export const EMPTY_STATE_PADDING = '60px 20px'
+
+/**
  * The three field shapes a filter bar is built from, so that the same control is the same width
  * on every screen.
  *
@@ -82,6 +95,29 @@ export const filterFieldWidth = {
   select: { flex: '1 1 160px', maxWidth: 200 },
   /** A `type="date"` box. Chromium needs about 130px before it clips its own placeholder. */
   date: { flex: '1 1 130px', maxWidth: 170 },
+} as const
+
+/**
+ * The same three shapes, without the upper bound, for a bar that wraps.
+ *
+ * The two log bars take two control rows at **every** width from 1024 to 1440 - six and seven
+ * controls against a 1094px panel - and `maxWidth` meant the last row stopped short: at 1440
+ * Audit's second row held one 170px control with **923px** of empty space beside it, and
+ * Activity's held two with 741px. `F-088`.
+ *
+ * Dropping the cap lets each wrapped row fill the width it is given. It does **not** change
+ * where the rows break, because a flex line wraps on `flex-basis` and minimum size rather than
+ * on the maximum - so this fills the bar without cramming the controls onto one line, which is
+ * the trade `F-088` records four options for and which is not being taken tonight.
+ *
+ * Only the log bars use these. The four smaller bars never wrap, so removing their bound would
+ * stretch two controls across 1094px, which is the unbounded growth `F-067` added the cap to
+ * stop.
+ */
+export const wrappingFilterFieldWidth = {
+  search: { flex: '2 1 260px' },
+  select: { flex: '1 1 160px' },
+  date: { flex: '1 1 130px' },
 } as const
 
 /** The gap between filter controls, and between the bar's control row and its action row. */

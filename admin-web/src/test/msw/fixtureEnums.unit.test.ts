@@ -10,7 +10,12 @@ import { sweepFixture } from './sweepFixture'
  * `difficulty` - while every other enum in the same files is SCREAMING_SNAKE. `enumLabel`
  * preserves the first character's case (`CONTENT` -> "Content", `content` -> "content"), so
  * the Scores column read "content 4 · clarity 5" against title-cased labels everywhere else.
- * `RatingsService.unit.test.ts` shows the wire shape is `{ CONTENT: 5 }`.
+ * `RatingsService.unit.test.ts` shows the wire shape.
+ *
+ * **The wire shape changed under this pin on 2026-09-10, and that is the pin working.** The
+ * categories arrive as `topics: [{category, value}]`, not as a `scores` map: `F-089`. The
+ * question - is a fixture's enum written the way the backend writes it - is unchanged, so both
+ * halves below now read `topics`.
  *
  * **Two fixtures, and the first version of this pin only knew about one.** `demoBackend` feeds
  * the browser and the end-to-end layer; `sweepFixture` feeds the call-surface, resilience and
@@ -34,15 +39,17 @@ describe('the MSW fixtures', () => {
       const ratings = build().ratings
       expect(ratings, `${name} serves no ratings`).toBeDefined()
 
-      // `scores` is nullable on the wire, which is why `ratingMapper` defaults it to `{}`. The
+      // `topics` is nullable on the wire, which is why `ratingMapper` defaults it to `{}`. The
       // same default here keeps the test about casing rather than about absence.
-      const categories = (ratings ?? []).flatMap((rating) => Object.keys(rating.scores ?? {}))
+      const categories = (ratings ?? []).flatMap((rating) =>
+        (rating.topics ?? []).map((topic) => topic.category ?? ''),
+      )
       expect(categories.length, `${name} serves no score categories`).toBeGreaterThan(0)
       expect(categories.filter((key) => !SCREAMING_SNAKE.test(key))).toEqual([])
     }
   })
 
-  it('carry no lowercase score key in any fixture module, named or not', () => {
+  it('carry no lowercase category in any fixture module, named or not', () => {
     // Discovered from the modules rather than from a list, so a third fixture added later is
     // swept without anybody remembering to add it here.
     const sources = import.meta.glob<string>(
@@ -53,18 +60,16 @@ describe('the MSW fixtures', () => {
     const offenders: string[] = []
     let literals = 0
     for (const [path, source] of Object.entries(sources)) {
-      for (const match of source.matchAll(/scores:\s*\{([^}]*)\}/g)) {
+      for (const match of source.matchAll(/category:\s*'([^']*)'/g)) {
         literals += 1
-        for (const entry of match[1].split(',')) {
-          const key = entry.split(':')[0].trim()
-          if (key && !SCREAMING_SNAKE.test(key)) offenders.push(`${path}: ${key}`)
-        }
+        const key = match[1].trim()
+        if (key && !SCREAMING_SNAKE.test(key)) offenders.push(`${path}: ${key}`)
       }
     }
 
     // Without this the sweep passes on a glob that matched nothing, which is a green over a
     // surface it never read - the same trap `callSurface.integration.test.ts` guards against.
-    expect(literals, 'no `scores` literal was found to check').toBeGreaterThan(0)
+    expect(literals, 'no `category` literal was found to check').toBeGreaterThan(0)
     expect(offenders).toEqual([])
   })
 })

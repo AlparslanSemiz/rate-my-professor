@@ -140,9 +140,13 @@ export function sweepFixture(): Partial<MswDb> {
       {
         id: 'rating-1',
         lectureId: 'lecture-1',
+        lectureLabel: 'IN1IPRO - Programmieren',
         createdAt: AT,
-        author: { id: 'user-1', name: 'Mira Kowalski' },
-        scores: { CONTENT: 4, CLARITY: 5 },
+        student: { id: 'user-1', name: 'Mira Kowalski' },
+        topics: [
+          { category: 'CONTENT', value: 4 },
+          { category: 'CLARITY', value: 5 },
+        ],
       },
     ],
     auditLogs: [

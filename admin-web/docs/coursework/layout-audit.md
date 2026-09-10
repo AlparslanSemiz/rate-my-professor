@@ -1135,3 +1135,70 @@ against a real backend.
 
 **Opened by 11.8:** `F-089`.
 
+# Section 12: the two applied, and what moved (2026-09-10)
+
+Two of §11's proposals were taken, two were left. Measured at 1440x900 before and after, plus
+1024 to 1440 for the bars.
+
+## 12.1 Every dialog was sliding 30px as it opened (`F-090`)
+
+§11.3 sampled the page's anchors 700ms after a dialog opened and found nothing moving. It was
+measuring the wrong thing: the background does not move, and **the dialog does**. Sampled every
+40ms from the click instead:
+
+| Dialog | enters at | settles at | travel | height change |
+| --- | --- | --- | --- | --- |
+| user profile | 169 | 199 | **30** | 0 |
+| content editor | 219 | 249 | **30** | 0 |
+| lecture editor | 132 | 162 | **30** | 0 |
+| bug report | 208 | 238 | **30** | 0 |
+| audit detail | 99 | 129 | **30** | 0 |
+| activity detail | 223 | 253 | **30** | 0 |
+
+Mantine's default entrance is `fade-down`. `DESIGN.md` §Motion permits one movement in the
+panel, `translateY(-2px)`, and says nothing moves further. After `transition: 'fade'`: **0px,
+one position, all twelve dialogs.**
+
+## 12.2 The tab strip, the row actions and the empty states (`F-087`)
+
+| | before | after |
+| --- | --- | --- |
+| tab strip - Comments / Bug Reports / catalogue | 220.6 / 220.6 / **306.6** | **220.6 / 220.6 / 220.6** |
+| filter strip - Comments / catalogue | 276.6 / **220.6** (above the tabs) | **276.6 / 276.6** |
+| table panel - Comments / catalogue | 362.6 / **358.6** | **362.6 / 362.6** |
+| row actions, rightmost control | **1387 / 1387 / 1387 / 1361.6 / 1356.7** | **1387** on all five |
+| empty state height | **101 / 191** | **192 / 191 / 141** * |
+| empty state padding | 40px / 60px / 56px | **60px** everywhere |
+
+\* The three heights that remain are content, not padding: Users draws an icon and one line,
+Comments two lines, the catalogue one line with no icon in the ratings case. The decision -
+what padding an empty state gets - is now one value in one place.
+
+## 12.3 The log bars fill their width, and still take two rows (`F-088`, partly)
+
+The four options in §11.7 stay on the deferred list; none of them was taken. What was taken is
+the narrower request: **stop leaving dead space on the right.**
+
+| Bar | 1024 | 1152 | 1280 | 1366 | 1440 |
+| --- | --- | --- | --- | --- | --- |
+| Audit, right gap before | 113 | 453 | 581 | 849 | **923** |
+| Audit, right gap after | **0** | **0** | **0** | **0** | **0** |
+| Activity, right gap before | 0 | 241 | 369 | 667 | **741** |
+| Activity, right gap after | **0** | **0** | **0** | **0** | **0** |
+
+Two changes, and the second is the one that matters. Dropping `maxWidth` for the log fields
+lets a wrapped row fill the width it is given - but on its own it made Audit's second row **one
+1094px date field**, which is worse than the gap it replaced. So the two dates are now one flex
+item that never splits.
+
+That also fixes what `F-088` recorded as a documentation error: Audit used to wrap `To` alone
+while Activity wrapped both. Both now wrap the pair, so the two log screens finally have the
+shape §Step 6 claimed they already had.
+
+Audit at 1440 after: row one Search 387, Admin 224, Action 224, Target 224; row two the date
+pair across 1094. Activity: five controls, then the pair. **Cost, stated:** each date box is
+about 541px, wider than its content needs. That is the price of filling the row without
+collapsing to one line, which was the instruction.
+
+**Opened by section 12:** `F-090`, fixed in the same round.
+

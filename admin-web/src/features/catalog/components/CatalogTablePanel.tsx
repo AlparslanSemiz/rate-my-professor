@@ -2,13 +2,14 @@ import { Box, Group, Text, type CSSProperties } from '@mantine/core'
 import type { ReactNode } from 'react'
 import Panel from '@/components/Panel'
 import TableHeaderRow from '@/components/TableHeaderRow'
+import { EMPTY_STATE_PADDING } from '@/constants/layout'
 import { chrome } from '@/theme'
 
 const panelStyle: CSSProperties = { overflow: 'hidden' }
 const headerStyle: CSSProperties = { borderBottom: `1px solid ${chrome.border}` }
 const tableScrollStyle: CSSProperties = { overflowX: 'auto' }
 const baseTableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse' }
-const emptyCellStyle: CSSProperties = { padding: '40px 20px', textAlign: 'center' }
+const emptyCellStyle: CSSProperties = { padding: EMPTY_STATE_PADDING, textAlign: 'center' }
 
 interface CatalogTablePanelProps {
   title: string

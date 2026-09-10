@@ -9,6 +9,19 @@ picture of 240 files answers none of them:
 4. [A feature in detail: moderation](#4-a-feature-in-detail-moderation) — how a screen is put together.
 5. [The shell](#5-the-shell) — routing, session and the authenticated layout.
 
+## Why each diagram appears twice
+
+Every diagram below is committed as a **PNG above its own source**. The coursework is handed in
+as a PDF, and a PDF renders no Mermaid: a reader of the exported document would otherwise get
+six fenced code blocks where the diagrams should be. The source stays underneath, collapsed,
+because it is what the diagram is maintained as - the picture is a build artefact of it, not a
+second copy to edit.
+
+Regenerate after editing any block: the images in [diagrams/](diagrams/) are rendered from the
+fences in this file with Mermaid in the Chromium that Playwright already caches, so there is no
+extra dependency to install. The renderer lives in the session scratchpad rather than in the
+repository, for the same reason the layout audit's measuring spec does.
+
 ## Notation
 
 Standard UML, in Mermaid.
@@ -40,6 +53,10 @@ Names in the diagrams map to paths under `src/`, with `_` standing in for `/`:
 The layering rule the codebase actually follows: **a package may depend downward and
 sideways within its own layer, never upward.** `src/api` does not know that features
 exist; `src/domain`, `src/utils` and `src/theme` import nothing from `@/` at all.
+
+![1. Packages](diagrams/01-1-packages.png)
+
+<details><summary>Diagram source (Mermaid)</summary>
 
 ```mermaid
 classDiagram
@@ -101,6 +118,8 @@ classDiagram
   hooks ..> utils
 ```
 
+</details>
+
 **Nothing points back up, and that is checked rather than claimed.** `src/api` holds
 no import of `@/features`, `@/hooks`, `@/components`, `@/layouts` or `@/context`;
 `src/domain`, `src/utils` and `src/theme` hold no `@/` import of any kind;
@@ -113,11 +132,15 @@ was imported back by the hook that produces it. All three were `import type`, so
 nothing failed at runtime and every one of them was still a real edge on this
 diagram. `npm run check` now runs `scripts/check-cycles.mjs` over every file in
 `src/`, so this line is true of the code rather than of somebody's reading of it —
-**276 files, 899 edges, no cycle** — and the check itself was verified by introducing
+**286 files, 967 edges, no cycle** — and the check itself was verified by introducing
 a cycle and watching it fail. It counts `import type` edges deliberately: they are
 erased at build time and they are exactly the three that had been missed.
 
 **Two feature-to-feature edges exist**, both one-way:
+
+![1. Packages](diagrams/02-1-packages.png)
+
+<details><summary>Diagram source (Mermaid)</summary>
 
 ```mermaid
 classDiagram
@@ -135,6 +158,8 @@ classDiagram
   features_comments ..> features_moderation : supplies a ModerationApi
   features_moderation ..> features_users : opens UserProfileModal
 ```
+
+</details>
 
 `comments` is a thin binding of two services onto the generic `moderation` screen —
 see [diagram 4](#4-a-feature-in-detail-moderation). `moderation` reaches into
@@ -161,6 +186,10 @@ feature's rules is a written list rather than whatever happens to be exported.
 
 One package per backend domain, each behind a barrel. A feature imports
 `@/api/catalog`, never a service file.
+
+![2. The API layer](diagrams/03-2-the-api-layer.png)
+
+<details><summary>Diagram source (Mermaid)</summary>
 
 ```mermaid
 classDiagram
@@ -339,6 +368,8 @@ classDiagram
   AnswersService --|> ModerationService
 ```
 
+</details>
+
 Four things this diagram is drawn to make visible.
 
 **A service is handed `HttpTransport`, not `ApiClient`.** This is the edge worth
@@ -392,6 +423,10 @@ composes a reader, a meta service and a revert service).
 The entities the panel passes between layers. These are TypeScript `interface`
 declarations, so they carry data and no behaviour; the rules that operate on them
 live in each feature's `model/` package and in `src/domain`.
+
+![3. The domain model](diagrams/04-3-the-domain-model.png)
+
+<details><summary>Diagram source (Mermaid)</summary>
 
 ```mermaid
 classDiagram
@@ -510,6 +545,8 @@ classDiagram
   AuthUser ..> User : the same account, as the session sees it
 ```
 
+</details>
+
 **`UserRole` is `'STUDENT' | 'ADMIN'` and has exactly two values.** The elevated
 operator is `isSuperAdmin` on `AuthUser` — a behavioural privilege, not a third role.
 See [ADR 0004](adr/0004-elevated-operator-is-behaviour-not-a-role.md).
@@ -531,6 +568,10 @@ meaning "unchanged".
 The richest feature, and the one that shows the pattern the others follow. The screen
 is **generic over its resource**: `ModerationPage` does not know whether it is looking
 at comments or answers.
+
+![4. A feature in detail: moderation](diagrams/05-4-a-feature-in-detail-moderation.png)
+
+<details><summary>Diagram source (Mermaid)</summary>
 
 ```mermaid
 classDiagram
@@ -635,6 +676,8 @@ classDiagram
   ReportsTab ..> moderation_model
 ```
 
+</details>
+
 **This is the one genuine dependency inversion in the codebase.** `ModerationPage`
 depends on the `ModerationApi` *interface*, and `CommentsPage` supplies an
 implementation of it built from `CommentsService` and `AnswersService`. The generic
@@ -668,6 +711,10 @@ The other features have the same skeleton with fewer parts:
 ---
 
 ## 5. The shell
+
+![5. The shell](diagrams/06-5-the-shell.png)
+
+<details><summary>Diagram source (Mermaid)</summary>
 
 ```mermaid
 classDiagram
@@ -739,6 +786,8 @@ classDiagram
   AdminLayout ..> ErrorAlert : the unconfirmed-session notice
   AdminRoutes ..> PageLoader : Suspense fallback
 ```
+
+</details>
 
 **The provider order is deliberate.** `QueryClientProvider` sits *inside* the error
 boundary and *outside* `AuthProvider`, and the client is created with `useState` —

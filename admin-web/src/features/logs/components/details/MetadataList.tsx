@@ -2,7 +2,7 @@ import { Group, Stack, Text } from '@mantine/core'
 import type { AuditEntry } from '@/api/logs'
 import { chrome } from '@/theme'
 import { formatLogValue, logEnumLabel } from '../../logModel'
-import DetailSection from './DetailSection'
+import DetailSection from '@/components/DetailSection'
 
 interface MetadataListProps {
   metadata: AuditEntry['metadata']

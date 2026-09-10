@@ -130,25 +130,36 @@ describe('Catalogue page', () => {
     expect(screen.queryByText('Algorithms')).not.toBeInTheDocument()
   })
 
-  it('puts the search in the filter bar above the tabs, not inside the table panel', async () => {
+  it('puts the search in the filter bar between the tabs and the table, not inside the table panel', async () => {
     const user = userEvent.setup()
     renderCatalog()
     await screen.findByText('Algorithms')
 
     // `F-067`. This screen was the one with no filter bar at all: its search sat in the table
     // panel's own header, right-aligned at x=1067, where every other screen puts its search at
-    // x=293. Moving it up is what makes the five screens one shell.
+    // x=293. Moving it into the shell is what makes the five screens one shell.
     //
-    // The cost is the same one Comments paid for `F-065`: the control differs per tab - a text
-    // box for Lectures and Professors, a lecture Select for Ratings - so the page has to hold
-    // the open tab for the bar to follow it.
+    // `F-087` then moved the bar *below* the tab strip. Above it, this screen's strip sat at
+    // y=306.6 while Comments and Bug Reports had theirs at 220.6 - and the equality across
+    // screens is what `F-065` was closed on. Comments already renders its filters inside the
+    // tab panel; this is the same arrangement.
+    //
+    // The cost is unchanged and is the one `F-065` found on Comments: the control differs per
+    // tab - a text box for Lectures and Professors, a lecture Select for Ratings - so the page
+    // holds the open tab for the bar to follow it.
     const search = screen.getByRole('textbox', { name: 'Search lectures' })
     const tabs = screen.getByRole('tablist')
-    const searchComesFirst = search.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING
+    const table = screen.getByRole('table')
 
-    expect(searchComesFirst).toBeTruthy()
+    const tabsBeforeSearch = tabs.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING
+    const searchBeforeTable = search.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING
 
-    // And it follows the tab rather than freezing on the first one's control.
+    expect(tabsBeforeSearch).toBeTruthy()
+    expect(searchBeforeTable).toBeTruthy()
+    // And it is not back inside the table's own panel.
+    expect(table.closest('.panel')?.contains(search)).toBe(false)
+
+    // It still follows the tab rather than freezing on the first one's control.
     await user.click(screen.getByRole('tab', { name: /Ratings/ }))
 
     await waitFor(() =>
@@ -385,6 +396,26 @@ describe('Catalogue page', () => {
         expect.objectContaining({ lectureId: 'lecture-1' }),
       ),
     )
+  })
+
+  it('opens a rating in a read-only detail view when the row is pressed', async () => {
+    const user = userEvent.setup()
+    renderCatalog()
+
+    await user.click(await screen.findByRole('tab', { name: /Ratings/ }))
+    await user.click(await screen.findByRole('row', { name: /^Open the rating by Alice Smith/ }))
+
+    const dialog = await screen.findByRole('dialog')
+    // Every category in full, rather than the single truncated line the cell can hold.
+    expect(within(dialog).getByText('Content')).toBeInTheDocument()
+    expect(within(dialog).getByText('Difficulty')).toBeInTheDocument()
+    expect(within(dialog).getByText('Alice Smith')).toBeInTheDocument()
+    expect(within(dialog).getByText('CS101 - Algorithms')).toBeInTheDocument()
+
+    // A rating is someone's own assessment: the backend serves no write for one, so this view
+    // offers no way to change it. Read-only is the contract, not a simplification.
+    expect(within(dialog).queryByRole('textbox')).toBeNull()
+    expect(within(dialog).queryByRole('button', { name: /save/i })).toBeNull()
   })
 
   it('removes a rating and re-reads the list', async () => {

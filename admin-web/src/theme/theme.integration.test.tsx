@@ -106,6 +106,17 @@ describe('panel theme', () => {
     expect(textarea?.defaultProps?.maxRows).toBeGreaterThan(0)
   })
 
+  /**
+   * The behavioural half is `e2e/surfaces.spec.ts`, which measures that no dialog moves as it
+   * opens. This is the deterministic half: that test samples frames and can only catch a slide
+   * it happens to be watching for, while the declaration is either there or it is not.
+   */
+  it('declares that a dialog fades in without travelling', () => {
+    expect(theme.components?.Modal?.defaultProps).toMatchObject({
+      transitionProps: { transition: 'fade' },
+    })
+  })
+
   it('paints the app shell navbar without a styles prop', () => {
     const { container } = renderThemed(
       <AppShell navbar={{ width: 240, breakpoint: 'sm' }} padding={0}>

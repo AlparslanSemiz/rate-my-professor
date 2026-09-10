@@ -8,6 +8,7 @@ import PageHeader from '@/components/PageHeader'
 import PageLoader from '@/components/PageLoader'
 import { useSelectedId } from '@/hooks/useSelectedId'
 import { indexById } from '@/utils/collection'
+import type { Rating } from '@/api/catalog'
 import type { CatalogDeleters, CatalogDeletion } from './model'
 import { activityFilterOptions, lectureLabel, toActivityFilter } from './model'
 import CatalogDeleteModal from './components/CatalogDeleteModal'
@@ -16,6 +17,7 @@ import LectureEditModal from './components/LectureEditModal'
 import LecturesTable from './components/LecturesTable'
 import ProfessorEditModal from './components/ProfessorEditModal'
 import ProfessorsTable from './components/ProfessorsTable'
+import RatingDetailsModal from './components/RatingDetailsModal'
 import RatingsTable from './components/RatingsTable'
 import { useCatalog } from './hooks/useCatalog'
 import { useRatings } from './hooks/useRatings'
@@ -35,6 +37,8 @@ export default function CatalogPage() {
   const lectureEdit = useSelectedId()
   const professorEdit = useSelectedId()
   const [deleting, setDeleting] = useState<CatalogDeletion | null>(null)
+  /** The rating whose details are open. Held whole: the list is a page, not an index. */
+  const [viewingRating, setViewingRating] = useState<Rating | null>(null)
   /** Which table is open. Controlled because the filter bar above the strip follows it. */
   const [tab, setTab] = useState<CatalogTab>('lectures')
 
@@ -67,6 +71,19 @@ export default function CatalogPage() {
       />
       <ErrorAlert message={actions.actionError || ratings.actionError || ratings.loadError} />
       <CatalogStats lectures={lists.lectures} professors={lists.professors} />
+
+      <Tabs value={tab} onChange={(value) => setTab(toCatalogTab(value))} keepMounted={false}>
+        <Tabs.List mb={20}>
+          <Tabs.Tab value="lectures" leftSection={<IconSchool size={iconSize.inline} />}>
+            Lectures ({lists.lecturesInState.length})
+          </Tabs.Tab>
+          <Tabs.Tab value="professors" leftSection={<IconUserStar size={iconSize.inline} />}>
+            Professors ({lists.professorsInState.length})
+          </Tabs.Tab>
+          <Tabs.Tab value="ratings" leftSection={<IconStar size={iconSize.inline} />}>
+            Ratings
+          </Tabs.Tab>
+        </Tabs.List>
 
       {/*
         `F-067`: this was the one screen with no filter bar at all. Its search sat inside the
@@ -138,19 +155,6 @@ export default function CatalogPage() {
         )}
       </FilterBar>
 
-      <Tabs value={tab} onChange={(value) => setTab(toCatalogTab(value))} keepMounted={false}>
-        <Tabs.List mb={20}>
-          <Tabs.Tab value="lectures" leftSection={<IconSchool size={iconSize.inline} />}>
-            Lectures ({lists.lecturesInState.length})
-          </Tabs.Tab>
-          <Tabs.Tab value="professors" leftSection={<IconUserStar size={iconSize.inline} />}>
-            Professors ({lists.professorsInState.length})
-          </Tabs.Tab>
-          <Tabs.Tab value="ratings" leftSection={<IconStar size={iconSize.inline} />}>
-            Ratings
-          </Tabs.Tab>
-        </Tabs.List>
-
         <Tabs.Panel value="lectures">
           <LecturesTable
             lectures={lists.filteredLectures}
@@ -179,6 +183,7 @@ export default function CatalogPage() {
             hasMore={ratings.hasMore}
             busy={ratings.busy}
             onLoadMore={ratings.loadMore}
+            onOpen={setViewingRating}
             onDelete={(record) => setDeleting({ type: 'rating', record })}
           />
         </Tabs.Panel>
@@ -197,6 +202,12 @@ export default function CatalogPage() {
         assignedLectureIds={editingProfessor?.lectureIds ?? NO_LECTURES}
         onClose={professorEdit.close}
         onSubmit={actions.updateProfessor}
+      />
+
+      <RatingDetailsModal
+        rating={viewingRating}
+        lecture={viewingRating?.lectureId ? lecturesById.get(viewingRating.lectureId) : undefined}
+        onClose={() => setViewingRating(null)}
       />
 
       {deleting && (

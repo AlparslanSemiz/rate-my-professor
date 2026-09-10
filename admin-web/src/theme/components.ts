@@ -109,7 +109,25 @@ export const components: MantineThemeComponents = {
      * eleventh would have been the one that got forgotten. No visual change: an accessible
      * name is not painted.
      */
-    defaultProps: { closeButtonProps: { 'aria-label': 'Close' } },
+    /**
+     * And the dialog fades in without moving.
+     *
+     * Mantine's default entrance is `fade-down`, a 30px `translateY`. Measured on every
+     * dialog the panel opens: the box starts 30px high and settles over four to six frames,
+     * height unchanged throughout - so what an operator sees on opening a detail view is the
+     * panel sliding under it. `DESIGN.md` §Motion allows **one** movement anywhere in the
+     * panel, the dashboard card's `translateY(-2px)`, and says "nothing else moves, and
+     * nothing moves further than this". Thirty pixels on eleven surfaces is fifteen times
+     * that. `F-090`.
+     *
+     * `fade` keeps the entrance without the travel. Mantine honours
+     * `prefers-reduced-motion` for its transitions itself, so the reduced-motion block in
+     * `src/interactive.css` has nothing to add here.
+     */
+    defaultProps: {
+      closeButtonProps: { 'aria-label': 'Close' },
+      transitionProps: { transition: 'fade' },
+    },
     styles: {
       content: { background: chrome.surface, border: `1px solid ${chrome.border}` },
       header: { background: chrome.surface, borderBottom: `1px solid ${chrome.border}` },
