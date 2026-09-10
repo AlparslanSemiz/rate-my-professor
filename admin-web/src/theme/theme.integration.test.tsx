@@ -117,6 +117,21 @@ describe('panel theme', () => {
     })
   })
 
+  /**
+   * The behavioural half is `e2e/layout.spec.ts`, which measures the label of every badge on
+   * screen against the box it is drawn in. This is the deterministic half, and it is the one
+   * that would have caught `F-075` early: the declaration is either there or it is not,
+   * whereas the layout measurement needs a real browser and the right box to look at.
+   */
+  it('declares that a badge is sized by its label', () => {
+    expect(theme.components?.Badge).toBeDefined()
+    // `max-content`, whatever else the rule carries: an ellipsis rule leaves the label with a
+    // min-content contribution of zero, so without this the column is free to squeeze it.
+    expect(theme.components?.Badge?.styles).toMatchObject({
+      root: { minWidth: 'max-content' },
+    })
+  })
+
   it('paints the app shell navbar without a styles prop', () => {
     const { container } = renderThemed(
       <AppShell navbar={{ width: 240, breakpoint: 'sm' }} padding={0}>

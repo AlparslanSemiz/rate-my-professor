@@ -1,5 +1,6 @@
 import {
   AppShell,
+  Badge,
   Modal,
   MultiSelect,
   NumberInput,
@@ -94,6 +95,39 @@ export const components: MantineThemeComponents = {
     defaultProps: { clearButtonProps: { 'aria-label': 'Clear' } },
   }),
   NumberInput: NumberInput.extend({ styles: inputStyles }),
+
+  /**
+   * A badge is sized by its label, so a status never reads `ACTI...`.
+   *
+   * Mantine gives the badge label `overflow: hidden; text-overflow: ellipsis`, which makes
+   * its **min-content contribution zero**: the badge never asks its column for room. Under
+   * `table-layout: auto` the catalogue's Status column was therefore sized by its `STATUS`
+   * header alone and collapsed to 87-96px, of which the label got 30 - so every row in a
+   * 92-lecture catalogue read `ACTI...` and every inactive one `INAC...`, at 1440 as well as
+   * at 1024. Users was never affected: its eight columns are all short and it sets no
+   * `minWidth`, so auto layout happened to leave Status 117px.
+   *
+   * **Why the cell measurements said it was fine.** The badge root is `width: fit-content`,
+   * so it shrinks rather than overflowing and `scrollWidth > clientWidth` is false on the
+   * cell, on the row and on the table. The clipping happens one box further in, on the
+   * label, which is the only box a sweep has to measure to see it. `F-075`.
+   *
+   * `min-width: max-content` restores the contribution the ellipsis rule removed, so the
+   * column reserves what the longest label needs. Measured against the live catalogue: the
+   * Status column goes 88 to 96 (`ACTIVE`) and 96 to 107 (`INACTIVE`), paid for by the two
+   * columns that wrap - Lecture loses 3-5px and Professors 6 - while the table's own width
+   * stays at its `minWidth` and nothing starts scrolling that did not scroll before. That is
+   * the trade `docs/TODO.md` refused to make blind.
+   *
+   * Set here rather than at the three table rows that show it, because it is one decision
+   * about how a badge sizes itself. Swept across all eight routes at 1024 first: no route
+   * gained an overflowing cell and none gained document overflow, including the Comments
+   * table, whose `table-layout: fixed` cannot widen a column and would have been the one
+   * place this could have pushed the overflow outwards instead.
+   */
+  Badge: Badge.extend({
+    styles: { root: { minWidth: 'max-content' } },
+  }),
 
   Modal: Modal.extend({
     /**
