@@ -136,6 +136,20 @@ loaded document heights measured at 1440x900 are:
 See `F-063`. Note the panel has **no skeleton**: the brief's "does the skeleton match the
 content height" question has no subject, and that absence is the finding.
 
+**Corrected 2026-09-10.** The paragraph above measures the **in-page data loader** and then
+says "every screen short-circuits to it", which is not what `PageLoader` is. Grep finds **ten**
+render sites: seven in-page loaders, one auth check (`ProtectedRoute.tsx:13`), and **two
+`Suspense` fallbacks**. `AdminLayout` is itself `lazy` (`App.tsx:13`) and it is what renders the
+`AppShell`, so `App.tsx:41`'s fallback replaces **the whole shell** - a 200px spinner on an empty
+page, no sidebar, no navbar, no gutters. That is the cold-load state, and there is a screenshot
+of it, so "the spinner could not be caught" is withdrawn as well. `AdminRoutes.tsx:27`'s fallback
+is inside `AppShell.Main` and keeps the sidebar, which is a different state again.
+
+And the reason the first attempt saw nothing is larger than the service-worker gap it names: the
+two `Suspense` states wait on **Vite chunk fetches**, not on API calls, so no delay injected at
+the network layer could ever have produced them. Two of the four waits were outside the
+measurement by construction.
+
 ### 2.8 Position across routes
 
 At 1280x720, every signed-in route:

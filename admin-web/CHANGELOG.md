@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 
+### `F-063` was measuring the wrong one of ten loading states
+
+The finding says the loading state is a fixed 200px box and that "every screen short-circuits
+to it while its first read is in flight". `PageLoader` has **ten** render sites, and that
+sentence describes seven of them.
+
+- **Corrected** the finding and [layout-audit.md](docs/coursework/layout-audit.md) §2.7. The
+  list was produced by grep rather than from memory: seven in-page data loaders, one auth check
+  in `ProtectedRoute.tsx:13`, and **two `Suspense` fallbacks**.
+- The one that matters is `App.tsx:41`. **`AdminLayout` is itself `lazy`** (`App.tsx:13`) and it
+  is the component that renders the `AppShell`, so while that chunk is in flight the fallback
+  stands in for the **entire shell**: a 200px spinner on an empty page, no sidebar, no navbar,
+  no gutters. That is the cold-load state on any signed-in route. `AdminRoutes.tsx:27`'s
+  fallback sits *inside* `AppShell.Main` and keeps the sidebar, so the two are different states
+  and the finding treated them as one.
+- **Withdrew** the "could not be captured" claim. There is a screenshot.
+- **Added** the reason the first attempt was blind rather than unlucky: the two `Suspense`
+  states wait on **Vite chunk fetches**, not on API calls, so no delay injected at the network
+  layer could have produced them whether or not `page.route` sat in front of the service worker.
+  Two of the four waits were outside that measurement by construction.
+
+### Unchanged on purpose
+
+- There is still **no skeleton**, and one `PageLoader` still stands for four different waits.
+  Splitting them is a design decision with a different answer per wait, and the correction is to
+  the record rather than to the code.
+
 ### One filter bar, on all five screens that filter
 
 `F-067`, and the largest change of this round. There were five layouts: two screens had a
