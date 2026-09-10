@@ -54,11 +54,36 @@ export const components: MantineThemeComponents = {
 
   TextInput: TextInput.extend({ styles: inputStyles }),
   Textarea: Textarea.extend({ styles: inputStyles }),
-  Select: Select.extend({ styles: inputStyles }),
-  MultiSelect: MultiSelect.extend({ styles: inputStyles }),
+  /**
+   * `clearButtonProps` for the same reason as `Modal`'s close button below: a clearable
+   * `Select` draws an unlabelled button and a screen reader announces it as "button". Found by
+   * `e2e/surfaces.spec.ts` inside the catalogue editors, where nothing had ever looked.
+   */
+  Select: Select.extend({
+    styles: inputStyles,
+    defaultProps: { clearButtonProps: { 'aria-label': 'Clear' } },
+  }),
+  MultiSelect: MultiSelect.extend({
+    styles: inputStyles,
+    defaultProps: { clearButtonProps: { 'aria-label': 'Clear' } },
+  }),
   NumberInput: NumberInput.extend({ styles: inputStyles }),
 
   Modal: Modal.extend({
+    /**
+     * The close button had no accessible name, in every dialog the panel opens.
+     *
+     * Mantine draws an unlabelled `CloseButton` in the header unless it is given one, so a
+     * screen reader announced the first control of all eleven dialogs as "button". Nothing
+     * caught it: the jsdom accessibility layer scans each route as it first renders and never
+     * opens a modal, which is the gap `e2e/surfaces.spec.ts` exists to close — it found this
+     * on its first run.
+     *
+     * Set here rather than on eleven `<Modal>` elements, because it is one decision and the
+     * eleventh would have been the one that got forgotten. No visual change: an accessible
+     * name is not painted.
+     */
+    defaultProps: { closeButtonProps: { 'aria-label': 'Close' } },
     styles: {
       content: { background: chrome.surface, border: `1px solid ${chrome.border}` },
       header: { background: chrome.surface, borderBottom: `1px solid ${chrome.border}` },
