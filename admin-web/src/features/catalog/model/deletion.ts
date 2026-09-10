@@ -64,7 +64,7 @@ export function getCatalogDeletion(
     case 'professor':
       return {
         title: 'Delete professor',
-        description: `Delete ${professorName(deletion.record)}? The lectures stay — only the assignment is dropped.`,
+        description: `Delete ${professorName(deletion.record)}? The lectures stay; only the assignment is dropped.`,
         confirmLabel: 'Delete professor',
         remove: () => deleters.professor(deletion.record.id),
       }

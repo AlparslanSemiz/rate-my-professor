@@ -433,7 +433,7 @@ export function demoBackend(): Partial<MswDb> {
           email: 'u-kisi2@student.kit.edu',
           role: 'STUDENT',
         },
-        target: { type: 'COMMENT', id: 'comment-1', label: 'Programmieren — Vorlesung' },
+        target: { type: 'COMMENT', id: 'comment-1', label: 'Programmieren - Vorlesung' },
         changes: {},
         metadata: {
           contentPreview: 'Die Übungsblätter sind gut, aber die Tutorien sind überfüllt.',

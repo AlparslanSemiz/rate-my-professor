@@ -25,7 +25,7 @@ export const USERS_HELP: HelpSection = {
         {
           value: 'Deleted',
           color: userStatusColor.DELETED,
-          meaning: 'Not a status you can set — deleting an account removes it outright, and that cannot be undone.',
+          meaning: 'Not a status you can set: deleting an account removes it outright, and that cannot be undone.',
         },
       ],
     },
@@ -46,7 +46,7 @@ export const USERS_HELP: HelpSection = {
     {
       action: 'Edit',
       result:
-        'Changes username, biography, and — for a non-admin, non-self account — status, role or credibility score. KIT email can never be changed here: it is the sign-in identity.',
+        'Changes username, biography, and (for a non-admin, non-self account) status, role or credibility score. KIT email can never be changed here: it is the sign-in identity.',
     },
     { action: 'Warn', result: 'Records a warning with a reason. Shows up in that user’s Warning History.' },
     { action: 'Block / Unblock', result: 'Sets status to Blocked, or back to Active.' },

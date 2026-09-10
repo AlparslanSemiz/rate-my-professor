@@ -113,7 +113,7 @@ export default function ReportRow({
               <IconTrashX size={iconSize.rowAction} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="Withdraw this report — the content is left as it is" withArrow>
+          <Tooltip label="Withdraw this report (the content is left as it is)" withArrow>
             <ActionIcon
               variant="subtle"
               color="gray"

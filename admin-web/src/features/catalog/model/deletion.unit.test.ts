@@ -25,7 +25,7 @@ describe('catalogue deletion copy', () => {
     const copy = getCatalogDeletion({ type: 'lecture', record: lecture }, deleters())
 
     expect(copy.title).toBe('Delete lecture')
-    expect(copy.description).toContain('IN0001 — Algorithms')
+    expect(copy.description).toContain('IN0001 - Algorithms')
     expect(copy.description).toContain('comments, answers and ratings go with it')
   })
 

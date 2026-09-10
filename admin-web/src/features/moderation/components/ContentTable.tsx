@@ -83,7 +83,7 @@ export default function ContentTable({
         <Box py={60} style={emptyStateStyle}>
           <IconMessage size={iconSize.emptyState} color={chrome.iconFaint} style={{ marginBottom: 12 }} />
           <Text c={chrome.textFaint} size="sm">
-            Nothing here — no {noun}s match these filters.
+            Nothing here. No {noun}s match these filters.
           </Text>
         </Box>
       ) : (

@@ -69,7 +69,7 @@ describe('CommentsService', () => {
           content: 'Great lecture',
           status: 'VISIBLE',
           author: { id: 'user-1', name: 'Mira', role: 'STUDENT', warnings: 0, status: 'ACTIVE' },
-          postContext: 'CS101 — Algorithms',
+          postContext: 'CS101 - Algorithms',
           lectureId: 'lecture-1',
           answers: 2,
           reports: 0,

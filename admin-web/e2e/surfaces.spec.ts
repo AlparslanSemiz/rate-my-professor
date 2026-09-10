@@ -161,7 +161,7 @@ test.describe('every modal', () => {
       expect(await positiveTabIndexes(dialog), `positive tabindex in ${surface.name}`).toEqual([])
       const controls = await controlsIn(dialog)
       const order = tabOrder(controls)
-      console.log(`focus ${surface.name}: ${order.length} stops — ${order.join(' → ')}`)
+      console.log(`focus ${surface.name}: ${order.length} stops: ${order.join(' → ')}`)
       expect(order.length, `tabbable controls in ${surface.name}`).toBeGreaterThan(0)
 
       // A control nothing named is announced as "button" and nothing else. Measured here
@@ -243,7 +243,7 @@ test.describe('every modal', () => {
       })
     }
 
-    test(`${surface.name} — the contrast a real browser can decide`, async ({ page }) => {
+    test(`${surface.name}: the contrast a real browser can decide`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: HEIGHT })
       await surface.reach(page)
       const dialog = page.getByRole('dialog').last()
@@ -302,7 +302,7 @@ test.describe('every form', () => {
 
       const controls = await controlsIn(root)
       const order = tabOrder(controls)
-      console.log(`form ${form.name}: ${order.length} stops — ${order.join(' → ')}`)
+      console.log(`form ${form.name}: ${order.length} stops: ${order.join(' → ')}`)
       expect(order.length, `controls in ${form.name}`).toBeGreaterThan(0)
       expect(unnamed(controls), `unnamed controls in ${form.name}`).toEqual([])
 

@@ -55,7 +55,7 @@ for (const route of ROUTES) {
    * **Expected** — no violations beyond those recorded; every target measured; and the
    *                contrast coverage reported as a number rather than implied.
    */
-  test(`${route.name} — the rules that need a real browser`, async ({ page }) => {
+  test(`${route.name}: the rules that need a real browser`, async ({ page }) => {
     await open(page, route)
 
     const results = await new AxeBuilder({ page }).withRules([...HANDED_OVER_FROM_JSDOM]).analyze()
@@ -64,7 +64,7 @@ for (const route of ROUTES) {
 
     // Printed so the delivery figures are read off a run rather than remembered.
     console.log(
-      `a11y ${route.name} — contrast passed=${contrast.passed} failed=${contrast.failed} ` +
+      `a11y ${route.name}: contrast passed=${contrast.passed} failed=${contrast.failed} ` +
         `undetermined=${contrast.undetermined} | target-size passed=${targets.passed} ` +
         `failed=${targets.failed} undetermined=${targets.undetermined}`,
     )

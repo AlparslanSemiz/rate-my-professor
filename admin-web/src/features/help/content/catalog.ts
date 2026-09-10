@@ -18,7 +18,7 @@ export const CATALOG_HELP: HelpSection = {
     },
     {
       action: 'Delete professor',
-      result: 'Removes the professor only — their lectures stay, just the assignment is dropped.',
+      result: 'Removes the professor only; their lectures stay, just the assignment is dropped.',
     },
   ],
 }

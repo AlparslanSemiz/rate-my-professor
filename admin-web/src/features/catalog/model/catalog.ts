@@ -9,7 +9,7 @@ export function professorName(professor: { firstName: string; lastName: string }
 
 /** @returns the lecture as the catalogue names it: its code and its title. */
 export function lectureLabel(lecture: Lecture) {
-  return `${lecture.code} — ${lecture.name}`
+  return `${lecture.code} - ${lecture.name}`
 }
 
 /** @returns the term the lecture runs in, e.g. "Winter 2026". */

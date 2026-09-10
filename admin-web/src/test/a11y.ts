@@ -20,10 +20,10 @@ import axeCore, { type AxeResults, type Result } from 'axe-core'
 export const RULES_JSDOM_CANNOT_ANSWER: Readonly<Record<string, string>> = {
   // Needs computed colours and a canvas to sample them. jsdom has neither, so axe reports
   // `incomplete` at best and nothing at worst.
-  'color-contrast': 'needs layout and canvas — measured in Chromium instead',
+  'color-contrast': 'needs layout and canvas: measured in Chromium instead',
   // Needs box geometry. Every element in jsdom is 0x0, so a 20x20 target and a 44x44 target
   // are indistinguishable.
-  'target-size': 'needs real box geometry — measured in Chromium instead',
+  'target-size': 'needs real box geometry: measured in Chromium instead',
 }
 
 /**
@@ -67,7 +67,7 @@ export function formatViolations(violations: readonly Result[]): string {
 export async function violationsIn(container: HTMLElement, label: string): Promise<Result[]> {
   const results = await axe(container)
   if (results.violations.length > 0) {
-    console.error(`\naxe — ${label}\n${formatViolations(results.violations)}\n`)
+    console.error(`\naxe: ${label}\n${formatViolations(results.violations)}\n`)
   }
   return results.violations
 }

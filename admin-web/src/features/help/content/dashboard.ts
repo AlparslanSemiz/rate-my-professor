@@ -39,7 +39,7 @@ export const DASHBOARD_HELP: HelpSection = {
           value: DASHBOARD_CARDS.active,
           color: CARD_ACCENTS.active,
           meaning:
-            'Accounts whose status is Active. An inactive account is neither active nor blocked, so this is not "everyone who is not blocked" — and it is not a count of who is online, which the backend does not measure.',
+            'Accounts whose status is Active. An inactive account is neither active nor blocked, so this is not "everyone who is not blocked", and it is not a count of who is online, which the backend does not measure.',
         },
         {
           value: DASHBOARD_CARDS.admins,
@@ -49,7 +49,7 @@ export const DASHBOARD_HELP: HelpSection = {
         {
           value: DASHBOARD_CARDS.openReports,
           color: CARD_ACCENTS.openReports,
-          meaning: 'Bug reports whose status is Open — reported comments and answers are not counted here.',
+          meaning: 'Bug reports whose status is Open; reported comments and answers are not counted here.',
         },
       ],
     },

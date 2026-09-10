@@ -115,6 +115,27 @@ What is not:
 `@media (prefers-reduced-motion: reduce)` already removes the transitions and the
 2px lift. **Any new animated class is added to that block in the same commit.**
 
+## Interface text
+
+**No em dash and no en dash.** Not in a label, a button, an empty-state sentence, an
+error message, a tooltip, a table header, a placeholder, or in fixture data that reaches
+the screen. A clause that wants an em dash wants a full stop, a colon, a semicolon or a
+pair of brackets instead, and choosing which is part of writing the sentence.
+
+This is a rule as of 2026-09-10, and before that date it was not one. The panel had **41
+em dashes across 27 files** and zero en dashes, and an earlier round deliberately left
+them alone on the grounds that removing them would mean inventing a rule and applying it
+in the same commit. The rule is written here first so that the change has something to
+point at.
+
+**Where there is no value, the marker is `EMPTY_VALUE` in `src/utils/emptyValue.ts`**, a
+plain hyphen, and it is the only glyph for that meaning. That file used to argue for an em
+dash; it now records why it changed rather than pretending it always said this. One
+meaning, one glyph, was always the point - the em dash was never the point.
+
+Code comments are exempt. They are not interface text, they are read in the editor, and
+this repository's comments carry the reasoning that makes the code reviewable.
+
 ## Banned
 
 Gradient text. Glassmorphism and blurred cards. Emoji used as an icon — the panel

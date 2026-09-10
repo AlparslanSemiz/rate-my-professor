@@ -7,7 +7,7 @@ export const COMMENTS_HELP: HelpSection = {
   title: 'Comments',
   icon: IconMessage,
   summary:
-    'Every comment, with its answers nested underneath — expand the ▸ next to a comment to see the replies posted under it. An answer is edited, hidden or deleted exactly like a comment; only the underlying request differs.',
+    'Every comment, with its answers nested underneath. Expand the ▸ next to a comment to see the replies posted under it. An answer is edited, hidden or deleted exactly like a comment; only the underlying request differs.',
   valueGroups: [
     {
       heading: 'Visibility',
@@ -21,7 +21,7 @@ export const COMMENTS_HELP: HelpSection = {
         {
           value: 'Deleted',
           color: contentStatusColor.DELETED,
-          meaning: 'Not a visibility you can set — deleting is permanent, and deleting a comment takes every answer under it with it.',
+          meaning: 'Not a visibility you can set: deleting is permanent, and deleting a comment takes every answer under it with it.',
         },
       ],
     },
@@ -46,6 +46,6 @@ export const COMMENTS_HELP: HelpSection = {
       action: 'Change a report’s status',
       result: 'Action Taken hides the reported content; any other status leaves or restores it.',
     },
-    { action: 'Withdraw report', result: 'Removes the report only — the content is left exactly as it is.' },
+    { action: 'Withdraw report', result: 'Removes the report only; the content is left exactly as it is.' },
   ],
 }

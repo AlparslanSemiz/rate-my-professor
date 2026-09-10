@@ -94,7 +94,7 @@ export default function HelpPage() {
     <>
       <PageHeader
         title="Help"
-        description="What each status means and what happens when you use a control — one reference per page in the panel."
+        description="What each status means and what happens when you use a control. One reference per page in the panel."
       />
 
       <Accordion multiple variant="separated" transitionDuration={0} styles={accordionStyles}>

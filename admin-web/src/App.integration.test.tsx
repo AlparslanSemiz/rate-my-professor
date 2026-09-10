@@ -197,7 +197,7 @@ describe('App routing and authentication', () => {
     expect(oversightNavigation).toHaveTextContent('Activity Logs')
   })
 
-  it('has no System Status route left — the path falls back to the dashboard', async () => {
+  it('has no System Status route left: the path falls back to the dashboard', async () => {
     localStorage.setItem('token', 'stored-token')
     localStorage.setItem('user', JSON.stringify(adminUser))
     window.history.pushState({}, '', '/system-status')
@@ -238,7 +238,7 @@ describe('App routing and authentication', () => {
 
     await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), adminUser.email)
     await user.click(screen.getByRole('button', { name: 'Send me a code' }))
-    expect(await screen.findByText(`We just sent a code to ${adminUser.email} — enter it below.`)).toBeInTheDocument()
+    expect(await screen.findByText(`We just sent a code to ${adminUser.email}. Enter it below.`)).toBeInTheDocument()
 
     await user.type(screen.getByPlaceholderText('Code from your email'), '123456')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))

@@ -113,7 +113,7 @@ function discoverServiceMethods(): string[] {
  * them would be asserting something about a list they are not on.
  */
 const EXEMPT: Record<string, string> = {
-  ApiClient: 'The transport itself. It has no path of its own — it is what every swept row goes through.',
+  ApiClient: 'The transport itself. It has no path of its own: it is what every swept row goes through.',
   ApiSession: 'Holds the token and the 401 listener. No request originates here.',
   ApiRequestBuilder: 'Builds the URL and headers the sweep asserts on. Testing it through itself would prove nothing.',
   ApiResponseParser: 'Reads responses. The sweep is about what went out.',

@@ -171,7 +171,7 @@ describe('Feedback page', () => {
     expect(screen.getByRole('tab', { name: 'History (0)' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: /History/ }))
-    expect(await screen.findByText('Nothing here yet — no report has been closed.')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing here yet. No report has been closed.')).toBeInTheDocument()
   })
 
   it('files a dismissed report under history too', async () => {

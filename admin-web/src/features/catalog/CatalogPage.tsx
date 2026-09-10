@@ -55,7 +55,7 @@ export default function CatalogPage() {
     <>
       <PageHeader
         title="Lectures & Professors"
-        description="The lectures students rate and the professors who teach them — names, terms and assignments."
+        description="The lectures students rate and the professors who teach them: names, terms and assignments."
       />
       <ErrorAlert message={actions.actionError || ratings.actionError || ratings.loadError} />
       <CatalogStats lectures={lists.lectures} professors={lists.professors} />

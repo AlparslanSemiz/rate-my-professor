@@ -4,6 +4,7 @@ import { contentStatusColor } from '@/constants/colors'
 import { chrome } from '@/theme'
 import { enumLabel } from '@/utils/enumLabel'
 import { formatDate } from '@/utils/formatDate'
+import { EMPTY_VALUE } from '@/utils/emptyValue'
 import type { ModeratedItem } from '../model'
 import ContentCell from './ContentCell'
 import ContentRowActions from './ContentRowActions'
@@ -83,7 +84,7 @@ export default function ContentRow({
           </Badge>
         ) : (
           <Text size="xs" c={chrome.iconFaint}>
-            —
+            {EMPTY_VALUE}
           </Text>
         )}
       </td>

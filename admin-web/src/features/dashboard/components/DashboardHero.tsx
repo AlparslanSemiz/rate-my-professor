@@ -79,7 +79,7 @@ export default function DashboardHero({
         Everything worth a look, all in one place.
       </Text>
       <Text size="sm" c={chrome.textDim} mb={24}>
-        See who's around, what needs a second look, and how things are holding up — no digging
+        See who's around, what needs a second look, and how things are holding up, with no digging
         required.
       </Text>
       <SimpleGrid cols={moduleGridCols} spacing={16}>

@@ -141,7 +141,7 @@ export default function UserProfileModal({
         <ConfirmModal
           opened
           title="Withdraw warning"
-          description="Withdraw this warning? The student is not notified — the notification went out when it was issued."
+          description="Withdraw this warning? The student is not notified; the notification went out when it was issued."
           confirmLabel="Withdraw warning"
           confirmColor="red"
           onConfirm={() => profile.withdrawWarning(withdrawing)}

@@ -2,6 +2,56 @@
 
 ## [Unreleased]
 
+### The em dash is gone from interface text, and there is now a rule saying so
+
+`F-061`. The instruction was to remove every long dash from user-visible text. Two earlier
+rounds measured this and changed nothing, because there was no rule to enforce and
+`emptyValue.ts` argued the other way. This round the decision was made, so the rule was
+written first and the change follows it rather than the other way round.
+
+#### `docs/DESIGN.md`
+
+- **Added** an **Interface text** section: no em dash and no en dash in a label, button,
+  empty state, error message, tooltip, table header, placeholder, or in fixture data that
+  reaches the screen. A clause that wants one takes a full stop, colon, semicolon or
+  brackets instead. Code comments are exempt, and the section says why: they are read in
+  the editor, and this repository's comments carry the reasoning that makes it reviewable.
+
+#### `src/utils/emptyValue.ts` and its twelve consumers
+
+- **Changed** `EMPTY_VALUE` from `'—'` to `'-'`. The file's doc comment is rewritten to
+  record the reversal rather than quietly contradict itself: one meaning and one glyph was
+  always the argument, and that half still holds.
+- **Changed** the two bare `—` literals in `ContentRow.tsx` and `UserTableRow.tsx` to use
+  the constant. They were the same "no value" decision written out twice by hand, which is
+  how they escaped the last change to it.
+- **Changed** `catalog.unit.test.ts` to assert `EMPTY_VALUE` rather than the character.
+
+#### Copy, across 27 files
+
+- **Rewritten, not hyphenated.** `"All quiet — nothing waiting."` became
+  `"All quiet. Nothing waiting."`; `"Severe — data loss"` became `"Severe: data loss"`;
+  `"The lectures stay — only the assignment is dropped."` took a semicolon;
+  `"and — for a non-admin, non-self account — status"` took brackets. A hyphen between
+  clauses is the wrong mark and would have read worse than the dash it replaced.
+- **Changed** the catalogue's record separator to `${code} - ${name}`, and the on-screen
+  fixture strings that mirror it.
+
+### Tests
+
+- **No tests added.** Six assertions that quote rewritten copy were updated to match, and
+  two of those needed a second pass: a blanket rewrite had turned them into `:` where the
+  copy actually took a full stop, and the suite caught it.
+
+### Proof
+
+`0` em and `0` en dashes outside comments across `src/` and `e2e/`, down from **82 in 48
+files**, measured with a scan that tracks comment regions character by character rather
+than matching lines that begin like comments. The 622 remaining are all inside comments. A
+cruder grep reports six survivors; all six are JSX and CSS comment continuation lines,
+which is exactly the case the cruder grep cannot see.
+
+
 ### Hand F-052 to the backend, and record the em dash as an open decision
 
 Three delivery-eve jobs, no behaviour change and no new tests.

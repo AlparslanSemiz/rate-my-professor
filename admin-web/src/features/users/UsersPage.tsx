@@ -70,7 +70,7 @@ function UsersPageHeader() {
   return (
     <PageHeader
       title="Users"
-      description="Everyone who's signed up — profiles, sessions and moderation, all in one place."
+      description="Everyone who's signed up: profiles, sessions and moderation, all in one place."
     />
   )
 }

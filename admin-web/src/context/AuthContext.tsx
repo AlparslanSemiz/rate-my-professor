@@ -20,7 +20,7 @@ import {
  * go. 122 characters, which is one line at 1280px and above.
  */
 const SESSION_UNCONFIRMED_MESSAGE =
-  'Could not confirm your session, so this page may be out of date. Reload it — or sign out and back in if that does not help.'
+  'Could not confirm your session, so this page may be out of date. Reload it, or sign out and back in if that does not help.'
 
 /**
  * Holds the session for the whole panel and keeps it honest.

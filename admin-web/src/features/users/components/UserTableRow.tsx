@@ -1,4 +1,5 @@
 import { Badge, Text, type CSSProperties, type MantineColor } from '@mantine/core'
+import { EMPTY_VALUE } from '@/utils/emptyValue'
 import type { User } from '@/api/users'
 import { roleColor, userStatusColor } from '@/constants/colors'
 import { enumLabel } from '@/utils/enumLabel'
@@ -74,7 +75,7 @@ function CountBadge({ value, color }: { value: number; color: MantineColor }) {
   if (value <= 0) {
     return (
       <Text size="xs" c={chrome.iconFaint}>
-        —
+        {EMPTY_VALUE}
       </Text>
     )
   }

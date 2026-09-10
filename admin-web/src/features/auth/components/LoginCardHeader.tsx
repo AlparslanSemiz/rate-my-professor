@@ -38,7 +38,7 @@ export default function LoginCardHeader({
       <Text size="sm" c={chrome.textDim} mb={24}>
         {step === 'email'
           ? "Pop in your KIT student email and we'll send over a login code."
-          : `We just sent a code to ${email} — enter it below.`}
+          : `We just sent a code to ${email}. Enter it below.`}
       </Text>
     </>
   )

@@ -78,7 +78,7 @@ export default function LectureEditModal({
           </Group>
           <MultiSelect
             label="Professors"
-            description="Replaces the assignment — clear it to leave the lecture unassigned."
+            description="Replaces the assignment. Clear it to leave the lecture unassigned."
             data={professors.map((professor) => ({
               value: professor.id,
               label: professorName(professor),

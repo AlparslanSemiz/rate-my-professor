@@ -114,7 +114,7 @@ test('an action that is absent and one that is merely unknown both survive being
   await page.getByText(/A trace of successful admin actions/).first().waitFor()
 
   // The entry with no action reads as the shared empty marker, in the row's own accessible name.
-  const missing = page.getByRole('row', { name: /^Open audit event — by / }).first()
+  const missing = page.getByRole('row', { name: /^Open audit event - by / }).first()
   await expect(missing).toBeVisible()
   await missing.click()
   await expect(page.getByRole('dialog')).toBeVisible()

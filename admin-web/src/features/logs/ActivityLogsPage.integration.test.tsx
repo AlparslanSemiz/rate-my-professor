@@ -41,7 +41,7 @@ const contribution: AuditEntry = {
     email: 'mira@student.kit.edu',
     role: 'STUDENT',
   },
-  target: { type: 'COMMENT', id: 'comment-1', label: 'CS101 — Algorithms' },
+  target: { type: 'COMMENT', id: 'comment-1', label: 'CS101 - Algorithms' },
   changes: {},
   metadata: { contentPreview: 'Clear and well paced', contentLength: 20 },
 }

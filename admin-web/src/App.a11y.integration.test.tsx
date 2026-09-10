@@ -148,7 +148,7 @@ describe('every route, scanned by axe', () => {
     })
   })
 
-  it.each(ROUTES)('$name — what axe finds', async (route) => {
+  it.each(ROUTES)('$name: what axe finds', async (route) => {
     const { container } = await openRoute(route)
     const violations = await violationsIn(container, route.name)
 
@@ -220,7 +220,7 @@ describe('the keyboard', () => {
     })
   })
 
-  it.each(ROUTES)('$name — every control it offers can take focus', async (route) => {
+  it.each(ROUTES)('$name: every control it offers can take focus', async (route) => {
     const { container } = await openRoute(route)
 
     const focusable = focusableIn(container)
@@ -320,7 +320,7 @@ describe('information that colour alone would carry', () => {
     })
   })
 
-  it.each(ROUTES.filter((route) => route.signedIn))('$name — every status badge reads as text too', async (route) => {
+  it.each(ROUTES.filter((route) => route.signedIn))('$name: every status badge reads as text too', async (route) => {
     const { container } = await openRoute(route)
 
     const badges = [...container.querySelectorAll<HTMLElement>('.mantine-Badge-root')]

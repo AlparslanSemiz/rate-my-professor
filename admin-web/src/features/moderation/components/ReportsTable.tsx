@@ -60,7 +60,7 @@ export default function ReportsTable({
         <Box py={60} style={emptyStateStyle}>
           <IconMessageReport size={iconSize.emptyState} color={chrome.iconFaint} style={{ marginBottom: 12 }} />
           <Text c={chrome.textFaint} size="sm">
-            Nothing here — no reports match these filters.
+            Nothing here. No reports match these filters.
           </Text>
         </Box>
       ) : (

@@ -40,7 +40,7 @@ export default function FeedbackPage() {
     <>
       <PageHeader
         title="Bug Reports"
-        description="Bug reports and crash logs sent in by your users — screenshots, device info and all."
+        description="Bug reports and crash logs sent in by your users: screenshots, device info and all."
       />
 
       <FeedbackStats reports={reports} />
@@ -62,8 +62,8 @@ export default function FeedbackPage() {
           <ReportQueue
             reports={queue}
             title="Report queue"
-            subtitle="Open and reviewed, newest first — tap a report for the full story."
-            emptyMessage="All quiet — nothing waiting."
+            subtitle="Open and reviewed, newest first. Tap a report for the full story."
+            emptyMessage="All quiet. Nothing waiting."
             onOpenReport={openReport}
           />
         </Tabs.Panel>
@@ -72,8 +72,8 @@ export default function FeedbackPage() {
           <ReportQueue
             reports={history}
             title="History"
-            subtitle="Acted on or dismissed. The date is when the report was filed — the backend does not record when it was closed."
-            emptyMessage="Nothing here yet — no report has been closed."
+            subtitle="Acted on or dismissed. The date is when the report was filed; the backend does not record when it was closed."
+            emptyMessage="Nothing here yet. No report has been closed."
             onOpenReport={openReport}
           />
         </Tabs.Panel>

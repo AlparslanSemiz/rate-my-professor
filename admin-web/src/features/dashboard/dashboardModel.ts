@@ -88,7 +88,7 @@ export const STALE_READING_SUFFIX = 'Showing the last successful reading.'
  */
 export const healthDescription: Record<SystemHealth, string> = {
   OK: 'The database answered and the counters were read.',
-  DEGRADED: 'The database answered, but a count query failed — counters are unavailable.',
+  DEGRADED: 'The database answered, but a count query failed, so counters are unavailable.',
   DOWN: 'The database is unreachable, so counters and the last write cannot be read.',
 }
 

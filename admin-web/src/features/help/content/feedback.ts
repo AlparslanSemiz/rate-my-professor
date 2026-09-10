@@ -23,7 +23,7 @@ export const FEEDBACK_HELP: HelpSection = {
         { value: 'Low', color: severityColor.LOW, meaning: 'Minor, cosmetic.' },
         { value: 'Medium', color: severityColor.MEDIUM, meaning: 'Noticeable but not blocking.' },
         { value: 'High', color: severityColor.HIGH, meaning: 'Blocks a real workflow for some users.' },
-        { value: 'Critical', color: severityColor.CRITICAL, meaning: 'Severe — data loss, crash, or similar.' },
+        { value: 'Critical', color: severityColor.CRITICAL, meaning: 'Severe: data loss, crash, or similar.' },
       ],
     },
   ],

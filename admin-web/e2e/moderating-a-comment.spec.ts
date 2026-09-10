@@ -35,10 +35,10 @@ test('correcting a comment shows the text the backend now holds', async ({ page 
 
   await page.getByRole('button', { name: 'Edit content by Jonas Weber' }).click()
   const dialog = page.getByRole('dialog')
-  await dialog.getByRole('textbox', { name: 'Text' }).fill('Skript ist veraltet — Stand 2019.')
+  await dialog.getByRole('textbox', { name: 'Text' }).fill('Skript ist veraltet - Stand 2019.')
   await dialog.getByRole('button', { name: 'Save changes' }).click()
 
-  await expect(page.getByText('Skript ist veraltet — Stand 2019.')).toBeVisible()
+  await expect(page.getByText('Skript ist veraltet - Stand 2019.')).toBeVisible()
 })
 
 /**

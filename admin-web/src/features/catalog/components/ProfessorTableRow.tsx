@@ -84,7 +84,7 @@ export default function ProfessorTableRow({
               <IconPencil size={iconSize.rowAction} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="Delete professor — the lectures stay" withArrow>
+          <Tooltip label="Delete professor (the lectures stay)" withArrow>
             <ActionIcon
               variant="subtle"
               color="red"

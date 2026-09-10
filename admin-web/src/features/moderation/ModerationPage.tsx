@@ -102,8 +102,8 @@ export default function ModerationPage({
           title={`Delete ${deleting.kind}`}
           description={
             deleting.kind === 'comment'
-              ? 'Delete this comment and every answer under it? This cannot be undone — use "Hidden" instead to take it out of the app while keeping it.'
-              : 'Delete this answer? This cannot be undone — use "Hidden" instead to take it out of the app while keeping it.'
+              ? 'Delete this comment and every answer under it? This cannot be undone. Use "Hidden" instead to take it out of the app while keeping it.'
+              : 'Delete this answer? This cannot be undone. Use "Hidden" instead to take it out of the app while keeping it.'
           }
           confirmLabel="Delete permanently"
           confirmColor="red"

@@ -106,7 +106,7 @@ describe('Catalogue page', () => {
     const user = userEvent.setup()
     renderCatalog()
 
-    await user.click(await screen.findByRole('button', { name: 'Edit CS101 — Algorithms' }))
+    await user.click(await screen.findByRole('button', { name: 'Edit CS101 - Algorithms' }))
     const dialog = await screen.findByRole('dialog')
     const nameInput = within(dialog).getByRole('textbox', { name: 'Name' })
     await user.clear(nameInput)
@@ -125,7 +125,7 @@ describe('Catalogue page', () => {
     const user = userEvent.setup()
     renderCatalog()
 
-    await user.click(await screen.findByRole('button', { name: 'Edit CS101 — Algorithms' }))
+    await user.click(await screen.findByRole('button', { name: 'Edit CS101 - Algorithms' }))
     const dialog = await screen.findByRole('dialog')
     const nameInput = within(dialog).getByRole('textbox', { name: 'Name' })
     await user.clear(nameInput)
@@ -142,7 +142,7 @@ describe('Catalogue page', () => {
     const user = userEvent.setup()
     renderCatalog()
 
-    await user.click(await screen.findByRole('button', { name: 'Delete CS101 — Algorithms' }))
+    await user.click(await screen.findByRole('button', { name: 'Delete CS101 - Algorithms' }))
     const dialog = await screen.findByRole('dialog')
     expect(
       within(dialog).getByText(/Its comments, answers and ratings go with it/)
@@ -172,7 +172,7 @@ describe('Catalogue page', () => {
 
     const turingRow = await screen.findByText('Alan Turing')
     expect(turingRow).toBeInTheDocument()
-    expect(screen.getByText('CS101 — Algorithms')).toBeInTheDocument()
+    expect(screen.getByText('CS101 - Algorithms')).toBeInTheDocument()
     expect(screen.getByText('None assigned')).toBeInTheDocument()
     expect(screen.getByText('4.2')).toBeInTheDocument()
   })
@@ -221,7 +221,7 @@ describe('Catalogue page', () => {
     renderCatalog()
 
     // Delete has its own confirmation; the row click behind it must not also open the form.
-    await user.click(await screen.findByRole('button', { name: 'Delete CS101 — Algorithms' }))
+    await user.click(await screen.findByRole('button', { name: 'Delete CS101 - Algorithms' }))
 
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).queryByRole('textbox', { name: 'Name' })).toBeNull()
@@ -232,7 +232,7 @@ describe('Catalogue page', () => {
     const user = userEvent.setup()
     renderCatalog()
 
-    await user.click(await screen.findByRole('button', { name: 'Edit CS101 — Algorithms' }))
+    await user.click(await screen.findByRole('button', { name: 'Edit CS101 - Algorithms' }))
     const dialog = await screen.findByRole('dialog')
 
     // The reads return active records only, so the warning must not be there until the
@@ -281,7 +281,7 @@ describe('Catalogue page', () => {
     expect(screen.getByText('Content 5 · Difficulty 3')).toBeInTheDocument()
 
     await user.click(screen.getByRole('combobox', { name: 'Filter ratings by lecture' }))
-    fireEvent.click(await screen.findByRole('option', { name: 'CS101 — Algorithms', hidden: true }))
+    fireEvent.click(await screen.findByRole('option', { name: 'CS101 - Algorithms', hidden: true }))
 
     await waitFor(() =>
       expect(ratingsService.list).toHaveBeenLastCalledWith(

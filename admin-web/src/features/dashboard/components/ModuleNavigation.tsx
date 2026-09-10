@@ -16,7 +16,7 @@ const MODULES = [
   {
     label: 'Bug reports',
     title: 'Bugs & crashes',
-    description: "See what's breaking — bug reports and crash logs, straight from your users.",
+    description: "See what's breaking: bug reports and crash logs, straight from your users.",
     accent: accentForRoute(routes.feedback),
     path: routes.feedback,
   },

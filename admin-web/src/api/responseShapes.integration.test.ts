@@ -160,7 +160,7 @@ describe('a 204 with no body at all', () => {
     seedDb(sweepFixture())
   })
 
-  it.each(API_ENDPOINTS)('$method $path — what it does with an empty answer', async ({ method, path, send }) => {
+  it.each(API_ENDPOINTS)('$method $path: what it does with an empty answer', async ({ method, path, send }) => {
     server.use(METHODS[method](path, () => new HttpResponse(null, { status: 204 })))
 
     const raised: unknown = await send().then(
@@ -199,7 +199,7 @@ describe('a backend that never answers', () => {
     seedDb(sweepFixture())
   })
 
-  it('is waited on indefinitely — there is no timeout anywhere in the client', async () => {
+  it('is waited on indefinitely: there is no timeout anywhere in the client', async () => {
     server.use(http.get(apiUrl('/system/status'), () => delay('infinite') as Promise<never>))
 
     // Parked deliberately. Nothing will ever settle it, which is the finding; the `catch` is
