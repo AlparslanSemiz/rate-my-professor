@@ -161,7 +161,10 @@ public interface APIService {
      * @return The response with comments.
      */
     @GET("/social/comments/{lecture_id}")
-    Call<CommentsResponse> getComments(@Path("lecture_id") String lectureId);
+    Call<CommentsResponse> getComments(
+            @Header("Authorization") String token,
+            @Path("lecture_id") String lectureId
+    );
 
     /**
      *

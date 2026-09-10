@@ -58,5 +58,5 @@ public interface ControlFlowInterface {
      * @param comment the selected comment
      * @param voteType the vote associated with the comment
      */
-    void openReplyFragment(Comment comment, VoteType voteType);
+    void openReplyFragment(Comment comment);
 }

@@ -178,8 +178,8 @@ public class MainActivity extends AppCompatActivity implements ControlFlowInterf
     }
 
     @Override
-    public void openReplyFragment(Comment comment, VoteType voteType) {
-        loadFragment(new ReplyFragment(comment, voteType), true);
+    public void openReplyFragment(Comment comment) {
+        loadFragment(new ReplyFragment(comment), true);
     }
 
 }

@@ -106,9 +106,9 @@ public class AdapterLogicTest {
     public void commentsAdapterBindsContent() {
         Context context = RuntimeEnvironment.getApplication();
         context.setTheme(R.style.Theme_RateMyProfessor);
-        Comment comment = new Comment("1", "ContentA", null, "UserB", "L1", null, LocalDateTime.now(), 2, 5, Collections.emptyList());
+        Comment comment = new Comment("1", "ContentA", null, "UserB", "L1", null, LocalDateTime.now(), 2, 5,VoteType.UP , Collections.emptyList());
         
-        CommentsAdapter adapter = new CommentsAdapter(context, Collections.singletonList(comment), null, CommentType.COMMENT, VoteType.UP);
+        CommentsAdapter adapter = new CommentsAdapter(context, Collections.singletonList(comment), null, CommentType.COMMENT);
         CommentsAdapter.CommentViewHolder holder = adapter.onCreateViewHolder(new FrameLayout(context), 0);
         adapter.onBindViewHolder(holder, 0);
 

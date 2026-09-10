@@ -21,6 +21,10 @@ import com.example.ratemyprofessor.domain.Rater;
 import com.example.ratemyprofessor.domain.Rating;
 import com.example.ratemyprofessor.domain.Semester;
 import com.example.ratemyprofessor.domain.SemesterSeason;
+import com.example.ratemyprofessor.domain.VoteType;
+import com.example.ratemyprofessor.servercommunication.APIService;
+import com.example.ratemyprofessor.servercommunication.ContentStatus;
+import com.example.ratemyprofessor.servercommunication.Database;
 import com.example.ratemyprofessor.servercommunication.responses.CommentsResponse;
 import com.example.ratemyprofessor.servercommunication.responses.LecturesResponse;
 import com.example.ratemyprofessor.servercommunication.responses.ProfessorsResponse;
@@ -109,6 +113,7 @@ public class DatabaseSyncTest {
                 createdAt.plusMinutes(5),
                 0,
                 2,
+                VoteType.UP,
                 Collections.emptyList()
         );
         Comment comment = new Comment(
@@ -121,6 +126,7 @@ public class DatabaseSyncTest {
                 createdAt,
                 1,
                 5,
+                VoteType.UP,
                 Collections.singletonList(reply)
         );
         APIService apiService = apiService(

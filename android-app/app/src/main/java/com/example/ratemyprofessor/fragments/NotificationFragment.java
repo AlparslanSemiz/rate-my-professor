@@ -312,7 +312,8 @@ public class NotificationFragment extends Fragment {
                 });
     }
     private void loadAndOpenCommentThread(String lectureId, String commentId) {
-        commentThreadCall = apiService.getComments(lectureId);
+        LoginSession session = LoginSession.from(requireContext());
+        commentThreadCall = apiService.getComments(session.bearerToken(), lectureId);
 
         commentThreadCall.enqueue(new Callback<>() {
             @Override
@@ -337,8 +338,8 @@ public class NotificationFragment extends Fragment {
                     return;
                 }
                 if (requireActivity() instanceof MainActivity mainActivity) {
-                    // Dont have a way to get the voteType yet
-                    mainActivity.openReplyFragment(selectedComment, null);
+                    // Dont have a way to get the userVote yet
+                    mainActivity.openReplyFragment(selectedComment);
                 }
             }
 

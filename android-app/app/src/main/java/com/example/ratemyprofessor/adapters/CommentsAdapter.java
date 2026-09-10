@@ -35,7 +35,6 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
     private final List<Comment> comments;
     private final OnCommentClickListener listener;
     private final CommentType type;
-    private final VoteType voteType;
     private final Context context;
 
     /**
@@ -45,18 +44,15 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
      * @param comments the comments to display
      * @param listener the listener notified when the user interacts with an item
      * @param type whether the displayed entries are comments or replies
-     * @param voteType the vote associated with the comment
      */
     public CommentsAdapter(Context context,
                            List<Comment> comments,
                            OnCommentClickListener listener,
-                           CommentType type,
-                           VoteType voteType) {
+                           CommentType type) {
         this.context = context;
         this.comments = comments;
         this.listener = listener;
         this.type = type;
-        this.voteType = voteType;
 
     }
 
@@ -81,24 +77,29 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         holder.commentContent.setText(comment.content());
         holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
         holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
-        // We currently dont have
-        if (voteType == VoteType.UP) {
+        System.out.println(comment.userVote());
+        if (comment.userVote() == VoteType.UP) {
             holder.upVoteButton.setImageResource(R.drawable.upvote_icon_filled);
-        } else if (voteType == VoteType.DOWN) {
+        } else if (comment.userVote() == VoteType.DOWN) {
             holder.downVoteButton.setImageResource(R.drawable.downvote_icon_filled);
         }
 
 
 
-        holder.itemView.setOnClickListener(v -> openReplies(comment, voteType));
-        holder.showCommentButton.setOnClickListener(v -> openReplies(comment, voteType));
+        holder.itemView.setOnClickListener(v -> openReplies(comment));
+        holder.showCommentButton.setOnClickListener(v -> openReplies(comment));
         holder.upVoteButton.setOnClickListener(v -> {
             if (!AuthManager.getInstance().isLoggedIn()) {
                 Toast.makeText(context, "You are not logged in.", Toast.LENGTH_SHORT).show();
                 return;
             }
-            holder.upVoteCount.setText(String.valueOf(comment.upVotes() + 1));
-            holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
+            if (comment.userVote() == VoteType.UP) {
+                holder.upVoteCount.setText(String.valueOf(comment.upVotes() - 1));
+                holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
+            } else {
+                holder.upVoteCount.setText(String.valueOf(comment.upVotes() + 1));
+                holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
+            }
             holder.upVoteButton.setImageResource(R.drawable.upvote_icon_filled);
             holder.downVoteButton.setImageResource(R.drawable.downvote_icon);
             listener.vote(comment.commentID(), VoteType.UP, type);
@@ -109,8 +110,13 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
                 Toast.makeText(context, "You are not logged in.", Toast.LENGTH_SHORT).show();
                 return;
             }
-            holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
-            holder.downVoteCount.setText(String.valueOf(comment.downVotes() + 1));
+            if (comment.userVote() == VoteType.DOWN) {
+                holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
+                holder.downVoteCount.setText(String.valueOf(comment.downVotes() - 1));
+            } else {
+                holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
+                holder.downVoteCount.setText(String.valueOf(comment.downVotes() + 1));
+            }
             holder.upVoteButton.setImageResource(R.drawable.upvote_icon);
             holder.downVoteButton.setImageResource(R.drawable.downvote_icon_filled);
             listener.vote(comment.commentID(), VoteType.DOWN, type);
@@ -133,8 +139,8 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
      * position is read from the holder instead of the bound one, because rows can be reused
      * and moved before the click happens.</p>
      */
-    private void openReplies(Comment comment, VoteType voteType) {
-        listener.onOpenReplies(comment, voteType);
+    private void openReplies(Comment comment) {
+        listener.onOpenReplies(comment);
     }
 
     @Override
@@ -191,10 +197,8 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
          * Called when the answers of a comment should be shown.
          *
          * @param comment  the comment whose answers are opened
-         *
-         * @param voteType the vote associated with the comment
          */
-        void onOpenReplies(Comment comment, VoteType voteType);
+        void onOpenReplies(Comment comment);
         /**
          * For voting on a comment or answer.
          *

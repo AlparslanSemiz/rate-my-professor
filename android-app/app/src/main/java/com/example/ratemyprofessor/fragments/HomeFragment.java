@@ -41,7 +41,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
- * The screen the app starts on. Currently, its only action is opening the notifications.
+ * The screen the app starts on. Currently, its only action is opening the notifications
  */
 public class HomeFragment extends Fragment {
 

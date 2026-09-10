@@ -342,8 +342,11 @@ public class ProfessorFeatureInstrumentedTest {
 
         @Override
         public Call<ServerResponse> postComment(String token, PostCommentRequest request) { return null; }
+
         @Override
-        public Call<CommentsResponse> getComments(String lectureId) { return null; }
+        public Call<CommentsResponse> getComments(String token, String lectureId) {
+            return null;
+        }
         @Override
         public Call<RatingAverageResponse> getRatings(String lectureId) { return null; }
 
