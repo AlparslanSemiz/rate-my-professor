@@ -1246,9 +1246,10 @@ and three of them touch no database at all.
 ## Where the suite stops
 
 *Deliberately uncovered* below names the **classes** nobody tests and why. This section names
-seven **questions** nobody tests — four the suite was drawn around, one a sweep's own filter,
-one that is about where the tests run rather than what they cover, and one about where the
-application runs. That is the larger and less
+eight **questions** nobody tests — four the suite was drawn around, one a sweep's own filter,
+one that is about where the tests run rather than what they cover, one about where the
+application runs, and one about **what it runs against**, which is the only one of the eight
+that has since produced a live defect. That is the larger and less
 visible gap: absence is not a defect, but an *unwritten* absence is — it reads as an oversight to anyone auditing this, and
 the next person either re-derives the reasoning or, worse, assumes the question was answered.
 
@@ -1444,6 +1445,57 @@ exercises.
 
 Closing it would need a test that runs against the deployed host — a different thing from this
 suite, with different credentials and a different failure meaning — and that has not been built.
+
+### The tests do not verify the production schema
+
+**The suite never reads the schema it will be deployed onto.** Stated outright because every
+layer above unit looks as though it does, and because this is the one limit in this section that
+has already cost something: it is why
+[F-50](test-findings.md#f-50--the-gitlab-issue-success-path-answers-409-state-conflict-and-the-issue-stays-open)
+— a `409` on a working button — was green here and broken in production. The limit itself is
+[F-51](test-findings.md#f-51--nothing-verifies-the-production-schema-and-it-is-not-the-schema-in-the-repository).
+
+**Four facts, each defensible, that combine into it:**
+
+1. **`V1` was baselined into production, not applied to it.** The deployed database was baselined
+   on 2026-09-05 (`deployment.md:61`, `:358`). Flyway's baseline writes a row in
+   `flyway_schema_history` and **does not execute the migration**, so
+   `V1__existing_schema_baseline.sql` has never run against the deployment.
+2. **The production schema is therefore the residue of the pre-Flyway `ddl-auto=update` era** —
+   accumulated by Hibernate, recorded in no file.
+3. **`ddl-auto=validate` cannot see the difference.** It checks that tables and columns *exist*
+   with compatible types. It does **not** check column length, nullability, defaults, unique
+   indexes or check constraints. A production column narrower than the mapping, or still `NOT
+   NULL` from an older one, or carrying a leftover unique index, passes and the application starts
+   clean.
+4. **The schema the tests execute is a second, hand-maintained baseline.**
+   `spring.flyway.locations=classpath:db/migration/{vendor}` resolves to
+   `src/test/resources/db/migration/h2/V1__existing_schema_baseline.sql` under the test profile.
+   Two files holding one truth, kept in step by hand.
+
+**What each layer actually proves, so this is not read as broader than it is.** The integration
+layer runs on H2's translation. The PostgreSQL layer and E2E run on `V1` **executed** against a
+real PostgreSQL 16 — `PostgresTestDatabase:64-66` sets `baseline-on-migrate=false` and
+`ddl-auto=validate`, and `PostgreSqlMigrationSmokeTests` asserts the application starts against
+the result. That is a real check and it is worth what it is: **`V1` is self-consistent with the
+entities.** It is not a check that production matches `V1`, and no test in this repository can be.
+
+**The measurement that makes the gap concrete rather than theoretical.** The two baselines were
+diffed line by line: they differ in exactly one place — `audit_logs.changes` / `.metadata` are
+`jsonb` in the PostgreSQL file and `json` in the H2 twin, a deliberate translation. `bug_reports`
+is identical in both and carries no unique or check constraint on the issue columns. And
+`EndToEndJourneyTests:260-261` opens a GitLab issue over this exact path against real PostgreSQL
+built from `V1`, and passes. **Production refuses the same write.** So the constraint that fires
+there is in none of the artefacts this repository holds — which is the gap, stated as an
+observation rather than a worry.
+
+**Crossing this one is a decision.** What closes it is a comparison against the deployed database
+(`\d` on the affected tables, or a dump) followed by a `V2` that corrects whatever the comparison
+finds — `docs/TODO.md` item 42. Until then, **a green pipeline says this application is consistent
+with `V1`, and says nothing about the database it is deployed onto.** Note also that this
+interacts with *Migration reversibility* above: the forward-only decision is cheap while there is
+one baseline, and the first `V2` is the migration that has to be written against a schema nobody
+has read.
 
 ### Four layers do not run on a developer machine, and CI status cannot be read from here
 

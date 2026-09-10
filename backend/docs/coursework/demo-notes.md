@@ -75,16 +75,46 @@ being demonstrated, or rehearse more than 15 minutes before.
 If it does trip, it is a `429` with a `Retry-After`, not a broken login. Say so rather than
 reloading.
 
-## Expected, not a bug: the GitLab issue action is hidden
+## Do not press: "create issue" on a bug report
 
-With `GITLAB_BASE_URL` / `GITLAB_PROJECT_ID` / `GITLAB_TOKEN` unset, the integration is off:
-`GET /system/status` reports `gitlabEnabled: false` and the panel **hides** the "create issue"
-action on a bug report. `POST /reports/{id}/gitlab-issue` answers `503` if called anyway
-(`application.properties:75-81`).
+**The integration is configured on the deployment, so the button is visible, and pressing it
+shows an error.** Measured on 10 September against `ratemyprofessor.dev`: the issue **is opened
+in GitLab** and the panel then reports `409 State conflict`. That is
+[F-50](../test-findings.md#f-50--the-gitlab-issue-success-path-answers-409-state-conflict-and-the-issue-stays-open),
+unfixed at submission.
 
-That is the designed behaviour and the reason the flag is on `/system/status` at all — the
-alternative is a button that looks live and fails when pressed. If somebody asks where the
-issue button is, this is the answer, not an apology.
+**Pressing it twice is worse than pressing it once.** The failure leaves the report's
+`issueState` at `NONE` and its `issueUrl` null, so the panel keeps offering the button — and each
+click opens **another** GitLab issue and returns the same error. Do not retry it to see whether
+it was a fluke.
+
+**If it is pressed by accident**, the recovery is in the tracker, not the panel: close the issues
+it opened. Nothing in this application points at them.
+
+**If it is asked about**, the honest answer is the interesting one and it is short: the write to
+the tracker succeeds and the write to our own database is refused by a constraint that **is not
+in the schema this repository holds** — because the deployed database was baselined rather than
+migrated, so nothing in the test suite has ever run against it. That is
+[F-51](../test-findings.md#f-51--nothing-verifies-the-production-schema-and-it-is-not-the-schema-in-the-repository),
+and it is the larger of the two findings. The end-to-end test covers this exact path against a
+real PostgreSQL built from `V1` and passes.
+
+**The one-configuration-change option, if the button must be gone.** Clearing any one of
+`GITLAB_BASE_URL` / `GITLAB_PROJECT_ID` / `GITLAB_TOKEN` turns the integration off:
+`gitLabClient.isEnabled()` requires all three (`RestClientGitLabClient:89-91`),
+`GET /system/status` then reports `gitlabEnabled: false`, the panel **hides** the action, and
+`POST /reports/{id}/gitlab-issue` answers a clean `503` if called anyway
+(`application.properties:76-83`). **`GITLAB_TOKEN` is the one to clear** — all three have the
+same effect, and clearing the token leaves the base URL and project id in place, so restoring the
+integration afterwards is one variable. These are `@ConfigurationProperties`, read at startup, so
+**it needs a redeploy**: clear the CI/CD variable, then re-run the deploy job — `.gitlab-ci.yml:330-333`
+writes them into `.deploy.env` at deploy time. That contains the demo; it does not fix F-50.
+
+**Not pressing it is the recommendation.** The disabled state is also a designed state worth
+narrating — the flag is on `/system/status` precisely so a client can hide an action instead of
+discovering it fails when pressed — but that story is weaker than saying plainly that the button
+has a known defect with a number, a measurement and a fix that was not guessed at under a
+deadline.
 
 ## Works now: the panel sign-in
 
@@ -136,7 +166,8 @@ consumer contract layer gets told, this is the example.
 5. **The audit log**, and **revert the name edit from step 2**. This is the strongest thing to
    show: the trail is not just a list, it undoes a field. The window is
    `app.audit.revert-window`, `P7D` by default.
-6. **Bug reports.** The list, and the GitLab action being absent — with the explanation above.
+6. **Bug reports.** The list only. **Do not press "create issue"** — see the section above; it
+   opens the issue and then shows an error, and a second press opens a second issue.
 7. **`GET /system/status`** as the closing slide if one is wanted: uptime, table counts, the
    last write, and the two capability flags.
 

@@ -169,6 +169,18 @@ five characterization tests, and
 **F-46 is closed** — the half of it that was a missing record; the half that was underneath it is
 F-48.
 
+**Nor are F-50 to F-52**, opened on 10 September while measuring the deployment for the
+Abgabe demo and all three unfixed by decision. They are of one piece and are best read in
+order: [F-50](#f-50--the-gitlab-issue-success-path-answers-409-state-conflict-and-the-issue-stays-open)
+is a button that does its work and reports failure;
+[F-51](#f-51--nothing-verifies-the-production-schema-and-it-is-not-the-schema-in-the-repository)
+is why no layer of this suite could have caught it, and is the larger finding of the three;
+[F-52](#f-52--a-constraint-violation-and-a-business-rule-refusal-are-the-same-409-state-conflict-to-the-client)
+is the handler that made F-50 read as something it was not. **F-50 is the only entry in this
+document whose mechanism is established from the code while its immediate cause is not yet
+named** — the constraint that fires lives in the production schema, which by F-51 is not an
+artefact this repository holds.
+
 **Two entries are open: F-29, which no commit can close, and F-34, which is a product
 decision rather than a defect.** Everything else is fixed or closed by a recorded decision.
 Twelve were closed in one pass; P-5 came later from the
@@ -2320,10 +2332,282 @@ was the question; the missing check was in the same nine lines.
 
 ---
 
+### F-50 — the GitLab issue success path answers 409 `State conflict`, and the issue stays open
+
+**Not counted in the fifty above**, which closed with the Kontrollphase pass. **Measured on the
+deployment on 10 September, not reproduced here** — see *What is still unnamed* at the end of this
+entry, which is the honest boundary of this record.
+
+**What.** `POST /admin/reports/{id}/gitlab-issue` opens the issue in GitLab and then answers the
+caller `409 {"message":"State conflict","success":false}`. The work succeeds and the operator is
+told it failed. It happens on the **first** call, so it is not the idempotency guard.
+
+**The chain, in the order the code runs it.** Two beans, two transaction boundaries —
+`ModerationBugReportService.createIssue:273-292` orchestrating and
+`BugReportIssueTransactions.createOrReturnExisting:64-91` doing the work:
+
+| # | Step | Where |
+| --- | --- | --- |
+| 1 | `isEnabled()` check — unconfigured is a `503` here, before anything else | `ModerationBugReportService:274` |
+| 2 | `@Transactional` **opens** | `BugReportIssueTransactions:64` |
+| 3 | The row is locked, `SELECT … FOR UPDATE` via `findByIdForUpdate`; absent is a `404` | `:66-67` |
+| 4 | Already `CREATED` **and** carrying a URL → the existing issue is returned, GitLab is not called | `:69-71` |
+| 5 | **The HTTP POST to GitLab** — the one step that cannot be undone | `:73-74` |
+| 6 | `issueUrl`, `issueIid`, `issueState = CREATED` written to the row | `:76-79` |
+| 7 | The audit entry is `saveAndFlush`ed | `:81-89` |
+| 8 | `@Transactional` **commits** | — |
+
+So: **the status check comes before the GitLab call, and the write comes after it.** Step 4 is
+never reached on a first call, because the row is still `NONE` — which is why "even the first
+click" is the correct reading and not a symptom of a stale row.
+
+**The `409` is not thrown anywhere on this path.** `grep CONFLICT` over both files returns
+nothing. There is exactly one place in `src/main/java` that produces this body —
+`GlobalExceptionHandler:166-171`:
+
+```java
+@ExceptionHandler(DataIntegrityViolationException.class)
+ResponseEntity<BasicResponse> handleConflict(DataIntegrityViolationException exception) {
+    LOGGER.error("State conflict", exception);
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(new BasicResponse("State conflict", false));
+}
+```
+
+The condition it keys on is **an exception type, not a business rule**: a
+`DataIntegrityViolationException`. Step 6 or step 7 is violating a database constraint. The
+message the operator reads is the backend's own literal string, not a label the panel invented.
+
+**The GitLab call and the write share one transaction, and that is the whole cost.** Step 5 sits
+inside the `@Transactional` opened at step 2. The rollback takes the database back and **cannot
+take the HTTP call back**, so the issue exists in the tracker with nothing in this application
+pointing at it.
+
+**And the failure marker never runs.** `DataIntegrityViolationException` is not an `ApiException`,
+and `ModerationBugReportService:279` catches only `ApiException`:
+
+```java
+} catch (ApiException exception) {
+    if (exception.getStatus() != HttpStatus.NOT_FOUND) {
+        issueTransactions.markFailed(reportId);
+    }
+    throw exception;
+}
+```
+
+So `markFailed` is not called, the rollback leaves `issue_state = NONE` and `issue_url = null`,
+and the panel — which decides on `issueUrl` — **keeps offering the button**. Every further click
+re-runs step 5. **Each click opens another GitLab issue and answers 409 again.** Pressing it twice
+makes it worse, which is the opposite of what the operator will assume.
+
+**The class's own Javadoc was written to close exactly this trap, and closed half of it.**
+`BugReportIssueTransactions:22-27` says it outright — *"Marking a report as `FAILED` cannot happen
+inside the transaction that failed: the exception that makes it a failure rolls that transaction
+back, and the marker with it, leaving the report looking as though nothing had ever been
+attempted."* That reasoning is correct and the two-transaction split it justifies works. It is
+routed through a `catch` on `ApiException` alone, so it covers the failure the adapter raises
+deliberately (`502`, `503` — `RestClientGitLabClient:95-126`) and leaves a hole under every
+`RuntimeException` the persistence layer can raise after GitLab has already been called. **The
+design is right and its entry condition is too narrow**, which is why this is worth writing down
+rather than filing as a missing `catch`: the comment will read as though the case were handled.
+
+**Refuted: the report's status has nothing to do with it.** This was the first hypothesis and it
+is wrong in both directions, recorded because a negative result that is not written down gets
+re-derived:
+
+- **Issue creation does not require any particular status.** `createOrReturnExisting` neither
+  reads nor branches on `report.getStatus()`; `ReportStatus` is not even imported by
+  `BugReportIssueTransactions`.
+- **Issue creation does not move the report to any status.** Step 6 writes exactly three fields
+  — `issueUrl`, `issueIid`, `issueState` — and nothing else.
+- **There is no hidden transition.** `BugReport` carries no `@PreUpdate`, no `@PrePersist` and no
+  `@EntityListeners`. Status transitions live only in `ModerationBugReportService.updateBugReport:113-127`,
+  behind a different endpoint.
+
+**Pinned by** — nothing yet, and that is deliberate rather than an omission: a characterization
+test needs the constraint that fires, and naming it needs the production schema (F-51). Written
+here first so the measurement is not lost. The test, when it exists, goes at the integration layer
+and asserts the two halves separately — that a persistence failure after step 5 leaves the row
+`FAILED` rather than `NONE`, and that the response is not a `409`.
+
+**Why the suite is green over this.** Two reasons, and the second is the larger finding:
+
+1. **The tracker is a fake, and its payload is invented.** `TestGitLabConfig:44` always returns
+   `https://gitlab.example/issues/<n>` and `iid = <n>` from a call counter. No test has ever put a
+   real GitLab response into these columns.
+2. **The schema the tests run against is not the schema in production.** That is
+   [F-51](#f-51--nothing-verifies-the-production-schema-and-it-is-not-the-schema-in-the-repository),
+   and this finding is its visible end. The sharpest evidence is that
+   `EndToEndJourneyTests:260-261` exercises **this exact success path against a real PostgreSQL 16
+   with `V1__existing_schema_baseline.sql` actually executed**, asserts `200`, and passes. So the
+   constraint that fires in production **is not in `V1`** — the production schema and `V1` are not
+   the same schema.
+
+**What is still unnamed, and why.** Which constraint. The mechanism is established from the code;
+the constraint's identity is not derivable from this repository, because the production DDL is not
+in it (F-51). Two measurements name it, both of which need someone who can reach the deployment:
+
+1. **The production log line.** `GlobalExceptionHandler:168` logs the exception with its stack
+   trace, and the underlying `PSQLException` message carries the constraint name. One line is
+   enough.
+2. **`\d bug_reports` and `\d audit_logs`** from the production database, to diff against `V1`.
+
+**Severity: high.** A button the panel shows and an examiner will press, on a path that does its
+work and reports failure, and which produces a duplicate issue on every retry. **It is a code
+defect, not a configuration one** — the one-line `GITLAB_TOKEN` change that hides the button
+(`docs/coursework/demo-notes.md`) contains the demo and fixes nothing here.
+
+**Deliberately not fixed**, by the rule that a new defect gets a number rather than a patch, and
+because the fix should not be guessed while the constraint is unnamed. `docs/TODO.md` item 41.
+
+---
+
+### F-51 — nothing verifies the production schema, and it is not the schema in the repository
+
+**Not counted in the fifty above.** **The larger of the two findings from this pass**, and
+[F-50](#f-50--the-gitlab-issue-success-path-answers-409-state-conflict-and-the-issue-stays-open) is
+its visible end: a write that every layer of the suite accepts, refused by the deployed database.
+
+**What.** There is no artefact in this repository that describes the production schema, and no
+test that reads it. Four separate facts combine into that, and each is individually reasonable:
+
+1. **`V1` was baselined into production, not applied to it.** `deployment.md:61` and `:358`:
+   *"The deployed database was baselined on 2026-09-05."* Flyway's baseline **records** a version
+   in `flyway_schema_history` and **does not execute it**. `V1__existing_schema_baseline.sql` has
+   therefore never run against the deployment.
+2. **So the production schema is whatever the pre-Flyway `ddl-auto=update` era left behind.** It
+   was accumulated by Hibernate over the life of the project, column by column, with no file
+   recording the result.
+3. **`ddl-auto=validate` cannot detect the difference.** `application.properties:24`. Hibernate's
+   `validate` checks that tables and columns **exist** with compatible types. It does **not**
+   check column length, nullability, defaults, unique indexes or check constraints. A production
+   column that is narrower, still `NOT NULL` from an older mapping, or carrying a leftover unique
+   index passes validation and the application starts clean.
+4. **The test schema is a second, hand-maintained baseline — and it is the one that actually
+   runs.** `spring.flyway.locations=classpath:db/migration/{vendor}` resolves to
+   `src/test/resources/db/migration/h2/V1__existing_schema_baseline.sql` under the test profile,
+   which H2 executes for real. Two files holding one truth, kept in step by hand — the same
+   failure mode as a hand-maintained route list, which goes stale in silence and then passes by
+   looking at less than it thinks.
+
+**What this costs.** The integration layer runs against H2's translation of a schema production
+does not have; the PostgreSQL and E2E layers run against `V1` executed on a real PostgreSQL 16 —
+a genuinely stronger check, and still not production's schema. **Every layer above unit therefore
+proves its assertions against a schema that exists nowhere but CI.** A green pipeline says the
+application is consistent with `V1`; it says nothing about the database it will be deployed onto.
+
+**Measured, not inferred, and the diff is the interesting part.** The two baselines were compared
+line by line. They differ in **exactly one place** — `audit_logs.changes` and `.metadata` are
+`jsonb` in the PostgreSQL file and `json` in the H2 twin, which is a deliberate translation, not
+drift. `bug_reports` is byte-identical between them, and carries no unique or check constraint on
+`issue_url`, `issue_iid` or `issue_state`. **That is precisely why F-50 matters here rather than
+being a puzzle about a URL length:** the two files agree, the entities agree with both, real
+PostgreSQL accepts the write in `EndToEndJourneyTests`, and production refuses it. The refusing
+constraint is in none of the artefacts this repository holds.
+
+**What is verified, so the scope of this finding is not overstated.**
+`PostgreSqlMigrationSmokeTests` runs the production migration directory against a real PostgreSQL
+with `baseline-on-migrate=false` and `ddl-auto=validate` (`PostgresTestDatabase:64-66`) and
+asserts `/health` is green. That is real: it proves **`V1` is self-consistent with the entities**
+and startable. It does not, and cannot, compare `V1` against the deployment. The gap is not
+`V1`'s correctness — it is that nothing connects `V1` to production.
+
+**A stale comment recording the confusion.** `BugReport.java:88-93` still explains its
+`@ColumnDefault` with *"Production runs `ddl-auto=update` against a populated `bug_reports`"*.
+Production runs `validate` (`application.properties:24`). The comment's **reasoning is a correct
+account of the era the column was added in** and its conclusion — the default is needed — still
+holds; its tense is wrong, and it is the only place in `src/main/java` that describes the
+production schema management at all, which is how it went unnoticed. Recorded rather than edited,
+so the fix lands with whoever reconciles the schema.
+
+**Pinned by** — nothing, and it cannot be pinned from here: the assertion this finding wants is
+*"the deployed schema matches `V1`"*, and no test in this repository can reach the deployed
+database. What closes it is a comparison run **against production**, then a `V2` that corrects
+whatever the comparison finds. `docs/TODO.md` item 42, and `docs/test-plan.md` now states the
+limit outright under *Where the suite stops*.
+
+**Severity: high, and it is a different kind of high from F-50.** F-50 is one broken button.
+This is the reason the suite could not have caught it, and the reason it cannot promise it has
+caught the others: any write anywhere in the application may be refused by a constraint no
+artefact here describes. **Nothing else is known to be affected today** — that is a statement
+about what has been measured, not a clean bill of health.
+
+---
+
+### F-52 — a constraint violation and a business-rule refusal are the same `409 State conflict` to the client
+
+**Not counted in the fifty above.** **The third sighting of this shape**, which is why it is
+opened as a number rather than left as a note under F-50.
+
+**What.** `GlobalExceptionHandler:166-171` maps every `DataIntegrityViolationException` to
+`409 {"message":"State conflict","success":false}`. There is no `reason` field and no
+distinguishing detail. A caller cannot tell apart:
+
+- a **business-rule refusal** it can act on — "this username is taken", which the client should
+  show against the field; and
+- a **database accident it caused nothing** — F-50's failing write, where the correct answer is
+  that the server broke and the operator should not retry.
+
+The client is handed the same three words for both, and in F-50's case the three words are
+actively misleading: nothing about the caller's request was in conflict.
+
+**Why this is the third sighting and not the first.** The shape is already in this document and
+already in the code:
+
+1. **`test-findings.md:295`** records it: a malformed request reaching a constraint and coming
+   back as *"an unexplained **State conflict**"* — a `409` where the caller expected a `400`.
+2. **`StudentProfileService:227`** carries a pre-check placed for this exact reason, with the
+   reason in the comment — *"constraint fire answers with an unexplained 'State conflict'
+   instead."*
+3. **F-50**, here, where the violation is not the caller's fault at all.
+
+Each of the first two was handled **at the call site**, by adding a guard ahead of the constraint.
+That works and does not scale: it needs somebody to anticipate every constraint, which is the
+same bet F-51 shows nobody can currently make, because the constraints in production are not
+written down. **The third sighting is what turns a pattern of local fixes into a question about
+the handler**, and the reason to record it now is that the next reader will otherwise add a fourth
+guard.
+
+**What it is not.** It is **not** an argument for `ProblemDetail`. The error contract is settled —
+failure is an exception, the body is `{message, success}`, and `CLAUDE.md` fixes both. This is
+about that body carrying a message worth reading, and about whether a violation the caller did
+not cause should be a `4xx` at all.
+
+**Pinned by** — the `409` itself is pinned indirectly wherever a constraint is reachable, but
+**nothing asserts the distinction this finding is about**, because there is nothing to assert yet.
+
+**Severity: medium.** It cost real diagnosis time on F-50 — the status hypothesis above was
+followed first precisely because "State conflict" reads like a state-machine refusal — and it will
+cost it again. `docs/TODO.md` item 43.
+
+---
+
 ## Negative results
 
 A sweep that finds nothing is only worth something if what it covered is written down.
 Otherwise the next person repeats it, or worse, assumes it was never done.
+
+### The report status is not involved in F-50, in either direction
+
+The first hypothesis for [F-50](#f-50--the-gitlab-issue-success-path-answers-409-state-conflict-and-the-issue-stays-open)
+was a status guard: either issue creation is only permitted in some status and the report under
+test was in another, or issue creation moves the report to a status whose transition is refused.
+**Both are wrong**, and it is written here because "State conflict" invites this reading and the
+next person will arrive at it too.
+
+**What was looked at, and how far.** `BugReportIssueTransactions.createOrReturnExisting:64-91`
+line by line: it neither reads nor branches on `report.getStatus()`, and `ReportStatus` is not
+imported by the file at all. Its only writes are the three issue fields at `:76-79`. Then the
+entity, for a transition the service does not spell out: `BugReport` carries no `@PreUpdate`, no
+`@PrePersist` and no `@EntityListeners`, so there is no lifecycle hook to hide one in. Then
+`grep` for the remaining possibility that some other component moves the status on this path —
+transitions exist only in `ModerationBugReportService.updateBugReport:113-127`, behind
+`PATCH`, and `deleteBugReport` reads the status only to record it.
+
+**What this leaves.** Ruling the status machine out is what pointed at the exception *type* in
+`GlobalExceptionHandler:166-171` instead, which is where F-50's actual mechanism was found. The
+negative result did the work; recording only the positive half would make the diagnosis look
+like a guess that happened to land.
 
 ### The consumer contract audit — what came back clean, and how far each check looked
 
