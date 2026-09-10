@@ -11,13 +11,20 @@ Testcontainers question — turned out not to be a blocker at all; see
 
 ### Where it stands
 
-**1019 tests, 0 failures**, 31 skipped locally (the `@Disabled` `DemoApplicationTests`, the
+**1048 tests, 0 failures**, 31 skipped locally (the `@Disabled` `DemoApplicationTests`, the
 twenty-four PostgreSQL integration tests and the six end-to-end journeys, all of which run in
 CI).
-Bundle **96.70% LINE** (3371/3486), **93.16% BRANCH** (1022/1097) — read from
-`target/site/jacoco/jacoco.csv` after `./mvnw clean verify` on **9 September**, exit code 0.
+Bundle **96.68% LINE** (3407/3524), **92.95% BRANCH** (1042/1121) — read from
+`target/site/jacoco/jacoco.csv` after `./mvnw clean verify` on **10 September**, Maven exit
+code **0**, captured as `$?` immediately rather than from a following command.
 Line coverage is gated in two tiers — **90% mandatory, 95% target** — and BRANCH has a single
 floor, ratcheted to 0.88 now that batch 7 has cleared it.
+
+**Both percentages moved slightly down from the 9 September figures** (96.70 / 93.16) while the
+suite grew by 29 tests, and that is arithmetic rather than a regression: the denominators grew
+by 38 lines and 24 branches — `AccountReactivator`, two audit writes and two enum constants —
+and the new branches are covered less densely than the bundle average. Both gates pass with
+room, and the CI line target of 95 is cleared by 1.68 points.
 
 > **Do not quote these two numbers from here.** They are a snapshot; the artefact is
 > `target/site/jacoco/jacoco.csv` after `./mvnw clean verify`, which is what CI reads and what
@@ -49,9 +56,18 @@ Line coverage has been above its target since batch 5, so `coverage:line-target`
 rather than yellow; batch 6 raised the target itself from 94 to 95 rather than banking the
 slack.
 
-**[test-findings.md](test-findings.md) has two open entries, and neither is a defect waiting
-on a commit:** F-29 needs credentials rotated at their providers, and F-34 needs a product
-decision about a half-built feature.
+**[test-findings.md](test-findings.md) has two open entries in the register of fifty, and
+neither is a defect waiting on a commit:** F-29 needs credentials rotated at their providers,
+and F-34 needs a product decision about a half-built feature.
+
+**Four more are open outside that register**, numbered F-42 to F-48 and deliberately not counted
+in it: F-42 (the panel does not read the `/all` routes — its work, after submission), F-46's
+remaining half and [F-48](test-findings.md#f-48--an-unauthenticated-caller-can-undo-somebodys-account-deletion)
+(an unauthenticated caller can revive a deleted account — four options costed, decision after
+submission), and [F-47](test-findings.md#f-47--active--false-is-honoured-by-exactly-two-queries-so-a-deactivated-row-is-still-read-still-rated-and-still-shown)
+(a product question about what `active = false` means). **None of the four is waiting on a
+commit either**; three are waiting on a decision and one is in another repository. All of them
+are pinned by tests here except the two that cannot be.
 
 The batch history behind that: the twelve that were still open
 after batch 6 were closed in one pass — eleven fixed, one (P-3) closed by a recorded decision.
@@ -1239,6 +1255,36 @@ the next person either re-derives the reasoning or, worse, assumes the question 
 Each of these is a boundary the suite was drawn to, not a hole in it. Written so that crossing
 one is a decision.
 
+### `active = false` is a filter on two queries, and nothing else
+
+The suite pins what deactivation does; it does not pin what most people assume it does, and the
+difference is a scope limit worth stating outright rather than leaving to be inferred from five
+test names.
+
+**`UserStatus`-style gating does not exist for this flag.** `active` is consulted by exactly two
+queries — `LectureRepository.findByActiveTrueOrderByNameAsc` and
+`ProfessorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc` — and by nothing else in
+`src/main/java`. So a deactivated row is still served by id to an anonymous caller, still accepts
+new ratings and comments, and a deactivated professor is still nested in every active lecture's
+staff list and inside its generated `title`. That is
+[F-47](test-findings.md#f-47--active--false-is-honoured-by-exactly-two-queries-so-a-deactivated-row-is-still-read-still-rated-and-still-shown),
+pinned by five characterization tests and **deliberately unfixed**: whether `active = false`
+means *hidden from the catalogue* or *retired* is a product question, `docs/TODO.md` item 38.
+
+**Nothing in production is misbehaving because of it, and that is measured rather than assumed.**
+Curled on 10 September, `GET /data/lectures` serves 92 lectures and `GET /data/professor` 132
+professors, and **not one row carries `active: false`** — the nested professors included. The
+flag has never been set on the deployed data.
+
+**That single measurement explains two findings at once**, which is why it belongs here and not
+only in the findings document. It is why F-47 has cost nobody anything: there is no deactivated
+row for any of the three consequences to apply to. And it is why
+[F-42](test-findings.md#f-42--deactivating-a-catalogue-row-hides-it-from-the-only-list-the-panel-reads)
+went unnoticed for the life of the product: the panel's catalogue form can deactivate a row and
+has no screen that can find it again, but nobody has used the switch, so the trap has never been
+sprung. **Both are armed rather than burning**, and both become live the first time an operator
+uses that switch in anger — which is a limit of what "green" means here, not a reason to relax.
+
 ### Performance and load — not measured at all
 
 There is **no** load test, no latency budget, no throughput figure and no query-count
@@ -1353,9 +1399,16 @@ so the gap is one-sided: **undocumented legacy routes, specifically.**
 
 This is a scope limit and not a defect to fix here. The filter is what makes the assertion mean
 "the admin API is documented" rather than "every route in the application is in the admin API
-document", which is not true and is not meant to be. It stops mattering when
-`docs/TODO.md` item 23 lands and the legacy surface is deleted; until then, the thing to know is
-that this sweep is not what would catch a new undocumented `/data` route.
+document", which is not true and is not meant to be.
+
+**It used to say here that the gap stops mattering when `docs/TODO.md` item 23 lands and the
+legacy surface is deleted. That is no longer true and the sentence was wrong to leave standing.**
+On 10 September the routing decision behind [F-43](test-findings.md) and F-44 settled that
+`/admin/` on the deployed host belongs to the panel's own container permanently, so **the
+unprefixed legacy surface is the production contract and is not being deleted**
+([adminweb-tasks.md](adminweb-tasks.md) withdraws both migration tasks). The gap is therefore
+**permanent, not transitional**: this sweep is not what would catch a new undocumented `/data`
+route, and nothing is scheduled that would make it so.
 
 Recorded against the same filter in
 [test-findings.md](test-findings.md#p-8--admin-apimd-drifted-five-times-and-nothing-noticed).
