@@ -13,35 +13,38 @@ import androidx.room.Room;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
-import com.example.ratemyprofessor.Adapters.ProfessorAdapter;
-import com.example.ratemyprofessor.Adapters.SearchPagerAdapter;
-import com.example.ratemyprofessor.Adapters.SearchService;
-import com.example.ratemyprofessor.DomainModel.Lecture;
-import com.example.ratemyprofessor.DomainModel.LectureModel;
-import com.example.ratemyprofessor.DomainModel.Professor;
-import com.example.ratemyprofessor.DomainModel.SemesterSeason;
-import com.example.ratemyprofessor.Fragments.SelectionFragment;
-import com.example.ratemyprofessor.ServerCommunication.APIService;
-import com.example.ratemyprofessor.ServerCommunication.Requests.BugReportRequest;
-import com.example.ratemyprofessor.ServerCommunication.Requests.CommentReportRequest;
-import com.example.ratemyprofessor.ServerCommunication.Requests.RatingRequest;
-import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
-import com.example.ratemyprofessor.ServerCommunication.Database;
-import com.example.ratemyprofessor.ServerCommunication.Requests.LoginRequest;
-import com.example.ratemyprofessor.ServerCommunication.Requests.PostCommentRequest;
-import com.example.ratemyprofessor.ServerCommunication.Responses.LectureDetailResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationsResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorDetailResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.RatingAverageResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoriesResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ServerResponse;
-import com.example.ratemyprofessor.ServerCommunication.Requests.SubmitAnswerRequest;
-import com.example.ratemyprofessor.ServerCommunication.Responses.StudentProfileResponse;
-import com.example.ratemyprofessor.ServerCommunication.Requests.VoteRequest;
-import com.example.ratemyprofessor.ServerCommunication.Responses.UserRatingResponse;
+import com.example.ratemyprofessor.adapters.ProfessorAdapter;
+import com.example.ratemyprofessor.adapters.SearchPagerAdapter;
+import com.example.ratemyprofessor.adapters.SearchService;
+import com.example.ratemyprofessor.domain.Lecture;
+import com.example.ratemyprofessor.domain.LectureModel;
+import com.example.ratemyprofessor.domain.Professor;
+import com.example.ratemyprofessor.domain.Rater;
+import com.example.ratemyprofessor.domain.Rating;
+import com.example.ratemyprofessor.domain.RatingCategory;
+import com.example.ratemyprofessor.domain.SemesterSeason;
+import com.example.ratemyprofessor.fragments.SelectionFragment;
+import com.example.ratemyprofessor.servercommunication.APIService;
+import com.example.ratemyprofessor.servercommunication.requests.BugReportRequest;
+import com.example.ratemyprofessor.servercommunication.requests.CommentReportRequest;
+import com.example.ratemyprofessor.servercommunication.requests.RatingRequest;
+import com.example.ratemyprofessor.servercommunication.responses.BasicResponse;
+import com.example.ratemyprofessor.servercommunication.responses.CommentsResponse;
+import com.example.ratemyprofessor.servercommunication.Database;
+import com.example.ratemyprofessor.servercommunication.requests.LoginRequest;
+import com.example.ratemyprofessor.servercommunication.requests.PostCommentRequest;
+import com.example.ratemyprofessor.servercommunication.responses.LectureDetailResponse;
+import com.example.ratemyprofessor.servercommunication.responses.LecturesResponse;
+import com.example.ratemyprofessor.servercommunication.responses.NotificationsResponse;
+import com.example.ratemyprofessor.servercommunication.responses.ProfessorDetailResponse;
+import com.example.ratemyprofessor.servercommunication.responses.ProfessorsResponse;
+import com.example.ratemyprofessor.servercommunication.responses.RatingAverageResponse;
+import com.example.ratemyprofessor.servercommunication.responses.RatingCategoriesResponse;
+import com.example.ratemyprofessor.servercommunication.responses.ServerResponse;
+import com.example.ratemyprofessor.servercommunication.requests.SubmitAnswerRequest;
+import com.example.ratemyprofessor.servercommunication.responses.StudentProfileResponse;
+import com.example.ratemyprofessor.servercommunication.requests.VoteRequest;
+import com.example.ratemyprofessor.servercommunication.responses.UserRatingResponse;
 
 import org.junit.After;
 import org.junit.Before;
@@ -107,26 +110,62 @@ public class ProfessorFeatureInstrumentedTest {
 
     @Test
     public void searchPagerAdapterCreatesProfessorPage() {
-        SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment(), () -> {});
+        // We use ActivityScenario to get a valid FragmentManager/Context
+        try (androidx.test.core.app.ActivityScenario<com.example.ratemyprofessor.activities.MainActivity> scenario =
+                     androidx.test.core.app.ActivityScenario.launch(com.example.ratemyprofessor.activities.MainActivity.class)) {
+            scenario.onActivity(activity -> {
+                Fragment host = activity.getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                SearchPagerAdapter adapter = new SearchPagerAdapter(host, () -> {});
 
-        Fragment fragment = adapter.createFragment(0);
+                Fragment createdFragment = adapter.createFragment(0);
 
-        assertEquals(2, adapter.getItemCount());
-        assertTrue(fragment instanceof SelectionFragment);
-        assertEquals("PROFESSORS", fragment.requireArguments().getString("selection_type"));
+                assertEquals(2, adapter.getItemCount());
+                assertTrue(createdFragment instanceof SelectionFragment);
+                assertEquals("PROFESSORS", createdFragment.requireArguments().getString("selection_type"));
+            });
+        }
     }
 
     @Test
-    public void searchServiceReturnsProfessorsMatchingFirstNameOrderedByFirstName() {
+    public void searchServiceReturnsProfessorsMatchingFirstNameOrderedByLastName() {
         searchService.insertProfessor(new Professor("prof-2", "Grace", "Hopper", 4.8f, 20));
         searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", 4.5f, 10));
         searchService.insertProfessor(new Professor("prof-3", "Alan", "Turing", 4.9f, 30));
 
+        // Query "A" matches Ada, Alan, and GrAce. (3 items)
         List<Professor> results = searchService.searchProfessors("A");
 
-        assertEquals(2, results.size());
-        assertEquals("Ada", results.get(0).firstName);
-        assertEquals("Alan", results.get(1).firstName);
+        assertEquals(3, results.size());
+        // Ordered by last name: Hopper (Grace), Lovelace (Ada), Turing (Alan)
+        assertEquals("Grace", results.get(0).firstName);
+        assertEquals("Ada", results.get(1).firstName);
+        assertEquals("Alan", results.get(2).firstName);
+    }
+
+    @Test
+    public void replaceLectureRatingsReplacesOnlyTheRequestedCache() {
+        searchService.upsertRating(new Rating(
+                "lecture-1", RatingCategory.ROOM, 2.0, Rater.AVERAGE
+        ));
+        searchService.upsertRating(new Rating(
+                "lecture-1", RatingCategory.ROOM, 4.0, Rater.USER
+        ));
+
+        searchService.replaceLectureRatings(
+                "lecture-1",
+                Rater.AVERAGE,
+                Collections.singletonList(new Rating(
+                        "lecture-1", RatingCategory.ORGANIZATION, 4.5, Rater.AVERAGE
+                ))
+        );
+
+        List<Rating> averages = searchService.getLectureRatings("lecture-1", Rater.AVERAGE);
+        List<Rating> userRatings = searchService.getLectureRatings("lecture-1", Rater.USER);
+        assertEquals(1, averages.size());
+        assertEquals(RatingCategory.ORGANIZATION, averages.get(0).category);
+        assertEquals(4.5, averages.get(0).score, 0.001);
+        assertEquals(1, userRatings.size());
+        assertEquals(4.0, userRatings.get(0).score, 0.001);
     }
 
     @Test
@@ -143,8 +182,9 @@ public class ProfessorFeatureInstrumentedTest {
         database.updateDB(apiService);
 
         List<Professor> results = waitForProfessorCount(2);
-        assertEquals("Ada", results.get(0).firstName);
-        assertEquals("Grace", results.get(1).firstName);
+        // Ordered by last name: Hopper (Grace), Lovelace (Ada)
+        assertEquals("Grace", results.get(0).firstName);
+        assertEquals("Ada", results.get(1).firstName);
     }
 
     @Test
@@ -153,14 +193,15 @@ public class ProfessorFeatureInstrumentedTest {
         APIService apiService = new FakeAPIService(
                 Collections.emptyList(),
                 Arrays.asList(
-                        new LectureModel("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SS, true, null, 0, 0, 0),
-                        new LectureModel("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WS, true, null, 0, 0, 0)
+                        new LectureModel("lecture-2", "Softwaretechnik", "240002", 2024, SemesterSeason.SS, true, Collections.emptyList(), 0, 0, 0),
+                        new LectureModel("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WS, true, Collections.emptyList(), 0, 0, 0)
                 )
         );
 
         database.updateDB(apiService);
 
         List<Lecture> results = waitForLectureCount(2);
+        // Ordered by name: Algorithms, Softwaretechnik
         assertEquals("Algorithms", results.get(0).name);
         assertEquals("Softwaretechnik", results.get(1).name);
     }
@@ -328,6 +369,11 @@ public class ProfessorFeatureInstrumentedTest {
 
         @Override
         public Call<RatingCategoriesResponse> getCategories(String lectureId) {
+            return null;
+        }
+
+        @Override
+        public Call<RatingAverageResponse> getOwnRatings(String token, String lectureId) {
             return null;
         }
 

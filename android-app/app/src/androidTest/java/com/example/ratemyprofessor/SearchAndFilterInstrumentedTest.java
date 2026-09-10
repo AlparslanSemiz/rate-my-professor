@@ -13,14 +13,14 @@ import androidx.room.Room;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
-import com.example.ratemyprofessor.Adapters.LectureAdapter;
-import com.example.ratemyprofessor.Adapters.SearchPagerAdapter;
-import com.example.ratemyprofessor.Adapters.SearchService;
-import com.example.ratemyprofessor.DomainModel.Lecture;
-import com.example.ratemyprofessor.DomainModel.Professor;
-import com.example.ratemyprofessor.DomainModel.SemesterSeason;
-import com.example.ratemyprofessor.Fragments.SelectionFragment;
-import com.example.ratemyprofessor.ServerCommunication.Database;
+import com.example.ratemyprofessor.adapters.LectureAdapter;
+import com.example.ratemyprofessor.adapters.SearchPagerAdapter;
+import com.example.ratemyprofessor.adapters.SearchService;
+import com.example.ratemyprofessor.domain.Lecture;
+import com.example.ratemyprofessor.domain.Professor;
+import com.example.ratemyprofessor.domain.SemesterSeason;
+import com.example.ratemyprofessor.fragments.SelectionFragment;
+import com.example.ratemyprofessor.servercommunication.Database;
 
 import org.junit.After;
 import org.junit.Before;
@@ -63,7 +63,7 @@ public class SearchAndFilterInstrumentedTest {
     }
 
     @Test
-    public void searchServiceReturnsAllProfessorsOrderedByFirstNameForBlankQuery() {
+    public void searchServiceReturnsAllProfessorsOrderedByLastNameForBlankQuery() {
         searchService.insertProfessor(new Professor("prof-3", "Grace", "Hopper", 4.8f, 20));
         searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", 4.5f, 10));
         searchService.insertProfessor(new Professor("prof-2", "Alan", "Turing", 4.9f, 30));
@@ -71,9 +71,10 @@ public class SearchAndFilterInstrumentedTest {
         List<Professor> results = searchService.searchProfessors("");
 
         assertEquals(3, results.size());
-        assertEquals("Ada", results.get(0).firstName);
-        assertEquals("Alan", results.get(1).firstName);
-        assertEquals("Grace", results.get(2).firstName);
+        // Ordered by last name: Hopper (Grace), Lovelace (Ada), Turing (Alan)
+        assertEquals("Grace", results.get(0).firstName);
+        assertEquals("Ada", results.get(1).firstName);
+        assertEquals("Alan", results.get(2).firstName);
     }
 
     @Test
@@ -92,11 +93,13 @@ public class SearchAndFilterInstrumentedTest {
         searchService.insertLecture(new Lecture("lecture-1", "Algorithms", "240001", 2023, SemesterSeason.WS, true, 0, 0, 0));
         searchService.insertLecture(new Lecture("lecture-3", "Analysis", "240003", 2024, SemesterSeason.SS, true, 0, 0, 0));
 
+        // Query "A" matches Algorithms, Analysis, AND Softwaretechnik (contains 'a')
         List<Lecture> results = searchService.searchLectures("A");
 
-        assertEquals(2, results.size());
+        assertEquals(3, results.size());
         assertEquals("Algorithms", results.get(0).name);
         assertEquals("Analysis", results.get(1).name);
+        assertEquals("Softwaretechnik", results.get(2).name);
     }
 
     @Test
@@ -161,22 +164,34 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void searchPagerAdapterCreatesLecturePage() {
-        SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment(), () -> {});
+        try (androidx.test.core.app.ActivityScenario<com.example.ratemyprofessor.activities.MainActivity> scenario =
+                     androidx.test.core.app.ActivityScenario.launch(com.example.ratemyprofessor.activities.MainActivity.class)) {
+            scenario.onActivity(activity -> {
+                Fragment host = activity.getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                SearchPagerAdapter adapter = new SearchPagerAdapter(host, () -> {});
 
-        Fragment fragment = adapter.createFragment(1);
+                Fragment fragment = adapter.createFragment(1);
 
-        assertEquals(2, adapter.getItemCount());
-        assertTrue(fragment instanceof SelectionFragment);
-        assertEquals("LECTURES", fragment.requireArguments().getString("selection_type"));
+                assertEquals(2, adapter.getItemCount());
+                assertTrue(fragment instanceof SelectionFragment);
+                assertEquals("LECTURES", fragment.requireArguments().getString("selection_type"));
+            });
+        }
     }
 
     @Test
     public void searchPagerAdapterTreatsUnknownPositionAsLecturePage() {
-        SearchPagerAdapter adapter = new SearchPagerAdapter(new Fragment(), () -> {});
+        try (androidx.test.core.app.ActivityScenario<com.example.ratemyprofessor.activities.MainActivity> scenario =
+                     androidx.test.core.app.ActivityScenario.launch(com.example.ratemyprofessor.activities.MainActivity.class)) {
+            scenario.onActivity(activity -> {
+                Fragment host = activity.getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                SearchPagerAdapter adapter = new SearchPagerAdapter(host, () -> {});
 
-        Fragment fragment = adapter.createFragment(99);
+                Fragment fragment = adapter.createFragment(99);
 
-        assertTrue(fragment instanceof SelectionFragment);
-        assertEquals("LECTURES", fragment.requireArguments().getString("selection_type"));
+                assertTrue(fragment instanceof SelectionFragment);
+                assertEquals("LECTURES", fragment.requireArguments().getString("selection_type"));
+            });
+        }
     }
 }
