@@ -2,6 +2,54 @@
 
 ## [Unreleased]
 
+### Four measured, none applied: symmetry, the log bars, the ratings columns (`F-087` to `F-089`)
+
+Items 4 to 7 of seven. **Measurement only, on the brief: the deviations and one proposed
+standard each, and the choice is the maintainer's.** Numbers in
+[docs/coursework/layout-audit.md](docs/coursework/layout-audit.md) §11.5 to §11.8, deferral
+entries with costs in [docs/TODO.md](docs/TODO.md).
+
+**Opened**, most serious first:
+
+- `F-089` **Major** - the Ratings table's Scores column is a dash and Rated by is "Unknown" on
+  **every row** against the deployed backend, and looks convincing here. Verified by handing
+  `toRating` the payload the backend documents rather than by reading it: `student` and
+  `topics: [{category, value}]` go in, `{authorName: 'Unknown', scores: {}}` comes out. The
+  mapper, its unit test, both fixtures and the MSW handler all use the panel's own invented
+  names, so the stack is self-consistent and wrong together.
+- `F-087` **Minor** - the tab strip is at 220.6 on Comments and Bug Reports and **306.6** on the
+  catalogue. `F-065` was closed on the sentence that they are equal; `F-067` then put the
+  catalogue's filter bar above its tab strip while Comments keeps its filters inside the tab
+  panel. Neither step was wrong alone, and each measured what it changed.
+- `F-088` **Minor** - both log bars take two control rows at **every** width from 1024 to 1440,
+  and Audit's second row at 1440 is one 170px control with **923px** of space beside it. The
+  record for `F-067` says the two wrap the same way; measured, Audit keeps `From` on row one and
+  wraps `To` alone, while Activity wraps both dates together. That section's own date table
+  already said so - the summary sentence and the table under it disagreed.
+
+**Also measured, and deliberately not turned into findings:**
+
+- **Row actions** end at three insets from a panel edge that is 1408 everywhere: **21px** on
+  Comments Reports, Lectures and Professors, **46.4** on Comments All, **51.3** on Ratings.
+  Proposed standard: 21, which three of the five already use. Recorded under `F-087`.
+- **Two empty-state shapes**: 101px tall with 40px padding on Users and the catalogue, 191px
+  with 60px and an icon on Comments and Bug Reports.
+- **Seven tables, seven `minWidth` decisions** - 1100, 1000, 960, 900, 900, 860, 760 and none at
+  all on Users. Proposed standard: **leave them.** A single value would cramp Comments or pad
+  Ratings; the question worth deciding is `F-036`.
+- **Filter-bar break points follow control count**, not a shared breakpoint: one to three
+  controls never wrap between 1024 and 1440, four wrap only at 1024, six and seven wrap at every
+  width.
+- **A rating cannot be edited on either side** - the whole call surface holds `ratings.list` and
+  `ratings.delete` and no write - so what `F-083`'s missing row click wants on that table is a
+  read-only detail view, not an editor.
+
+**Refuted, and recorded so they are not re-reported:**
+
+- **Modal widths are two values, 620 and 380.** The brief asks for a report above three.
+- **Cell alignment is uniform** across all seven tables, left through `TableHeaderRow`; only
+  empty states centre.
+
 ### The background does not move when a detail view opens (`F-086` opened)
 
 Item 3 of seven. **Measurement only; nothing was changed.** Numbers in

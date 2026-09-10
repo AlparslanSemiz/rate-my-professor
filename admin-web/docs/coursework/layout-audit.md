@@ -906,3 +906,232 @@ The cost is not the scroll, it is that it does not come back: the operator close
 and the table is still scrolled fully right, with the Content and Lecture columns - the ones
 that say what the row *is* - off the left edge.
 
+## 11.5 List symmetry: what steps 4 to 6 left behind (`F-087`)
+
+Measured at 1440x900, eleven screen states. **Nothing here was changed** - the brief asks for
+the deviations and one proposed standard each, and the choice is the maintainer's.
+
+### The one that reopens a closed finding
+
+| screen | tab strip y | filter strip y | order |
+| --- | --- | --- | --- |
+| Comments (both tabs) | **220.6** | 276.6 | tabs, then filter |
+| Bug Reports | **220.6** | none | - |
+| Catalogue (all three tabs) | **306.6** | 220.6 | filter, then tabs |
+
+`F-065` was closed on the sentence "the tab strip starts in the same place on every screen",
+measured at 220.59. It does not any more: the catalogue's strip sits **86px lower**, because
+`F-067` put a filter bar above it and Comments keeps its filter *inside* the tab panel. Two
+screens that both tab and filter, in the opposite order. **`F-087`.**
+
+*One standard, proposed:* the filter bar belongs above the tab strip on both, because it is the
+same shell in the same place on the five screens that filter. That moves Comments' strip down
+to 306.6 and makes the catalogue the reference rather than the outlier - and it costs the
+Comments filter its per-tab content unless the page holds the tab, which it already does.
+
+### Where each band starts
+
+| band | values measured | screens |
+| --- | --- | --- |
+| page title | **32** | all eleven - the one number that never varies |
+| card row | **117.8** | Users, Comments, Catalogue, Bug Reports; the two logs have no cards; the Dashboard's own is 388.6 |
+| filter strip | **117.8** / **220.6** / **276.6** | logs / Users and Catalogue / Comments |
+| table panel | **349.4** / **362.6** / **379.4** | logs / Comments and Catalogue / Users |
+| first row | 435.7 / 448.9 / 473.2 / 490 | logs / Comments / Catalogue / Users |
+
+The spread follows from what is above each table rather than from four different paddings, so
+the standard worth proposing is the one above: fix the **order** of the bands and the y values
+follow.
+
+### Row actions do not share a right edge
+
+The table panel's right edge is **1408** on every screen. The rightmost row control is not.
+
+| table | rightmost control | inset from the panel | controls, in order |
+| --- | --- | --- | --- |
+| Comments All | **1361.6** | **46.4** | expand, author, edit, delete |
+| Comments Reports | **1387** | **21** | author, author, edit, delete, withdraw |
+| Lectures | **1387** | **21** | edit, delete |
+| Professors | **1387** | **21** | edit, delete |
+| Ratings | **1356.7** | **51.3** | delete |
+| Users | - | - | **none** |
+| Audit / Activity Logs | - | - | **none** |
+
+Three insets - 21, 46.4 and 51.3 - a **30px spread**, and the order is consistent where the
+same action exists (edit before delete, destructive last).
+
+*One standard, proposed:* every row-action group ends **21px** from the panel edge, which is
+the value three of the five already use. Comments All and Ratings are the two to move.
+
+### Two empty states, not one
+
+| screen | height | padding | icon |
+| --- | --- | --- | --- |
+| Users, Catalogue | **101** | 40px | none |
+| Comments, Bug Reports | **191** | 60px | yes |
+
+*One standard, proposed:* the taller, iconned one, which is what the majority of list surfaces
+already draw; the two table-cell states are the ones to raise.
+
+### Table minimum widths: seven tables, seven decisions
+
+**1100** Comments, **1000** Lectures, **960** Reports, **900** both logs, **860** Professors,
+**760** Ratings, and **none at all** on Users. Column counts are 7, 7, 8, 6, 5, 5 and 8.
+
+*One standard, proposed:* leave them. The number is a per-table judgement about its own columns
+and a single value would either cramp Comments or pad Ratings; what wants deciding is
+`F-036`, which is the same question asked properly.
+
+### Asked and answered without a deviation
+
+- **Modal widths: two values, 620 and 380.** The brief asks for a report above three. Under.
+- **Cell alignment: uniform.** Every data cell in all seven tables is left-aligned through
+  `TableHeaderRow`; only empty states centre. Numeric columns are left-aligned like text
+  everywhere, so they are consistent, if not conventional.
+- **Column order by data type is not consistent, and it is not obviously wrong either.** The
+  date column is **first** on both logs (`Time`) and fourth to eighth everywhere else; the
+  status badge sits at index 3 on Professors, 4 on Users, 5 on Lectures and 6 on Reports. A log
+  is read by when, a list by what, so this is recorded as a divergence rather than a defect.
+- **Row heights** run 53.8 to 119.2 and are content-driven; `F-069` already decided the one
+  padding token underneath them.
+
+**Opened by 11.5:** `F-087`.
+
+## 11.6 Where every filter bar breaks, 1024 to 1440
+
+Control rows occupied by each bar, with the controls per row in brackets. The action row, where
+a bar has one, is counted separately and is always its own row.
+
+| Bar | controls | 1024 | 1152 | 1280 | 1366 | 1440 | breaks at |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Users | 4 | **2** (3+1) | 1 (4) | 1 | 1 | 1 | between **1024 and 1152** |
+| Comments All | 2 | 1 | 1 | 1 | 1 | 1 | never |
+| Comments Reports | 3 | 1 | 1 | 1 | 1 | 1 | never |
+| Catalog Lectures | 2 | 1 | 1 | 1 | 1 | 1 | never |
+| Catalog Professors | 2 | 1 | 1 | 1 | 1 | 1 | never |
+| Catalog Ratings | 1 | 1 | 1 | 1 | 1 | 1 | never |
+| Audit Logs | 6 | **2** (3+3) | **2** (4+2) | **2** (4+2) | **2** (5+1) | **2** (5+1) | **always** |
+| Activity Logs | 7 | **2** (3+4) | **2** (4+3) | **2** (4+3) | **2** (5+2) | **2** (5+2) | **always** |
+
+**The break points are not consistent across routes, and they are not arbitrary either: they
+follow control count.** One to three controls never wrap at any measured width; four wrap only
+at 1024; six and seven wrap at every width there is. There is no shared breakpoint to name,
+because nothing here is written against one - the bar is a wrapping flex row and the wrap is
+decided by what fits.
+
+The panel's inner width at each viewport, which is what everything above is competing for:
+**678** at 1024, **806** at 1152, **934** at 1280, **1020** at 1366, **1094** at 1440.
+
+### The empty space on the right, which is the visible half of the complaint
+
+Distance from the last control on the final control row to the panel's inner right edge:
+
+| Bar | 1024 | 1152 | 1280 | 1366 | 1440 |
+| --- | --- | --- | --- | --- | --- |
+| Audit Logs | 113 | 453 | 581 | 849 | **923** |
+| Activity Logs | 0 | 241 | 369 | 667 | **741** |
+| Users | 477 | 0 | 0 | 23 | 97 |
+| Comments All | 105 | 233 | 361 | 447 | **521** |
+| Catalog Ratings | 317 | 445 | 573 | 659 | **733** |
+
+At 1440 the Audit bar's second row holds **one 170px control with 923px of nothing beside it**,
+and then the action row below that. That is the shape the brief calls bad, and the number.
+
+## 11.7 The two log bars: four options, costed (`F-088`)
+
+### First, a correction to this document
+
+§Step 6 concludes that after `F-067` "row one is the search and the selects, row two is the
+dates" and that this is "the same wrap on both". Measured at 1440:
+
+| Bar | row 1 | row 2 |
+| --- | --- | --- |
+| Audit Logs | Search 319, Admin 189, Action 189, Target 189, **From 159** | **To 170** |
+| Activity Logs | Search, Person, Who, Action, Target | From, To |
+
+Audit splits its two date fields **across** the two rows; Activity keeps them together. The
+claim is true of Activity and false of Audit - and §Step 6's own date table already said so,
+listing Audit's `From` at 159 "because it sits on the crowded first row and never grows to its
+170 cap". The summary sentence and the table underneath it disagreed, and the summary was the
+part that got quoted. **`F-088`.**
+
+### The constraint, restated with the measured numbers
+
+Panel inner width **1094** at 1440. `input[type=date]` has a Chromium minimum of about **170**.
+Six Audit controls at their caps need 360 + 3x200 + 2x170 = 1300; at their bases,
+260 + 3x160 + 2x170 = 1080, plus five 12px gaps = **1140**. Short by **46**. Activity has a
+seventh control: 1240 + 72 = **1312**, short by **218**.
+
+### The options
+
+| # | Change | Audit at 1440 | Activity at 1440 | Cost |
+| --- | --- | --- | --- | --- |
+| **A** | Narrow search to 240 and selects to 150 | 240 + 450 + 340 + 60 = **1090** - fits, 4px spare | 240 + 600 + 340 + 72 = **1252** - **still wraps** | Already measured and rejected in §Step 6: four pixels is a coincidence, and it puts the two log screens back on different layouts, which is the whole of `F-067` |
+| **B** | Replace the two native date inputs with one range control (~200px), keeping today's widths | 260 + 480 + 200 + 48 = **988** - fits, 106 spare | 260 + 640 + 200 + 60 = **1160** - **still wraps** | A range control is a new component the panel does not have; native `type=date` gives the browser's own picker and keyboard behaviour for free, and dropping it is an accessibility change that wants its own look |
+| **C** | **B** plus narrowing search to 200 and selects to 150 | 200 + 450 + 200 + 48 = **898** | 200 + 600 + 200 + 60 = **1060** - **fits**, 34 spare | The only option measured to put **both** bars on one row. Costs the new control *and* narrower fields; `F-067` sized those fields by what goes in them, and `F-082` is already a placeholder truncated at 136px |
+| **D** | Keep two rows, let each row stretch to fill the width | Audit 3+3, each control ~357 | Activity 4+3 | No new component and the right-hand gap goes to zero, but a `Select` over four options drawn 357px wide is exactly the unbounded growth `F-067` added `maxWidth` to stop - it would be reintroducing that on purpose |
+| **E** | Keep two rows, move Apply and Clear onto the last control row's right | Fills 235 of the 923px gap | Fills 235 of 741 | Satisfies both stated goals at once and costs nothing new - but it undoes the specific thing `F-067` did: the buttons' position becomes a function of how many controls happened to wrap, which is what put them at two different heights on three screens before |
+
+**Nothing applied.** `E` is the cheapest and reverses a deliberate decision; `C` is the only one
+that fits both bars on one row and costs a new control plus narrower fields. The choice is the
+maintainer's.
+
+**Opened by 11.7:** `F-088`.
+
+## 11.8 Ratings: the scores on screen are the fixture's, not the backend's (`F-089`)
+
+Three questions, three answers. **Nothing applied.**
+
+### Are the scores real?
+
+Under the mock backend, yes and they look convincing: the Scores cell reads
+`Content 4 · Clarity 5 · Difficulty 3`. Against the deployed backend it is a dash.
+
+Verified by handing `toRating` the payload `docs/adminweb-tasks-from-backend.md` §2a documents,
+rather than by reading the code and inferring:
+
+```
+in   {"id":"rating-1","student":{...,"name":"Lena Hoffmann"},"lectureLabel":"CS101 - Algorithms",
+      "topics":[{"category":"LECTURE_UNDERSTANDABILITY","value":4.5},{"category":"LECTURE_CONTENT","value":3}],
+      "createdAt":"..."}
+out  {"id":"rating-1","lectureId":"lecture-1","authorName":"Unknown","createdAt":"...","scores":{}}
+```
+
+| Column | reads | backend serves | on screen against the real backend |
+| --- | --- | --- | --- |
+| Scores | `rating.scores` (open map) | `topics: [{category, value}]` | **`-`** on every row (`scoreLine({})` returns `EMPTY_VALUE`) |
+| Rated by | `rating.author.name` | `student.name` | **`Unknown`** on every row |
+
+Both reads are optional-chained with a fallback, so neither fails - they produce wrong data
+quietly. **Why nothing caught it:** the mapper, `RatingsService.unit.test.ts:24-35`,
+`sweepFixture.ts`, `demoData.ts` and the MSW handler all use the panel's own field names, so
+the whole stack is self-consistent and wrong together. Only the backend's own sweep saw it.
+
+### Can a rating be edited?
+
+**No, and the panel is right not to offer it.** Verified on both sides: the whole call surface
+holds `ratings.list` and `ratings.delete` and no write at all, `RatingDeletionService.ts:6` and
+`RatingsTable.tsx:21-24` both say a rating is someone's own assessment, and the backend's
+document says "a rating can be removed, never rewritten". Nothing in the brief asks for
+anything against that.
+
+### So what should the row click do?
+
+Open a **read-only detail view**, not an editor - which is also the shape `F-083` wants, since
+the Ratings row is one of the two in the panel that answer a click with nothing. It has content
+to show that the table cannot: the per-category scores in full rather than a truncated single
+line, who rated and when, and the lecture. Deletion already exists as a row action and would
+move into the dialog beside the rest.
+
+*Proposed, not applied:*
+1. Fix `ratingMapper.ts` to read `student` and `topics` and to keep the category order the
+   backend sends. **This breaks `fixtureEnums.unit.test.ts:45-69`**, which hard-codes the regex
+   `/scores:\s*\{...\}/` and asserts it matched something, so that sweep has to learn the new
+   shape in the same change - which is the sweep working, not a cost.
+2. Then a `RatingDetailsModal`, opened by `ClickableRow` the way the other five tables do it.
+
+Doing 2 before 1 would put a detail view on screen whose every field is `Unknown` and `-`
+against a real backend.
+
+**Opened by 11.8:** `F-089`.
+
