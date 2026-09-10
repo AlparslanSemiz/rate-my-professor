@@ -2,6 +2,136 @@
 
 ## [Unreleased]
 
+### Four complaints, taken to a real browser against the real backend
+
+The previous rounds answered these with numbers and got two of them wrong, so this round
+changed the method: the dev server ran against the **live backend** (`VITE_MOCK_BACKEND`
+unset, the `/api` proxy forwarding to the bw-cloud instance), signed in with a real session,
+and every claim below was looked at in a screenshot before and after the change. 92 active
+lectures, 132 professors, 32 ratings - not a three-row fixture.
+
+**Two findings were wrong, and both were wrong in the same way: they measured a box that
+could not report the defect.**
+
+#### `src/theme/components.ts` - the status badge is sized by its label (`F-075`)
+
+- **Added** a `Badge` theme entry with `styles.root.minWidth = 'max-content'`. Mantine gives the
+  badge label `text-overflow: ellipsis`, which makes its min-content contribution **zero**: the
+  badge never asks its column for room, so `table-layout: auto` sized the catalogue's Status
+  column from its `STATUS` header alone and every row read `ACTI...`, with the inactive ones
+  reading `INAC...`.
+- **Seen red first, in a screenshot, at 1440** - the width nobody thought was affected. Measured
+  per label: Lectures `ACTIVE` needs 39 and got **30**, `INACTIVE` needs 50 and got **38**,
+  Professors `ACTIVE` needs 39 and got **32**. At 1024, `INACTIVE` got 33. Users clipped nothing,
+  which is why it looked like a badge difference and was a column difference.
+- **What it costs, which is the question [TODO.md](docs/TODO.md) refused to answer blind:**
+  Status goes 88 to 96 (`ACTIVE`) and 96 to 107 (`INACTIVE`); Lecture pays 3-5px and Professors
+  6px, both of which wrap; the table's own width stays at its `minWidth` and **nothing starts
+  scrolling that did not scroll before**.
+- **In the theme rather than at the three rows that show it**, because it is one decision about
+  how a badge sizes itself. Swept across all eight routes at 1024 before choosing that scope: no
+  route gained an overflowing cell or document overflow - including Comments, whose
+  `table-layout: fixed` cannot widen a column and was the one place this could have pushed the
+  overflow outwards instead.
+- **Not** the third option the brief offered: the catalogue badge is `variant="light"` and has no
+  dot section to remove. The dot is on Users, which is the table that already worked.
+
+#### `src/index.css` - the page no longer widens when a dialog opens (`F-062`)
+
+- **Added** `scrollbar-gutter: stable` on `html`. Mantine locks the body while a modal is up, and
+  on a browser with classic scrollbars that hands back the 9px the page was drawn around.
+- **Reproduced, which is what the finding was waiting for.** `F-062` was left open for want of
+  "a browser with classic scrollbars to confirm first"; the earlier run used a Chromium with
+  overlay scrollbars, where the gutter is 0 and there is nothing to take away. On this machine,
+  on the live catalogue at 1024: `documentElement.clientWidth` **1015 -> 1024 -> 1015** and every
+  panel's right edge, the tab strip's included, travelled **+10px out and back** - on every open
+  and every close. The left edges do not move, because the layout is anchored left, which is why
+  it reads as the right-hand side of the screen jumping rather than the page recentring.
+- **After:** panel right edge 983 in all three states; `documentElement.scrollWidth` 1015
+  throughout. Confirmed in the pixels as well as the numbers - the panel surface and its row
+  separators end 10px further left with the dialog open than they did before.
+
+#### `src/features/catalog/CatalogPage.tsx` - the catalogue counts against the catalogue
+
+- **Changed** each table panel's `totalCount` from the filtered list to the unfiltered one. The
+  denominator's own words are "in the catalogue", and it was counting the filter: against the
+  live backend the panel read **"92 of 92 in the catalogue"** under a stat card reading **95**,
+  so the three inactive lectures looked like rows the panel had lost rather than rows the filter
+  was holding back. Now "92 of 95", "3 of 95", "95 of 95".
+- **Changed** `useCatalogLists.ts`'s docstring on `lecturesInState`, which described the value as
+  "every row read, whatever the filter shows" - the opposite of what it became when the activity
+  filter landed.
+
+#### `src/test/msw/browser.ts` - a fault override that had stopped applying
+
+- **Changed** the `?fault=long-content` catalogue override from `/data/lectures` to
+  `/data/lectures/all`. The catalogue moved to the admin read when the activity filter landed and
+  this override kept patching a path the panel no longer requests, so the fault silently stopped
+  reaching the catalogue while still reaching Comments.
+
+### Tests
+
+- **Added** `e2e/layout.spec.ts`: every badge label on every route at all three widths, measured
+  against the box it is drawn in. **The box is the point** - the root is `width: fit-content` and
+  never overflows, so every earlier sweep over cells, rows and tables answered "nothing is
+  clipped" while 92 rows on screen read `ACTI...`.
+- **Added** `e2e/layout.spec.ts`: every panel's right edge recorded before, during and after a
+  dialog. It measures the **edges**, which move on any browser, rather than the gutter, which is
+  the measurement that missed `F-062` the first time.
+- **Added** `src/theme/theme.integration.test.tsx`: the badge declaration, alongside the Modal
+  transition it sits next to - the deterministic half of a layout question.
+- **Added** `src/features/catalog/CatalogPage.integration.test.tsx`: the panel's denominator under
+  each of the three filters. Nothing asserted that string before, which is why changing it broke
+  no test.
+- **Changed** six page-overflow assertions from `toBe` to `toBeLessThanOrEqual`, in
+  `e2e/layout.spec.ts`, `e2e/faults.spec.ts` and `e2e/surfaces.spec.ts`. Overflow is `needs >
+  gets`; equality was a proxy that held only while the page filled its viewport exactly, and the
+  reserved gutter makes a non-scrolling page legitimately 10px narrower. **82 measurements failed
+  with nothing wrong with them**, which is what a proxy assertion costs when the thing it stood
+  in for changes.
+- **Changed** the narrow-width navbar assertion to compare against `document.body.clientWidth`:
+  Chromium reports the root's `clientWidth` as the whole viewport even where the gutter has
+  reserved part of it, so the root says 320 while everything laid out inside gets 310.
+
+### Unchanged on purpose
+
+- **`F-086` is real, is not a Playwright artifact, and is still not fixed.** Its record says the
+  scroll happens because "the browser scrolls a control into view before activating it", and
+  [layout-audit.md](docs/coursework/layout-audit.md) §11.3 attributes the same numbers to the
+  harness. Measured this round with **no click and no `scrollIntoView`** - Tab, Enter, Escape
+  only: tab 14 moves focus from the row to the 22px Edit icon and the *browser* scrolls the
+  holder to **290**, putting the Lecture column at `x = -18`, and it is still 290 after the
+  dialog closes. Three fixes were tried and rejected: restoring `scrollLeft` on close restores
+  the scrolled position, because the scroll happens at focus time and before the dialog exists;
+  a sticky action column cannot be painted, because the panel surface is a vertical gradient and
+  a sticky cell would need a flat one; and the focus scroll itself is the browser's, not
+  something the panel calls. It stays with the `F-036` column pass, now with the cause named
+  correctly.
+- **The ratings and comments screens were checked and are right.** Against the real backend:
+  `SCORES` carries real per-category numbers, `Rated by` carries real student names rather than
+  `Unknown`, the tab strip sits at y=220 on all three screens, and the rating detail opens
+  populated. That is `F-089` confirmed against the backend it was written for, having only ever
+  run against fixtures written to match it.
+- **The catalogue's inactive round trip works, end to end, on the live instance.** The panel calls
+  `/data/lectures/all` and `/data/professor/all`; both answer 200. Walked in full: `Deep Learning
+  and Neural Networks` (DLNN) and `Tamim Asfour`, each deactivated, confirmed gone from the
+  default Active list, found under Inactive, reactivated, and confirmed back. `PATCH
+  /data/lectures/{id}` and `PATCH /data/professor/{id}` both 200. The instance was returned to its
+  starting state and re-read to prove it: 95 lectures / 92 active / the same three inactive, 132
+  professors / 0 inactive.
+- **`README.md` and `wiki.md` are untouched, and were checked rather than assumed.** Neither
+  describes the catalogue's activity filter, the panel's counting, or anything about scrollbars,
+  so the rule that a change to one is applied to both has nothing to apply here.
+- **`docs/worklog.md:71` still says the panel does not call the `…/all` reads, and stays.** It is
+  a dated entry recording what was true during an earlier round; correcting it in place would be
+  rewriting the log rather than continuing it.
+- **Comments has two visible column defects that were seen and left.** The LECTURE column
+  truncates to `KAK -...` and `AFR -...`, which name nothing, and `MustafaTester3456789` in AUTHOR
+  runs into the cell beside it - 11 overflowing cells at 1024, unchanged by this round's badge
+  rule. That is `F-012` and `F-036`, whose column pass is deferred, and widening a column in a
+  `table-layout: fixed` table is that pass rather than a value.
+
+
 ### The numbers this round was measured on
 
 Re-derived from the runs, per [testplan.md](docs/testplan.md) §0.
@@ -11,11 +141,11 @@ Re-derived from the runs, per [testplan.md](docs/testplan.md) §0.
   Branches fell **0.16** and it is not a regression: `toScores` and the rating detail's
   empty-category branch are new code with a branch each, and the suite covers the populated
   path.
-- **Updated** [testplan.md](docs/testplan.md) §3a: Layer 4 was 156 and is **174** (surfaces 71
-  to **89** - eleven motion tests and the twelfth surface); the Playwright suite was 187 and is
-  **205 tests in 15 specs**.
-- **Added** a run-log row: check clean at **286 files, 967 edges**; **51 test files, 1221 tests,
-  3 skipped**; **205 Playwright tests in 3.3 minutes**; build in 386ms.
+- **Updated** [testplan.md](docs/testplan.md) §3a: Layer 4 was 174 and is **202** (layout 37 to
+  **65** - the badge sweep and the panel-edge test); the Playwright suite was 205 and is
+  **233 tests in 15 specs**.
+- **Added** a run-log row: check clean at **286 files, 967 edges**; **51 test files, 1223 tests,
+  3 skipped**; **233 Playwright tests in 3.7 minutes**; build in 378ms.
 
 ### The ratings columns now hold the backend's data, and open (`F-089`, `F-083` half)
 

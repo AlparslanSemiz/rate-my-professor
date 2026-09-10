@@ -1263,7 +1263,7 @@ Bold marks a field whose absence raises an error rather than degrading.
 | `GET /data/lectures/all` | **`lectures[]`**, `lectures[].id`, `.name`, `.code`, `.semesterYear`, `.semesterSeason`, `.active`, `.lectureType`, `.professors[].id`, `.professors[].firstName`, `.professors[].lastName`, `.commentCount`, `.ratingCount` |
 | `PATCH /data/lectures/{id}` | — |
 | `DELETE /data/lectures/{id}` | — |
-| `GET /data/professor` | **`professors[]`**, `professors[].id`, `.firstName`, `.lastName`, `.active`, `.lectureIds`, `.averageRating`, `.ratingCount` |
+| `GET /data/professor/all` | **`professors[]`**, `professors[].id`, `.firstName`, `.lastName`, `.active`, `.lectureIds`, `.averageRating`, `.ratingCount` |
 | `PATCH /data/professor/{id}` | — |
 | `DELETE /data/professor/{id}` | — |
 | `GET /ratings` | **`ratings[]`**, `ratings[].id`, `.lectureId`, `.author.name`, `.createdAt`, `.scores` (open map), `nextCursor` |

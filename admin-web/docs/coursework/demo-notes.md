@@ -12,33 +12,35 @@ it](#3-the-order), and [what to say when something is deliberately missing](#4-q
 
 ### The catalogue's **Active** switch
 
-**Do not switch a lecture or professor inactive during the demo.** There is no way
-back from the panel.
+**Safe to demonstrate in both directions, since 2026-09-10.** This section previously
+said the opposite, and if you have read it before, read it again.
 
-The panel reads `GET /data/lectures` and `GET /data/professor`, which filter on
-`active = true`. Saving a record with the switch off removes it from the only list
-the panel currently reads, and putting it back needs a database write.
+The panel reads `GET /data/lectures/all` and `GET /data/professor/all`, which return
+every record, active or not, and filters on screen with an **All / Active / Inactive**
+select in the filter bar. Switching a record off takes it out of the default view, as
+the form warns; the **Inactive** filter finds it again and the same switch puts it
+back.
 
-The form says so before you save — `InactiveVisibilityNotice`:
+**Walked end to end against the deployed instance on 2026-09-10**, on one lecture
+(`Deep Learning and Neural Networks`) and one professor (`Tamim Asfour`): deactivate,
+confirm it leaves the Active list, find it under Inactive, reactivate, confirm it is
+back. Both records were returned to their original state.
 
-> …it cannot be found or switched back on from here — the change has to be undone
-> in the database.
+**A good thing to show, and a good thing to say why.** The switch used to be a
+one-way door — the panel read the public, active-only endpoints, so a deactivated
+record was unreachable from every screen and had to be restored with a database
+write. That was `F-006`, and it was closed by moving to two endpoints the backend had
+already written for exactly this reason:
 
-**Show that warning on purpose and explain it as a decision.** It is the honest
-behaviour: the alternative is a switch that silently destroys the operator's access
-to the record. Then say what is actually true about the gap, because it is a good
-answer rather than an excuse:
+> The backend serves `/data/lectures/all` and `/data/professor/all` — the controller
+> says it added them so a deactivated lecture or professor stays reachable from the
+> panel to correct or reactivate. We read those now, and filter in the browser, so
+> the default view still shows only active records and nothing is stranded.
 
-> The backend already serves `/data/lectures/all` and `/data/professor/all`, which
-> return every record, active or not — the controller says it added them for
-> precisely this, so a deactivated record stays reachable from the panel. We have
-> not moved to them yet: it is a small change, but inactive records would start
-> appearing in lists that have never shown them, and the All/Active/Inactive filter
-> that should come with it does not exist. It is `F-006` in
-> `docs/testfindings.md`, and it is the next thing we would do.
+If you have a moment, deactivating and reactivating one record is a better
+demonstration than either half alone, because the round trip is the thing that was
+missing.
 
-If a switch has to be demonstrated, **switch one on**, not off. Reactivating is
-safe: the record is already in the list.
 
 ### The login rate limit
 

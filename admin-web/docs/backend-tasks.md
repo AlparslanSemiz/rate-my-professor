@@ -166,15 +166,23 @@ for exactly this case:
 Both are mapped on the legacy path as well as under `/admin`, so this does **not**
 depend on `H2`.
 
-So there is **no backend work here**. The remaining gap is on our side: the panel
-still calls the public, active-only reads. It is a small change, but it is a
-behaviour change — inactive records start appearing in lists that have never shown
-them, the edit form's inactive warning stops being the whole story, and the
-All / Active / Inactive filter that was waiting on this becomes possible — so it is
-the panel maintainer's call rather than something to slip in.
+So there is **no backend work here**, and as of **2026-09-10 there is no gap on our
+side either**: the panel now calls both `…/all` reads, with an All / Active / Inactive
+filter that defaults to Active so the default view is unchanged from what operators
+had before.
 
-Tracked as `F-006` in `docs/testfindings.md`. **Please leave both `…/all` routes in
-place**; the panel is going to want them.
+**Verified against the deployed instance**, not only against our mocks: both reads
+answer 200 for an admin session, `GET /data/lectures/all` returns 95 lectures where
+the public `GET /data/lectures` returns 92, and the three inactive ones are reachable
+and reactivatable from the panel. A full round trip — deactivate, confirm it leaves
+the default list, find it under Inactive, reactivate via
+`PATCH /data/lectures/{id} {"active": true}` — was walked on one lecture and one
+professor and both were returned to their original state.
+
+Tracked as `F-006` in `docs/testfindings.md`, now closed. **The request to leave both
+`…/all` routes in place is now stronger, not weaker**: the panel does not merely want
+them, it depends on them. Removing either takes the catalogue's whole read path with
+it, not one feature.
 
 ---
 
@@ -233,12 +241,16 @@ paths is not scheduled on the assumption that we have migrated.
 
 `docs/admin-api.md` states that every administrative route now answers under
 `/admin` as well as its old path, and that the legacy paths "are removed once
-[the panel] has [moved]". As of 2026-09-09 **the panel has not moved.** It still
+[the panel] has [moved]". As of 2026-09-10 **the panel has not moved.** It still
 calls:
 
 `/auth/request-login`, `/auth/login`, `/auth/logout`, `/auth/me`, `/users/**`,
 `/comments/**`, `/answers/**`, `/ratings`, `/reports`, `/audit-logs/**`,
-`/system/status`, `/data/lectures`, `/data/professor`.
+`/system/status`, `/data/lectures/all`, `/data/professor/all`.
+
+The last two changed on 2026-09-10 — the catalogue reads the admin variants now, on
+the legacy path — so the list above is the current one. It is the same request either
+way: these are legacy paths and the panel is still on all of them.
 
 Dropping the legacy routes today breaks the panel completely — every screen, not a
 feature. **Please tell us before they go**, and we will move first.
