@@ -153,7 +153,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
                 comments.set(position, updatedComment);
                 notifyItemChanged(position);
 
-                listener.vote(comment.commentID(), VoteType.UP, type);
+                listener.vote(comment.commentID(), VoteType.DOWN, type);
             }
         });
         if (type == CommentType.REPLY) {

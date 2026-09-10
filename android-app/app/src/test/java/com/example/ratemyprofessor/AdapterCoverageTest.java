@@ -184,7 +184,8 @@ public class AdapterCoverageTest {
         Comment reply = comment("r1", VoteType.DOWN, Collections.emptyList());
         Comment comment = comment("c1", VoteType.UP, Collections.singletonList(reply));
         CommentsAdapter.OnCommentClickListener listener = mock(CommentsAdapter.OnCommentClickListener.class);
-        CommentsAdapter adapter = new CommentsAdapter(context, Collections.singletonList(comment), listener, CommentType.COMMENT);
+        CommentsAdapter adapter = new CommentsAdapter(context,
+                new ArrayList<>(Collections.singletonList(comment)), listener, CommentType.COMMENT);
         CommentsAdapter.CommentViewHolder holder = adapter.onCreateViewHolder(parent, 0);
         adapter.onBindViewHolder(holder, 0);
         assertEquals(1, adapter.getItemCount());
@@ -201,10 +202,11 @@ public class AdapterCoverageTest {
         AuthManager.getInstance().setAuthState(AuthState.LOGGED_IN);
         holder.itemView.findViewById(R.id.upvote_icon).performClick();
         holder.itemView.findViewById(R.id.downvote_icon).performClick();
-        verify(listener).vote("c1", VoteType.UP, CommentType.COMMENT);
+        verify(listener).vote("c1", VoteType.NONE, CommentType.COMMENT);
         verify(listener).vote("c1", VoteType.DOWN, CommentType.COMMENT);
 
-        CommentsAdapter replies = new CommentsAdapter(context, Collections.singletonList(reply), listener, CommentType.REPLY);
+        CommentsAdapter replies = new CommentsAdapter(context,
+                new ArrayList<>(Collections.singletonList(reply)), listener, CommentType.REPLY);
         CommentsAdapter.CommentViewHolder replyHolder = replies.onCreateViewHolder(parent, 0);
         replies.onBindViewHolder(replyHolder, 0);
         assertEquals(View.INVISIBLE, replyHolder.itemView.findViewById(R.id.comments_icon).getVisibility());
