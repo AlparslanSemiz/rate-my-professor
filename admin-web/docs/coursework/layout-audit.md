@@ -451,3 +451,16 @@ tab-independent. Comments rendered a **different** card set inside each panel
 above the strip therefore means the tab can no longer be uncontrolled: the page has to hold
 the open tab so the numbers can follow it. **3 files**, not 1.
 
+## Step 3 - the Dashboard uses `PageHeader` (`F-064`, `F-071`)
+
+| Route | `h1` before | `h1` after | accent bar after |
+| --- | --- | --- | --- |
+| Dashboard | **none** | **288, 32, 28px** | **4x26 @ 272** |
+| The other seven | 288, 32, 28px | unchanged | unchanged |
+
+All eight routes now agree to 0.00px on both. The greeting becomes the header's title, so
+the shape is structural rather than drawn per screen.
+
+**One visible consequence:** the greeting was 32px and `PageHeader` sets 28px. That is the
+change, not a side effect - the size was per-screen too.
+

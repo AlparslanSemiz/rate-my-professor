@@ -173,6 +173,23 @@ describe('Dashboard page', () => {
     expect(screen.getAllByText('Active accounts').length).toBeGreaterThan(0)
   })
 
+  it('gives its title the same shape as every other screen', async () => {
+    renderDashboard()
+    await screen.findByText('Total users')
+
+    // `F-064` and `F-071`. Seven routes render `PageHeader`, which is the only component that
+    // emits an `h1` and the only one that draws the accent bar; a cross-route sweep found the
+    // title at x=288, y=32 on all seven and nothing at all here. So the panel's landing screen
+    // was the one screen whose title was not a title, and the one with no top-level heading for
+    // a screen reader to navigate by.
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(heading).toHaveTextContent(/Welcome back,/)
+
+    // The bar is decorative, so it is `aria-hidden` and has to be found in the DOM rather than
+    // through a role. Asserted because it is half of what makes the header read as a header.
+    expect(heading.closest('header')?.querySelector('[aria-hidden]')).not.toBeNull()
+  })
+
   it('reports a failed first load instead of claiming the platform is empty', async () => {
     vi.mocked(systemStatusService.getStatus).mockRejectedValue(new Error('Counters are unavailable.'))
     vi.mocked(usersService.list).mockRejectedValue(new Error('Counters are unavailable.'))

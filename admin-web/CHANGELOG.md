@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+### The Dashboard's title is a title
+
+`F-064` and `F-071`, closed together by one change. `PageHeader` is the only component in
+`src/` that emits an `h1` and the only one that draws the accent bar; the Dashboard drew its
+own title and so had **neither**. A cross-route sweep put every other title at x=288, y=32
+and found nothing here, which made the panel's landing screen the one screen whose title did
+not read as one, and the one a screen reader had no top-level heading to navigate by.
+
+- **Changed** `DashboardHeader` to render `PageHeader` with the greeting as its title.
+  Measured after: **all eight routes** report the title at **x=288, y=32, 28px** and the bar
+  at **4x26, x=272**.
+- **The hidden-text utility `F-064` expected to need is not needed.** The greeting *is* the
+  title - it only had to be routed through the component that already emits the heading.
+- **Unchanged on purpose, and visible:** the greeting drops from 32px to 28px. The size was
+  per-screen too, which is the thing being fixed.
+
+### Tests
+
+- **Added** a dashboard assertion that an `h1` exists, carries the greeting, and sits in a
+  `header` that also holds the decorative bar. Red first, failing with `Unable to find an
+  accessible element with the role "heading"` - which is exactly what `F-064` recorded.
+
+
 ### The tab strip starts in the same place on every screen
 
 `F-065`. Comments' strip started at **y=117.80** and the catalogue's and Bug Reports' at
