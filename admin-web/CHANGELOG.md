@@ -2,6 +2,89 @@
 
 ## [Unreleased]
 
+### One filter bar, on all five screens that filter
+
+`F-067`, and the largest change of this round. There were five layouts: two screens had a
+`<form>` with its own panel, two had a bare panel and no Apply at all, and the catalogue had
+no filter bar whatsoever - its search sat inside the table panel's header at **x=1067**, where
+every other search is at **x=293**. None of that was decided; each screen had been written on
+its own.
+
+#### `src/components/FilterBar.tsx` - new
+
+- **Added** the shell every filter bar now uses: a panel, a wrapping row of controls, and
+  **Apply and Clear on a row of their own**. The buttons used to be the last two flex children
+  of the same group as the controls, so where they landed was decided by how many controls a
+  screen happened to offer. A row of their own makes that impossible rather than unlikely,
+  which is why the shell owns the buttons instead of taking them as children.
+- The shell renders a `<form>` only when there is something to submit. Comments and the
+  catalogue filter as you type, so an Apply button there would have nothing to do.
+
+#### `src/constants/layout.ts`
+
+- **Added** `filterFieldWidth` - three shapes, `search`, `select` and `date`, each with a
+  **`maxWidth`**. Every field had been written `flex: '<n> 1 <basis>'` with no upper bound, so
+  its width was decided by what happened to wrap onto its row rather than by what goes in it.
+
+#### Measured at 1440, before and after
+
+- **Every search now starts at x=293**, the catalogue's having moved **774px** left.
+- Comments' search: **922 -> 360**.
+- Apply and Clear: still x=1147 and x=1295, now on a row the controls cannot reach.
+- Audit Logs' end date: **838.5 -> 170**, against Activity Logs' **413.2 -> 170**. The widest
+  spread between two identical controls is now **11px**, down from **425px**.
+
+#### What did not close, said with the number
+
+Both log screens still take **two control rows** at 1440, and the brief asked for Audit Logs
+to fit on one. The content box is 1094px and Chromium gives `input[type=date]` an automatic
+minimum size of about 170px rather than the 130px basis, so Audit's six controls need
+**1140** - a 46px shortfall. Audit alone fits at **1090** with the search cut to a 240 basis
+and the selects to 150; that was measured and **rejected**. Four pixels of slack is a
+coincidence rather than a layout, and Activity Logs has a seventh control and reaches 1252
+either way - so it would put the two log screens back on different layouts, which is the whole
+of what `F-067` is. Both wrap identically now.
+
+#### `src/features/catalog/`
+
+- **Moved** the search out of `LecturesTable`, `ProfessorsTable` and `RatingsTable` into the
+  page's filter bar, and **removed** `CatalogTablePanel`'s `controls` slot, which nothing used
+  any more.
+- **Changed** the tab from uncontrolled to controlled. The same cost `F-065` found on
+  Comments: the control differs per tab - a text box for Lectures and Professors, a lecture
+  select for Ratings - so the page has to hold the tab for the bar to follow it.
+
+### Tests
+
+- **Added** two assertions, both red first. `AuditLogsPage`: Apply and Clear are not in the
+  container the search is in - `expect(element).not.toContainElement(element)` against the one
+  `Group` that used to hold all ten. `CatalogPage`: the search precedes the tab strip in
+  document order - `expected +0 to be truthy` - and the control **swaps** when the tab changes,
+  which is the half that stops the bar being hoisted and then frozen on the first tab.
+- Order and containment rather than coordinates, because jsdom has no layout. The browser
+  measurement is in [docs/coursework/layout-audit.md](docs/coursework/layout-audit.md).
+- **Changed** what `e2e/surfaces.spec.ts` pins for dialog contrast, from one number to two, and
+  the measurement behind it is the point. The audit and activity detail panels each reported one
+  more failure after the bar got taller, which reads exactly like a regression. It is not: both
+  were measured **on either side of the change**, by stashing it and running the same tests. The
+  audit panel went from `passed=10 failed=9 undetermined=1` to `passed=10 failed=10
+  undetermined=0`, the activity panel from `passed=6 failed=6 undetermined=1` to `passed=6
+  failed=7 undetermined=0`. **Same node count, same colours, one node decided instead of
+  skipped** - the taller bar changed what axe can resolve behind the dialog, which is `F-035`'s
+  entire subject.
+- Chasing that turned up the larger problem: **`failed` alone was never a pinnable quantity.**
+  Ten runs of the undo confirmation reported `failed` as 11, 10, 11, 11, 10 with the change and
+  9, 10, 10, 10, 10 without it, so a single pinned integer goes red on roughly half of all runs
+  while nothing about the panel has changed. What is stable across all ten, and across the
+  change on all three log surfaces, is `passed` and `failed + undetermined`.
+- **Changed** the map to pin those two per surface, for all eleven dialogs rather than the six
+  that had a non-zero count. `notPassing` adds the two buckets together deliberately: `F-035` is
+  the habit of counting `incomplete` as a pass, and this refuses to. The cost is stated in the
+  file: a node sliding between `failed` and `undetermined` no longer turns anything red, because
+  that is the timing artefact; a node moving in or out of `passed` still does, because that is
+  the only move that means a colour changed. **Validated over 33 runs** - three repeats of all
+  eleven - including runs where the undo confirmation reported 10 and 11.
+
 ### `F-073` had a second half, in the fixture its pin did not name
 
 The Ratings fix changed `demoData.ts` and pinned it with a test called `demoData.unit.test.ts`,

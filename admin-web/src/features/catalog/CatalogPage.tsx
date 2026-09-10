@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
-import { Tabs } from '@mantine/core'
-import { IconSchool, IconStar, IconUserStar } from '@tabler/icons-react'
+import { Select, Tabs, TextInput } from '@mantine/core'
+import { IconSchool, IconSearch, IconStar, IconUserStar } from '@tabler/icons-react'
 import ErrorAlert from '@/components/ErrorAlert'
+import FilterBar from '@/components/FilterBar'
 import LoadError from '@/components/LoadError'
 import PageHeader from '@/components/PageHeader'
 import PageLoader from '@/components/PageLoader'
 import { useSelectedId } from '@/hooks/useSelectedId'
 import { indexById } from '@/utils/collection'
 import type { CatalogDeleters, CatalogDeletion } from './model'
+import { lectureLabel } from './model'
 import CatalogDeleteModal from './components/CatalogDeleteModal'
 import CatalogStats from './components/CatalogStats'
 import LectureEditModal from './components/LectureEditModal'
@@ -17,9 +19,13 @@ import ProfessorsTable from './components/ProfessorsTable'
 import RatingsTable from './components/RatingsTable'
 import { useCatalog } from './hooks/useCatalog'
 import { useRatings } from './hooks/useRatings'
-import { iconSize } from '@/theme'
+import { chrome, iconSize } from '@/theme'
+import { filterFieldWidth } from '@/constants/layout'
 
 const NO_LECTURES: string[] = []
+
+/** The three halves of this screen, and the only values its tab may take. */
+type CatalogTab = 'lectures' | 'professors' | 'ratings'
 
 export default function CatalogPage() {
   const { lists, actions } = useCatalog()
@@ -29,6 +35,8 @@ export default function CatalogPage() {
   const lectureEdit = useSelectedId()
   const professorEdit = useSelectedId()
   const [deleting, setDeleting] = useState<CatalogDeletion | null>(null)
+  /** Which table is open. Controlled because the filter bar above the strip follows it. */
+  const [tab, setTab] = useState<CatalogTab>('lectures')
 
   // The three services, handed to the model so that it — and only it — decides which one a
   // given deletion needs. The page knows how to delete each kind; it does not choose.
@@ -60,7 +68,55 @@ export default function CatalogPage() {
       <ErrorAlert message={actions.actionError || ratings.actionError || ratings.loadError} />
       <CatalogStats lectures={lists.lectures} professors={lists.professors} />
 
-      <Tabs defaultValue="lectures" keepMounted={false}>
+      {/*
+        `F-067`: this was the one screen with no filter bar at all. Its search sat inside the
+        table panel's own header, right-aligned at x=1067, where every other screen puts its
+        search at x=293 - which is why it read as part of the table rather than as a filter.
+        The control differs per tab, so the page holds the tab for the bar to follow it, the
+        same cost `F-065` found on Comments.
+      */}
+      <FilterBar>
+        {tab === 'lectures' && (
+          <TextInput
+            placeholder="Search by name, code, or professor..."
+            value={lists.lectureSearch}
+            onChange={(event) => lists.setLectureSearch(event.currentTarget.value)}
+            style={filterFieldWidth.search}
+            size="sm"
+            aria-label="Search lectures"
+            leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
+          />
+        )}
+        {tab === 'professors' && (
+          <TextInput
+            placeholder="Search by name..."
+            value={lists.professorSearch}
+            onChange={(event) => lists.setProfessorSearch(event.currentTarget.value)}
+            style={filterFieldWidth.search}
+            size="sm"
+            aria-label="Search professors"
+            leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
+          />
+        )}
+        {tab === 'ratings' && (
+          <Select
+            placeholder="All lectures"
+            aria-label="Filter ratings by lecture"
+            data={lists.lectures.map((lecture) => ({
+              value: lecture.id,
+              label: lectureLabel(lecture),
+            }))}
+            value={ratings.lectureId}
+            onChange={ratings.filterByLecture}
+            style={filterFieldWidth.search}
+            size="sm"
+            searchable
+            clearable
+          />
+        )}
+      </FilterBar>
+
+      <Tabs value={tab} onChange={(value) => setTab(toCatalogTab(value))} keepMounted={false}>
         <Tabs.List mb={20}>
           <Tabs.Tab value="lectures" leftSection={<IconSchool size={iconSize.inline} />}>
             Lectures ({lists.lectures.length})
@@ -77,9 +133,7 @@ export default function CatalogPage() {
           <LecturesTable
             lectures={lists.filteredLectures}
             totalCount={lists.lectures.length}
-            search={lists.lectureSearch}
             mutating={actions.mutating}
-            onSearchChange={lists.setLectureSearch}
             onEdit={(lecture) => lectureEdit.open(lecture.id)}
             onDelete={(record) => setDeleting({ type: 'lecture', record })}
           />
@@ -89,10 +143,8 @@ export default function CatalogPage() {
           <ProfessorsTable
             professors={lists.filteredProfessors}
             totalCount={lists.professors.length}
-            search={lists.professorSearch}
             mutating={actions.mutating}
             lecturesById={lecturesById}
-            onSearchChange={lists.setProfessorSearch}
             onEdit={(professor) => professorEdit.open(professor.id)}
             onDelete={(record) => setDeleting({ type: 'professor', record })}
           />
@@ -101,12 +153,9 @@ export default function CatalogPage() {
         <Tabs.Panel value="ratings">
           <RatingsTable
             ratings={ratings.ratings}
-            lectures={lists.lectures}
             lecturesById={lecturesById}
-            lectureId={ratings.lectureId}
             hasMore={ratings.hasMore}
             busy={ratings.busy}
-            onFilterByLecture={ratings.filterByLecture}
             onLoadMore={ratings.loadMore}
             onDelete={(record) => setDeleting({ type: 'rating', record })}
           />
@@ -137,4 +186,12 @@ export default function CatalogPage() {
       )}
     </>
   )
+}
+
+/**
+ * Mantine hands back `string | null`, so the tab is narrowed rather than cast: an unknown value
+ * falls back to the first table instead of putting the page in a state it has no panel for.
+ */
+function toCatalogTab(value: string | null): CatalogTab {
+  return value === 'professors' || value === 'ratings' ? value : 'lectures'
 }

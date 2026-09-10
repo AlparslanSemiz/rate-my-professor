@@ -1,4 +1,4 @@
-import { Select, type CSSProperties } from '@mantine/core'
+import { Select } from '@mantine/core'
 import type { AuditMeta } from '@/api/logs'
 import {
   actorTypeOptions,
@@ -9,8 +9,7 @@ import {
   type FilterDraft,
 } from '../logModel'
 import type { DraftSetter } from './logFilterTypes'
-
-const filterFieldStyle: CSSProperties = { flex: '1 1 180px' }
+import { filterFieldWidth } from '@/constants/layout'
 
 interface LogSelectFilterProps {
   meta: AuditMeta
@@ -43,7 +42,7 @@ export function ActorFilter({ value, label, placeholder, meta, onDraftChange }: 
       onChange={(actorId) => onDraftChange((current) => ({ ...current, actorId }))}
       searchable
       clearable
-      style={filterFieldStyle}
+      style={filterFieldWidth.select}
     />
   )
 }
@@ -68,7 +67,7 @@ export function ActionFilter({ value, meta, onDraftChange }: ActionFilterProps) 
         }))
       }}
       clearable
-      style={filterFieldStyle}
+      style={filterFieldWidth.select}
     />
   )
 }
@@ -93,7 +92,7 @@ export function TargetFilter({ value, meta, onDraftChange }: TargetFilterProps) 
         }))
       }}
       clearable
-      style={filterFieldStyle}
+      style={filterFieldWidth.select}
     />
   )
 }
@@ -122,7 +121,7 @@ export function ActorTypeFilter({ value, meta, onDraftChange }: ActorTypeFilterP
         }))
       }}
       clearable
-      style={filterFieldStyle}
+      style={filterFieldWidth.select}
     />
   )
 }

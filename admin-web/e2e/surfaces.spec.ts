@@ -97,20 +97,46 @@ const KNOWN_OVERFLOW_IN: Readonly<Record<string, number>> = {}
  * dialogs pass clean on the same surface, so this is specific text on specific components
  * rather than the panel's palette as a whole.
  *
- * **These numbers are only stable because the measurement waits for the modal to finish
- * animating** — see `settled` in `e2e/measure.ts`. Taken mid-fade they move by several nodes
- * per run in both directions, and the first set written down here was wrong for that reason.
+ * **Two numbers per surface, not one, and that is a correction rather than a refinement.**
+ * This map used to pin `failed` alone, and `failed` is not a stable quantity even after
+ * `settled` has waited out the fade. Measured on the undo confirmation, ten runs: with the
+ * `F-067` filter bar it reported `failed` 11, 10, 11, 11, 10 and without it 9, 10, 10, 10, 10.
+ * A single pinned integer therefore goes red on roughly half of all runs while nothing about
+ * the panel has changed — which is a test that records nothing.
+ *
+ * What **is** stable across all ten runs, and across the `F-067` change on all three log
+ * surfaces, is `passed` and `failed + undetermined`. The node total never moved; what moved
+ * was whether axe could resolve a given node's background at the moment it looked. So the pin
+ * is those two, and `notPassing` deliberately adds the two buckets together: `F-035` is
+ * precisely the habit of counting `incomplete` as a pass, and this pin refuses to.
+ *
+ * The cost, stated: a node sliding between `failed` and `undetermined` no longer turns
+ * anything red. That is the intent - it is the timing artefact. A node moving in or out of
+ * `passed` still does, and that is the only move that means a colour changed.
  *
  * Recorded and not fixed: every one of them is a colour, and `F-034` is already waiting on the
  * same theme pass for `chrome.textDim`.
  */
-const KNOWN_CONTRAST_FAILURES: Readonly<Record<string, number>> = {
-  'the user profile': 9,
-  'the content editor': 1,
-  'the audit detail panel': 9,
-  'the undo confirmation': 10,
-  'the bug report': 3,
-  'the activity detail panel': 6,
+
+/** What one dialog's contrast measurement is pinned to. */
+interface ContrastTally {
+  /** Nodes axe computed a ratio for and found sufficient. */
+  passed: number
+  /** Nodes it did not: failing plus undetermined, because an unresolved node is not a pass. */
+  notPassing: number
+}
+const KNOWN_CONTRAST: Readonly<Record<string, ContrastTally>> = {
+  'the user profile': { passed: 14, notPassing: 9 },
+  'the content editor': { passed: 7, notPassing: 1 },
+  'the delete-content confirmation': { passed: 3, notPassing: 1 },
+  'the lecture editor': { passed: 17, notPassing: 1 },
+  'the professor editor': { passed: 12, notPassing: 0 },
+  'the delete-lecture confirmation': { passed: 3, notPassing: 1 },
+  'the delete-rating confirmation': { passed: 3, notPassing: 1 },
+  'the bug report': { passed: 11, notPassing: 4 },
+  'the audit detail panel': { passed: 10, notPassing: 10 },
+  'the undo confirmation': { passed: 12, notPassing: 12 },
+  'the activity detail panel': { passed: 6, notPassing: 7 },
 }
 
 /**
@@ -265,9 +291,10 @@ test.describe('every modal', () => {
         `contrast ${surface.name}: passed=${contrast.passed} failed=${contrast.failed} ` +
           `undetermined=${contrast.undetermined}`,
       )
-      expect(contrast.failed, `contrast failures in ${surface.name}`).toBe(
-        KNOWN_CONTRAST_FAILURES[surface.name] ?? 0,
-      )
+      expect(
+        { passed: contrast.passed, notPassing: contrast.failed + contrast.undetermined },
+        `contrast tally for ${surface.name}`,
+      ).toEqual(KNOWN_CONTRAST[surface.name])
     })
   }
 

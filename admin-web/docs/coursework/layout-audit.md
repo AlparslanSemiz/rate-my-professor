@@ -501,3 +501,71 @@ moderation content and reports. After: **14px** everywhere, via `tableCellPaddin
 an author chip; Professors lists every lecture. Equalising those means truncating content,
 not aligning a layout - so the token decides the padding, not the height.
 
+## Step 6 - one filter bar shell (`F-067`)
+
+Measured at 1440x900 against the mock backend, after the change.
+
+### Where the search sits
+
+| Route | x before | x after | width before | width after |
+| --- | --- | --- | --- | --- |
+| Users | 293 | 293 | 352.5 | 360 |
+| Comments | 293 | 293 | **922** | **360** |
+| Lectures & Professors | **1067** | **293** | 320 | 360 |
+| Audit Logs | 293 | 293 | 305.3 | 319 |
+| Activity Logs | 293 | 293 | 295.3 | 309 |
+
+**Every search now starts at x=293.** The catalogue's moved 774px left, out of the table
+panel's header and into a bar of its own. Comments' shrank from 922 to 360, because `flex: 1`
+with no upper bound had let it eat every pixel its one neighbour did not want.
+
+The three widths that are not 360 are the two log screens, where the search shares its row
+with three or four selects and the bound is never reached. That is the basis doing its job
+rather than a fourth width.
+
+### Where Apply and Clear sit
+
+| | before | after |
+| --- | --- | --- |
+| Apply x | 1143.5 | **1147** |
+| Clear x | 1294.6 | **1295** |
+| On a row of their own? | **no** - last two flex children of the control group | **yes** |
+| Users: control row y / button row y | one row, buttons on it | 262 / **310** |
+| Audit Logs: last control row y / button row y | buttons on the wrapped second row | 232 / **280** |
+| Activity Logs | as above | 232 / **280** |
+
+They were already at the same x on all three screens; what moved them was **vertical**, and a
+row of their own is what makes control count unable to reach them.
+
+### The date fields, which is where the worst number was
+
+| Field | before | after |
+| --- | --- | --- |
+| Audit Logs `To` | **838.5** | **170** |
+| Activity Logs `From` | 413.2 | **170** |
+| Activity Logs `To` | 413.2 | **170** |
+| Audit Logs `From` | - | 159 |
+
+The 838.5 was never a width somebody chose: `flex: '1 1 150px'` with no `maxWidth` meant the
+field absorbed whatever slack its wrapped row had, and Audit wrapped it **alone** where
+Activity wrapped **two** of them. A bound is what makes the same control the same size. The
+one field still off the bound is Audit's `From`, at 159, because it sits on the crowded first
+row and never grows to its 170 cap - an 11px spread where there was a 425px one.
+
+### What did not close, with the number that says why
+
+**Both log screens still take two control rows at 1440**, and the brief asked for Audit Logs
+to fit on one. Measured rather than asserted: the panel's content box is **1094px**, and
+Chromium's `input[type=date]` has an automatic minimum size of about **170px**, not the 130px
+basis - so the six Audit controls need 260 + 160 + 160 + 160 + 170 + 170 = 1080 plus five 12px
+gaps, which is **1140**. It does not fit, and the shortfall is 46px.
+
+Audit alone could be made to fit by cutting the search basis to 240 and the selects to 150:
+240 + 150 + 150 + 150 + 170 + 170 + 60 = **1090**, four pixels inside the box. That was
+measured and **rejected** for two reasons. Four pixels of slack is not a layout, it is a
+coincidence waiting for a longer label. And Activity Logs has a seventh control, so the same
+widths give 1252 and it wraps anyway - which would put the two log screens back on different
+layouts, which is the whole of what `F-067` is about.
+
+So the wrap is now **the same wrap on both**: row one is the search and the selects, row two
+is the dates, row three is Apply and Clear. Recorded rather than fixed.

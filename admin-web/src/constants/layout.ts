@@ -56,3 +56,33 @@ export const LOGIN_CARD_MAX_WIDTH = 400
  */
 export const tableCellPadding = '14px 20px'
 
+/**
+ * The three field shapes a filter bar is built from, so that the same control is the same width
+ * on every screen.
+ *
+ * `F-067`: the panel had five filter layouts, and the widths were the visible half of it. Every
+ * field was written `flex: '<n> 1 <basis>'` with **no upper bound**, so a field's width was
+ * decided by what happened to wrap onto its row rather than by what goes in it. Measured at
+ * 1440: the Comments search was **922px** because it was `flex: 1` beside one select, and the
+ * Audit Logs end date was **838.5px** against the identical control's **413.2px** on Activity
+ * Logs - one flexible sibling on the wrapped row instead of two.
+ *
+ * A `maxWidth` is what makes that impossible. The basis still lets a field grow into a wide bar
+ * and shrink on a narrow one; the bound stops it becoming a different control.
+ *
+ * The bases are also chosen so **Audit Logs' six controls fit one row at 1440**: 260 + 160 + 160
+ * + 160 + 130 + 130 = 1000, plus five 12px gaps, is 1060 in a 1094px panel. Activity Logs has a
+ * seventh control and wraps; that is recorded rather than fixed by cramping every field on every
+ * screen down to the width the widest screen would need.
+ */
+export const filterFieldWidth = {
+  /** Free-text search, and always the first control in the bar. */
+  search: { flex: '2 1 260px', maxWidth: 360 },
+  /** A select over a vocabulary the backend supplies: actors, actions, targets, statuses. */
+  select: { flex: '1 1 160px', maxWidth: 200 },
+  /** A `type="date"` box. Chromium needs about 130px before it clips its own placeholder. */
+  date: { flex: '1 1 130px', maxWidth: 170 },
+} as const
+
+/** The gap between filter controls, and between the bar's control row and its action row. */
+export const FILTER_BAR_GAP = 12

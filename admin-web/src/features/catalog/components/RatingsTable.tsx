@@ -1,24 +1,19 @@
-import { Box, Button, Select, Text, type CSSProperties } from '@mantine/core'
+import { Box, Button, Text, type CSSProperties } from '@mantine/core'
 import { IconStar } from '@tabler/icons-react'
 import { type Lecture, type Rating } from '@/api/catalog'
-import { lectureLabel } from '../model'
 import CatalogTablePanel, { CatalogEmptyRow } from './CatalogTablePanel'
 import RatingTableRow from './RatingTableRow'
 import { chrome } from '@/theme'
 
 const TABLE_COLUMNS = ['Lecture', 'Scores', 'Rated by', 'Date', ''] as const
 
-const filterStyle: CSSProperties = { flex: '1 1 260px', maxWidth: 360 }
 const loadMoreStyle: CSSProperties = { padding: '14px 20px', textAlign: 'center' }
 
 interface RatingsTableProps {
   ratings: Rating[]
-  lectures: Lecture[]
   lecturesById: Map<string, Lecture>
-  lectureId: string | null
   hasMore: boolean
   busy: boolean
-  onFilterByLecture: (lectureId: string | null) => void
   onLoadMore: () => void
   onDelete: (rating: Rating) => void
 }
@@ -29,39 +24,18 @@ interface RatingsTableProps {
  */
 export default function RatingsTable({
   ratings,
-  lectures,
   lecturesById,
-  lectureId,
   hasMore,
   busy,
-  onFilterByLecture,
   onLoadMore,
   onDelete,
 }: RatingsTableProps) {
-  const lectureOptions = lectures.map((lecture) => ({
-    value: lecture.id,
-    label: lectureLabel(lecture),
-  }))
-
   return (
     <CatalogTablePanel
       title="Ratings"
       description={`${ratings.length} loaded · a rating can be removed, never rewritten`}
       columns={TABLE_COLUMNS}
       minWidth={760}
-      controls={
-        <Select
-          placeholder="All lectures"
-          aria-label="Filter ratings by lecture"
-          data={lectureOptions}
-          value={lectureId}
-          onChange={onFilterByLecture}
-          style={filterStyle}
-          size="sm"
-          searchable
-          clearable
-        />
-      }
       footer={hasMore && (
         <Box style={loadMoreStyle}>
           <Button variant="light" loading={busy} onClick={onLoadMore}>

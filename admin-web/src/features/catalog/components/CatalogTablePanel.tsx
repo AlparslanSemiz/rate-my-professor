@@ -16,7 +16,6 @@ interface CatalogTablePanelProps {
   columns: readonly string[]
   minWidth: number
   icon?: ReactNode
-  controls?: ReactNode
   footer?: ReactNode
   children: ReactNode
 }
@@ -27,7 +26,6 @@ export default function CatalogTablePanel({
   columns,
   minWidth,
   icon,
-  controls,
   footer,
   children,
 }: CatalogTablePanelProps) {
@@ -46,7 +44,6 @@ export default function CatalogTablePanel({
               {description}
             </Text>
           </div>
-          {controls}
         </Group>
       </Box>
 

@@ -124,6 +124,27 @@ describe('Audit Logs page', () => {
     expect(requestsTo('GET', '/api/audit-logs').at(-1)?.path).toContain('q=Alice')
   })
 
+  it('keeps Apply and Clear out of the row the controls wrap in', async () => {
+    renderAuditLogs()
+    await screen.findByText('Alice (alice@student.kit.edu)')
+
+    // `F-067`. Apply and Clear used to be the last two flex children of the same wrapping
+    // group as the eight filter controls, so where they ended up was decided by how many
+    // controls the screen happened to offer: at 1440 they sat on a second line here and on a
+    // first line on Users. Their own row is what makes that impossible rather than unlikely.
+    //
+    // Asserted as containment rather than as a coordinate, because jsdom has no layout. The
+    // browser measurement is in `docs/coursework/layout-audit.md`.
+    const search = screen.getByRole('textbox', { name: 'Search' })
+    const apply = screen.getByRole('button', { name: 'Apply filters' })
+    const clear = screen.getByRole('button', { name: 'Clear' })
+
+    const actionRow = apply.parentElement
+    expect(actionRow).not.toBeNull()
+    expect(actionRow).toContainElement(clear)
+    expect(actionRow).not.toContainElement(search)
+  })
+
   it('appends the next cursor page', async () => {
     // A full page and one more, because the handler really slices: with fewer entries than
     // the page size there is no second page to append, and a mock that simply returned two

@@ -102,6 +102,33 @@ describe('Catalogue page', () => {
     expect(screen.queryByText('Algorithms')).not.toBeInTheDocument()
   })
 
+  it('puts the search in the filter bar above the tabs, not inside the table panel', async () => {
+    const user = userEvent.setup()
+    renderCatalog()
+    await screen.findByText('Algorithms')
+
+    // `F-067`. This screen was the one with no filter bar at all: its search sat in the table
+    // panel's own header, right-aligned at x=1067, where every other screen puts its search at
+    // x=293. Moving it up is what makes the five screens one shell.
+    //
+    // The cost is the same one Comments paid for `F-065`: the control differs per tab - a text
+    // box for Lectures and Professors, a lecture Select for Ratings - so the page has to hold
+    // the open tab for the bar to follow it.
+    const search = screen.getByRole('textbox', { name: 'Search lectures' })
+    const tabs = screen.getByRole('tablist')
+    const searchComesFirst = search.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING
+
+    expect(searchComesFirst).toBeTruthy()
+
+    // And it follows the tab rather than freezing on the first one's control.
+    await user.click(screen.getByRole('tab', { name: /Ratings/ }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('textbox', { name: 'Search lectures' })).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole('combobox', { name: 'Filter ratings by lecture' })).toBeInTheDocument()
+  })
+
   it('sends only the fields a lecture edit changed', async () => {
     const user = userEvent.setup()
     renderCatalog()
