@@ -1,7 +1,9 @@
 package com.pse.social.service;
 
+import com.pse.lecture.model.Lecture;
 import com.pse.shared.dto.BasicResponse;
 import com.pse.shared.enums.NotificationType;
+import com.pse.shared.enums.UserStatus;
 import com.pse.social.dto.request.*;
 import com.pse.social.dto.response.NotificationsResponse;
 import com.pse.social.model.*;
@@ -40,6 +42,60 @@ import static org.mockito.Mockito.*;
     }
 
 
+    @Test
+    void getNotificationsReturnsDeletedUserForAnswerNotification() {
+
+        Student recipient = mock(Student.class);
+
+        Student deletedAuthor = new Student();
+        deletedAuthor.setId(UUID.randomUUID());
+        deletedAuthor.setUsername("oldName");
+        deletedAuthor.setStatus(UserStatus.DELETED);
+
+        Answer answer = new Answer();
+        answer.setId(UUID.randomUUID());
+        answer.setStudent(deletedAuthor);
+        answer.setContent("Some answer");
+
+        Lecture lecture = new Lecture();
+        lecture.setId(UUID.randomUUID());
+        lecture.setName("Algorithmen 1");
+
+        Comment ownComment = new Comment();
+        ownComment.setId(UUID.randomUUID());
+
+        Notification notification = new Notification();
+        notification.setId(UUID.randomUUID());
+        notification.setType(NotificationType.ANSWER);
+        notification.setAnswer(answer);
+        notification.setLecture(lecture);
+        notification.setOwnComment(ownComment);
+        notification.setCreatedAt(LocalDateTime.now());
+
+        when(notificationRepository
+                .findAllByRecipientAndSeenFalseOrderByCreatedAtDesc(recipient))
+                .thenReturn(List.of(notification));
+
+        NotificationsResponse response =
+                notificationService.getNotifications(recipient);
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.notifications()).hasSize(1);
+
+        var notificationResponse = response.notifications().getFirst();
+
+        assertThat(notificationResponse.type())
+                .isEqualTo(NotificationType.ANSWER);
+
+        assertThat(notificationResponse.userName())
+                .isEqualTo("Deleted User");
+
+        assertThat(notificationResponse.content())
+                .isEqualTo("Some answer");
+
+        assertThat(notificationResponse.ownCommentID())
+                .isEqualTo(ownComment.getId());
+    }
 
 
     @Test
