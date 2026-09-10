@@ -1,0 +1,16 @@
+package com.example.ratemyprofessor.domain;
+
+import java.util.List;
+
+public record LectureModel(
+        String id,
+        String name,
+        String code,
+        int semesterYear,
+        SemesterSeason semesterSeason,
+        boolean active,
+        List<Professor> professors,
+        int commentCount,
+        int ratingCount,
+        double averageRating
+) {}

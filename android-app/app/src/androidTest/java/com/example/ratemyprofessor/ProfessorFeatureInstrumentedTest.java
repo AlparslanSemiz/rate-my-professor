@@ -13,38 +13,38 @@ import androidx.room.Room;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
-import com.example.ratemyprofessor.Adapters.ProfessorAdapter;
-import com.example.ratemyprofessor.Adapters.SearchPagerAdapter;
-import com.example.ratemyprofessor.Adapters.SearchService;
-import com.example.ratemyprofessor.DomainModel.Lecture;
-import com.example.ratemyprofessor.DomainModel.LectureModel;
-import com.example.ratemyprofessor.DomainModel.Professor;
-import com.example.ratemyprofessor.DomainModel.Rater;
-import com.example.ratemyprofessor.DomainModel.Rating;
-import com.example.ratemyprofessor.DomainModel.RatingCategory;
-import com.example.ratemyprofessor.DomainModel.SemesterSeason;
-import com.example.ratemyprofessor.Fragments.SelectionFragment;
-import com.example.ratemyprofessor.ServerCommunication.APIService;
-import com.example.ratemyprofessor.ServerCommunication.Requests.BugReportRequest;
-import com.example.ratemyprofessor.ServerCommunication.Requests.CommentReportRequest;
-import com.example.ratemyprofessor.ServerCommunication.Requests.RatingRequest;
-import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
-import com.example.ratemyprofessor.ServerCommunication.Database;
-import com.example.ratemyprofessor.ServerCommunication.Requests.LoginRequest;
-import com.example.ratemyprofessor.ServerCommunication.Requests.PostCommentRequest;
-import com.example.ratemyprofessor.ServerCommunication.Responses.LectureDetailResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.NotificationsResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorDetailResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.RatingAverageResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.RatingCategoriesResponse;
-import com.example.ratemyprofessor.ServerCommunication.Responses.ServerResponse;
-import com.example.ratemyprofessor.ServerCommunication.Requests.SubmitAnswerRequest;
-import com.example.ratemyprofessor.ServerCommunication.Responses.StudentProfileResponse;
-import com.example.ratemyprofessor.ServerCommunication.Requests.VoteRequest;
-import com.example.ratemyprofessor.ServerCommunication.Responses.UserRatingResponse;
+import com.example.ratemyprofessor.adapters.ProfessorAdapter;
+import com.example.ratemyprofessor.adapters.SearchPagerAdapter;
+import com.example.ratemyprofessor.adapters.SearchService;
+import com.example.ratemyprofessor.domain.Lecture;
+import com.example.ratemyprofessor.domain.LectureModel;
+import com.example.ratemyprofessor.domain.Professor;
+import com.example.ratemyprofessor.domain.Rater;
+import com.example.ratemyprofessor.domain.Rating;
+import com.example.ratemyprofessor.domain.RatingCategory;
+import com.example.ratemyprofessor.domain.SemesterSeason;
+import com.example.ratemyprofessor.fragments.SelectionFragment;
+import com.example.ratemyprofessor.servercommunication.APIService;
+import com.example.ratemyprofessor.servercommunication.requests.BugReportRequest;
+import com.example.ratemyprofessor.servercommunication.requests.CommentReportRequest;
+import com.example.ratemyprofessor.servercommunication.requests.RatingRequest;
+import com.example.ratemyprofessor.servercommunication.responses.BasicResponse;
+import com.example.ratemyprofessor.servercommunication.responses.CommentsResponse;
+import com.example.ratemyprofessor.servercommunication.Database;
+import com.example.ratemyprofessor.servercommunication.requests.LoginRequest;
+import com.example.ratemyprofessor.servercommunication.requests.PostCommentRequest;
+import com.example.ratemyprofessor.servercommunication.responses.LectureDetailResponse;
+import com.example.ratemyprofessor.servercommunication.responses.LecturesResponse;
+import com.example.ratemyprofessor.servercommunication.responses.NotificationsResponse;
+import com.example.ratemyprofessor.servercommunication.responses.ProfessorDetailResponse;
+import com.example.ratemyprofessor.servercommunication.responses.ProfessorsResponse;
+import com.example.ratemyprofessor.servercommunication.responses.RatingAverageResponse;
+import com.example.ratemyprofessor.servercommunication.responses.RatingCategoriesResponse;
+import com.example.ratemyprofessor.servercommunication.responses.ServerResponse;
+import com.example.ratemyprofessor.servercommunication.requests.SubmitAnswerRequest;
+import com.example.ratemyprofessor.servercommunication.responses.StudentProfileResponse;
+import com.example.ratemyprofessor.servercommunication.requests.VoteRequest;
+import com.example.ratemyprofessor.servercommunication.responses.UserRatingResponse;
 
 import org.junit.After;
 import org.junit.Before;
@@ -111,8 +111,8 @@ public class ProfessorFeatureInstrumentedTest {
     @Test
     public void searchPagerAdapterCreatesProfessorPage() {
         // We use ActivityScenario to get a valid FragmentManager/Context
-        try (androidx.test.core.app.ActivityScenario<com.example.ratemyprofessor.Activities.MainActivity> scenario =
-                     androidx.test.core.app.ActivityScenario.launch(com.example.ratemyprofessor.Activities.MainActivity.class)) {
+        try (androidx.test.core.app.ActivityScenario<com.example.ratemyprofessor.activities.MainActivity> scenario =
+                     androidx.test.core.app.ActivityScenario.launch(com.example.ratemyprofessor.activities.MainActivity.class)) {
             scenario.onActivity(activity -> {
                 Fragment host = activity.getSupportFragmentManager().findFragmentById(R.id.fragment_container);
                 SearchPagerAdapter adapter = new SearchPagerAdapter(host, () -> {});
