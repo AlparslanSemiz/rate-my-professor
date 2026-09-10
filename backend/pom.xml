@@ -11,21 +11,15 @@
 	<groupId>com.example</groupId>
 	<artifactId>demo</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
+	<name>RateMyProfApp Backend</name>
+	<description>Lecture and professor rating service for KIT: the API behind the Android app and the admin panel.</description>
+	<!--
+		The empty url, licenses, developers and scm blocks that stood here were Spring
+		Initializr placeholders, never filled in. An empty element is worse than either
+		answer: it reads as a field somebody forgot rather than one nobody needs. Removed
+		rather than filled, because a licenses block in particular would assert a licence
+		this project has not chosen; that decision is on the board, not here.
+	-->
 	<properties>
 		<java.version>21</java.version>
 		<jacoco.version>0.8.13</jacoco.version>
