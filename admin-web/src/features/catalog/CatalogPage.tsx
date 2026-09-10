@@ -158,7 +158,7 @@ export default function CatalogPage() {
         <Tabs.Panel value="lectures">
           <LecturesTable
             lectures={lists.filteredLectures}
-            totalCount={lists.lecturesInState.length}
+            totalCount={lists.lectures.length}
             mutating={actions.mutating}
             onEdit={(lecture) => lectureEdit.open(lecture.id)}
             onDelete={(record) => setDeleting({ type: 'lecture', record })}
@@ -168,7 +168,7 @@ export default function CatalogPage() {
         <Tabs.Panel value="professors">
           <ProfessorsTable
             professors={lists.filteredProfessors}
-            totalCount={lists.professorsInState.length}
+            totalCount={lists.professors.length}
             mutating={actions.mutating}
             lecturesById={lecturesById}
             onEdit={(professor) => professorEdit.open(professor.id)}

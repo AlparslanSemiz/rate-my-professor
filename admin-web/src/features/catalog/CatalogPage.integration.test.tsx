@@ -320,6 +320,31 @@ describe('Catalogue page', () => {
     expect(screen.getByText('Algorithms')).toBeInTheDocument()
   })
 
+  it('counts the panel against the whole catalogue, not against the filter', async () => {
+    const user = userEvent.setup()
+    renderCatalog()
+
+    // Two lectures in the fixture, one of them inactive. The tab counts what the filter shows
+    // and the panel's denominator counts the catalogue - they are different questions, and the
+    // denominator's own words are "in the catalogue".
+    //
+    // It used to be the filtered count, which read "1 of 1 in the catalogue" while the stat
+    // card above it said 2. Against the live backend that was "92 of 92" under a card reading
+    // 95, so the three inactive lectures looked like rows the panel had lost rather than rows
+    // the filter was holding back.
+    expect(await screen.findByText('1 of 2 in the catalogue')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('combobox', { name: 'Filter lectures by status' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'Inactive', hidden: true }))
+
+    expect(await screen.findByText('1 of 2 in the catalogue')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('combobox', { name: 'Filter lectures by status' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'All', hidden: true }))
+
+    expect(await screen.findByText('2 of 2 in the catalogue')).toBeInTheDocument()
+  })
+
   it('lists active professors only until the filter is widened', async () => {
     const user = userEvent.setup()
     renderCatalog()

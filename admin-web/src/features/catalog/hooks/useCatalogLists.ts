@@ -61,7 +61,13 @@ export function useCatalogLists() {
   return {
     lectures: lectureItems,
     professors: professorItems,
-    /** How many of each the tab strip counts: every row read, whatever the filter shows. */
+    /**
+     * The rows the activity filter admits, before the search narrows them further.
+     *
+     * This is what the tab strip counts, so the number on the tab and the number of rows
+     * under it agree. The unfiltered `lectures` and `professors` above stay the catalogue's
+     * own totals, which is what the stat cards and each panel's `n of m` denominator read.
+     */
     lecturesInState,
     professorsInState,
     filteredLectures: lectureSearch.filtered,

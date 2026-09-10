@@ -75,7 +75,11 @@ const FAULTS: Record<string, () => HttpHandler[]> = {
         })),
       }),
     ),
-    http.get(apiUrl('/data/lectures'), () =>
+    // `/data/lectures/all`, not `/data/lectures`: the catalogue moved to the admin read when
+    // the activity filter landed, and this override kept patching a path the panel no longer
+    // requests - so `?fault=long-content` silently stopped reaching the catalogue while still
+    // reaching Comments, and the screen it was written for came back with ordinary names.
+    http.get(apiUrl('/data/lectures/all'), () =>
       ok({
         lectures: db.lectures.map((lecture) => ({ ...lecture, name: LONG_TEXT.slice(0, 120) })),
       }),
