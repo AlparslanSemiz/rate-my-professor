@@ -29,6 +29,6 @@ public record Comment (
         LocalDateTime createdAt,
         int downVotes,
         int upVotes,
-        VoteType voteType,
+        VoteType userVote,
         List<Comment> answers
 ) {}

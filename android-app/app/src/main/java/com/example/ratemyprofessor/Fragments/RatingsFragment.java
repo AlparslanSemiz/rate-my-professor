@@ -233,18 +233,18 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
      */
     private void getComments() {
         SearchService searchService = Database.getInstance(requireContext()).searchService();
-//        executorService.execute(() -> {
-//            List<Comment> cachedComments = commentModelsToComments(
-//                    searchService,
-//                    searchService.getComments(lecture.id)
-//            );
-//            runOnUiThread(() -> {
-//                if (!serverCommentsLoaded) {
-//                    System.out.println("Hier");
-//                    showComments(cachedComments);
-//                }
-//            });
-//        });
+        executorService.execute(() -> {
+            List<Comment> cachedComments = commentModelsToComments(
+                    searchService,
+                    searchService.getComments(lecture.id)
+            );
+            runOnUiThread(() -> {
+                if (!serverCommentsLoaded) {
+                    System.out.println("Hier");
+                    showComments(cachedComments);
+                }
+            });
+        });
 
         if (!AuthManager.getInstance().isLoggedIn()) {
             return;
@@ -278,7 +278,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                 System.out.println("createdAt: " + freshComments.get(0).createdAt());
                 System.out.println("downVotes: " + freshComments.get(0).downVotes());
                 System.out.println("upVotes: " + freshComments.get(0).upVotes());
-                System.out.println("voteType: " + freshComments.get(0).voteType());
+                System.out.println("userVote: " + freshComments.get(0).userVote());
                 showComments(freshComments);
 
                 List<CommentModel> models = commentsToModels(freshComments);

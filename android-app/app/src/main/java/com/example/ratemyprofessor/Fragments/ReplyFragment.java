@@ -35,7 +35,6 @@ import com.example.ratemyprofessor.databinding.ItemCommentBinding;
 import com.example.ratemyprofessor.logic.CommentHelper;
 
 import java.util.List;
-import java.util.Objects;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -86,9 +85,9 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         mainComment.upvotesNum.setText(String.valueOf(comment.upVotes()));
         mainComment.downvotesNum.setText(String.valueOf(comment.downVotes()));
 
-        if (comment.voteType() == VoteType.UP) {
+        if (comment.userVote() == VoteType.UP) {
             mainComment.upvoteIcon.setImageResource(R.drawable.upvote_icon_filled);
-        } else if (comment.voteType() == VoteType.DOWN) {
+        } else if (comment.userVote() == VoteType.DOWN) {
             mainComment.downvoteIcon.setImageResource(R.drawable.downvote_icon_filled);
         }
 

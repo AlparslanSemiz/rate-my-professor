@@ -1,7 +1,6 @@
 package com.example.ratemyprofessor.Adapters;
 
 import android.content.Context;
-import android.graphics.PorterDuff;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,7 +10,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
@@ -71,10 +69,10 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         holder.commentContent.setText(comment.content());
         holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
         holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
-        System.out.println(comment.voteType());
-        if (comment.voteType() == VoteType.UP) {
+        System.out.println(comment.userVote());
+        if (comment.userVote() == VoteType.UP) {
             holder.upVoteButton.setImageResource(R.drawable.upvote_icon_filled);
-        } else if (comment.voteType() == VoteType.DOWN) {
+        } else if (comment.userVote() == VoteType.DOWN) {
             holder.downVoteButton.setImageResource(R.drawable.downvote_icon_filled);
         }
 
