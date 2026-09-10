@@ -16,12 +16,12 @@ Severity is about what an operator would experience, not about how hard it is to
 
 | # | Finding | Severity |
 | --- | --- | --- |
-| [C-01](#c-01--getauthme-may-already-be-gone-and-the-page-load-path-swallows-the-404) | `GET /auth/me` may already return `404`; the page-load path ignores it | **Blocker if confirmed** |
+| [C-01](#c-01--get-authme-may-already-be-gone-and-the-page-load-path-swallows-the-404) | `GET /auth/me` may already return `404`; the page-load path ignores it | **Blocker if confirmed** |
 | [C-02](#c-02--the-client-sends-no-admin-prefix-on-any-of-its-42-paths) | No `/admin` prefix on any of 42 paths | Major |
 | [C-03](#c-03--405-and-415-are-invisible-to-every-call-site) | `405` and `415` are indistinguishable from any other 4xx | Minor |
 | [C-04](#c-04--path-ids-are-never-escaped) | Path ids are interpolated raw, never escaped | Minor |
 | [C-05](#c-05--34-of-42-calls-branch-on-no-status-at-all) | 34 of 42 calls branch on no status at all | Medium |
-| [C-06](#c-06--four-calls-swallow-every-failure-including-a-404) | Four calls swallow every failure, `404` included | Medium |
+| [C-06](#c-06--four-calls-swallow-every-failure-404-included) | Four calls swallow every failure, `404` included | Medium |
 | [C-07](#c-07--nested-objects-are-read-without-a-null-check) | Nested objects read without a null check | Medium |
 | [C-08](#c-08--open-maps-are-enumerated-without-a-presence-check) | `changes`, `metadata`, `counts` enumerated without a presence check | Medium |
 | [C-09](#c-09--path-and-field-names-are-spread-across-19-files) | Paths and response keys are spread across 19 files | Medium |
@@ -262,7 +262,7 @@ silently.**
 | Call | Where | What is swallowed |
 | --- | --- | --- |
 | `POST /auth/logout` | `src/context/AuthContext.tsx:50-57` | Everything. Deliberate: signing out locally is safer than staying signed in. |
-| `GET /auth/me` on page load | `src/context/AuthContext.tsx:88-93` | Everything except `401`. See [C-01](#c-01--getauthme-may-already-be-gone-and-the-page-load-path-swallows-the-404). |
+| `GET /auth/me` on page load | `src/context/AuthContext.tsx:88-93` | Everything except `401`. See [C-01](#c-01--get-authme-may-already-be-gone-and-the-page-load-path-swallows-the-404). |
 | `GET /auth/me` after login | `src/features/auth/authenticateAdmin.ts:32-42` | Bare `catch`; converted into a failed sign-in. |
 | `GET /system/status` (users table) | `src/features/users/hooks/useUsersPage.ts:35-41` | Everything. Counters render as dashes. |
 | `GET /system/status` (bug reports) | `src/features/feedback/hooks/useFeedbackReports.ts:15-21` | Everything. `gitlabEnabled` becomes `false`, so the "Create issue" button silently disappears. |
@@ -720,7 +720,7 @@ Ordered by what would hurt most if it broke, and phrased as things the backend c
 assert without seeing this repository.
 
 1. **Answer whether legacy `GET /auth/me` is still routed.** Two documents here
-   disagree ([C-01](#c-01--getauthme-may-already-be-gone-and-the-page-load-path-swallows-the-404)).
+   disagree ([C-01](#c-01--get-authme-may-already-be-gone-and-the-page-load-path-swallows-the-404)).
    If it is gone, the panel cannot sign anyone in.
 2. **Accept the five bodyless writes without a `Content-Type` header** —
    `POST /auth/logout`, `POST /audit-logs/{id}/revert`,

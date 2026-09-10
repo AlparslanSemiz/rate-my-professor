@@ -49,6 +49,25 @@ what to write next:
 | **Concurrency layer** (two requests at once, real PostgreSQL) | 0 | — see [Negative results](#negative-results) |
 | **Doing the measuring** — process findings about the suite itself, its own assertions, and its documentation | 7 | P-1, P-2, P-3, P-4, P-6, P-7, P-8 |
 
+**Seven findings came after this register closed, and they have their own sources.** F-42 to
+F-48 are numbered but not counted above, for the reason given below the status table: four of
+them are in deployment configuration or in a client repository and cannot be pinned from here.
+The other three are in this application, and two of those are pinned and open on a product
+decision rather than on a commit. Where each came from, because that is the same question the
+table above answers for the fifty:
+
+| Found by | How many | Which |
+|---|---|---|
+| **Consumer contract audit** — the panel's called-route list read against this code | 1 | F-42 |
+| **Curling the deployed host** — after a deployment, with response headers used to name the serving layer | 3 | F-43, F-44, F-45 |
+| **Measuring a client request instead of answering it** — reading the code a feature request would touch, before writing any | 3 | F-46, F-47, F-48 |
+
+**The third row is the method that produced the most in the fewest passes**, and it is worth
+naming as a method rather than as luck: each of those three came out of being asked for a
+feature and reading the code that would have to change, rather than estimating it. F-47 came
+from asking what actually reads the `active` flag; F-46 from asking whether a delete is audited;
+F-48 from reading the nine lines under F-46 instead of summarising them.
+
 **The two rows of seven are the same method run twice.** The first was the 9 September pass;
 the second finished it. Every one of the five shapes had been found once and searched in one
 place — F-23 in a single class, F-26 on a single field, F-21 and F-27 in two spots each — and
@@ -136,7 +155,7 @@ defect; it found a different kind.
 | [F-39](#f-39--get-authme-was-unmapped-and-the-admin-panel-could-not-sign-anybody-in) | `GET /auth/me` was unmapped; the admin panel could not sign anybody in | **Blocker** — a shipped client locked out, silently | **Fixed** |
 | [F-40](#f-40--post-answersreport-was-never-served-and-every-report-from-the-app-failed-silently) | `POST /answers/report` was never served; every report from the app failed silently | **High** — a feature that has never worked on any release | **Fixed** |
 | [F-41](#f-41--get-accountratings-served-its-ratings-in-no-defined-order) | `GET /account/ratings` served its ratings in no defined order | Medium — F-21's shape, on the list its sweep missed | **Fixed** |
-| [P-8](#p-8--admin-apimd-drifted-four-times-and-nothing-noticed) | `admin-api.md` drifted from the code four times with no mechanism | Process | **Fixed** (under test) |
+| [P-8](#p-8--admin-apimd-drifted-five-times-and-nothing-noticed) | `admin-api.md` drifted from the code five times with no mechanism | Process | **Fixed** (under test) |
 | [P-6](#p-6--a-sweep-asserted-not-refused-which-a-404-also-satisfies) | A sweep asserted "not refused", which a `404` also satisfies | Process | **Fixed** |
 
 **F-42 has a number but is not one of the fifty.** It is a defect in the admin panel that this

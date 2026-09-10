@@ -63,5 +63,5 @@ before this.
 
 ## Sources
 
-[P-8](../test-findings.md#p-8--admin-apimd-drifted-four-times-and-nothing-noticed);
+[P-8](../test-findings.md#p-8--admin-apimd-drifted-five-times-and-nothing-noticed);
 `AdminApiDocumentationDriftTests`; `docs/admin-api.md`, *The contract, as a table*.
