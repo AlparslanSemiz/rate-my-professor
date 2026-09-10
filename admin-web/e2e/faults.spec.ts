@@ -87,7 +87,16 @@ for (const fault of FAULTS) {
 
       const doc = await pageOverflow(page)
       console.log(`fault ${fault.name} @${width}px: page=${doc.needs}/${doc.gets}`)
-      expect(doc.needs, `page scroll width with ?fault=${fault.name} at ${width}px`).toBe(doc.gets)
+      // `toBeLessThanOrEqual`, not `toBe`. Overflow is `needs > gets`; equality was only ever a
+      // proxy for it, and it held because the page happened to fill its viewport exactly. Since
+      // `scrollbar-gutter: stable` the root always reserves the scrollbar's 10px, so a page that
+      // does not scroll needs 10 less than it gets - which is the gutter doing its job, not
+      // content going missing. Asserting equality here failed on 82 measurements that had
+      // nothing wrong with them. `F-062`.
+      expect(
+        doc.needs,
+        `page scroll width with ?fault=${fault.name} at ${width}px`,
+      ).toBeLessThanOrEqual(doc.gets)
     })
   }
 }

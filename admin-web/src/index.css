@@ -21,6 +21,24 @@ html, body, #root {
   width: 100%;
 }
 
+/* Hold the scrollbar's column open even when nothing is scrolling, so opening a dialog does
+   not widen the page underneath it.
+
+   Mantine locks the body while a modal is up (`body { overflow: hidden }`), which on a browser
+   with classic scrollbars takes the 9px gutter away and hands it back on close. Measured on the
+   catalogue at 1024 with a real session: `documentElement.clientWidth` goes 1015 -> 1024 -> 1015
+   and every panel's right edge, the tab strip's included, travels +10px out and back — on every
+   open and every close, of every one of the panel's dialogs. The left edges do not move, because
+   the layout is anchored left, which is why this reads as the right-hand side of the screen
+   jumping rather than as the page recentring.
+
+   `F-062` measured this before and could not reproduce it: that run used a Chromium with overlay
+   scrollbars, where the gutter is 0 and there is nothing to take away. The finding was left open
+   for want of "a browser with classic scrollbars to confirm first". This is that confirmation. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   /* KIT-Grün and Maigrün, at the alpha the old washes used — enough to warm the page, not
      enough to tint what is drawn on it. */

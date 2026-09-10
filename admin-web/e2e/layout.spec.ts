@@ -55,18 +55,29 @@ const HEIGHT = 900
 test('the panel cannot be measured at or below 768px, and the boundary is 800', async ({ page }) => {
   await signIn(page, '/users')
 
-  const widthOfNavAt = async (width: number) => {
+  /** @returns the navbar's width, and the content width it had to lay itself out in */
+  const navAt = async (width: number) => {
     await page.setViewportSize({ width, height: HEIGHT })
     await page.getByText(/Everyone who's signed up/).first().waitFor()
     const box = await page.locator('nav').first().boundingBox()
-    return Math.round(box?.width ?? 0)
+    // `body`, not `documentElement`: Chromium reports the root's `clientWidth` as the whole
+    // viewport even when `scrollbar-gutter: stable` has reserved part of it, so the root
+    // says 320 while everything laid out inside it gets 310. The body is the box the
+    // navbar is actually stretched across.
+    const available = await page.evaluate(() => document.body.clientWidth)
+    return { nav: Math.round(box?.width ?? 0), available }
   }
 
   for (const width of UNUSABLE_WIDTHS) {
-    expect(await widthOfNavAt(width), `navbar at ${width}px`).toBe(width)
+    // Against the content width rather than the viewport width it was set from:
+    // `scrollbar-gutter: stable` reserves the scrollbar's 10px on the root, so the widest
+    // anything can be laid out is 10 short of the viewport. The claim is "the navbar *is* the
+    // content width", and this is the number that says so.
+    const { nav, available } = await navAt(width)
+    expect(nav, `navbar at ${width}px`).toBe(available)
   }
   for (const width of USABLE_WIDTHS) {
-    expect(await widthOfNavAt(width), `navbar at ${width}px`).toBe(NAVBAR_WIDTH)
+    expect((await navAt(width)).nav, `navbar at ${width}px`).toBe(NAVBAR_WIDTH)
   }
 })
 
@@ -76,7 +87,8 @@ for (const width of USABLE_WIDTHS) {
      * **State** — one route, loaded, at a width the panel is usable at.
      * **Action** — compare the document's scroll width with its client width, and every
      *              table's own scroll width with the box it is drawn in.
-     * **Expected** — equal. A page that scrolls sideways has already overflowed.
+     * **Expected** — no more than it gets. A page that scrolls sideways has already
+     *                overflowed; needing less than the viewport is the reserved gutter.
      */
     test(`${route.name} fits at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: HEIGHT })
@@ -86,7 +98,16 @@ for (const width of USABLE_WIDTHS) {
         scrollWidth: document.documentElement.scrollWidth,
         clientWidth: document.documentElement.clientWidth,
       }))
-      expect(doc.scrollWidth, `${route.name} page scroll width at ${width}px`).toBe(doc.clientWidth)
+      // `toBeLessThanOrEqual`, not `toBe`. Overflow is `needs > gets`; equality was only ever a
+      // proxy for it, and it held because the page happened to fill its viewport exactly. Since
+      // `scrollbar-gutter: stable` the root always reserves the scrollbar's 10px, so a page that
+      // does not scroll needs 10 less than it gets - which is the gutter doing its job, not
+      // content going missing. Asserting equality here failed on 82 measurements that had
+      // nothing wrong with them. `F-062`.
+      expect(
+        doc.scrollWidth,
+        `${route.name} page scroll width at ${width}px`,
+      ).toBeLessThanOrEqual(doc.clientWidth)
 
       const tables = await page.evaluate(() =>
         [...document.querySelectorAll('table')].map((table) => {
@@ -148,7 +169,12 @@ for (const width of USABLE_WIDTHS) {
         scrollWidth: document.documentElement.scrollWidth,
         clientWidth: document.documentElement.clientWidth,
       }))
-      expect(doc.scrollWidth, `${path} page scroll width at ${width}px`).toBe(doc.clientWidth)
+      // See the note on the same assertion above: overflow is `>`, and the stable gutter
+      // makes a non-scrolling page legitimately narrower than its viewport.
+      expect(
+        doc.scrollWidth,
+        `${path} page scroll width at ${width}px`,
+      ).toBeLessThanOrEqual(doc.clientWidth)
     })
   }
 }
@@ -176,7 +202,11 @@ for (const faults of ['session-check', 'system-status', 'session-check,system-st
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
     }))
-    expect(doc.scrollWidth, `page scroll width with ?fault=${faults}`).toBe(doc.clientWidth)
+    // Overflow is `>`; see the note on the first of these assertions. `F-062`.
+    expect(
+      doc.scrollWidth,
+      `page scroll width with ?fault=${faults}`,
+    ).toBeLessThanOrEqual(doc.clientWidth)
 
     // Every strip must be inside the viewport horizontally, not merely present in the DOM.
     const boxes = await alerts.evaluateAll((nodes) =>
@@ -191,3 +221,82 @@ for (const faults of ['session-check', 'system-status', 'session-check,system-st
     }
   })
 }
+
+/**
+ * **State** — every route that draws badges, at every usable width.
+ * **Action** — measure each badge's *label* against the box it is drawn in.
+ * **Expected** — no label is asked to fit in less room than it needs.
+ *
+ * **The box matters, and getting it wrong is what hid `F-075` for a whole round.** Mantine's
+ * badge root is `width: fit-content`, so it shrinks instead of overflowing and every sweep of
+ * `scrollWidth > clientWidth` over cells, rows and tables answered "nothing is clipped" while
+ * the catalogue showed `ACTI...` on all 92 lectures and `INAC...` on the inactive ones. The
+ * clipping happens one box further in: the label carries the `text-overflow: ellipsis`, and the
+ * label is the only box that reports it.
+ */
+for (const width of USABLE_WIDTHS) {
+  for (const route of ROUTES) {
+    test(`${route.name} shows every badge label in full at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: HEIGHT })
+      await open(page, route)
+
+      const badges = await page.evaluate(() =>
+        [...document.querySelectorAll('[class*="mantine-Badge-root"]')].map((badge) => {
+          const label = badge.querySelector('[class*="mantine-Badge-label"]') ?? badge
+          return {
+            text: (badge.textContent ?? '').trim().slice(0, 30),
+            needs: label.scrollWidth,
+            gets: label.clientWidth,
+          }
+        }),
+      )
+
+      const clipped = badges.filter((badge) => badge.needs > badge.gets)
+      console.log(`badges ${route.name} @${width}px: ${badges.length} measured, ${clipped.length} clipped`)
+      expect(
+        clipped.map((badge) => `${badge.text} needs ${badge.needs} gets ${badge.gets}`),
+        `clipped badge labels on ${route.name} at ${width}px`,
+      ).toEqual([])
+    })
+  }
+}
+
+/**
+ * **State** — the catalogue, at the width where a dialog is opened in anger.
+ * **Action** — record every panel's right edge, open a dialog, close it, record again.
+ * **Expected** — the edges are where they were, at all three moments.
+ *
+ * `F-062`. Mantine locks the body while a dialog is up, and on a browser with classic
+ * scrollbars that hands back the gutter the page was drawn around: measured on the live
+ * catalogue at 1024, `documentElement.clientWidth` went 1015 -> 1024 -> 1015 and every panel's
+ * right edge travelled +10px out and back. The finding sat open because the run that looked for
+ * it used a Chromium with overlay scrollbars, where there is no gutter to take away — so this
+ * measures the **edges**, which move either way, rather than the gutter, which does not.
+ */
+test('no panel edge moves when a dialog opens or closes', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: HEIGHT })
+  await signIn(page, '/catalog')
+  await page.locator('table').first().waitFor()
+
+  const edges = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('.panel')].map((panel) =>
+        Math.round(panel.getBoundingClientRect().right),
+      ),
+    )
+
+  const before = await edges()
+  expect(before.length, 'panels found on the catalogue').toBeGreaterThan(0)
+
+  await page.getByRole('row', { name: /^Edit / }).first().click()
+  await page.getByRole('dialog').waitFor()
+  const during = await edges()
+
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toBeHidden()
+  const after = await edges()
+
+  console.log(`panel right edges: before=${before} during=${during} after=${after}`)
+  expect(during, 'panel right edges while a dialog is open').toEqual(before)
+  expect(after, 'panel right edges after the dialog closed').toEqual(before)
+})

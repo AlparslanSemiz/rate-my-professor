@@ -283,7 +283,16 @@ test.describe('every modal', () => {
 
         // The page behind the modal must not scroll sideways either — an overlay that pushes
         // the document wider is still a document that scrolls.
-        expect(doc.needs, `page scroll width behind ${surface.name} at ${width}px`).toBe(doc.gets)
+        // `toBeLessThanOrEqual`, not `toBe`. Overflow is `needs > gets`; equality was only ever a
+        // proxy for it, and it held because the page happened to fill its viewport exactly. Since
+        // `scrollbar-gutter: stable` the root always reserves the scrollbar's 10px, so a page that
+        // does not scroll needs 10 less than it gets - which is the gutter doing its job, not
+        // content going missing. Asserting equality here failed on 82 measurements that had
+        // nothing wrong with them. `F-062`.
+        expect(
+          doc.needs,
+          `page scroll width behind ${surface.name} at ${width}px`,
+        ).toBeLessThanOrEqual(doc.gets)
 
         const overflow = body.needs - body.gets
         expect(overflow, `${surface.name} overflows at ${width}px`).toBeLessThanOrEqual(
