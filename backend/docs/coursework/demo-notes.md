@@ -113,7 +113,12 @@ consumer contract layer gets told, this is the example.
    to show.
 4. **Mail reachable.** The login code arrives by e-mail; if `SPRING_MAIL_*` is not configured
    the code is not retrievable and there is no fallback. Check this first — it is the one
-   failure that stops the demo at step one.
+   failure that stops the demo at step one. **This is about the deployed instance, which mails
+   through a real SMTP server.** It stopped being true of a local `docker compose up` on
+   10 September: that stack now runs a mail catcher and the code is read from
+   `http://localhost:8025`. If the demo is given off the local stack rather than the deployment,
+   this item is free — but the rate limit below still applies, because it is counted per address
+   either way.
 5. **`GET /system/status` green**, and read `gitlabEnabled` and `locationLookupEnabled` off it
    so there are no surprises about which actions are visible.
 6. **Nothing deactivated and nothing deleted** from a previous rehearsal. See the first section.

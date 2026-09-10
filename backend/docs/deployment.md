@@ -19,6 +19,7 @@ GitLab issue, IPinfo, and Geoapify integrations.
 | Docker | Used for image build, local Compose, and server deployment. |
 | Docker Compose | Used by `docker-compose.yml`, `docker-compose.prod.yml`, CI deploy, and `scripts/docker-smoke-test.sh`. |
 | PostgreSQL | Local Docker Compose uses `postgres:16`. |
+| Mailpit | Local Docker Compose uses `axllent/mailpit:v1.31.1` as a mail catcher, so a local run can be signed into. Not used by any deployment. |
 | Kaniko | CI image build uses `gcr.io/kaniko-project/executor:v1.23.2-debug`. |
 | GitLab CI/CD | The pipeline is defined in `.gitlab-ci.yml`. |
 
@@ -31,7 +32,8 @@ configuration is in `.mvn/wrapper/maven-wrapper.properties`.
 | --- | --- | --- |
 | Backend API | Spring Boot application exposing authentication, account, catalogue, social, moderation, audit, health, and system status endpoints. | `src/main/java/com/pse`, `docs/admin-api.md`, `docker-compose.prod.yml` |
 | PostgreSQL database | Runtime persistence for the backend. The app uses JDBC/JPA with PostgreSQL in normal runtime and H2 in tests. | `pom.xml`, `application.properties`, `docker-compose.yml` |
-| SMTP server | Sends OTP login emails and successful-login notification emails. | `MailService`, `application.properties`, `.env.example` |
+| SMTP server | Sends OTP login emails and successful-login notification emails. **A deployment needs a real one**: without it nobody can log in, because a login code is the only way in. | `HtmlMailSender`, `LoginCodeMail`, `application.properties`, `.env.example` |
+| Mail catcher (local only) | Stands in for that SMTP server in the local Compose stack. The server mails the login code to it and a person reads the code out of its web inbox on port `8025`; nothing leaves the machine and no SMTP account is needed. | `docker-compose.yml`, `README.md` |
 | Admin Web | The admin panel, served by its own nginx container under `/admin/` on the same host as this API. Its calls are therefore same-origin and do not use CORS. | `CorsConfig`, `.gitlab-ci.yml`, `docs/admin-api.md` |
 | GitLab issue integration | Optional backend integration for creating GitLab issues from bug reports. | `RestClientGitLabClient`, `application.properties`, `.env.example` |
 | IPinfo and Geoapify | Optional login-location enrichment for notification emails. | `LoginLocationService`, `.env.example` |
@@ -151,6 +153,8 @@ variables.
 | `5173` | Browser origin | Local Admin Web origins in CORS defaults. | `application.properties`, `.env.example`, `CorsConfig` |
 | `25` | Outbound from backend | Default SMTP port. | `application.properties` |
 | `587` | Outbound from backend | SMTP port used in `.env.example` and CI staging default. | `.env.example`, `.gitlab-ci.yml` |
+| `1025` | Inbound to the mail catcher | SMTP, local Compose only. The backend sends login codes here instead of to a real SMTP server. | `docker-compose.yml` |
+| `8025` | Browser | The mail catcher's web inbox, local Compose only. This is where a login code is read. | `docker-compose.yml`, `README.md` |
 | `DEPLOY_PORT` | Inbound SSH to server | CI deployment SSH port. | `.gitlab-ci.yml` |
 
 ## Public address and request path
@@ -239,8 +243,27 @@ docker compose down --remove-orphans
 ```
 
 `docker-compose.yml` is the local development stack. It builds the backend image
-from `src/Dockerfile`, starts `postgres:16`, waits for PostgreSQL health, and
-publishes backend port `8080` and PostgreSQL port `5432`.
+from `src/Dockerfile`, starts `postgres:16` and `axllent/mailpit:v1.31.1`, waits for
+PostgreSQL health, and publishes backend port `8080`, PostgreSQL port `5432`, and the
+catcher's `1025` and `8025`.
+
+**The mail catcher is what makes a local run usable rather than merely running.** Signing in
+needs a one-time code delivered by e-mail, and there is no other way in — so with nothing
+listening on SMTP, `POST /auth/request-login` answers `500 "Could not send login code"` and the
+stack is an API nobody can authenticate against. The backend is pointed at the catcher with two
+variables in its `environment:` block, `SPRING_MAIL_HOST` and `SPRING_MAIL_PORT`; the auth and
+STARTTLS toggles already default to `false` in `application.properties`, which is what an
+unauthenticated catcher wants. The code is then read from the web inbox at
+`http://localhost:8025` — [README.md](../README.md) has the click-path.
+
+The local stack also sets `ADMIN_BOOTSTRAP_EMAILS` to a single neutral address,
+`admin@student.kit.edu`, so whoever starts it becomes an administrator. Left unset it falls back
+to the project's own six addresses from `application.properties`, which is right for the
+deployment and useless for anybody else: they would sign in successfully and then collect `403`
+on every panel screen.
+
+**None of this reaches a deployment.** `docker-compose.prod.yml` mails through a real SMTP server
+and has no catcher; CI copies *that* file to the server, never this one.
 
 `scripts/docker-smoke-test.sh` runs `docker compose config`, starts the stack,
 checks `GET /health`, and tears the stack down on exit. It is a **local** helper: no CI

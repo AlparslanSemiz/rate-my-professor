@@ -96,11 +96,78 @@ Branch coverage has a single mandatory floor of 88%. The floor in `pom.xml` and
 docker compose up --build
 ```
 
-Brings up PostgreSQL 16 and the server on `localhost:8080`, with development credentials
-already set in `docker-compose.yml`. `GET /health` answers once Flyway has migrated.
+Brings up PostgreSQL 16, a mail catcher, and the server on `localhost:8080`, with development
+credentials already set in `docker-compose.yml`. `GET /health` answers once Flyway has migrated.
+
+**The mail catcher is there because signing in is impossible without it.** A login is a one-time
+code delivered by e-mail and there is no other way in — no password, no seeded session. Point the
+server at nothing and `POST /auth/request-login` answers `500 "Could not send login code"`, which
+is a running API that nobody can authenticate against. So the local stack runs
+[Mailpit](https://mailpit.axllent.org/) and the server mails the code to it instead of to the
+internet. Nothing to configure and no SMTP account to obtain.
+
+**Signing in, end to end:**
+
+1. Ask for a code. Any address on the bootstrap list works — see the next section:
+
+   ```bash
+   curl -s localhost:8080/auth/request-login \
+     -H 'Content-Type: application/json' \
+     -d '{"email":"admin@student.kit.edu"}'
+   ```
+
+2. **Open <http://localhost:8025>** and read the code out of the message. That is Mailpit's
+   inbox; nothing leaves the machine.
+3. Exchange it for a session:
+
+   ```bash
+   curl -s localhost:8080/auth/login \
+     -H 'Content-Type: application/json' \
+     -d '{"email":"admin@student.kit.edu","loginToken":"THE-CODE"}'
+   ```
+
+   The `authToken` in the response is a bearer token: `Authorization: Bearer <token>`.
+
+**Only the local stack does this.** `docker-compose.prod.yml` mails through a real SMTP server,
+and the deployed instance always has. Nothing here changes that.
 
 For a deployment rather than a local run, `docker-compose.prod.yml` and `.env.example` are the
 starting points, and [docs/deployment.md](docs/deployment.md) is the description.
+
+## Becoming an administrator
+
+**Being able to log in is not the same as being able to use the admin panel**, and getting this
+wrong looks like a broken product rather than a missing configuration line. An account that is
+not an administrator signs in perfectly well and then collects `403` on every panel screen.
+
+Administrators are made from a list, not from a flag on an account:
+`app.auth.admin-bootstrap-emails` (`ADMIN_BOOTSTRAP_EMAILS`). An address on it gets an `admins`
+row **at startup**, and also on its first login if it was added while the server was already
+running. The entry is `email` or `email:Display Name` — the name is optional and is only used if
+the account has to be created.
+
+**Locally there is nothing to do**: `docker-compose.yml` sets the list to
+`admin@student.kit.edu`, which is the address used in the commands above. Sign in with it and you
+are an administrator.
+
+To use **your own** address instead, extend the list on the `backend` service:
+
+```yaml
+    environment:
+      ADMIN_BOOTSTRAP_EMAILS: admin@student.kit.edu,your.address@student.kit.edu
+```
+
+then `docker compose up -d --force-recreate backend`.
+
+**On a deployment**, set the `ADMIN_BOOTSTRAP_EMAILS` CI/CD variable and redeploy —
+[docs/deployment.md](docs/deployment.md) has the variable table and the pipeline.
+
+Then sign in with that address exactly as above: **the list alone does nothing until the account
+exists**, and the account is created by the first login, whose code still has to come out of
+Mailpit.
+
+`ADMIN_SUPERUSER_EMAILS` is a different thing and is not what makes an administrator — it decides
+which administrators may moderate *other* administrators.
 
 ## Changing the API
 
