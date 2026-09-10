@@ -2,6 +2,31 @@
 
 ## [Unreleased]
 
+### `F-073` had a second half, in the fixture its pin did not name
+
+The Ratings fix changed `demoData.ts` and pinned it with a test called `demoData.unit.test.ts`,
+which asserted over `demoBackend()` and nothing else. `sweepFixture.ts:145` carried the same
+`{ content: 4, clarity: 5 }` and feeds the call-surface, resilience and accessibility layers, so
+half the defect survived its own fix.
+
+- **Changed** `src/test/msw/sweepFixture.ts` to `{ CONTENT: 4, CLARITY: 5 }`.
+- **Renamed** the pin to `src/test/msw/fixtureEnums.unit.test.ts`, because it is about the
+  fixtures rather than about one of them, and gave it two halves: a behavioural check over both
+  builders, and a source sweep that finds fixture modules with `import.meta.glob` so a third one
+  is covered without anybody remembering to add it.
+- The lesson is the part worth keeping: **a pin that names its subject is only as complete as
+  whoever wrote the name.** The first pin was not weak, it was narrow, and nothing said so.
+
+### Tests
+
+- Both halves **red first**: `expected [ 'content', 'clarity' ] to deeply equal []`, and
+  `[ '/src/test/msw/sweepFixture.ts: content', '/src/test/msw/sweepFixture.ts: clarity' ]`.
+- The sweep was **broken deliberately, twice**, to show it can still fail. Pointed at a glob
+  that matches nothing it reports ``no `scores` literal was found to check: expected 0 to be
+  greater than 0`` - the anti-vacuity guard `callSurface.integration.test.ts` established.
+  Given a lowercase key in `demoData.ts`, a file it does not name, it reports
+  `/src/test/msw/demoData.ts: clarity`.
+
 ### A killed end-to-end run could stop the lint from running at all
 
 `F-074`. `.gitignore` naming a directory does not make ESLint skip it, and the two lists had

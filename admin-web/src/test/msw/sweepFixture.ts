@@ -142,7 +142,7 @@ export function sweepFixture(): Partial<MswDb> {
         lectureId: 'lecture-1',
         createdAt: AT,
         author: { id: 'user-1', name: 'Mira Kowalski' },
-        scores: { content: 4, clarity: 5 },
+        scores: { CONTENT: 4, CLARITY: 5 },
       },
     ],
     auditLogs: [
