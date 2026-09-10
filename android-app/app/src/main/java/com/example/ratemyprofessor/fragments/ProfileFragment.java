@@ -232,11 +232,9 @@ public class ProfileFragment extends Fragment {
      */
     private void bindHeader() {
         if (selectionType == SelectionType.PROFESSORS) {
-            Log.d(TAG, "opened for professor " + professor.id);
             binding.name.setText(professor.firstName);
             binding.surname.setText(professor.lastName);
         } else {
-            Log.d(TAG, "opened for lecture " + lectureTitle);
             binding.name.setText("");
             binding.surname.setText(lectureTitle);
         }
@@ -256,7 +254,6 @@ public class ProfileFragment extends Fragment {
             if (selectionType == SelectionType.PROFESSORS) {
                 List<String> lectures = service.getLectureTitlesByProfessor(professor.id);
                 if (lectures.isEmpty()) {
-                    Log.d(TAG, "professor " + professor.id + " has no lectures");
                     return;
                 }
 
@@ -266,7 +263,6 @@ public class ProfileFragment extends Fragment {
             } else {
                 List<Professor> professors = service.getProfessorsByLectureTitle(lectureTitle);
                 if (professors.isEmpty()) {
-                    Log.d(TAG, "lecture " + lectureTitle + " has no professors");
                     return;
                 }
 

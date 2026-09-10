@@ -101,14 +101,12 @@ public class SearchFragment extends Fragment {
         binding.profsButton.setOnClickListener(v -> {
             closeSearchMode();
 
-            Log.d(TAG, "PROF BOTTOM GOT CLICKED");
             binding.searchViewPager.setCurrentItem(PROFESSOR_TAB, true);
         });
 
         binding.lecturesButton.setOnClickListener(v -> {
             closeSearchMode();
 
-            Log.d(TAG, "LECTURE BOTTOM GOT CLICKED");
             binding.searchViewPager.setCurrentItem(LECTURE_TAB, true);
         });
 
@@ -119,10 +117,8 @@ public class SearchFragment extends Fragment {
                         super.onPageSelected(position);
 
                         if (position == PROFESSOR_TAB) {
-                            Log.d(TAG, "SWIPE TO PROF TAB");
                             selectProfessorTab();
                         } else {
-                            Log.d(TAG, "SWIPE TO LECTURE TAB");
                             selectLectureTab();
                         }
                     }
@@ -266,7 +262,6 @@ public class SearchFragment extends Fragment {
         if (!searchModeOpen) {
             return;
         }
-        Log.d(TAG, "closeSearchMode");
         searchModeOpen = false;
 
 
@@ -321,7 +316,6 @@ public class SearchFragment extends Fragment {
     // If you click anywhere on the screen the search gets canceled.
     private void setupCloseSearchOnOutsideTouch() {
 
-        Log.d(TAG, "setupCloseSearchOnOutsideTouch()");
         binding.searchRoot.setOnClickListener(v -> closeSearchMode());
 
         binding.searchViewPager.setOnClickListener(v -> closeSearchMode());

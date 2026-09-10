@@ -77,7 +77,6 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         holder.commentContent.setText(comment.content());
         holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
         holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
-        System.out.println(comment.userVote());
         if (comment.userVote() == VoteType.UP) {
             holder.upVoteButton.setImageResource(R.drawable.upvote_icon_filled);
         } else if (comment.userVote() == VoteType.DOWN) {

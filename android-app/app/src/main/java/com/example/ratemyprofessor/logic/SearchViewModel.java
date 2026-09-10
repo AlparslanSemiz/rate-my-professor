@@ -34,7 +34,6 @@ public class SearchViewModel extends ViewModel {
      * @param newQuery the text the user typed
      */
     public void setQuery(String newQuery) {
-        Log.d(TAG, "query changed to: " + newQuery);
         query.setValue(newQuery);
     }
 
