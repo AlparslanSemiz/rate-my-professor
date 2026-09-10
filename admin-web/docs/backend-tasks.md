@@ -299,13 +299,14 @@ finding can be closed. If it does not, they should be set either there or by rep
 them in the `assets/` block here — we have not made that change because the audit that
 found it was explicitly a read of the deployment, not an edit of it.
 
-**What is not established.** There is no `Content-Security-Policy` and no
-`Strict-Transport-Security` anywhere in this repository, and no HTTPS listener or
-HTTP-to-HTTPS redirect in our nginx config. We cannot tell from here whether HTTPS is
-enforced or whether HSTS is set. **Please confirm both.** That is the single largest
-blind spot in the audit.
+There is also no `Content-Security-Policy` anywhere in this repository. We are not
+asking for one here — it needs a policy decision about what the panel is allowed to
+load, and that is a conversation rather than a line of config.
 
 Tracked as `F-052` in `docs/testfindings.md`.
+
+**HSTS and the HTTPS redirect are a separate question and are asked in J3**, because
+unlike this one they cannot be answered from our repository at all.
 
 ## J2. `robots.txt` needs to be at the domain root, not under `/admin/`
 
@@ -335,3 +336,48 @@ It is correct for any deployment served from a root, and removing it would leave
 the meta tag.
 
 Tracked as `F-047` in `docs/testfindings.md`.
+
+## J3. Confirm HTTPS enforcement and HSTS — we cannot check this ourselves
+
+**This is a verification request, not a change request.** We are handing it over rather
+than calling it out of scope: it is a real finding on the deployed panel, we simply have
+no way to answer it from this repository, and you own the configuration that does.
+
+**Why we cannot answer it.** `docker/nginx.prod.conf.template` — the whole of our web
+server config — is `listen 80;` with no TLS listener and no redirect. The container is
+published on `127.0.0.1:8081` (`.gitlab-ci.yml`, `scripts/deploy-prod.ps1`) and something
+in front of it terminates TLS and serves `https://ratemyprofessor.dev/admin/`. That
+something is not in this repository, so from here we can see neither its headers nor its
+redirect behaviour.
+
+**Please answer these four, for the host that serves `https://ratemyprofessor.dev/`:**
+
+1. **Is `Strict-Transport-Security` sent on responses?** If yes, please paste the exact
+   header value — we need `max-age`, and whether `includeSubDomains` and `preload` are
+   on. If no, please say so plainly; "probably" is the answer we cannot record.
+2. **Is there an HTTP-to-HTTPS redirect?** That is: does a request to
+   `http://ratemyprofessor.dev/admin/` return a `301`/`308` to the `https://` URL, or is
+   it served over plain HTTP, or refused?
+3. **Which server block are those in?** We are asking for the file and the `server { … }`
+   block, so the answer stays checkable later and so we know whether it covers the whole
+   host or only some paths. If HSTS is set on a `location` rather than the `server`, that
+   matters — `add_header` does not inherit into a block that declares its own, which is
+   exactly the bug J1 describes one level down.
+4. **Does that same proxy set `X-Content-Type-Options`, `X-Frame-Options` or
+   `Referrer-Policy` for the whole host?** If it does, J1 is already covered for our
+   assets and we will close it; if it does not, we will fix J1 on our side.
+
+**A curl against the deployed host answers 1, 2 and 4 in one go:**
+
+```bash
+curl -sSI https://ratemyprofessor.dev/admin/ | grep -iE 'strict-transport|x-frame|x-content-type|referrer'
+curl -sSI http://ratemyprofessor.dev/admin/  | head -1   # expect 301/308 to https
+```
+
+**What must not change.** Nothing, on the basis of this item alone. It asks only for an
+answer. If the answer is "HSTS is not set", the decision about adding it is yours — an
+HSTS header with a long `max-age` is hard to walk back, and it affects every service on
+that hostname, not only the admin panel.
+
+Tracked as `F-052` in `docs/testfindings.md`, where it is recorded as handed to you on
+2026-09-10 rather than deferred.

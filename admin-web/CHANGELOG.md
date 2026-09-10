@@ -2,6 +2,53 @@
 
 ## [Unreleased]
 
+### Hand F-052 to the backend, and record the em dash as an open decision
+
+Three delivery-eve jobs, no behaviour change and no new tests.
+
+#### `docs/backend-tasks.md`
+
+- **Added** §J3, which asks the backend team to confirm HTTPS enforcement and HSTS on the
+  host that serves `https://ratemyprofessor.dev/`. Four specific questions rather than a
+  general worry, because a general worry gets acknowledged and a specific one gets
+  answered: the exact `Strict-Transport-Security` value if one is sent, whether `http://`
+  returns a `301`/`308`, **which `server` block both live in**, and whether that proxy
+  already sets `nosniff`/`X-Frame-Options`/`Referrer-Policy` host-wide. Two `curl` lines
+  answer three of the four. It asks for **no change** — if HSTS turns out to be missing,
+  adding it is their call, since a long `max-age` is hard to walk back and binds every
+  service on that hostname.
+- **Moved** the transport question out of §J1, which now covers only the `assets/` header
+  problem that is genuinely ours. A `Content-Security-Policy` is still deliberately not
+  asked for: it needs a decision about what the panel may load.
+
+#### `docs/testfindings.md`, `docs/TODO.md`
+
+- **Changed** `F-052` from "reported only" to **handed over on 2026-09-10, and open until
+  answered** — delegated, not out of scope. The distinction matters at hand-in: one says
+  we looked and stopped, the other says who has it now.
+- **Added** a deferred item for the em dash. The instruction was to remove every long dash
+  from interface text; it was **not** carried out, on purpose. **There is no rule to
+  enforce** — DESIGN.md and all seventeen ADRs are silent on dashes — so removing them
+  would have meant inventing a rule and applying it in the same commit. Worse,
+  `src/utils/emptyValue.ts:1-12` argues *for* the em dash in writing, and twelve call
+  sites depend on it, so a ban **overturns a recorded decision** rather than tidying
+  strings. The item is therefore "write the rule, then apply it", with the note that
+  `emptyValue.ts`'s rationale has to be re-read and either rewritten or cited as the
+  exception. The measurement — **41 em dashes over 40 lines in 27 files, zero en dashes**
+  — stands as `A7` of the audit. ~30 min to write the rule, ~2 h to apply it.
+
+### Unchanged on purpose
+
+- **`.gitignore`.** The previous entry in this file said `test-results/` was not ignored
+  and that `git add -A` could sweep in Playwright trace zips. **That was wrong.**
+  `.gitignore:51-52` already carries `playwright-report/` and `test-results/`, and they
+  work. The bad check was `git check-ignore test-results` without a trailing slash on a
+  path that did not exist at the time — git cannot tell an absent path is a directory, so
+  a directory-only rule appears not to match. Re-tested by creating both directories with
+  files in them: `git status` and `git add -A` report nothing. No line was added, because
+  the right line is already there.
+
+
 ### Release-readiness audit: measured everything, changed four things
 
 A pass before the hand-in, run as **measure first, fix only what carries no visual risk**.
