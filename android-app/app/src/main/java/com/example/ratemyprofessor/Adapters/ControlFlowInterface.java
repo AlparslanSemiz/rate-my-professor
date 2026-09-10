@@ -52,5 +52,5 @@ public interface ControlFlowInterface {
      */
     void openLectureProfile(Professor professor, Semester semester, Lecture lecture);
 
-    void openReplyFragment(Comment comment, VoteType voteType);
+    void openReplyFragment(Comment comment);
 }

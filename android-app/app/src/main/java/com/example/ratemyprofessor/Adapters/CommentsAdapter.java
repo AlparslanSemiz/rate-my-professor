@@ -37,19 +37,16 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
     private final List<Comment> comments;
     private final OnCommentClickListener listener;
     private final CommentType type;
-    private final VoteType voteType;
     private final Context context;
 
     public CommentsAdapter(Context context,
                            List<Comment> comments,
                            OnCommentClickListener listener,
-                           CommentType type,
-                           VoteType voteType) {
+                           CommentType type) {
         this.context = context;
         this.comments = comments;
         this.listener = listener;
         this.type = type;
-        this.voteType = voteType;
 
     }
 
@@ -74,17 +71,17 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         holder.commentContent.setText(comment.content());
         holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
         holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
-        // We currently dont have
-        if (voteType == VoteType.UP) {
+        System.out.println(comment.voteType());
+        if (comment.voteType() == VoteType.UP) {
             holder.upVoteButton.setImageResource(R.drawable.upvote_icon_filled);
-        } else if (voteType == VoteType.DOWN) {
+        } else if (comment.voteType() == VoteType.DOWN) {
             holder.downVoteButton.setImageResource(R.drawable.downvote_icon_filled);
         }
 
 
 
-        holder.itemView.setOnClickListener(v -> openReplies(comment, voteType));
-        holder.showCommentButton.setOnClickListener(v -> openReplies(comment, voteType));
+        holder.itemView.setOnClickListener(v -> openReplies(comment));
+        holder.showCommentButton.setOnClickListener(v -> openReplies(comment));
         holder.upVoteButton.setOnClickListener(v -> {
             if (!AuthManager.getInstance().isLoggedIn()) {
                 Toast.makeText(context, "You are not logged in.", Toast.LENGTH_SHORT).show();
@@ -126,8 +123,8 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
      * position is read from the holder instead of the bound one, because rows can be reused
      * and moved before the click happens.</p>
      */
-    private void openReplies(Comment comment, VoteType voteType) {
-        listener.onOpenReplies(comment, voteType);
+    private void openReplies(Comment comment) {
+        listener.onOpenReplies(comment);
     }
 
     @Override
@@ -180,7 +177,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
          *
          * @param comment  the comment whose answers are opened
          */
-        void onOpenReplies(Comment comment, VoteType voteType);
+        void onOpenReplies(Comment comment);
         /**
          * For voting on a comment or answer.
          */

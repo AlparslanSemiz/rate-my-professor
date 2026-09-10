@@ -82,7 +82,7 @@ public class DomainModelTest {
         // Verifies data integrity across related domain objects
         Comment parent = new Comment(
                 "c1", "Great!", ContentStatus.VISIBLE, "user", "l1", 
-                null, LocalDateTime.now(), 0, 0, new ArrayList<>()
+                null, LocalDateTime.now(), 0, 0,VoteType.UP , new ArrayList<>()
         );
         
         Vote vote = new Vote("v1", new Date(), VoteType.UP, parent);
@@ -97,7 +97,7 @@ public class DomainModelTest {
         // Verifies that vote tracking in comments is consistent
         Comment comment = new Comment(
                 "c1", "Text", ContentStatus.VISIBLE, "u1", "l1", 
-                null, LocalDateTime.now(), 2, 10, new ArrayList<>()
+                null, LocalDateTime.now(), 2, 10,VoteType.UP, new ArrayList<>()
         );
         
         assertEquals(10, comment.upVotes());

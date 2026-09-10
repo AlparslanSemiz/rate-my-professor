@@ -21,6 +21,7 @@ import com.example.ratemyprofessor.DomainModel.Rater;
 import com.example.ratemyprofessor.DomainModel.Rating;
 import com.example.ratemyprofessor.DomainModel.Semester;
 import com.example.ratemyprofessor.DomainModel.SemesterSeason;
+import com.example.ratemyprofessor.DomainModel.VoteType;
 import com.example.ratemyprofessor.ServerCommunication.Responses.CommentsResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.LecturesResponse;
 import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorsResponse;
@@ -82,6 +83,7 @@ public class DatabaseSyncTest {
                 createdAt.plusMinutes(5),
                 0,
                 2,
+                VoteType.UP,
                 Collections.emptyList()
         );
         Comment comment = new Comment(
@@ -94,6 +96,7 @@ public class DatabaseSyncTest {
                 createdAt,
                 1,
                 5,
+                VoteType.UP,
                 Collections.singletonList(reply)
         );
         APIService apiService = apiService(

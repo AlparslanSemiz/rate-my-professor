@@ -54,14 +54,12 @@ import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
 import com.example.ratemyprofessor.databinding.FragmentRatingsBinding;
 import com.example.ratemyprofessor.logic.CommentHelper;
 import com.example.ratemyprofessor.logic.RatingColorCalculator;
-import com.example.ratemyprofessor.logic.WeightedRatingCalc;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -184,6 +182,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                 model.createdAt(),
                 model.downVotes(),
                 model.upVotes(),
+                null, // vorerst
                 replies
         );
     }
@@ -224,8 +223,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                 requireContext(),
                 comments,
                 RatingsFragment.this,
-                CommentType.COMMENT,
-                null
+                CommentType.COMMENT
         );
         binding.commentList.setAdapter(commentsAdapter);
     }
@@ -235,23 +233,25 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
      */
     private void getComments() {
         SearchService searchService = Database.getInstance(requireContext()).searchService();
-        executorService.execute(() -> {
-            List<Comment> cachedComments = commentModelsToComments(
-                    searchService,
-                    searchService.getComments(lecture.id)
-            );
-            runOnUiThread(() -> {
-                if (!serverCommentsLoaded) {
-                    showComments(cachedComments);
-                }
-            });
-        });
+//        executorService.execute(() -> {
+//            List<Comment> cachedComments = commentModelsToComments(
+//                    searchService,
+//                    searchService.getComments(lecture.id)
+//            );
+//            runOnUiThread(() -> {
+//                if (!serverCommentsLoaded) {
+//                    System.out.println("Hier");
+//                    showComments(cachedComments);
+//                }
+//            });
+//        });
 
         if (!AuthManager.getInstance().isLoggedIn()) {
             return;
         }
+        LoginSession session = LoginSession.from(requireContext());
 
-        Call<CommentsResponse> commentsResponseCall = apiService.getComments(lecture.id);
+        Call<CommentsResponse> commentsResponseCall = apiService.getComments(session.bearerToken() ,lecture.id);
         commentsResponseCall.enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<CommentsResponse> call, @NonNull Response<CommentsResponse> response) {
@@ -263,6 +263,22 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
                 serverCommentsLoaded = true;
                 List<Comment> freshComments = new ArrayList<>(body.comments());
+                System.out.println("___");
+                System.out.println("Request");
+                System.out.println("Token: " + session.bearerToken());
+                System.out.println("lectureId: " + lecture.id);
+                System.out.println("___");
+                System.out.println("Response: ");
+                System.out.println("commentId: " + freshComments.get(0));
+                System.out.println("content: " + freshComments.get(0).content());
+                System.out.println("status: " + freshComments.get(0).status());
+                System.out.println("studentUsername: " + freshComments.get(0).studentUsername());
+                System.out.println("lectureID: " + freshComments.get(0).lectureID());
+                System.out.println("profilePicture: " + freshComments.get(0).profilePicture());
+                System.out.println("createdAt: " + freshComments.get(0).createdAt());
+                System.out.println("downVotes: " + freshComments.get(0).downVotes());
+                System.out.println("upVotes: " + freshComments.get(0).upVotes());
+                System.out.println("voteType: " + freshComments.get(0).voteType());
                 showComments(freshComments);
 
                 List<CommentModel> models = commentsToModels(freshComments);
@@ -622,13 +638,6 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             return;
         }
 
-        double lectureRating = WeightedRatingCalc.calcRating(ratings);
-
-        if (lectureRating == -1) {
-            binding.averageLectureRating.setText("-");
-            return;
-        }
-
         Call<LectureDetailResponse> call = apiService.getLecture(lecture.id);
         executorService.execute(() -> call.enqueue(new Callback<>() {
             @Override
@@ -804,9 +813,9 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
      * Inserts the answers of a comment right below it.
      */
     @Override
-    public void onOpenReplies(Comment comment, VoteType voteType) {
+    public void onOpenReplies(Comment comment) {
 
-        flowInterface.openReplyFragment(comment, voteType);
+        flowInterface.openReplyFragment(comment);
     }
 
     @Override

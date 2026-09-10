@@ -144,7 +144,7 @@ public class APIServiceHttpIntegrationTest {
                         + "{\"content\":\"Test content\",\"status\":\"VISIBLE\",\"studentUsername\":\"user1\","
                         + "\"lectureID\":\"l1\",\"createdAt\":\"2026-07-08T15:49:58.217\",\"answers\":[]}]}"));
 
-        Response<CommentsResponse> response = apiService.getComments("l1").execute();
+        Response<CommentsResponse> response = apiService.getComments("", "l1").execute();
 
         assertTrue(response.isSuccessful());
         assertNotNull(response.body());

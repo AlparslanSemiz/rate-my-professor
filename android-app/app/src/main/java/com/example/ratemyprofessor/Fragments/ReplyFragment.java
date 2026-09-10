@@ -47,7 +47,6 @@ import retrofit2.Response;
 public class ReplyFragment extends Fragment implements CommentsAdapter.OnCommentClickListener {
 
     private Comment comment;
-    private VoteType voteType;
     private FragmentReplyBinding binding;
     private final APIService apiService;
 
@@ -55,10 +54,9 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         apiService = RetrofitClient.getClient().create(APIService.class);
         // Required empty public constructor
     }
-    public ReplyFragment(Comment comment, VoteType voteType) {
+    public ReplyFragment(Comment comment) {
         apiService = RetrofitClient.getClient().create(APIService.class);
         this.comment = comment;
-        this.voteType = voteType;
     }
 
     @Override
@@ -88,9 +86,9 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         mainComment.upvotesNum.setText(String.valueOf(comment.upVotes()));
         mainComment.downvotesNum.setText(String.valueOf(comment.downVotes()));
 
-        if (voteType == VoteType.UP) {
+        if (comment.voteType() == VoteType.UP) {
             mainComment.upvoteIcon.setImageResource(R.drawable.upvote_icon_filled);
-        } else if (voteType == VoteType.DOWN) {
+        } else if (comment.voteType() == VoteType.DOWN) {
             mainComment.downvoteIcon.setImageResource(R.drawable.downvote_icon_filled);
         }
 
@@ -129,7 +127,7 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
         });
 
 
-        mainComment.commentsIcon.setOnClickListener(v -> onOpenReplies(comment, voteType));
+        mainComment.commentsIcon.setOnClickListener(v -> onOpenReplies(comment));
         mainComment.upvoteIcon.setOnClickListener(v -> {
             if (!AuthManager.getInstance().isLoggedIn()) {
                 Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
@@ -159,7 +157,7 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
 
         answerList.setLayoutManager(new LinearLayoutManager(getContext()));
         List<Comment> answers = comment.answers();
-        CommentsAdapter adapter = new CommentsAdapter(getContext(), answers, this, CommentType.REPLY, null);
+        CommentsAdapter adapter = new CommentsAdapter(getContext(), answers, this, CommentType.REPLY);
         answerList.setAdapter(adapter);
         return binding.getRoot();
     }
@@ -212,7 +210,7 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
     }
 
     @Override
-    public void onOpenReplies(Comment comment, VoteType voteType) {
+    public void onOpenReplies(Comment comment) {
     }
 
     @Override
