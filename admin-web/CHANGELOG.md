@@ -2,6 +2,52 @@
 
 ## [Unreleased]
 
+### The screenshot round: eleven observations measured, nine opened, three refuted
+
+Measurement only. **Nothing on this list was fixed**, per the brief: each was measured at
+1440x900 first and then written down. Numbers in
+[docs/coursework/layout-audit.md](docs/coursework/layout-audit.md) §10, findings `F-075` to
+`F-083`, deferral entries with cost in [docs/TODO.md](docs/TODO.md).
+
+**Opened**, most serious first:
+
+- `F-076` **Major** - the profile shows `3 warnings` beside `Warning history (0)` and `No
+  warnings issued.`, 40px apart. Two endpoints, no cross-check, and a demo seed that
+  contradicts itself on exactly one account. The only item here where the operator is told
+  something untrue about a real account.
+- `F-075` - **the STATUS badge clips its own text, and the earlier sweep looked at the wrong
+  box.** §7's "zero clipped cells" is still true: the badge hides its overflow, so the *cell*
+  never overflows. Measured inside the badge instead, at 1440 with the table fitting exactly:
+  `INACTIVE` needs 49px of label and gets **34** on Lectures, **43** on Professors. The whole
+  chain is measured - 92px column, 40px cell padding, 50px badge root, 34px of label. Not
+  `F-036`, which is about tables that do not fit.
+- `F-077` - `Status`, `Role` and `Credibility score` sit at y=686, 700 and 667, **33px apart**,
+  because their help text is one line, two lines and none.
+- `F-078` - `credibilityScore` renders as **`credibilityscore`**. `enumLabel` splits on `_` and
+  preserves the first character's case, so a camelCase key passes through untouched. Three call
+  sites; `F-073` was the fourth member of the family.
+- `F-079` - the catalogue counts two of its three tabs.
+- `F-080` - the session strip is above the `h1` and a page error below it, so the title sits
+  between two alerts about the same screen.
+- `F-081` - Bug Reports is the only screen with no table, and its status and severity commit
+  with no Cancel and no Save. Both deliberate, both documented in the code, neither said on
+  screen.
+- `F-082` - the `Person` placeholder is **truncated by 39px**, canvas-measured against its own
+  font, and `Person` and `Who` are two vague names for two different filters on one screen -
+  where `Who` is also a column heading.
+- `F-083` - two of seven tables have rows that open nothing. `RatingTableRow` says why;
+  `ReportRow` keeps its hover state and does not.
+
+**Refuted, and recorded so they are not re-reported:**
+
+- **The Comments columns are not clipped.** Seven widths summing to exactly **1134**, the
+  table's width and the holder's, with every first-row cell at `needs == gets`. What is visible
+  is `ContentCell`'s deliberate two-line clamp.
+- **The Dashboard's mismatched panel pair is gone.** Step 1 removed the right-hand one, so
+  `Newest members` spans 1136px alone and the four cards are 116px each to the pixel.
+- **`From` and `To` are the same width.** `F-067`'s 838.5 against 413.2 is 170 and 170 since
+  the filter bar shell landed.
+
 ### `F-063` was measuring the wrong one of ten loading states
 
 The finding says the loading state is a fixed 200px box and that "every screen short-circuits

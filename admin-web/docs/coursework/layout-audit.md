@@ -583,3 +583,147 @@ layouts, which is the whole of what `F-067` is about.
 
 So the wrap is now **the same wrap on both**: row one is the search and the selects, row two
 is the dates, row three is Apply and Clear. Recorded rather than fixed.
+
+# Section 10: the screenshot round (2026-09-10)
+
+Eleven observations taken from screenshots, measured at 1440x900 against the mock backend.
+**Nothing here was fixed.** Three of the eleven did not survive measurement and are recorded
+as refutations, which is worth as much as the eight that did.
+
+## 10.1 The STATUS badge is clipped, and the earlier measurement looked at the wrong box
+
+Section 7 says "no cell is clipped at **any** width - zero clipped cells", from
+`scrollWidth > clientWidth` on every `th` and first-row `td`. That is still true and it is not
+the question. **The badge clips itself.** Mantine's `Badge` root carries `overflow: hidden` and
+its label carries `white-space: nowrap; text-overflow: ellipsis`, so when the badge runs out of
+room the text disappears *inside* the badge and the cell never overflows. Measuring the cell
+could not have found it.
+
+Measured per badge: the label's `scrollWidth` against its `clientWidth`.
+
+| Table | Badge | label needs | label gets | short by | column w | badge root |
+| --- | --- | --- | --- | --- | --- | --- |
+| Catalog / Lectures | `INACTIVE` | 49 | **34** | **15** | 92 | 50 |
+| Catalog / Lectures | `ACTIVE` | 36 | **34** | **2** | 92 | 50 |
+| Catalog / Professors | `INACTIVE` | 49 | **43** | **6** | 101 | 52 |
+| Catalog / Professors | `ACTIVE` | 36 | 36 | - | 101 | 52 |
+| Users | `BLOCKED` | 48 | 48 | - | 134 | 74 |
+| Users | `ACTIVE` | 36 | 36 | - | 134 | 63 |
+
+**The chain, all four links measured.** The catalogue's Status column is **92px** wide; the
+cell's `14px 20px` padding takes 40, leaving 52; the badge's `max-width: 100%` puts its root at
+**50**; the badge's own horizontal padding takes ~16, leaving **34** for a label that needs 49.
+Users' Status column is **134px** and nothing clips.
+
+Neither `LectureTableRow` nor `UserTableRow` sets a width, a `max-width` or a `text-overflow` on
+the badge - every one of those comes from Mantine. What differs is only the column, and the
+column is decided by `table-layout: auto` against the other columns' content. Both tables
+report `needs=1134 gets=1134`, so **this happens with zero table overflow**, which is why it is
+not `F-036`.
+
+Worth stating because the report that prompted this said "ACTI..." and "INA...": the rendered
+text is uppercase (Mantine's default `text-transform`), so the two glyph counts differ from the
+label strings above.
+
+## 10.2 Three fields on one row, at three different heights
+
+The `Status` / `Role` / `Credibility score` row in the user profile modal, measured by input:
+
+| Field | input y | description height | description |
+| --- | --- | --- | --- |
+| Credibility score | **667** | **0** | none |
+| Status | **686** | 14 | "Deleting is a separate action." |
+| Role | **700** | **29** | "Demoting an admin also signs it out." |
+
+**33px of spread, and it is exactly the description heights.** Mantine stacks label,
+description, input, so a taller description pushes its own input down while its neighbours stay
+put. Credibility has no description at all when the field is editable, Status has one line, and
+Role's 36 characters wrap to two at a third of a `size="lg"` modal.
+
+The row above does the same thing at smaller scale: `Username` at **485** and `KIT email` at
+**505**, 20px apart, because only one of them has a description.
+
+## 10.3 The warnings badge and the warning history disagree
+
+Measured from the rendered modal text for `Mira Kowalski`:
+
+> ... u-kisi3@student.kit.edu **3 warnings** Joined 20 Jan 2026 ... **Warning history (0)** **No
+> warnings issued.**
+
+Two numbers for one fact, 40px apart on screen. See `F-076` for where each comes from.
+
+## 10.4 The catalogue counts two of its three tabs
+
+`["Lectures (3)", "Professors (3)", "Ratings"]`.
+
+## 10.5 The Person filter truncates its placeholder
+
+Measured with a canvas against each input's own computed font, comparing the text width with
+the room inside the box:
+
+| Field | text | needs | room | verdict |
+| --- | --- | --- | --- | --- |
+| Person | `Everyone the backend lists` | **175** | **136** | **truncated by 39px** |
+| Search | `Name, email, or target...` | 160 | 261 | fits |
+| Who | `Everyone` | 61 | 136 | fits |
+| Action | `All actions` | 67 | 136 | fits |
+| Target | `All targets` | 67 | 136 | fits |
+
+One field of seven, and it is the longest placeholder in the panel.
+
+## 10.6 The session strip is above the title
+
+`/users?fault=session-check` at 1440:
+
+| Element | y | height |
+| --- | --- | --- |
+| session notice, `role="status"` | **32** | 58 |
+| `h1` "Users" | **102** | 31 |
+
+A page-level error renders *below* the `h1`, because the page renders it after `PageHeader`
+while the shell renders the session notice before the routes. Only the strip above was produced
+in this run; the one below is read from the source, and that is stated rather than blurred.
+
+## 10.7 Refuted: the Comments columns are not clipped
+
+The report was that `LECTURE` and `CONTENT` are cut off while the right side has a large gap.
+Measured at 1440:
+
+| Column | width | cell needs / gets |
+| --- | --- | --- |
+| Content | 318 | 318 / 318 |
+| Author | 159 | 159 / 159 |
+| Lecture | 170 | 170 / 170 |
+| Visibility | 102 | 102 / 102 |
+| Reports | 79 | 79 / 79 |
+| Posted | 193 | 193 / 193 |
+| (actions) | 113 | 113 / 113 |
+
+**The widths sum to exactly 1134**, which is the table's width and the holder's width, and no
+cell overflows. There is no gap and nothing is clipped. What is visible is `ContentCell`'s
+deliberate two-line clamp with a tooltip past 90 characters, which is a design decision with a
+comment on it rather than a layout fault. Refuted at 1440 only; below 1300 every table scrolls
+sideways, which is `F-036`.
+
+## 10.8 Refuted: the Dashboard's two panels are gone
+
+The report was that the left and right panels are different heights with a gap under the left.
+Measured after step 1:
+
+| Panel | x | y | w | h |
+| --- | --- | --- | --- | --- |
+| Total users | 272 | 389 | 272 | 116 |
+| Active accounts | 560 | 389 | 272 | 116 |
+| Admin accounts | 848 | 389 | 272 | 116 |
+| Open reports | 1136 | 389 | 272 | 116 |
+| Newest members | 272 | 532 | **1136** | 295 |
+
+**There is no side-by-side pair any more.** `SystemPulse` was the right-hand panel and step 1
+removed it, so `Newest members` spans the full width alone. The four cards are the same height
+to the pixel. Not fixed here; fixed by `F-066` and re-measured because the report predates it.
+
+## 10.9 Closed by step 6: the From and To widths
+
+The report was that `From` is narrow while `To` takes the full width. That is `F-067`'s
+838.5px measurement and it closed with the filter bar shell: both are **170** now. Section 6
+above carries the numbers.
