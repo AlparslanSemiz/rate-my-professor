@@ -2600,6 +2600,16 @@ awk -F, 'NR>1 && $6>0 {printf "%4d %s.%s\n", $6, $2, $3}' \
   target/site/jacoco/jacoco.csv | sort -rn | head -25
 ```
 
+**The harder half, found on 10 September.** Recorded above as something that fools a coverage
+counter, P-2 also fools a **reader**, and twice in one pass:
+`WarningServiceTests.getWarningsForStudent_deletedStudent_readsAsNotFound` claimed the deleted
+account in its name while stubbing an empty `Optional`, so what it pinned was the unknown-id
+rule; and `SessionIssuerTests:516` pins a neighbouring rule and reads as though it covered
+`LoginCodeService:76-79`, which no test reaches at all (F-46). **No column reports this one.**
+`LINE_MISSED` and the branch counter both find a unit nothing executes; neither finds a unit
+that *is* executed by a test asserting something other than what its name says. The only thing
+that catches it is reading what a test asserts instead of what it is called.
+
 ### P-3 — Lombok is not filtered in JaCoCo
 
 The repo has no `lombok.config` and `lombok.addLombokGeneratedAnnotation` defaults to `false`.
