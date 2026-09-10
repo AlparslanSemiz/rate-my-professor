@@ -1,0 +1,55 @@
+# Logs. `/logs` is anchored to the repo root on purpose: a bare `logs` matches any
+# directory of that name at any depth, which silently hid all of `src/api/logs/`.
+/logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Saved Docker images produced for a deployment
+*.tar
+*.tar.gz
+
+# Local env files (.env, .env.demo-local, .env.docker are tracked on purpose;
+# this only guards against a future .env.*.local holding real secrets)
+.env.*.local
+.env.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local GitLab Wiki draft (publish when the project is final)
+docs/gitlab-wiki/
+docs/gitlab-wiki-publishing.md
+
+# Local working notes for AI agents (see CLAUDE.md); kept out of history on purpose.
+# The project's own working notes are tracked instead, under docs/: TODO.md,
+# backend-tasks.md, testplan.md, testfindings.md.
+CLAUDE.md
+STATUS.md
+BACKEND-PROMPT.md
+FRONTEND-TASKS.md
+ISSUES.md
+
+# Coverage reports (npm run test:coverage) and Playwright's own output directories.
+coverage/
+playwright-report/
+test-results/
+
+# Screenshot runs for review (docs/coursework/layout-audit.md). Produced on demand, never committed.
+docs/screenshots/

@@ -1,0 +1,63 @@
+{
+  "name": "admin-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "check": "npm run lint && npm run check:cycles && npm run check:docs && npm run typecheck",
+    "lint": "eslint .",
+    "check:cycles": "node scripts/check-cycles.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
+    "typecheck": "tsc -b",
+    "schema:types": "npx --yes openapi-typescript@7 docs/api/openapi.json -o src/types/api.generated.ts",
+    "test": "vitest run",
+    "test:unit": "vitest run .unit.test.",
+    "test:integration": "vitest run .integration.test.",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mantine/core": "^9.2.1",
+    "@mantine/form": "^9.6.1",
+    "@mantine/hooks": "^9.2.1",
+    "@tabler/icons-react": "^3.44.0",
+    "@tanstack/react-query": "^5.102.8",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-error-boundary": "^6.1.5",
+    "react-router-dom": "^7.15.1",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.12.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.11",
+    "axe-core": "^4.13.0",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "jsdom": "^29.1.1",
+    "msw": "^2.15.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.59.2",
+    "vite": "^8.0.12",
+    "vitest": "^4.1.9"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
+}

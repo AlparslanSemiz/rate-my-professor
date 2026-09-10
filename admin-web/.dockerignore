@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env.*.local
+.env.local
+dist
+node_modules
+*.log
+npm-debug.log*
+# Saved images from a previous deployment must not be sent as build context
+*.tar
+*.tar.gz
