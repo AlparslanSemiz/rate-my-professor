@@ -80,10 +80,12 @@ public final class RatingAverages {
 
         for (Rating rating : ratings) {
 
-            // Ignore ratings from deleted users
-            if (rating.getStudent().getStatus() == UserStatus.DELETED) {
+            // Ignore ratings from deleted users, but allow test ratings without a student.
+            if (rating.getStudent() != null
+                    && rating.getStudent().getStatus() == UserStatus.DELETED) {
                 continue;
             }
+
             for (RatingTopic topic : rating.getTopics()) {
                 if (topic.getCategory() == RatingCategory.OVERALL) {
                     sum += topic.getValue();

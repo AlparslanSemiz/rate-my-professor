@@ -69,7 +69,8 @@ public final class LectureResponseMapper {
 
         // Ignore ratings from deleted users
         var activeRatings = lecture.getRatings().stream()
-                .filter(rating -> rating.getStudent().getStatus() != UserStatus.DELETED)
+                .filter(rating -> rating.getStudent() == null
+                        || rating.getStudent().getStatus() != UserStatus.DELETED)
                 .toList();
 
         return new LectureResponse(
