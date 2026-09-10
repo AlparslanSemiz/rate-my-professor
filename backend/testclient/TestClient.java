@@ -6,12 +6,41 @@ import java.net.http.HttpResponse;
 
 
 /**
- * Problem: Server currently doesnt allow acces to 192.0.2.10:8080
- * Solution: Server does allow connection to localhost:8080
- * 
- * This class simulates a user who wants to login using the token based login.
- * 
- * WARNING: Token should be unique, therefore creating two identical tokens leads to an exception.
+ * A historical manual client. <b>Not part of the product, and not part of the delivered
+ * application.</b>
+ *
+ * <p>It sits in a directory outside every Maven source root, so it is never compiled, never
+ * packaged and never copied into the image -- {@code src/Dockerfile} takes {@code src} and
+ * nothing else. It was run by hand with {@code java testclient/TestClient.java} while the API
+ * was being built, and it is kept because it records how the endpoints were exercised before
+ * there was a test suite.
+ *
+ * <p>Read the rest of this file as a record rather than as instructions. Three things in it are
+ * out of date and are deliberately not being rewritten, because rewriting a record destroys it:
+ *
+ * <ul>
+ *   <li>The note below about {@code 192.0.2.10:8080} describes a problem somebody hit
+ *       months ago. It has not been true since; the field further down points at the bw-cloud
+ *       host over HTTPS.</li>
+ *   <li>{@code SERVER_IP} is a hard-coded default with no way to override it, and it names the
+ *       bw-cloud hostname rather than {@code https://ratemyprofessor.dev}, which is the
+ *       address everything else uses.</li>
+ *   <li>{@code main} calls only {@code sendBugReport}. The other three methods, and the two KIT
+ *       addresses baked into them, are unreachable from it.</li>
+ * </ul>
+ *
+ * <p>The bearer token is the one thing here that was corrected rather than recorded: it is read
+ * from the environment now. See the field's own note for why.
+ *
+ * <p>Original note follows.
+ *
+ * <p>Problem: Server currently doesnt allow acces to 192.0.2.10:8080
+ * <br>Solution: Server does allow connection to localhost:8080
+ *
+ * <p>This class simulates a user who wants to login using the token based login.
+ *
+ * <p>WARNING: Token should be unique, therefore creating two identical tokens leads to an
+ * exception.
  */
 public class TestClient {
 
