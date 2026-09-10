@@ -32,11 +32,20 @@ export default function SidebarNavButton({ item, active, onNavigate }: SidebarNa
         <Icon size={NAV_ICON_SIZE} color={active ? accent : INACTIVE_ICON_COLOR} />
       </Box>
       <div>
+        {/*
+          `nowrap` because the active state is bolder, and bold is wider: at weight 600
+          "Lectures & Professors" needed 145px in a 142.8px box and wrapped to a second line,
+          which made that one button 71.2px tall instead of 54.4px and pushed the three items
+          below it down by 16.8px every time the section was open. Measured with the label
+          unwrapped: 148px of text in 148px of box, so nothing is clipped today. A longer label
+          added later would overflow rather than wrap, which is the trade this makes.
+        */}
         <Text
           size="sm"
           fw={active ? 600 : 400}
           c={active ? chrome.textBright : chrome.textMuted}
           lh={1.2}
+          style={{ whiteSpace: 'nowrap' }}
         >
           {item.label}
         </Text>

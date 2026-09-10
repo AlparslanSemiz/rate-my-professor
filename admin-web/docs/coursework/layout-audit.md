@@ -182,3 +182,227 @@ Horizontal table overflow at 1024 is **`F-036`**, already measured and recorded.
 table needs roughly 1300px; at 1024 all four overflow inside a holder that scrolls. This
 audit did not re-derive it and opens no new finding for it. Below 1024 the panel is
 unmeasurable for the reason `F-019` records.
+
+---
+
+# Sections 3 to 8: symmetry, repetition and the sidebar
+
+Measured at 1024, 1280 and 1440 unless a row says otherwise. Tolerance 1px.
+
+## 3. The Dashboard repeats itself
+
+### 3.1 Section heights
+
+| Section | 1024 | 1280 | 1440 |
+| --- | --- | --- | --- |
+| Title `Welcome back, ...` | 35.2 | 35.2 | 35.2 |
+| Description | 20.3 | 20.3 | 20.3 |
+| **Hero, "Today at a glance"** | **350.2** | **242.8** | **242.8** |
+| **Stat card row** | **247.2** | **115.6** | **115.6** |
+| **"How things are running"** | **295.5** | **295.5** | **295.5** |
+| **"Jump to"** | **401.3** | **221.2** | **221.2** |
+| document `scrollHeight` | 1542 | 1123 | 1123 |
+| **overflow past the viewport** | **642** | **223** | **223** |
+
+### 3.2 Which numbers appear more than once
+
+Every standalone number rendered on the Dashboard at 1440, with the block it sits in:
+
+| Value | y | Where |
+| --- | --- | --- |
+| 75% | 302 | Hero, "Active accounts" |
+| 1 | 302 | Hero, "Reports waiting" |
+| 4 | 440 | Card, "Total users" |
+| 3 | 440 | Card, "Active accounts" |
+| 1 | 440 | Card, "Admin accounts" |
+| 1 | 440 | Card, "Open reports" |
+| 75% | 620 | Bar, "Active accounts" |
+| 25% | 660 | Bar, "Admin share of accounts" |
+
+**Your three observations, checked one at a time:**
+
+1. **"The hero's three numbers repeat in the cards below" - confirmed.** `Reports waiting 1`
+   (hero) and `Open reports 1` (card) are the **same number with two names**. `Active
+   accounts` appears as **75%** in the hero and as **3** in a card: one datum, two forms.
+2. **"Both bars are 100% and carry no information" - refuted on the numbers.** They read
+   **75%** and **25%**, not 100%. But the weaker claim holds: `Active accounts 75%` is a
+   **third** rendering of the same datum, and `Admin share 25%` is a second rendering of
+   the card's `Admin accounts 1`. Neither bar introduces a number the page does not
+   already show.
+3. **"Jump to duplicates the sidebar" - confirmed.** Its three cards go to Users, Bug
+   Reports and Comments; all three are in the sidebar, which is on screen at the time.
+
+**Net: 4 distinct facts are rendered 8 times.**
+
+### 3.3 Options, not applied
+
+| | Removes | Saves at 1440 | Information lost | Files | Tests |
+| --- | --- | --- | --- | --- | --- |
+| **1. Least** | `SystemPulse` (the two bars) | ~0 - it shares a grid row with Recent Registrations, which sets the row height | **none** - 75% and 25% are both derivable from the cards, which stay | 2 | `App.a11y` pins both bar labels (`F-030`); `DashboardPage` tests | 
+| **2. Middle** | `SystemPulse` **and** `ModuleNavigation` ("Jump to") | **221.2 + 28 margin = 249.2**, which clears the 223px overflow at 1440 | **none** - every destination stays in the sidebar | 3-4 | as above, plus the dashboard navigation test | 
+| **3. Most** | Both of the above **and** the hero collapses to one line of context | **~490**, and 1024 drops from 642 to ~150 | the "last updated" timestamp, unless it moves to the header | 5-6 | above plus `DashboardHero` and degraded-payload cases |
+
+**Where the removed information still lives**, which is the question that decides whether
+an option is allowed at all:
+
+- `Active accounts 75%` -> the card `Active accounts 3` and `Total users 4`.
+- `Admin share 25%` -> the card `Admin accounts 1`.
+- `Reports waiting 1` -> the card `Open reports 1`.
+- "Jump to" destinations -> the sidebar, always visible.
+- **`Last updated`** appears **only** in the hero. Option 3 must move it, not drop it.
+
+Estimates: option 1 ~30 min, option 2 ~1 h, option 3 ~3 h plus a design pass.
+
+## 4. A. The filter bar - five pages, five layouts
+
+At 1440. Search box x, and where Apply/Clear sit:
+
+| Route | Own form? | Controls | Rows | Search x / w | Apply x | Clear x | Bar h | Gap to table |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Users | yes | 6 | 1 | 293 / 352.5 | 1143.5 | 1294.6 | 94.8 | **87.1** |
+| Catalog | **no** | 1 | - | **1067** / 320 | none | none | - | - |
+| Comments | **no** | 2 | 1 | 293 / **922** | none | none | 66 | - |
+| Audit Logs | yes | 8 | **2** | 293 / 305.3 | 1143.5 | 1294.6 | 167.6 | **62.8** |
+| Activity Logs | yes | 9 | **2** | 293 / 295.3 | 1143.5 | 1294.6 | 167.6 | **62.8** |
+
+**Two corrections to the brief.** Audit Logs does **not** fit on one line: at 1440 it is
+already two rows, the same as Activity Logs. And the Catalog search is **not** in the table
+header - it is in the table's panel, right-aligned at **x=1067**, which is why it reads as
+part of the header.
+
+**One more, found while measuring:** Audit Logs' end-date input is **838.5px** wide on the
+second row, where the identical control on Activity Logs is **413.2px**. Same control,
+same job, twice the width, because it is the only field on that row and it stretches.
+
+Good news: **Apply and Clear are already at x=1143.5 and x=1294.6 on all three pages that
+have them.** They never move horizontally; they move *vertically* when the bar wraps.
+
+**Proposed standard (one, not a menu):** one `FilterBar` shell used by all five screens:
+a panel of its own, search always first at x=293 with a fixed width, then filter controls
+in a wrapping group, and **Apply + Clear pinned to the bar's own last line** so they are
+never pushed by control count. The Catalog search moves into that bar. Gap to the table
+fixed at one value.
+**Cost:** ~6 files, ~4 h. Breaks `e2e/surfaces.spec.ts` (the two filter-bar form tests),
+the Catalog search tests, and the log filter tests. `F-067`.
+
+## 5. B. Stat cards
+
+Card geometry is **identical everywhere it appears**: w=273.5, h=74.8, padding 16px 20px,
+gap 14, icon 18x18, value 22px, label 12px.
+
+| Route | Cards | Row filled? |
+| --- | --- | --- |
+| Users | **3** | no - one empty 273.5px slot at x=1134.5 |
+| Catalog | 4 | yes |
+| Comments | 4 | yes |
+| Audit Logs | **0** | - |
+| Activity Logs | **0** | - |
+
+**Correction:** Users' three cards are **not** wider. They are 273.5 like every other card;
+the row simply ends early. `F-068`.
+
+**Proposed standard:** the card row is a fixed four-column grid on every screen that has
+one. Users gains a fourth card (`Blocked`, which the backend already counts). Audit and
+Activity keep **zero** - they are event streams with nothing to count, and that is a
+deliberate difference rather than an omission.
+**Cost:** ~2 files, ~1 h. Breaks the Users stat tests.
+
+## 6. C. Tab strip position - the mechanism behind `F-065`
+
+| Route | Cards y | Tab strip y |
+| --- | --- | --- |
+| Comments | 173.8 | **117.8** (above the cards) |
+| Catalog | 117.8 | **220.6** (below the cards) |
+| Bug Reports | 117.8 | **220.6** (below the cards) |
+
+The 102.79px in `F-065` is **the card row plus its margin**: Comments puts tabs first,
+the other two put cards first. Already recorded; not re-opened.
+
+**Proposed standard:** cards first, tabs second, on every screen - so the strip is at
+**y=220.6** everywhere and the tab switch never moves the numbers above it. Comments is the
+one screen that changes.
+**Cost:** 1 file, ~30 min. Breaks the Comments tab tests.
+
+## 7. D. Tables
+
+| Table | Row height | Actions right edge | Numeric alignment |
+| --- | --- | --- | --- |
+| Users | **51.8** | - | left |
+| Comments | **94.4** | 1361.6 | left |
+| Catalog / Lectures | **66.1** | **1387** | left |
+| Catalog / Professors | **69.6** | **1387** | left |
+| Catalog / Ratings | **54.3** | 1356.1 | left |
+| Audit Logs | 66.1 | - | left |
+| Activity Logs | 66.1 | - | left |
+
+- **Five distinct row heights across seven tables** (51.8, 54.3, 66.1, 69.6, 94.4).
+- **Row actions end at two different right edges**: 1361.6 on Comments, 1387 on the
+  catalogue - **25.4px** apart. Order (edit then delete) and size (22x22) are consistent.
+- **Numeric columns are left-aligned in every table**, consistently.
+- **Empty cells** all go through `EMPTY_VALUE`, which is now a single hyphen everywhere
+  (`F-061`). The only blank cells are action columns, which have no value by design.
+
+**Two claims in the brief, refuted by measurement:**
+
+- **"STATUS is cut off to ACT..."** - no cell is clipped at **any** width. Checked
+  `scrollWidth > clientWidth` on every `th` and first-row `td` at 1024, 1280 and 1440:
+  **zero clipped cells**. What is happening is `F-036`: the catalogue table needs more
+  width than it gets and its holder scrolls, so the column is *beyond the right edge*, not
+  truncated. Holder overflow measured **282px at 1024**, 26 at 1280, 0 at 1440. Referenced,
+  not re-opened.
+- **"Ratings SCORES always shows a dash"** - it does not. Measured content:
+  `content 4 - clarity 5 - difficulty 3`. `scoreLine` returns `EMPTY_VALUE` only for an
+  empty map, and the demo data has scores. One real cosmetic issue is visible in that
+  string: the category names render lowercase (`content`, not `Content`), because the
+  fixture keys are lowercase and `enumLabel` passes them through.
+
+**Proposed standard:** one row height token for all tables, one right gutter for action
+columns, numbers stay left-aligned. `F-069`, `F-070`.
+**Cost:** ~7 files, ~2 h. Breaks layout assertions in `e2e/layout.spec.ts`.
+
+## 8. E. Page header
+
+| Route | h1 | Accent bar |
+| --- | --- | --- |
+| 7 routes | x=288, y=32, 28px | 4x26 at x=272 |
+| **Dashboard** | **none** | **none** |
+
+The Dashboard is the only screen with neither. The missing `h1` is `F-064`; the missing
+accent bar is new and is `F-071`.
+
+**Proposed standard:** every route uses `PageHeader`, including the Dashboard, so the bar
+and the `h1` are structural rather than per-screen. The greeting becomes the header's
+title.
+**Cost:** 2 files, ~45 min. Fixes `F-064` at the same time. Breaks the dashboard header test.
+
+## 9. F. Sidebar - fixed
+
+The one change permitted this round, and it was a single declaration.
+
+| | Before | After |
+| --- | --- | --- |
+| Active `Lectures & Professors` height | **71.2** | **54.4** |
+| Every other nav button | 54.4 | 54.4 |
+| Distinct heights at 1024 / 1280 / 1440 | `[54.4, 71.2]` | **`[54.4]`** |
+| `Users` y when the catalogue is open | 216.6 | **199.8** |
+| `Comments` y | 273 | **256.2** |
+| `Bug Reports` y | 329.4 | **312.6** |
+
+**Cause, measured rather than guessed:** the active state is `fw={600}` and the inactive
+`fw={400}`. Bold is wider - the label needed **145px** in a **142.8px** box and wrapped to
+a second line, adding **16.8px** to that one button and pushing the three items below it
+down by the same amount every time the catalogue was open. The oversight group lower down
+never moved, because it is a separate nav block.
+
+**Why `white-space: nowrap` and not something else.** Three candidates were measured in
+the browser before touching the file:
+
+| Candidate | Active height | Clipped? |
+| --- | --- | --- |
+| `white-space: nowrap` | **54.4** | no - 148px of text in a 148px box |
+| `font-weight: 400` (match inactive) | 54.4 | no, but it changes type |
+| `font-weight: 500` | 71.2 | still wraps |
+
+`nowrap` is one declaration, changes no type and no colour, and clips nothing today. **The
+trade it makes:** a longer label added later would overflow rather than wrap. That is
+recorded in a comment at the change.

@@ -2,6 +2,54 @@
 
 ## [Unreleased]
 
+### Layout audit, sections 3 to 9: one fix, seven findings, six standards proposed
+
+Measurement round. **One declaration changed**; everything else is measured, costed and
+left for a decision. Numbers in [docs/coursework/layout-audit.md](docs/coursework/layout-audit.md).
+
+#### `src/layouts/components/SidebarNavButton.tsx`
+
+- **Fixed** `F-072`: the active navigation item was **71.2px** tall against **54.4px** for
+  every other one, and pushed the three items below it down by **16.8px** whenever the
+  catalogue was open. The cause was not padding - the active state is `fw={600}`, bold is
+  wider, and the label needed 145px in a 142.8px box, so it wrapped. `white-space: nowrap`
+  is one declaration, changes no type and no colour, and **clips nothing**: 148px of text
+  in a 148px box. Chosen after measuring three candidates in the browser rather than
+  guessing - matching the inactive weight also works but changes type, and `fw: 500` still
+  wraps. After: every nav button is **54.4 at 1024, 1280 and 1440**, and the items below
+  are back at their baseline coordinates.
+
+#### Findings opened, none fixed
+
+`F-066` the Dashboard renders four facts eight times and overflows by 223px at 1440;
+`F-067` five screens have five filter layouts; `F-068` the Users card row ends early;
+`F-069` five row heights across seven tables; `F-070` row actions stop at two right edges;
+`F-071` the Dashboard heading has no accent bar. Each has **one** proposed standard with a
+file count, an hour estimate and the tests it would break.
+
+### Three reported problems that the measurements refute
+
+Recorded because a refuted observation is a result, not a non-event.
+
+- **"The catalogue's STATUS column is truncated to ACT..."** - **no cell is clipped at any
+  width.** `scrollWidth > clientWidth` was checked on every header and first-row cell at
+  1024, 1280 and 1440: zero clipped. The column is *beyond the right edge* because the
+  table needs more width than it gets and its holder scrolls - **that is `F-036`**, already
+  recorded, and this audit opens nothing new for it. Holder overflow: 282px at 1024, 26 at
+  1280, 0 at 1440.
+- **"The Ratings SCORES column always shows a dash"** - it does not. Measured content:
+  `content 4 - clarity 5 - difficulty 3`. `scoreLine` returns the empty marker only for an
+  empty map. One real cosmetic issue is visible in that string: the category names render
+  lowercase, because the fixture keys are lowercase and `enumLabel` passes them through.
+- **"Both dashboard progress bars are 100%"** - they read **75%** and **25%**. The weaker
+  form of the point stands and is why `F-066` exists: neither bar shows a number the page
+  does not already show elsewhere.
+
+Two more corrections, inside `F-067` and `F-068`: **Audit Logs already wraps to two rows at
+1440**, so it is not Activity Logs alone; and the **three Users cards are not wider** than
+the four elsewhere - every card in the panel is 273.5px, the row just ends early.
+
+
 ### Layout audit, section 2: what moves when something is pressed
 
 Measurement only. **No code changed**, and the report says why for each of the three fixes
