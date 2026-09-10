@@ -147,6 +147,7 @@ against that on its own. The snapshot needs the commit it was taken at, not only
 
 | Date | Scope | Result |
 | --- | --- | --- |
+| 2026-09-10 | `npm run check`, `npm test`, `npm run test:e2e`, `npm run build`, `npm run test:coverage` - the symmetry round, after `F-067` | Pass - check clean (**285 files, 949 edges**, no cycles; every public service, hook and domain type documented; `tsc -b` silent); **51 test files, 1216 tests, 3 skipped**; **14 Playwright specs, 177 tests in 2.6 minutes**; clean build in 404ms; coverage **93.15 / 86.67 / 91.78 / 94.83**. Two things worth recording about the run itself. The e2e suite was run with the tracked config, `trace: 'retain-on-failure'`, and `F-033` did **not** reproduce - because nothing failed, so no trace was retained; that is a consequence of a green run rather than evidence the flake is gone. And `npm run check` was red before this round for a reason that had nothing to do with the code: `F-074`. |
 | 2026-09-10 | `npm run check`, `npm test`, `npm run test:e2e`, `npm run build`, `npm run test:coverage` — the release-readiness audit | Pass — check clean (**287 files, 954 edges**, no cycles; every public symbol documented); **49 test files, 1207 tests, 3 skipped**; **14 Playwright specs, 177 tests**; clean build; coverage **93.1 / 86.66 / 91.56 / 94.76**. Eighteen findings opened (`F-043`…`F-060`), three of them fixed in the same round, plus `F-031` closed. **Two failures on the way that are worth recording, because both were caused by the `F-031` fix rather than found by it:** the hidden description puts the refused sentence in the DOM twice, so five Vitest assertions matching it unscoped went red, and one Playwright locator was rejected outright by strict mode. All six now scope to the alert. `npm run test:e2e` was **177/177 with tracing on**, so `F-033` did not reproduce this round — one clean run is not evidence it is gone. |
 | 2026-09-10 | `npm run check`, `npm test`, `npm run test:e2e`, `npm run build`, `npm run test:coverage` — after restoring the activity log and adding the modal, keyboard and fault layers | Pass — check clean (287 files, 954 edges, no cycles; every public symbol documented); **48 test files, 1196 tests, 3 skipped**; **13 Playwright specs, 172 tests**; coverage **93.09 / 86.61 / 91.56 / 94.76**; clean build. Five findings opened (`F-038`…`F-042`), three defects fixed (`F-039` in part), and `F-028` reduced from 14 cases to 12. |
 | 2026-09-10 | Pre-push gate on `main` at `b38f1a5`: `npm run check`, `npm test`, `npm run build`, then the **tracked** e2e specs | Pass — check clean (287 files, 953 edges, no cycles); **48 test files, 1196 tests, 3 skipped**; clean build; **73/73 Playwright** with `--trace=off`. With tracing on the same suite failed 4 then 2, always in teardown and never on an assertion — `F-033`. The e2e run was restricted to `git ls-files 'e2e/*.spec.ts'` on purpose: `e2e/surfaces.spec.ts`, `e2e/surfaces.ts` and `e2e/measure.ts` were untracked work in progress being written while the gate ran, so they are not in the repository, would not exist in CI, and their 48 failures say nothing about what would be pushed. |
@@ -183,7 +184,68 @@ against that on its own. The snapshot needs the commit it was taken at, not only
 
 ## Coverage
 
-### Current — 2026-09-10, after the release-readiness audit
+### Current — 2026-09-10, after the symmetry round
+
+**All files: 93.15 statements / 86.67 branches / 91.78 functions / 94.83 lines**
+
+Read from `coverage/coverage-summary.json`, which §0 of [testplan.md](testplan.md) names as the
+authority. Per-directory rows are summed from the per-file entries in the same artefact.
+
+| Directory | % Stmts | % Branch | % Funcs | % Lines |
+| --- | --- | --- | --- | --- |
+| **All files** | **93.15** | **86.67** | **91.78** | **94.83** |
+| `src` | 71.43 | 33.33 | 66.67 | 72.73 |
+| `src/api/auth` | 95.83 | 92.86 | 100.00 | 95.45 |
+| `src/api/catalog` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/api/client` | 99.15 | 94.59 | 100.00 | 99.10 |
+| `src/api/feedback` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/api/logs` | 100.00 | 94.74 | 100.00 | 100.00 |
+| `src/api/moderation` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/api/system` | 100.00 | 88.89 | 100.00 | 100.00 |
+| `src/api/users` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/assets` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/components` | 96.10 | 90.91 | 96.43 | 97.22 |
+| `src/constants` | 100.00 | 90.00 | 100.00 | 100.00 |
+| `src/context` | 97.87 | 94.12 | 100.00 | 100.00 |
+| `src/domain` | 100.00 | 93.33 | 100.00 | 100.00 |
+| `src/features/auth` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/features/auth/components` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/features/auth/hooks` | 95.12 | 90.48 | 100.00 | 100.00 |
+| `src/features/catalog` | 96.67 | 84.85 | 92.86 | 96.15 |
+| `src/features/catalog/components` | 92.50 | 66.67 | 91.30 | 94.52 |
+| `src/features/catalog/hooks` | 85.96 | 80.49 | 88.89 | 85.96 |
+| `src/features/catalog/model` | 92.73 | 90.00 | 100.00 | 97.62 |
+| `src/features/comments` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/features/dashboard` | 95.24 | 85.19 | 83.33 | 94.74 |
+| `src/features/dashboard/components` | 100.00 | 80.00 | 100.00 | 100.00 |
+| `src/features/dashboard/hooks` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/features/feedback` | 94.74 | 88.89 | 100.00 | 100.00 |
+| `src/features/feedback/components` | 72.22 | 72.22 | 75.00 | 72.92 |
+| `src/features/feedback/hooks` | 93.88 | 87.50 | 90.00 | 93.88 |
+| `src/features/feedback/model` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/features/help` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/features/help/content` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/features/logs` | 85.71 | 85.53 | 78.12 | 89.71 |
+| `src/features/logs/components` | 77.08 | 77.27 | 67.65 | 83.33 |
+| `src/features/logs/components/details` | 95.65 | 81.25 | 100.00 | 95.45 |
+| `src/features/logs/hooks` | 85.37 | 89.29 | 93.33 | 87.18 |
+| `src/features/moderation` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/features/moderation/components` | 91.35 | 87.32 | 89.36 | 93.68 |
+| `src/features/moderation/hooks` | 95.45 | 87.50 | 100.00 | 96.77 |
+| `src/features/moderation/model` | 95.16 | 75.41 | 88.89 | 94.34 |
+| `src/features/users` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/features/users/components` | 89.05 | 77.03 | 85.45 | 90.84 |
+| `src/features/users/components/warnings` | 80.00 | 50.00 | 100.00 | 100.00 |
+| `src/features/users/hooks` | 91.06 | 83.87 | 94.12 | 95.15 |
+| `src/features/users/model` | 79.17 | 91.89 | 60.00 | 89.19 |
+| `src/hooks` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/layouts` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/layouts/components` | 90.32 | 91.30 | 81.82 | 90.32 |
+| `src/theme` | 100.00 | 100.00 | 100.00 | 100.00 |
+| `src/utils` | 98.18 | 92.31 | 100.00 | 97.62 |
+
+
+### Previous — 2026-09-10, after the release-readiness audit
 
 **All files: 93.1 statements / 86.66 branches / 91.56 functions / 94.76 lines**
 

@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### The numbers this round was measured on
+
+Re-derived from the runs rather than carried forward, per [testplan.md](docs/testplan.md) §0.
+
+- **Updated** the coverage block in [testfindings.md](docs/testfindings.md) - **93.15 / 86.67 /
+  91.78 / 94.83**, generated from `coverage/coverage-summary.json` rather than transcribed, with
+  the per-directory rows summed from the same artefact.
+- **Updated** [testplan.md](docs/testplan.md) §3a. Layer 4 was 141 and is **146**, re-derived
+  with `npx playwright test --list`: layout 37, focus 12, a11y 9, surfaces 71, keyboard 4,
+  faults 13. Layer 6 was "13 specs, 172 tests" and is **14 specs, 177 tests** - and the row now
+  says what that figure has always counted, which is the whole Playwright suite rather than that
+  layer alone. The six flow specs are 17 of it.
+- **Added** a run-log row: check clean at **285 files, 949 edges**; **51 test files, 1216 tests,
+  3 skipped**; **177 Playwright tests in 2.6 minutes**; build in 404ms.
+- Recorded with it: the e2e suite ran under the tracked config, with `trace:
+  'retain-on-failure'`, and **`F-033` did not reproduce - because nothing failed, so no trace was
+  retained.** That is a consequence of a green run, not evidence the flake is gone, and saying
+  so is the difference between a result and a claim.
+
 ### The screenshot round: eleven observations measured, nine opened, three refuted
 
 Measurement only. **Nothing on this list was fixed**, per the brief: each was measured at
