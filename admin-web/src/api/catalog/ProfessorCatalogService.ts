@@ -8,10 +8,15 @@ interface ProfessorsResponse extends BasicResponse {
 
 /** Professors: the public read, and the admin-only writes on the same paths. */
 export class ProfessorCatalogService extends HttpService {
-  /** Public professor catalogue read, backed by the singular backend path. */
+  /**
+   * Every professor the catalogue holds, **active or not**, on the singular backend path.
+   *
+   * The admin read, for the reason `LectureCatalogService.getAll` gives: `/data/professor`
+   * filters to `active = true` and a professor switched off would otherwise be unreachable.
+   */
   async getAll(): Promise<Professor[]> {
-    const response = await this.client.get<ProfessorsResponse>('/data/professor')
-    return expectArray<Professor>(response, 'professors', 'GET /data/professor')
+    const response = await this.client.get<ProfessorsResponse>('/data/professor/all')
+    return expectArray<Professor>(response, 'professors', 'GET /data/professor/all')
   }
 
   /**

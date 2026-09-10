@@ -38,12 +38,12 @@ describe('CatalogService', () => {
       { id: 'lecture-1', code: 'CS101', professors: [{ id: 'prof-1' }] },
     ])
     expect(fetchMock).toHaveBeenCalledWith(
-      `${TEST_API_BASE_URL}/data/lectures`,
+      `${TEST_API_BASE_URL}/data/lectures/all`,
       expect.objectContaining({ method: 'GET' })
     )
   })
 
-  it('reads professors from the singular catalogue path', async () => {
+  it('reads professors from the singular catalogue path, active or not', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({
       success: true,
       message: 'Success',
@@ -54,7 +54,7 @@ describe('CatalogService', () => {
 
     await expect(createService().getProfessors()).resolves.toMatchObject([{ id: 'prof-1' }])
     expect(fetchMock).toHaveBeenCalledWith(
-      `${TEST_API_BASE_URL}/data/professor`,
+      `${TEST_API_BASE_URL}/data/professor/all`,
       expect.objectContaining({ method: 'GET' })
     )
   })

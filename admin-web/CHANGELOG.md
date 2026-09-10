@@ -2,6 +2,70 @@
 
 ## [Unreleased]
 
+### A deactivated lecture can be found again (`F-006`, `F-085`)
+
+Item 2 of seven, and the backend raised the same thing as `F-42`. Numbers in
+[docs/coursework/layout-audit.md](docs/coursework/layout-audit.md) §11.2.
+
+**The fixture was fixed first, and it is the more interesting half.** The mock backend answered
+the active-only reads with **every** row, so the door this finding is about could not be
+reproduced by anything: measured before touching the panel, the catalogue listed 3 lectures,
+switching one to Inactive left 3, and it stayed on screen with an `Inactive` badge. The panel's
+own warning that the row was about to vanish had never once been true in a test, and the two
+integration tests over that warning asserted it was **shown** without ever checking what it
+claims. `F-085`, and the same shape as `F-041`: a fixture wrong in the panel's favour reads
+exactly like a clean measurement.
+
+#### `src/test/msw/handlers/catalog.ts`
+
+- **Added** `GET /data/lectures/all` and `GET /data/professor/all`, and **corrected**
+  `/data/lectures` and `/data/professor` to filter to `active = true` the way the backend does.
+  With this alone the door reproduced: 3 rows became 2, then 1.
+
+#### `src/api/catalog/LectureCatalogService.ts`, `ProfessorCatalogService.ts`, `CatalogService.ts`
+
+- **Changed** both catalogue reads to the `/all` pair. The backend maps them to the legacy paths
+  too, so this needs nothing from `F-005`.
+
+#### `src/features/catalog/model/catalog.ts`, `hooks/useCatalogLists.ts`, `CatalogPage.tsx`
+
+- **Added** an All / Active / Inactive filter, defaulting to **Active** so the screen looks as it
+  did, as a `Select` in the filter bar beside each tab's search - the shell `F-067` established,
+  and `filterFieldWidth.select` for the width. `matchesActivity` and `toActivityFilter` follow
+  the moderation filters' shape rather than inventing a second one.
+- The narrowing happens **before** the search, so the search reports how many of the rows on
+  screen match rather than how many exist in a state nobody asked to see. The tab counts follow
+  the filter for the same reason.
+- **No new colour.** Status still reads from the green/gray `activeStatusColor` badge both
+  catalogue tables already draw.
+
+#### `src/features/catalog/components/InactiveVisibilityNotice.tsx`
+
+- **Rewrote** the copy, which this change made false. It said the record "cannot be found or
+  switched back on from here; the change has to be undone in the database". It now says the row
+  leaves the app and the default view, and where to look for it.
+
+**Measured after**, in the browser: Active 2 rows, Inactive 1 - `Lineare Algebra I`, which no
+screen could reach before - All 3; deactivating `Programmieren` drops the default view to 1, the
+Inactive filter finds it, and switching it back on restores it.
+
+#### Tests
+
+- **Added** two filter tests to `CatalogPage.integration.test.tsx`, **red first**.
+- **Updated** `src/test/msw/apiCalls.ts` with the new paths, which is what the call-surface
+  ratchet demands before it will go green again, and which regenerates the resilience cases.
+- **Widened** five existing catalogue tests to `All` rather than deleting them: they assert on
+  the fixture's inactive rows, which are now behind the default filter. One assertion is now
+  scoped to the table, because `Active` and `Inactive` are also the filter's own options and
+  Mantine keeps its dropdown mounted in a portal.
+- **Updated** `degradedPayloads.integration.test.tsx` to serve its degraded payload on the path
+  the panel now asks for.
+
+#### `docs/consumer-contract.md`
+
+- **Moved** `GET /data/lectures` and `GET /data/professor` into "defined but not read", and the
+  `/all` pair out of it. The per-endpoint sections and the numbered index follow.
+
 ### Every multi-line box shows what is in it (`F-084`)
 
 Item 1 of seven. Measured first, in

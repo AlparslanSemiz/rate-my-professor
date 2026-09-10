@@ -187,7 +187,9 @@ const CALLS: readonly ApiCall[] = [
   {
     name: 'catalog.getLectures',
     method: 'GET',
-    path: '/data/lectures',
+    // The admin read, not the public one. `/data/lectures` filters to `active = true`; the
+    // panel needs the inactive rows to be able to switch one back on. `F-006`.
+    path: '/data/lectures/all',
     contentType: null,
     covers: ['CatalogService.getLectures', 'LectureCatalogService.getAll'],
     send: () => catalogService.getLectures(),
@@ -214,7 +216,8 @@ const CALLS: readonly ApiCall[] = [
     method: 'GET',
     // Singular, and not a typo: the backend serves the professor catalogue at `/data/professor`
     // while lectures are plural. A sweep that normalised it would hide the asymmetry.
-    path: '/data/professor',
+    // `/all` for the same reason as the lecture read above.
+    path: '/data/professor/all',
     contentType: null,
     covers: ['CatalogService.getProfessors', 'ProfessorCatalogService.getAll'],
     send: () => catalogService.getProfessors(),

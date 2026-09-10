@@ -9,7 +9,9 @@ import { ROUTES, open } from './routes'
  * assets and Vite's client — and the handler set had **no catalogue slice at all**. So
  * `/data/lectures`, `/data/professor` and `/ratings` fell straight through the worker to the
  * Vite proxy and out to the deployed backend, from a suite whose whole premise is that it
- * contacts nothing. Nobody noticed because no spec opened the catalogue.
+ * contacts nothing. Nobody noticed because no spec opened the catalogue. The catalogue now
+ * reads the `/all` pair (`F-006`), and those are handled here too - a new endpoint with no
+ * handler is exactly how this escapes again.
  *
  * `src/test/msw/handlers/catalog.ts` closed it. This is what keeps it closed, and it is
  * deliberately a *measurement* rather than a claim: `Response.fromServiceWorker()` says whether

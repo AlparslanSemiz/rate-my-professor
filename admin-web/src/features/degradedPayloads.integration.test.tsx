@@ -155,7 +155,9 @@ const SCREENS: readonly Screen[] = [
   {
     name: 'Lectures & Professors',
     element: () => <CatalogPage />,
-    path: '/data/lectures',
+    // The admin read, since `F-006`: the screen lists inactive rows too and filters them on
+    // screen. A degraded payload has to arrive on the path the panel actually asks for.
+    path: '/data/lectures/all',
     heading: 'Lectures & Professors',
     isList: true,
     record: fixture.lectures![0] as unknown as Wire,

@@ -28,8 +28,21 @@ function replace<T extends { id: string }>(list: T[], updated: T): void {
   list[list.findIndex((item) => item.id === updated.id)] = updated
 }
 
+/**
+ * The active-only reads and the admin reads, kept apart because the backend keeps them apart.
+ *
+ * `GET /data/lectures` and `GET /data/professor` filter to `active = true` - that is what they
+ * are for, since the app must not offer a retired lecture - while `/all` serves both. Until
+ * 2026-09-10 this file served **everything** from both, which made `F-006`'s one-way door
+ * impossible to reproduce: a lecture switched to Inactive stayed on screen, so the panel's own
+ * warning that it would vanish was never once true in a test.
+ */
 const lectureHandlers = [
-  http.get(apiUrl('/data/lectures'), () => ok({ lectures: db.lectures })),
+  http.get(apiUrl('/data/lectures/all'), () => ok({ lectures: db.lectures })),
+
+  http.get(apiUrl('/data/lectures'), () =>
+    ok({ lectures: db.lectures.filter((lecture) => lecture.active) }),
+  ),
 
   http.patch(apiUrl('/data/lectures/:id'), async ({ params, request }) => {
     const lecture = db.lectures.find((candidate) => candidate.id === params.id)
@@ -63,7 +76,11 @@ const lectureHandlers = [
 ]
 
 const professorHandlers = [
-  http.get(apiUrl('/data/professor'), () => ok({ professors: db.professors })),
+  http.get(apiUrl('/data/professor/all'), () => ok({ professors: db.professors })),
+
+  http.get(apiUrl('/data/professor'), () =>
+    ok({ professors: db.professors.filter((professor) => professor.active) }),
+  ),
 
   http.patch(apiUrl('/data/professor/:id'), async ({ params, request }) => {
     const professor = db.professors.find((candidate) => candidate.id === params.id)

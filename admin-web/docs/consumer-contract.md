@@ -719,14 +719,15 @@ all.
 - **Error statuses handled:** none by status.
 - **Success determined by:** status **and** body `success`.
 
-### `GET /data/lectures`
+### `GET /data/lectures/all`
 
-- **Call site:** `src/api/catalog/LectureCatalogService.ts:13`
-- **Reached from:** `src/features/catalog/hooks/useCatalogLists.ts:21`
-- **Body / query parameters:** none. This is the **public, active-only** read; the
-  panel deliberately does not call the `…/all` variant
-  (`src/api/catalog/CatalogService.ts:29-31`). An `Authorization` header is still sent
-  when a session exists (`src/api/client/apiRequest.ts:108-109`).
+- **Call site:** `src/api/catalog/LectureCatalogService.ts:19`
+- **Reached from:** `src/features/catalog/hooks/useCatalogLists.ts:32`
+- **Body / query parameters:** none. This is the **admin read, active or not**. The panel
+  called the public active-only `GET /data/lectures` until 2026-09-10, which made a
+  deactivated lecture unreachable from the only screen that could edit it (`F-006`); the
+  Active / Inactive / All choice is now a filter on the screen. An `Authorization` header is
+  sent when a session exists (`src/api/client/apiRequest.ts:108-109`).
 - **Response fields read:**
 
   | Path | Notes |
@@ -750,7 +751,7 @@ all.
 - **Expected success status:** any 2xx carrying a `lectures` array.
 - **Error statuses handled:** none by status; fallback "Failed to load lectures"
   (`src/features/catalog/hooks/useCatalogLists.ts:49`). Fetched with `Promise.all`
-  alongside `GET /data/professor`, so either failure takes the catalogue screen down
+  alongside `GET /data/professor/all`, so either failure takes the catalogue screen down
   (`useCatalogLists.ts:19-26`, `:34`).
 - **Success determined by:** status, body `success`, **and** the presence of the
   `lectures` array.
@@ -793,12 +794,13 @@ all.
   deleted."
 - **Success determined by:** status **and** body `success`.
 
-### `GET /data/professor`
+### `GET /data/professor/all`
 
-- **Call site:** `src/api/catalog/ProfessorCatalogService.ts:13` — **singular** path
+- **Call site:** `src/api/catalog/ProfessorCatalogService.ts:17` — **singular** path
   segment, plural response key.
-- **Reached from:** `src/features/catalog/hooks/useCatalogLists.ts:25`
-- **Body / query parameters:** none. Public, active-only read.
+- **Reached from:** `src/features/catalog/hooks/useCatalogLists.ts:36`
+- **Body / query parameters:** none. The admin read, active or not, for the same reason as
+  `GET /data/lectures/all` above (`F-006`).
 - **Response fields read:**
 
   | Path | Notes |
@@ -1143,7 +1145,7 @@ against the actual call sites listed above.
 | Path / verb | Where it is mentioned | Status |
 | --- | --- | --- |
 | `GET /activity-logs`, `GET /activity-logs/meta` | `src/domain/auditLog.ts:5-7` (comment only) | **Not called.** The Activity Log screen was removed; a routing test asserts the route is gone (`src/App.integration.test.tsx:194-212`). |
-| `GET /data/lectures/all`, `GET /data/professor/all` | `src/api/catalog/CatalogService.ts:29-31` (comment only) | **Not called.** The panel deliberately reads the active-only public endpoints instead. |
+| `GET /data/lectures`, `GET /data/professor` | `src/api/catalog/CatalogService.ts` (comment only) | **No longer called**, since 2026-09-10. These filter to `active = true`, which is what the student app needs and what left a deactivated row unreachable from the panel. The catalogue reads the `/all` pair instead and filters on screen. `F-006`. |
 | `POST /data/lectures`, `POST /data/professor` | Not referenced in `src/` at all | **Not called.** The panel has no catalogue-creation UI. |
 | `POST /auth/logout-all` | Not referenced in `src/` at all | **Not called.** |
 | `GET /admins/validate` | Not referenced in `src/` at all | **Not called.** This answers the open question in `docs/adminweb-tasks-from-backend.md:135` — the backend may delete it. |
@@ -1160,7 +1162,7 @@ Present in a TypeScript interface, absent from every call site:
 | --- | --- | --- |
 | `GET /comments` | `comments[].lectureId` | `src/api/moderation/commentTypes.ts:20` |
 | `GET /answers/reported` | `answers[].commentId` | `src/api/moderation/answerTypes.ts:29` |
-| `GET /data/lectures` | `lectures[].professors[].active` | `src/api/catalog/catalogTypes.ts:13` |
+| `GET /data/lectures/all` | `lectures[].professors[].active` | `src/api/catalog/catalogTypes.ts:13` |
 | `GET /ratings` | `ratings[].author.id` | `src/api/catalog/ratingTypes.ts:39` |
 | `GET /users/{id}/warnings` | `warnings[].createdFrom.createdAt` | `src/api/users/userWarningMapper.ts:9` |
 | `GET /audit-logs` | `auditLogs[].actor.type`, `auditLogs[].actor.id` | `src/domain/auditLog.ts:72-78` |
@@ -1204,10 +1206,10 @@ Present in a TypeScript interface, absent from every call site:
 | 24 | GET | `/answers/reported` | `src/api/moderation/ReportsService.ts` | 23 |
 | 25 | PATCH | `/answers/reported/{id}` | `src/api/moderation/ReportsService.ts` | 33 |
 | 26 | DELETE | `/answers/reported/{id}` | `src/api/moderation/ReportsService.ts` | 38 |
-| 27 | GET | `/data/lectures` | `src/api/catalog/LectureCatalogService.ts` | 13 |
+| 27 | GET | `/data/lectures/all` | `src/api/catalog/LectureCatalogService.ts` | 19 |
 | 28 | PATCH | `/data/lectures/{id}` | `src/api/catalog/LectureCatalogService.ts` | 23 |
 | 29 | DELETE | `/data/lectures/{id}` | `src/api/catalog/LectureCatalogService.ts` | 28 |
-| 30 | GET | `/data/professor` | `src/api/catalog/ProfessorCatalogService.ts` | 13 |
+| 30 | GET | `/data/professor/all` | `src/api/catalog/ProfessorCatalogService.ts` | 17 |
 | 31 | PATCH | `/data/professor/{id}` | `src/api/catalog/ProfessorCatalogService.ts` | 23 |
 | 32 | DELETE | `/data/professor/{id}` | `src/api/catalog/ProfessorCatalogService.ts` | 28 |
 | 33 | GET | `/ratings` | `src/api/catalog/RatingReadService.ts` | 19 |
@@ -1258,7 +1260,7 @@ Bold marks a field whose absence raises an error rather than degrading.
 | `GET /answers/reported` | **`answers[]`**, `answers[].id`, `.answerId`, `.answerContent`, `.commentContent`, `.postContext`, `.reportText`, `.reportedUser.{id,name,role,warnings,status}`, `.reporter.{id,name,role,warnings,status}`, `.reason`, `.status`, `.date` |
 | `PATCH /answers/reported/{id}` | — |
 | `DELETE /answers/reported/{id}` | — |
-| `GET /data/lectures` | **`lectures[]`**, `lectures[].id`, `.name`, `.code`, `.semesterYear`, `.semesterSeason`, `.active`, `.lectureType`, `.professors[].id`, `.professors[].firstName`, `.professors[].lastName`, `.commentCount`, `.ratingCount` |
+| `GET /data/lectures/all` | **`lectures[]`**, `lectures[].id`, `.name`, `.code`, `.semesterYear`, `.semesterSeason`, `.active`, `.lectureType`, `.professors[].id`, `.professors[].firstName`, `.professors[].lastName`, `.commentCount`, `.ratingCount` |
 | `PATCH /data/lectures/{id}` | — |
 | `DELETE /data/lectures/{id}` | — |
 | `GET /data/professor` | **`professors[]`**, `professors[].id`, `.firstName`, `.lastName`, `.active`, `.lectureIds`, `.averageRating`, `.ratingCount` |

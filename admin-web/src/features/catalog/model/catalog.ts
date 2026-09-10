@@ -57,3 +57,45 @@ export function formatAverageRating(value: number | null, ratingCount: number): 
  * generous. `clampBehavior="strict"` on the input is what these actually enforce.
  */
 export const SEMESTER_YEAR_RANGE = { min: 1900, max: 2999 } as const
+
+/**
+ * The "no filter" option, spelled the way the moderation filters spell it.
+ *
+ * A value rather than `null` because a Mantine `Select` shows its placeholder for an empty
+ * value, and "All" has to read as a deliberate choice in the box.
+ */
+export const ALL_ACTIVITY = 'All'
+
+/** Whether a catalogue row is in service, or no filter at all. */
+export type ActivityFilter = typeof ALL_ACTIVITY | 'Active' | 'Inactive'
+
+/**
+ * The three states, "All" first, in the order the operator reads them.
+ *
+ * Not derived from an enum because there is none: `active` is a boolean on the wire, and the
+ * two labels beside it are the same two words the Status badge already draws.
+ */
+export const activityFilterOptions = [
+  { value: ALL_ACTIVITY, label: ALL_ACTIVITY },
+  { value: 'Active', label: 'Active' },
+  { value: 'Inactive', label: 'Inactive' },
+]
+
+/**
+ * @param value whatever the dropdown reported, including `null` when it was cleared
+ * @returns the value if it is one this panel knows, otherwise no filter
+ */
+export function toActivityFilter(value: string | null): ActivityFilter {
+  return value === 'Active' || value === 'Inactive' ? value : ALL_ACTIVITY
+}
+
+/**
+ * @param record anything the catalogue lists; both lectures and professors carry `active`
+ * @param filter the state the operator asked for
+ * @returns whether the record belongs in the list under that filter
+ */
+export function matchesActivity(record: { active: boolean }, filter: ActivityFilter): boolean {
+  if (filter === ALL_ACTIVITY) return true
+  return record.active === (filter === 'Active')
+}
+

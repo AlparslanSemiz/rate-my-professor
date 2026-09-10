@@ -800,3 +800,42 @@ than swept in.
 
 **Opened by 11.1:** `F-084`.
 
+## 11.2 Deactivating a lecture, measured before and after (`F-006`, `F-085`)
+
+Not a layout measurement, and here because it is the round's second item and the numbers belong
+with the rest. Chromium at 1440x900, against the mock backend.
+
+### Before: the door the panel warns about does not exist in any test
+
+| | lectures listed | after switching one to Inactive | after a reload | row still on screen |
+| --- | --- | --- | --- | --- |
+| as measured | **3** | **3** | **3** | **yes**, with an `Inactive` badge |
+
+Calls observed: `GET /api/data/lectures`, `GET /api/data/professor`, `PATCH
+/api/data/lectures/lecture-1`. No `/all` anywhere. The mock served every row from the
+active-only reads, so `InactiveVisibilityNotice` was warning about something that did not
+happen. `F-085`.
+
+### With the handlers corrected, the door reproduces
+
+| filter | rows |
+| --- | --- |
+| default | **2** - the fixture's inactive `Lineare Algebra I` is gone |
+| after deactivating `Programmieren` | **1** |
+
+### After: the round trip
+
+| step | filter | rows |
+| --- | --- | --- |
+| loaded | Active (default) | **2** |
+| widened | Inactive | **1** - `Lineare Algebra I`, reachable from no screen before |
+| widened | All | **3** |
+| deactivated `Programmieren` | Active | **1** |
+| looked for it | Inactive | **2** |
+| switched it back on | Active | **2** |
+
+Calls after: `GET /api/data/lectures/all`, `GET /api/data/professor/all`, `PATCH
+/api/data/lectures/lecture-1`.
+
+**Closed by 11.2:** `F-006`. **Opened and closed by 11.2:** `F-085`.
+

@@ -9,7 +9,7 @@ import PageLoader from '@/components/PageLoader'
 import { useSelectedId } from '@/hooks/useSelectedId'
 import { indexById } from '@/utils/collection'
 import type { CatalogDeleters, CatalogDeletion } from './model'
-import { lectureLabel } from './model'
+import { activityFilterOptions, lectureLabel, toActivityFilter } from './model'
 import CatalogDeleteModal from './components/CatalogDeleteModal'
 import CatalogStats from './components/CatalogStats'
 import LectureEditModal from './components/LectureEditModal'
@@ -77,26 +77,48 @@ export default function CatalogPage() {
       */}
       <FilterBar>
         {tab === 'lectures' && (
-          <TextInput
-            placeholder="Search by name, code, or professor..."
-            value={lists.lectureSearch}
-            onChange={(event) => lists.setLectureSearch(event.currentTarget.value)}
-            style={filterFieldWidth.search}
-            size="sm"
-            aria-label="Search lectures"
-            leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
-          />
+          <>
+            <TextInput
+              placeholder="Search by name, code, or professor..."
+              value={lists.lectureSearch}
+              onChange={(event) => lists.setLectureSearch(event.currentTarget.value)}
+              style={filterFieldWidth.search}
+              size="sm"
+              aria-label="Search lectures"
+              leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
+            />
+            <Select
+              aria-label="Filter lectures by status"
+              data={activityFilterOptions}
+              value={lists.lectureActivity}
+              onChange={(value) => lists.setLectureActivity(toActivityFilter(value))}
+              style={filterFieldWidth.select}
+              size="sm"
+              clearable={false}
+            />
+          </>
         )}
         {tab === 'professors' && (
-          <TextInput
-            placeholder="Search by name..."
-            value={lists.professorSearch}
-            onChange={(event) => lists.setProfessorSearch(event.currentTarget.value)}
-            style={filterFieldWidth.search}
-            size="sm"
-            aria-label="Search professors"
-            leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
-          />
+          <>
+            <TextInput
+              placeholder="Search by name..."
+              value={lists.professorSearch}
+              onChange={(event) => lists.setProfessorSearch(event.currentTarget.value)}
+              style={filterFieldWidth.search}
+              size="sm"
+              aria-label="Search professors"
+              leftSection={<IconSearch size={iconSize.inline} color={chrome.textDim} />}
+            />
+            <Select
+              aria-label="Filter professors by status"
+              data={activityFilterOptions}
+              value={lists.professorActivity}
+              onChange={(value) => lists.setProfessorActivity(toActivityFilter(value))}
+              style={filterFieldWidth.select}
+              size="sm"
+              clearable={false}
+            />
+          </>
         )}
         {tab === 'ratings' && (
           <Select
@@ -119,10 +141,10 @@ export default function CatalogPage() {
       <Tabs value={tab} onChange={(value) => setTab(toCatalogTab(value))} keepMounted={false}>
         <Tabs.List mb={20}>
           <Tabs.Tab value="lectures" leftSection={<IconSchool size={iconSize.inline} />}>
-            Lectures ({lists.lectures.length})
+            Lectures ({lists.lecturesInState.length})
           </Tabs.Tab>
           <Tabs.Tab value="professors" leftSection={<IconUserStar size={iconSize.inline} />}>
-            Professors ({lists.professors.length})
+            Professors ({lists.professorsInState.length})
           </Tabs.Tab>
           <Tabs.Tab value="ratings" leftSection={<IconStar size={iconSize.inline} />}>
             Ratings
@@ -132,7 +154,7 @@ export default function CatalogPage() {
         <Tabs.Panel value="lectures">
           <LecturesTable
             lectures={lists.filteredLectures}
-            totalCount={lists.lectures.length}
+            totalCount={lists.lecturesInState.length}
             mutating={actions.mutating}
             onEdit={(lecture) => lectureEdit.open(lecture.id)}
             onDelete={(record) => setDeleting({ type: 'lecture', record })}
@@ -142,7 +164,7 @@ export default function CatalogPage() {
         <Tabs.Panel value="professors">
           <ProfessorsTable
             professors={lists.filteredProfessors}
-            totalCount={lists.professors.length}
+            totalCount={lists.professorsInState.length}
             mutating={actions.mutating}
             lecturesById={lecturesById}
             onEdit={(professor) => professorEdit.open(professor.id)}

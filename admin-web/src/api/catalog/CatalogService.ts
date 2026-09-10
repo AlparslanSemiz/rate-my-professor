@@ -25,11 +25,13 @@ export class CatalogService {
   }
 
   /**
-   * Every lecture, unpaged.
+   * Every lecture, unpaged, **active or not**.
    *
-   * This calls the read that returns **active** lectures only. `/data/lectures/all` exists and
-   * would include inactive ones, and moving to it is a behaviour change the panel has not made
-   * — see `F-006`.
+   * This calls `/data/lectures/all`, the admin read. It used to call the public
+   * `/data/lectures`, which filters to `active = true` - so switching a lecture off removed it
+   * from the only list the panel had and there was no way back. `F-006`, closed 2026-09-10.
+   * Which of them an operator sees is now a filter on the screen rather than a choice of
+   * endpoint.
    *
    * @returns the catalogue
    * @throws {ContractError} when the response holds no `lectures` list
@@ -39,7 +41,7 @@ export class CatalogService {
   }
 
   /**
-   * Every professor, unpaged. Active only, for the same reason as {@link getLectures}.
+   * Every professor, unpaged, active or not, for the same reason as {@link getLectures}.
    *
    * @returns the professors
    * @throws {ContractError} when the response holds no `professors` list

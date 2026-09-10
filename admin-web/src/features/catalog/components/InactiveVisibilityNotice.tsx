@@ -12,18 +12,23 @@ const noticeStyles = {
 /**
  * Shown the moment a lecture or professor is switched to Inactive.
  *
- * The catalogue is read from `GET /data/lectures` and `GET /data/professor`, which return
- * active records only — so saving this leaves the record in the database but takes it out of
- * every list this panel can see, including this one. There is no way back from here. Until the
- * backend can serve inactive records to an admin caller (task G1), the operator has to be told
- * before they close the door rather than after.
+ * **What this said until 2026-09-10, and why it changed.** The catalogue used to read
+ * `GET /data/lectures` and `GET /data/professor`, which serve active records only, so saving
+ * this took the record out of the only list the panel had and there was no way back: the
+ * `PATCH` that would undo it needs the id, and the id was on the row that had just vanished.
+ * The notice existed to warn about a door that locked behind you.
+ *
+ * The screen now reads the `/all` pair, so the record is still there and the status filter is
+ * what decides whether it is on screen. The warning is still worth making - the row does leave
+ * the default view, and it stops being offered to students - but it is now a description of
+ * where it went rather than of something irreversible. `F-006`.
  */
 export default function InactiveVisibilityNotice({ noun }: { noun: 'lecture' | 'professor' }) {
   return (
     <Alert icon={<IconAlertTriangle size={iconSize.inline} />} color="yellow" radius="md" styles={noticeStyles}>
-      Saving this as Inactive removes the {noun} from this panel. The catalogue reads return
-      active records only, so it cannot be found or switched back on from here; the change has
-      to be undone in the database.
+      Saving this as Inactive takes the {noun} out of the app and out of this screen's default
+      view. To find it again, or to switch it back on, set the status filter above the table to
+      Inactive or All.
     </Alert>
   )
 }

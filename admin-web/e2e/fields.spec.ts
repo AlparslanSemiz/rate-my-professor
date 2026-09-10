@@ -168,7 +168,6 @@ for (const width of WIDTHS) {
       // set, so this reads the floor the call site declared rather than assuming it applies.
       const heightBefore = await documentHeight(page)
       const seeded = await boxOf(field)
-      // eslint-disable-next-line no-console -- the figure is the point of the layer
       console.log(`field ${spec.name} @${width}px seeded: ${seeded.rows} rows, ${seeded.hidden}px hidden, ${seeded.characters} chars`)
       expect(seeded.rows, `${spec.name} declares minRows=${spec.minRows}`).toBeGreaterThanOrEqual(
         spec.minRows,
@@ -177,7 +176,6 @@ for (const width of WIDTHS) {
 
       await field.fill(LONG_TEXT)
       const filled = await boxOf(field)
-      // eslint-disable-next-line no-console -- the figure is the point of the layer
       console.log(`field ${spec.name} @${width}px filled: ${filled.rows} rows, ${filled.hidden}px hidden, ${filled.characters} chars`)
       expect(filled.characters, `${spec.name} took the long value`).toBe(LONG_TEXT.length)
       expect(filled.hidden, `${spec.name} hides part of the longest fixture text`).toBe(0)

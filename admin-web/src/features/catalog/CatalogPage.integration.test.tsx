@@ -69,6 +69,24 @@ function renderCatalog() {
   return render(<MantineProvider>{withQueryClient(<CatalogPage />)}</MantineProvider>)
 }
 
+/**
+ * Widens one tab's status filter to `All`.
+ *
+ * The catalogue defaults to Active, which is what an operator wants and what `F-006` asked
+ * for. Half the fixture is deliberately inactive - `Databases` and `Alan Turing` - so a test
+ * about listing or searching has to say which state it means before it can look for one.
+ *
+ * @param user the session driving the page
+ * @param noun which tab's filter to widen
+ */
+async function showAll(user: ReturnType<typeof userEvent.setup>, noun: 'lectures' | 'professors') {
+  const control = screen.getByRole('combobox', { name: `Filter ${noun} by status` })
+  await user.click(control)
+  fireEvent.click(await screen.findByRole('option', { name: 'All', hidden: true }))
+  // The dropdown stays mounted in its portal, so the box's own value is what says it took.
+  await waitFor(() => expect(control).toHaveValue('All'))
+}
+
 describe('Catalogue page', () => {
   beforeEach(() => {
     vi.mocked(ratingsService.list).mockResolvedValue({ ratings, nextCursor: null })
@@ -82,19 +100,29 @@ describe('Catalogue page', () => {
   })
 
   it('lists lectures with their term, staff and activity', async () => {
+    const user = userEvent.setup()
     renderCatalog()
 
-    expect(await screen.findByText('Algorithms')).toBeInTheDocument()
-    expect(screen.getByText('Winter 2026')).toBeInTheDocument()
-    expect(screen.getByText('Ada Lovelace')).toBeInTheDocument()
-    expect(screen.getByText('Unassigned')).toBeInTheDocument()
-    expect(screen.getByText('Inactive')).toBeInTheDocument()
+    await screen.findByText('Algorithms')
+    // Both states, because the point of this test is the columns rather than the filter.
+    await showAll(user, 'lectures')
+
+    // Scoped to the table: `Active` and `Inactive` are also the filter's own options, which
+    // stay mounted in Mantine's portal once the dropdown has been opened.
+    const table = within(screen.getByRole('table'))
+
+    expect(await table.findByText('Algorithms')).toBeInTheDocument()
+    expect(table.getByText('Winter 2026')).toBeInTheDocument()
+    expect(table.getByText('Ada Lovelace')).toBeInTheDocument()
+    expect(table.getByText('Unassigned')).toBeInTheDocument()
+    expect(table.getByText('Inactive')).toBeInTheDocument()
   })
 
   it('filters lectures by name, code, or professor', async () => {
     const user = userEvent.setup()
     renderCatalog()
     await screen.findByText('Algorithms')
+    await showAll(user, 'lectures')
 
     await user.type(screen.getByRole('textbox', { name: 'Search lectures' }), 'CS102')
 
@@ -185,6 +213,7 @@ describe('Catalogue page', () => {
     renderCatalog()
 
     await user.click(await screen.findByRole('tab', { name: /Professors/ }))
+    await showAll(user, 'professors')
     await user.type(await screen.findByLabelText('Search professors'), 'turing')
 
     expect(await screen.findByText('Alan Turing')).toBeInTheDocument()
@@ -196,6 +225,7 @@ describe('Catalogue page', () => {
     renderCatalog()
 
     await user.click(await screen.findByRole('tab', { name: /Professors/ }))
+    await showAll(user, 'professors')
 
     const turingRow = await screen.findByText('Alan Turing')
     expect(turingRow).toBeInTheDocument()
@@ -237,6 +267,7 @@ describe('Catalogue page', () => {
     renderCatalog()
 
     await user.click(await screen.findByRole('tab', { name: /Professors/ }))
+    await showAll(user, 'professors')
     await user.click(await screen.findByText('Alan Turing'))
 
     const dialog = await screen.findByRole('dialog')
@@ -255,23 +286,62 @@ describe('Catalogue page', () => {
     expect(within(dialog).getByRole('button', { name: 'Delete lecture' })).toBeInTheDocument()
   })
 
-  it('warns that switching a lecture to Inactive hides it from the panel', async () => {
+  it('lists active lectures only until the filter is widened', async () => {
+    const user = userEvent.setup()
+    renderCatalog()
+
+    // `Databases` is the fixture's inactive lecture. The screen reads `/data/lectures/all`, so
+    // it is in the list the page holds; the default filter is what keeps it off the table.
+    expect(await screen.findByText('Algorithms')).toBeInTheDocument()
+    expect(screen.queryByText('Databases')).toBeNull()
+
+    await user.click(screen.getByRole('combobox', { name: 'Filter lectures by status' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'Inactive', hidden: true }))
+
+    // The one that could not be reached from any screen before `F-006` was closed.
+    expect(await screen.findByText('Databases')).toBeInTheDocument()
+    expect(screen.queryByText('Algorithms')).toBeNull()
+
+    await user.click(screen.getByRole('combobox', { name: 'Filter lectures by status' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'All', hidden: true }))
+
+    expect(await screen.findByText('Databases')).toBeInTheDocument()
+    expect(screen.getByText('Algorithms')).toBeInTheDocument()
+  })
+
+  it('lists active professors only until the filter is widened', async () => {
+    const user = userEvent.setup()
+    renderCatalog()
+
+    await user.click(await screen.findByRole('tab', { name: /Professors/ }))
+
+    expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument()
+    expect(screen.queryByText('Alan Turing')).toBeNull()
+
+    await user.click(screen.getByRole('combobox', { name: 'Filter professors by status' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'Inactive', hidden: true }))
+
+    expect(await screen.findByText('Alan Turing')).toBeInTheDocument()
+    expect(screen.queryByText('Ada Lovelace')).toBeNull()
+  })
+
+  it('warns that switching a lecture to Inactive takes it out of the default view', async () => {
     const user = userEvent.setup()
     renderCatalog()
 
     await user.click(await screen.findByRole('button', { name: 'Edit CS101 - Algorithms' }))
     const dialog = await screen.findByRole('dialog')
 
-    // The reads return active records only, so the warning must not be there until the
-    // operator actually closes the door.
-    expect(within(dialog).queryByText(/removes the lecture from this panel/)).toBeNull()
+    // The row leaves the default view rather than the panel now (`F-006`), but it is still a
+    // change worth announcing, and not before the operator has actually made it.
+    expect(within(dialog).queryByText(/takes the lecture out of the app/)).toBeNull()
 
     await user.click(within(dialog).getByLabelText('Active'))
 
-    expect(within(dialog).getByText(/removes the lecture from this panel/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/takes the lecture out of the app/)).toBeInTheDocument()
   })
 
-  it('warns that switching a professor to Inactive hides them from the panel', async () => {
+  it('warns that switching a professor to Inactive takes them out of the default view', async () => {
     const user = userEvent.setup()
     renderCatalog()
 
@@ -279,11 +349,11 @@ describe('Catalogue page', () => {
     await user.click(await screen.findByRole('button', { name: 'Edit Ada Lovelace' }))
     const dialog = await screen.findByRole('dialog')
 
-    expect(within(dialog).queryByText(/removes the professor from this panel/)).toBeNull()
+    expect(within(dialog).queryByText(/takes the professor out of the app/)).toBeNull()
 
     await user.click(within(dialog).getByLabelText('Active'))
 
-    expect(within(dialog).getByText(/removes the professor from this panel/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/takes the professor out of the app/)).toBeInTheDocument()
   })
 
   it('shows a load error and retries', async () => {
