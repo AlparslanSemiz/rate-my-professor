@@ -50,3 +50,6 @@ ISSUES.md
 coverage/
 playwright-report/
 test-results/
+
+# Screenshot runs for review (docs/coursework/layout-audit.md). Produced on demand, never committed.
+docs/screenshots/
