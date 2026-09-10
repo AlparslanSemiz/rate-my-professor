@@ -98,15 +98,26 @@ import static org.mockito.Mockito.when;
     }
 
     /**
-     * Deleted accounts are excluded from the listing unconditionally, so filtering for them
-     * could only ever return an empty page — which reads as "no deleted accounts exist"
-     * rather than "you cannot ask that".
+     * Inverted, not deleted. This used to pin a {@code 400 "Deleted users are not listed"}:
+     * the listing excluded deleted accounts unconditionally, so the filter could only ever
+     * have returned an empty page, and an empty page reads as "no deleted accounts exist"
+     * rather than "you cannot ask that". The exclusion is conditional now and this filter is
+     * the only way to lift it, so the question is answerable and the refusal is gone.
+     *
+     * <p>The spellings are here for the same reason they are on the sort parser: the parse
+     * trims and upper-cases, so a client sending {@code Deleted} must not fall into the
+     * unknown-status branch.
      */
-    @Test
-    void getStudents_filteringForDeletedUsers_isRefusedRatherThanReturningNothing() {
-        assertThatThrownBy(() -> directory().getStudents(null, null, null, "deleted", null, null))
-                .isInstanceOf(ApiException.class)
-                .hasMessage("Deleted users are not listed");
+    @ParameterizedTest
+    @ValueSource(strings = {"deleted", "DELETED", "  Deleted  "})
+    void getStudents_filteringForDeletedUsers_reachesTheQuery(String rawStatus) {
+        when(adminRepository.findAllAdminStudentIds()).thenReturn(List.of());
+        when(studentRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
+                .thenReturn(List.of());
+
+        directory().getStudents(null, null, null, rawStatus, null, null);
+
+        verify(studentRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class));
     }
 
     @Test

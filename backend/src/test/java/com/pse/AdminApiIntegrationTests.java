@@ -2496,27 +2496,33 @@ class AdminApiIntegrationTests {
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("A cursor requires a limit"));
-        // Soft-deleted accounts are excluded unconditionally, so asking for them is an
-        // error rather than an empty page that reads as "there are none".
+        // Inverted, not deleted: this used to be a 400 "Deleted users are not listed",
+        // because the listing excluded soft-deleted accounts unconditionally and the filter
+        // could only have answered an empty page. The exclusion is conditional now, so the
+        // ask is answerable and status=DELETED is an ordinary filter.
         mockMvc.perform(get("/users?status=DELETED")
                         .header("Authorization", bearer(admin.rawToken())))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Deleted users are not listed"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.users", hasSize(0)));
         mockMvc.perform(get("/users?role=WIZARD").header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Invalid user role"));
     }
 
     @Test
-    void deletedAccountsAreExcludedFromTheListingAndItsCount() throws Exception {
+    void deletedAccountsAreExcludedFromTheListingAndItsCountUnlessAskedForByName() throws Exception {
         Session admin = createSession("admin@student.kit.edu", true);
         Session target = createSession("student@student.kit.edu", false);
+        UUID deletedId = target.student().getId();
 
-        mockMvc.perform(delete("/users/{id}", target.student().getId())
+        mockMvc.perform(delete("/users/{id}", deletedId)
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
 
-        // Counting a soft-deleted account would over-report the size of the platform.
+        // Counting a soft-deleted account would over-report the size of the platform, so the
+        // default stays what it was. This half is unchanged and is the reason the exclusion
+        // was made conditional rather than removed.
         mockMvc.perform(get("/users").header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.users", hasSize(1)))
@@ -2524,6 +2530,22 @@ class AdminApiIntegrationTests {
         mockMvc.perform(get("/users?limit=50").header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.users", hasSize(1)));
+        // Neither does a status filter for something else reach them.
+        mockMvc.perform(get("/users?status=ACTIVE").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users", hasSize(1)));
+
+        // Asked for by name, the account is there -- anonymised, which is the whole point of
+        // showing it: the id and the join date survive the scrub and the identity does not.
+        // The panel puts a name back on this row from the USER_DELETED audit entry, whose
+        // target label was written before the scrub.
+        mockMvc.perform(get("/users?status=DELETED").header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users", hasSize(1)))
+                .andExpect(jsonPath("$.users[0].id").value(deletedId.toString()))
+                .andExpect(jsonPath("$.users[0].status").value("DELETED"))
+                .andExpect(jsonPath("$.users[0].username")
+                        .value("Deleted user " + deletedId.toString().substring(0, 8)));
     }
 
     @Test

@@ -114,9 +114,15 @@ public class UserDirectoryService {
 
         Specification<Student> specification = (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
-            // Soft-deleted accounts are anonymised and are never listed, whatever else was
-            // asked for. Returning them would over-report the size of the platform.
-            predicates.add(builder.notEqual(root.get("status"), UserStatus.DELETED));
+            // Soft-deleted accounts stay out of every listing that did not name them, and
+            // the default has to go on excluding them: the panel reads its account counts
+            // off this listing, and counting anonymised rows would over-report the size of
+            // the platform. Asking for them by status is the one way to lift it, so the
+            // exclusion is skipped exactly then -- and the equality predicate below is what
+            // narrows the page, so lifting it never widens anything on its own.
+            if (status != UserStatus.DELETED) {
+                predicates.add(builder.notEqual(root.get("status"), UserStatus.DELETED));
+            }
             if (status != null) {
                 predicates.add(builder.equal(root.get("status"), status));
             }

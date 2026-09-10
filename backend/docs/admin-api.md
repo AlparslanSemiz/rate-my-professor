@@ -255,7 +255,7 @@ built on this listing does not over-report the platform.
 | `limit` | Page size, 1–100. **Omit it and every matching user is returned**, with `nextCursor: null`. |
 | `cursor` | Opaque cursor from the previous page. `400` without a `limit`. |
 | `q` | Case-insensitive search over `username` and `kitEmail`, max 200 characters |
-| `status` | `ACTIVE`, `INACTIVE` or `BLOCKED`. `DELETED` is a `400`. |
+| `status` | `ACTIVE`, `INACTIVE`, `BLOCKED` or `DELETED`. Soft-deleted accounts are excluded from every other call, including an unfiltered one; `status=DELETED` is the only thing that reaches them. |
 | `role` | `STUDENT` or `ADMIN`, resolved from `admins` membership |
 | `sort` | `newest` (default) or `oldest` |
 
@@ -269,8 +269,16 @@ role is not a column and so cannot be an `ORDER BY`. A call with `limit` orders 
 
 Bad parameters answer `400` with a specific message rather than a generic failure:
 `Limit must be an integer between 1 and 100`, `Invalid user cursor`,
-`A cursor requires a limit`, `Deleted users are not listed`, `Invalid user status`,
+`A cursor requires a limit`, `Invalid user status`,
 `Invalid user role`, `Invalid user sort`, `User search is too long`.
+
+**Soft-deleted accounts are listable, and they are anonymised.** A `DELETE` scrubs `username`,
+`kitEmail` and `biography` before the row is kept, so the row you get back carries the `id`,
+`joined`, `credibilityScore`, `warnings` and `reports` the account had, and
+`Deleted user <first 8 of the id>` where the identity was. To put a real name on it, read the
+matching `USER_DELETED` entry from `GET /admin/audit-logs` — its `target.label` was written
+before the scrub. `target.label` is a **display string**, not two fields: render it, do not
+split it.
 
 For dashboard counters, prefer `GET /admin/system/status` — its `counts` block already carries
 users, active users, admins, lectures, comments, answers, ratings, open reports and audit
@@ -308,7 +316,10 @@ field that actually changed.
   identity, so the old sessions no longer correspond to how the account signs in.
 - `status` accepts `ACTIVE` and `BLOCKED`. `DELETED` is `400`: deleting anonymizes the
   account, which is `DELETE /admin/users/{id}` and not a field edit. For the same reason a
-  deleted account cannot be restored — its identifying fields are already scrubbed.
+  deleted account cannot be restored — its identifying fields are already scrubbed. This is
+  unchanged by `GET /admin/users?status=DELETED`, which makes those accounts **readable and
+  nothing more**: every mutating route on this resource still answers `404` for one, because
+  `ModeratedStudents.findMutable` refuses a deleted target before any of them runs.
 - `role` moves the account in and out of the `admins` table. Demoting also revokes its
   sessions, because an admin session outlives a student one and the panel would keep
   working until it expired. Demoting is `409` once the account has moderation history —

@@ -50,22 +50,28 @@ final class UserListQuery {
         return role == UserRole.ADMIN ? isAdmin : builder.not(isAdmin);
     }
 
+    /**
+     * Every value of the enum is accepted, {@code DELETED} included. It used to be refused,
+     * and the refusal was about the listing rather than about the filter: deleted accounts
+     * were excluded from every query unconditionally, so asking for them could only have
+     * produced an empty page, and an empty page reads as "there are none" rather than "you
+     * cannot ask that". The exclusion is conditional now -- see {@code UserDirectoryService}
+     * -- and this filter is what lifts it, so there is nothing left to refuse.
+     *
+     * @param rawStatus the rawStatus
+     * @return the result
+     *
+     * @throws ApiException if the operation fails
+     */
     static UserStatus parseStatusFilter(String rawStatus) {
         if (rawStatus == null || rawStatus.isBlank()) {
             return null;
         }
-        UserStatus status;
         try {
-            status = UserStatus.valueOf(rawStatus.trim().toUpperCase(Locale.ROOT));
+            return UserStatus.valueOf(rawStatus.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException exception) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid user status");
         }
-        // Filtering for DELETED can only ever return nothing, because deleted accounts are
-        // excluded unconditionally. An empty page would read as "no deleted accounts exist".
-        if (status == UserStatus.DELETED) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Deleted users are not listed");
-        }
-        return status;
     }
 
     static UserRole parseUserRole(String rawRole) {

@@ -345,3 +345,257 @@ came from. An entry with `"api": "APP"` is a panel that still logs in through `/
 Which is a signal that cannot arrive now that tasks 1 and 2 are withdrawn, and that is fine:
 **the legacy root paths are not going anywhere.** They are what carries the panel in production,
 and under the decision recorded above they are what will carry it. Nothing on them is deleted.
+
+## 6. Deleted accounts — answer to your §6 / backend task I1
+
+**Nothing here is implemented and no public behaviour has changed.** This section is the
+measurement you asked for plus three options, so the decision is taken with the real numbers
+rather than from what the documentation claims. Two of your two source documents
+(`adminweb-tasks-from-backend.md`, `backend-tasks.md`) are not in this repository, so the four
+obstacles below were read out of the code, not out of them.
+
+### What is actually in the way
+
+**1. `status=DELETED` is refused deliberately, and by one line.**
+[`UserListQuery.java:65-67`](../src/main/java/com/pse/moderation/service/user/UserListQuery.java#L65-L67)
+throws `400 "Deleted users are not listed"`. The stated reason is in the comment above it: the
+filter could only ever return an empty page, because the exclusion below is unconditional, and
+an empty page reads as *"there are no deleted accounts"* — a wrong answer that looks like a
+right one. So the refusal is not protecting anything; it is honesty about the exclusion. Remove
+the exclusion and the refusal has no reason left.
+
+**2. The exclusion is in the query, not in the service, and it is in two places.**
+- Listing: [`UserDirectoryService.java:119`](../src/main/java/com/pse/moderation/service/user/UserDirectoryService.java#L119) —
+  a `notEqual(status, DELETED)` predicate added unconditionally to every specification.
+- Single read: [`UserDirectoryService.java:188`](../src/main/java/com/pse/moderation/service/user/UserDirectoryService.java#L188) —
+  `findByIdAndStatusNot(id, DELETED)`, so `GET /users/{id}` on a deleted account is `404`.
+- Every mutating user route is closed too, one layer up:
+  [`ModeratedStudents.findMutable:70-72`](../src/main/java/com/pse/moderation/service/user/ModeratedStudents.java#L70-L72)
+  turns a deleted target into `404` before block, unblock, delete, warn or `PATCH` ever run.
+
+That third one matters for option B: **there is currently no route through which a deleted
+account can be modified at all**, so a restore is a new endpoint, not a parameter.
+
+**3. What the scrub destroys, exactly.**
+[`StudentLifecycleService.deleteStudent:85-93`](../src/main/java/com/pse/moderation/service/user/StudentLifecycleService.java#L85-L93):
+
+| Field | After deletion | Recoverable? |
+| --- | --- | --- |
+| `username` | `Deleted user <first 8 of uuid>` | only from `audit_logs.target_label` |
+| `kitEmail` | `deleted-<uuid>@invalid.local` | only from `audit_logs.target_label` |
+| `biography` | `""` | **no — no copy exists anywhere** |
+| `blockedReason` | `null` | **no** |
+| `status` | `DELETED` | yes, `before` is in the audit changes |
+| `deletedAt` | set | — |
+| `id`, `createdAt`, `credibilityScore`, `emailVerifiedAt`, every relation | untouched | yes |
+
+The row is never deleted, which is why comments, answers, votes, ratings, warnings and reports
+keep valid foreign keys. **The single surviving copy of the identity is
+`audit_logs.target_label`**, written as `"username (kitEmail)"` by
+[`UserResponseMapper.label`](../src/main/java/com/pse/moderation/mapper/UserResponseMapper.java#L139-L141)
+**before** the scrub — and `audit_logs` has no foreign key to `students` and no retention or
+pruning job anywhere in `src/main`, so it survives indefinitely.
+
+**You can therefore build a read-only "deleted accounts" list today with no backend change at
+all**: `GET /audit-logs` filtered to `action=USER_DELETED` gives you the id (`target.id`), the
+real identity (`target.label`), the timestamp and the acting admin. That covers the *visibility*
+half of your request for admin-initiated deletions, right now. It does not cover self-deletions —
+see the finding below.
+
+**4. `USER_DELETED` is not revertible, and it is blocked twice over.**
+It is absent from `REVERTIBLE_ACTIONS`
+([`AuditRevertService.java:52-64`](../src/main/java/com/pse/audit/revert/AuditRevertService.java#L52-L64)),
+and independently of that its `changes` map carries the lifecycle keys `exists` and `anonymized`,
+which `isFieldDiff` rejects on sight
+([`AuditRevertService.java:293-297`](../src/main/java/com/pse/audit/revert/AuditRevertService.java#L293-L297)).
+Adding the action to the set alone would change nothing. And the `before` values it carries are
+only `status: BLOCKED|ACTIVE`, `exists: true`, `anonymized: false` — **no `username`, no
+`kitEmail`, no `biography`**. Confirmed by the assertion in
+`StudentLifecycleServiceTests.deleteStudent_recordsTheChangeAsALifecycleEventSoItCannotBeReverted`.
+The generic revert machinery cannot restore an identity it was never given.
+
+### A defect found while measuring — F-46, opened, not fixed
+
+**There are two different soft-deletes, and only one of them anonymises.**
+`PATCH /account/deleteAccount` (the app's own) goes through
+[`StudentService.softDeleteByKitEmail:205-214`](../src/main/java/com/pse/user/service/StudentService.java#L205-L214),
+which sets `status = DELETED` **and nothing else** — no scrub, no `deletedAt`, and **no audit
+entry at all**. Consequences that bear directly on this request:
+
+- A self-deleted account is invisible to you *and* absent from the audit log, so the
+  audit-log workaround above does not see it. Your list would be admin-deletions only.
+- Because its `kitEmail` is intact, [`LoginCodeService.java:76-79`](../src/main/java/com/pse/auth/service/LoginCodeService.java#L76-L79)
+  flips it back to `ACTIVE` when a login code is requested for that address. **Undelete already
+  exists, unaudited and uncontrolled** — for exactly the accounts you cannot see. No test pins
+  that branch.
+- Admin-deleted accounts are not affected: their address is scrubbed to `@invalid.local`, so the
+  lookup misses and a re-registration makes a fresh row.
+
+Recorded in `docs/TODO.md` row 36. Not fixed in this pass, per instruction.
+
+### The three options
+
+Estimates are backend work including tests and documentation. **Client-visible** means a
+`CHANGELOG` entry is mandatory in the same commit.
+
+---
+
+**Option A — make deleted accounts visible. Recommended.**
+
+Allow `status=DELETED`, and make the listing exclusion conditional so the default stays exactly
+as it is (excluding), because every count the panel renders depends on that default.
+
+- **Changes:** drop the refusal at `UserListQuery.java:65-67`; make the predicate at
+  `UserDirectoryService.java:119` conditional; optionally relax `:188` to `findById` so a
+  detail page can open. **2 files** in `src/main` (3 with the detail page). No schema change.
+- **Tests to invert, not delete:** `UserDirectoryServiceTests:101-109` and
+  `AdminApiIntegrationTests:2501-2504` both pin the `400`.
+  `AdminApiIntegrationTests.deletedAccountsAreExcludedFromTheListingAndItsCount:2510-2527`
+  stays green — the default does not change — and gains one assertion for the new filter.
+- **Docs:** `admin-api.md:258`, `:272`, `:309`; `CHANGELOG`.
+- **Client-visible:** yes. A documented `400` becomes a `200`.
+- **Estimate:** ~2 hours.
+- **What you actually see:** id, join date, `DELETED` status, credibility score, warning and
+  report counts, the placeholder avatar — and `Deleted user 7c9e6679` /
+  `deleted-…@invalid.local` where the identity was. **Pair it with the `USER_DELETED` audit
+  entry to put a real name on the row.** That pairing is the whole feature.
+
+---
+
+**Option B — flip the status back. Do not do this.**
+
+Mechanically small: a `POST /users/{id}/restore` that sets `ACTIVE`. It is the product answer
+that is wrong, and this is the question you asked me to answer honestly.
+
+A restored account comes back with its id, every relation, its credibility and its join date —
+and with `username = "Deleted user 7c9e6679"` and `kitEmail = "deleted-…@invalid.local"`. It is
+an **active account that nobody can identify and that its owner cannot log into**, because no
+one receives mail at `@invalid.local`. It would sit in your user list looking healthy. That is
+worse than leaving it deleted: it is a row that lies about its own state. Its ratings would also
+re-enter every lecture and professor average
+([`RatingAverages.java:83-87`](../src/main/java/com/pse/rating/service/RatingAverages.java#L83-L87),
+[`LectureResponseMapper.java:71-75`](../src/main/java/com/pse/lecture/mapper/LectureResponseMapper.java#L71-L75)),
+silently moving numbers the app has already shown.
+
+**Recovering the identity from `audit_logs.target_label` does not rescue it.** That column is a
+display string, `"username (kitEmail)"`; splitting it back into two fields is parsing a formatted
+message to recover typed data, which is the shape this repository has already been burned by
+(F-4). It breaks on any username containing `" ("`, it cannot restore the biography at all — no
+copy exists — and re-applying the original address can collide with the `unique` constraint on
+`kit_email` if anyone re-registered with it in the meantime.
+
+- **Estimate if built anyway:** ~4 hours, and it buys a misleading feature.
+- **Client-visible:** yes, new route and new `USER_RESTORED` audit action.
+
+---
+
+**Option C — split deletion from anonymisation. The only route to a real undo.**
+
+Mark `DELETED` immediately; anonymise after a grace window. Restore inside the window is then a
+genuine restore, because nothing has been destroyed yet.
+
+- **Schema:** a new `students.anonymized_at` column. This repository keeps **twin baselines**
+  (ADR-0004): `src/main/resources/db/migration/postgresql/V1__…sql` and
+  `src/test/resources/db/migration/h2/V1__…sql`. Both move, by hand.
+- **New infrastructure:** something must run the delayed scrub. **There is no `@Scheduled` and no
+  `@EnableScheduling` anywhere in `src/main`** — this would be the first, which is a new test
+  question (what layer tests a job that fires on a clock?) as well as new code.
+- **Main changes:** `StudentLifecycleService.deleteStudent` (stop scrubbing, record a real
+  before-diff), the anonymisation job, `ModeratedStudents.findMutable` (a restore route needs a
+  way past its `404`), a new restore endpoint and controller, `AuditAction` (`USER_RESTORED`),
+  `LoginCodeService:76` — F-46 becomes *far* more dangerous here, because during the window the
+  real address is still in the table and that branch would silently resurrect accounts.
+  **~6 files plus 2 migrations plus a new controller.**
+- **Tests to invert:** `StudentLifecycleServiceTests.deleteStudent_anonymisesTheAccountRatherThanRemovingIt`,
+  `…recordsTheChangeAsALifecycleEventSoItCannotBeReverted`, `…recordsTheIdentityTheAccountHadBeforeTheScrub`
+  (becomes trivially true and should say so), the two `400` tests from option A, plus the
+  `USER_DELETED` cases in `AuditRevertServiceTests:137` and `:487-494`, plus
+  `AdminApiIntegrationTests:2702-2723`.
+- **The part that is not an engineering cost:** for the length of the window the account is
+  *not* anonymised. Real names and real addresses stay in the table after a user has asked for
+  deletion. For a KIT project that is a data-protection posture decision, and it belongs in an
+  ADR with your name on it, not in a commit message.
+- **Estimate:** 1.5–2 days, and an ADR.
+- **Client-visible:** yes, extensively.
+
+---
+
+### Decided 10 September: option A, paired with the audit log
+
+**Option A is implemented and is in this repository.** Option B is refused — it is the cheapest
+and the only one that produces a screen that lies. Option C is a standing decision, not a
+backlog item: it is written up and declined in
+[ADR-0015](adr/0015-deletion-not-split-from-anonymisation.md), so nobody revives it from an
+options list alone.
+
+### What you get, and what you have to do
+
+**Backend, done — one filter.** `GET /users?status=DELETED` now answers `200` with the
+soft-deleted accounts instead of `400 "Deleted users are not listed"`. It is in the `CHANGELOG`
+under `10.09 (18)`.
+
+**Nothing else moved, on purpose.** An unfiltered `GET /users` still excludes deleted accounts,
+and so does a filter for any other status — your account counts come off this listing and
+counting anonymised rows would over-report the platform. `status=DELETED` is the only thing that
+reaches them. And it is **read-only**: every mutating route still answers `404` for a deleted
+account, because `ModeratedStudents.findMutable` refuses one before block, unblock, delete, warn
+or `PATCH` ever runs. There is no restore, by decision.
+
+**Panel side — the row you get is anonymised.** It carries `id`, `joined`, `status: "DELETED"`,
+`credibilityScore`, `warnings`, `reports`, and `Deleted user 7c9e6679` /
+`deleted-…@invalid.local` where the identity was. Rendering that on its own is a screen that
+says an account was deleted and cannot say whose.
+
+### Putting the identity back: `GET /audit-logs?action=USER_DELETED`
+
+**This needs no backend change.** It works today, and it worked before option A shipped.
+
+Every admin deletion writes a `USER_DELETED` entry, and the entry is built **before** the scrub
+runs ([`StudentLifecycleService.java:71-73`](../src/main/java/com/pse/moderation/service/user/StudentLifecycleService.java#L71-L73)).
+`audit_logs` has no foreign key to `students` and there is no retention or pruning job anywhere
+in `src/main`, so the entry outlives the account indefinitely. From one entry you get:
+
+| Field | What it carries |
+| --- | --- |
+| `target.id` | the account id — **this is your join key** to the `status=DELETED` row |
+| `target.label` | the real identity the account had, as `"username (kitEmail)"` |
+| `createdAt` | when it was deleted |
+| `actor.name`, `actor.email` | which administrator deleted it |
+
+Join on `target.id` and the screen becomes truthful: *this account existed, this was its name,
+this admin deleted it on this date, its content is still here.*
+
+### `target.label` is a display string. Render it; do not parse it.
+
+It is one field that happens to read as two, and the temptation to `split(' (')` it into a name
+and an address is the reason this paragraph exists. **Do not.**
+
+- It is **not a contract of two fields.** It is `username + " (" + kitEmail + ")"`, built by one
+  mapper for humans to read, and nothing anywhere guarantees that shape survives. Other writers
+  build labels like `"Comment by ada"` and `"Report about ada"` into the same column.
+- It **breaks on real data.** Any username containing `" ("` splits in the wrong place, and
+  usernames are user-supplied.
+- **This repository has already been burned by exactly this shape.** F-4: a test let a matcher
+  throw and then regex-parsed the exception's *message* to recover the failing field, while the
+  same library exposed the typed values the whole time. Parsing a formatted string to recover
+  data that was typed before someone formatted it is the shape, and this is the same shape.
+
+If you need the name and the address as separate fields, **say so and we will add them to the
+audit entry as typed values** — that is a backend change, cheap, and the right place for it. It
+is not a change you can make safely on your side by splitting a string.
+
+### What this still does not cover — F-46
+
+The pairing above sees **admin deletions only**. An account that deleted itself through the
+app's `PATCH /account/deleteAccount` writes **no audit entry at all** and is not anonymised, so
+it appears in your new `status=DELETED` list carrying its real name — with nothing in the audit
+log explaining when or why it went. Worse, because its address is intact, requesting a login
+code for it silently flips it back to `ACTIVE`.
+
+That is F-46, recorded in `docs/TODO.md` and **deliberately not fixed before submission** — it
+touches the account lifecycle. Two consequences for your screen, both worth knowing before you
+build it:
+
+- A `DELETED` row **with a real username** is a self-deletion, not an admin deletion. It will
+  have no matching `USER_DELETED` entry. Do not render the missing entry as an error.
+- A row can leave the list on its own, without any admin action, if its owner signs in again.

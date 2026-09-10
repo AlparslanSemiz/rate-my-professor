@@ -28,3 +28,4 @@ instead; a plausible-sounding reconstruction is worse than an admission.
 | [0012](0012-documentation-under-test.md) | The admin API document is tested against the code |
 | [0013](0013-consumer-expectations-in-the-backend-repo.md) | Consumer expectations live here, as a generated list under test |
 | [0014](0014-legacy-auth-me-alias.md) | `GET /auth/me` restored as a time-boxed legacy alias |
+| [0015](0015-deletion-not-split-from-anonymisation.md) | Deletion is not split from anonymisation |

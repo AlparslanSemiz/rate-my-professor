@@ -916,3 +916,33 @@ since F-21 -- so the item was ordered inside and unordered outside.
 
 Nothing to change if you sort client-side. If you render the array in the order it arrives, it
 will stop reshuffling between two requests for the same account.
+
+
+///// 10.09 (18)
+
+
+"GET /users?status=DELETED" lists soft-deleted accounts instead of refusing.
+
+Was: 400, "Deleted users are not listed"
+Now: 200, the soft-deleted accounts
+
+Every other call is unchanged, and that is deliberate: an unfiltered listing still excludes
+them, and so does a filter for any other status. The panel's account counts come off this
+listing, and counting anonymised rows would over-report the size of the platform. "DELETED" is
+the only thing that reaches them.
+
+The refusal was never about the filter. Deleted accounts were excluded from every query
+unconditionally, so asking for them could only have returned an empty page -- and an empty page
+reads as "there are none" rather than "you cannot ask that". The exclusion is conditional now,
+so the question is answerable and there is nothing left to refuse.
+
+What comes back is anonymised. A deletion scrubs "username", "kitEmail" and "biography" before
+keeping the row, so you get the "id", "joined", "credibilityScore", "warnings" and "reports"
+the account had, and "Deleted user <first 8 of the id>" where the identity was. The real
+identity is on the matching "USER_DELETED" entry in "GET /audit-logs", whose "target.label" is
+written before the scrub. That label is a display string, not two fields: render it, do not
+split it.
+
+Read-only. Every mutating route on a deleted account still answers 404.
+
+Nothing to change if you do not ask for them; no existing call moves.
