@@ -547,12 +547,10 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             @Override
             public void onResponse(@NonNull Call<RatingCategoriesResponse> call, @NonNull Response<RatingCategoriesResponse> response) {
                 RatingCategoriesResponse body = response.body();
-                Log.d(TAG, "WE ARE IN");
                 if (!response.isSuccessful() || body == null || body.categories() == null) {
                     Log.d(TAG, "couldn't get the ratings, status " + response.code());
                     return;
                 }
-                Log.d(TAG, "WE ARE IN");
 
                 List<TopicAverageResponse> topicRatings = new ArrayList<>();
                 List<RatingCategoryResponse> categories = body.categories();

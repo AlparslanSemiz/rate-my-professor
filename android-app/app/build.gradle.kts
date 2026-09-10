@@ -110,9 +110,6 @@ val debugCoverageExcludes = listOf(
     "**/*Binding.*",
     "**/*_Impl.*",
     "**/*_Impl*",
-//    "**/activities/**",
-//    "**/adapters/**",
-//    "**/fragments/**"
 )
 
 fun debugCoverageClassDirectories() = files(
@@ -155,9 +152,9 @@ tasks.register<org.gradle.testing.jacoco.tasks.JacocoCoverageVerification>(
     violationRules {
         rule {
             limit {
-                counter = "LINE"
+                counter = "INSTRUCTION"
                 value = "COVEREDRATIO"
-                minimum = "0.00".toBigDecimal()
+                minimum = "0.90".toBigDecimal()
             }
         }
     }
