@@ -100,25 +100,28 @@ android:sonarcloud:
     - ./gradlew app:debugUnitTestCoverage --no-daemon
 
     - |
-      echo "JaCoCo XML reports:"
-      find app/build/reports/jacoco -type f -name "*.xml" -print || true
+      echo "=== JaCoCo reports ==="
+      find app/build/reports/jacoco -type f -print || true
+
+      echo "=== Expected report ==="
+      ls -lah app/build/reports/jacoco/debugUnitTestCoverage/ || true
+
+      echo "=== Java source examples ==="
+      find app/src/main/java -type f -name "*.java" | head -20
+
+      echo "=== JaCoCo source entries ==="
+      grep -o '<sourcefile name="[^"]*"' \
+        app/build/reports/jacoco/debugUnitTestCoverage/debugUnitTestCoverage.xml \
+        | head -20 || true
 
     - |
-      JACOCO_REPORTS="$(find app/build/reports/jacoco -type f -name "*.xml" -print | paste -sd, -)"
-
-      if [ -z "$JACOCO_REPORTS" ]; then
-        echo "No JaCoCo XML coverage report found."
-        exit 1
-      fi
-
-      echo "Using JaCoCo reports: $JACOCO_REPORTS"
-
       ./gradlew sonar \
         --no-daemon \
+        --info \
         -Dsonar.host.url="${SONAR_HOST_URL:-https://sonarcloud.io}" \
         -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
         -Dsonar.organization="$SONAR_ORGANIZATION" \
-        -Dsonar.coverage.jacoco.xmlReportPaths="$JACOCO_REPORTS"
+        -Dsonar.coverage.jacoco.xmlReportPaths="$CI_PROJECT_DIR/app/build/reports/jacoco/debugUnitTestCoverage/debugUnitTestCoverage.xml"
 
   rules:
     - if: '$SONAR_TOKEN'
