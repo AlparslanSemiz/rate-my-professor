@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 
+### Ratings categories read like every other label
+
+`F-073`. The Scores column showed `content 4 · clarity 5 · difficulty 3` while every other
+enum in the panel is title-cased.
+
+**The renderer was not at fault.** `enumLabel` maps a word to
+`charAt(0) + slice(1).toLowerCase()`, which preserves the first character's case: `CONTENT`
+becomes "Content", `content` stays "content". The demo fixture wrote the three categories
+lower case while **every other enum in the same file** - `role`, `status`, `severity` - is
+SCREAMING_SNAKE, and `RatingsService.unit.test.ts` shows the wire shape is `{ CONTENT: 5 }`.
+The fixture was the outlier; the screen was faithfully rendering what it was given.
+
+- **Changed** the three keys in `src/test/msw/demoData.ts` to `CONTENT`, `CLARITY`,
+  `DIFFICULTY`. No source change.
+
+### Tests
+
+- **Added** `src/test/msw/demoData.unit.test.ts`, red first with all six keys failing. It pins
+  the fixture's **shape** rather than one string, so the next enum written the wrong way fails
+  too.
+- Two things `tsc` caught there, now handled rather than cast away: `demoBackend()` returns a
+  `Partial<MswDb>`, so the ratings are asserted present - `F-041` is the round where a fixture
+  serving nothing read exactly like a clean measurement - and `scores` is nullable on the wire,
+  so the test defaults it the way `ratingMapper` does.
+
+
 ### One table cell padding, decided once
 
 `F-069`. Seven tables carried **three** different vertical paddings - 13px on Users, 14px on

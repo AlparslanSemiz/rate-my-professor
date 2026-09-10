@@ -319,14 +319,14 @@ export function demoBackend(): Partial<MswDb> {
         lectureId: 'lecture-1',
         createdAt: '2026-09-07T11:20:00Z',
         author: { id: 'user-1', name: 'Lena Hoffmann' },
-        scores: { content: 4, clarity: 5, difficulty: 3 },
+        scores: { CONTENT: 4, CLARITY: 5, DIFFICULTY: 3 },
       },
       {
         id: 'rating-2',
         lectureId: 'lecture-2',
         createdAt: '2026-09-05T16:45:00Z',
         author: { id: 'user-3', name: 'Mira Kowalski' },
-        scores: { content: 2, clarity: 3, difficulty: 5 },
+        scores: { CONTENT: 2, CLARITY: 3, DIFFICULTY: 5 },
       },
     ],
     auditMeta: {
