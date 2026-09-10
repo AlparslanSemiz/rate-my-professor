@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.pse.lecture.mapper.LectureResponseMapper;
 import com.pse.shared.dto.BasicResponse;
 import com.pse.shared.enums.NotificationType;
+import com.pse.shared.enums.UserStatus;
 import com.pse.shared.error.ApiException;
 import com.pse.social.dto.response.NotificationResponse;
 import com.pse.social.dto.response.NotificationsResponse;
@@ -100,15 +101,23 @@ public class NotificationService {
             );
         }
 
+        Student student = notification.getAnswer().getStudent();
+
+        boolean deleted = student.getStatus() == UserStatus.DELETED;
+
+        String userName = deleted ? "Deleted User" : student.getUsername();
+
         return new NotificationResponse(
                 notification.getId(),
                 type,
                 LectureResponseMapper.toResponse(notification.getLecture()),
                 notification.getOwnComment().getId(),
-                notification.getAnswer().getStudent().getUsername(),
+                userName,
                 notification.getAnswer().getContent(),
                 null,
                 notification.getCreatedAt()
         );
     }
+
+
 }

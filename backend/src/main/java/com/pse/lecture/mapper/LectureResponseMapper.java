@@ -9,7 +9,9 @@ import com.pse.lecture.model.Lecture;
 import com.pse.professor.dto.response.ProfessorShortResponse;
 import com.pse.professor.mapper.ProfessorResponseMapper;
 import com.pse.professor.model.Professor;
+import com.pse.rating.model.Rating;
 import com.pse.rating.service.RatingAverages;
+import com.pse.shared.enums.UserStatus;
 
 /**
  * A lecture as the API returns it.
@@ -65,6 +67,12 @@ public final class LectureResponseMapper {
 
         String semesterLabel = lecture.getSemesterSeason().label(lecture.getSemesterYear());
 
+        // Ignore ratings from deleted users
+        var activeRatings = lecture.getRatings().stream()
+                .filter(rating -> rating.getStudent() == null
+                        || rating.getStudent().getStatus() != UserStatus.DELETED)
+                .toList();
+
         return new LectureResponse(
                 lecture.getId(),
                 lecture.getName(),
@@ -77,8 +85,8 @@ public final class LectureResponseMapper {
                 lecture.getLectureType(),
                 professors,
                 lecture.getComments().size(),
-                lecture.getRatings().size(),
-                RatingAverages.overallAcross(lecture.getRatings())
+                activeRatings.size(),
+                RatingAverages.overallAcross(activeRatings)
         );
     }
 
