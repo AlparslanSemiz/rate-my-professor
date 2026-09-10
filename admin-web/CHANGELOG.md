@@ -2,6 +2,38 @@
 
 ## [Unreleased]
 
+### A killed end-to-end run could stop the lint from running at all
+
+`F-074`. `.gitignore` naming a directory does not make ESLint skip it, and the two lists had
+drifted: `test-results/` and `playwright-report/` were in the first and not in the second.
+
+- **Changed** `eslint.config.js` so `globalIgnores` names both. A Playwright run killed
+  mid-flight leaves half-written trace resources behind, and `eslint .` then walked into one
+  and died with `ENOENT ... test-results/.playwright-artifacts-0/traces/resources/<hash>.js`
+  **before linting a single source file**. `npm run check` was red on this machine for a
+  reason that had nothing to do with the code.
+- **Removed** the 157 MB of artefacts that were sitting there from the previous session's
+  killed run. Reproducible output, ignored by git, referenced by nothing.
+- The failure is loud, so nothing shipped because of it. What it cost was the gate: a check
+  that cannot run is a check nobody is reading.
+
+### Two records from running the gate, and one claim withdrawn before it was written
+
+- **Extended** `F-024`. The flaky one is the **file**, not the test in it. This round the full
+  suite timed out on the dashboard marker at `App.integration.test.tsx:130`, the same file run
+  **alone** then timed out on a different test (`heading: 'Audit Logs'`, `:187`), and the same
+  command a minute later was 20/20 green. That contradicts the row's own sentence that the file
+  alone is 25/25 green and that only the suite's parallelism reproduces it. Not a regression:
+  both are `findBy*` waits, and the second is on a route this round did not touch.
+- **Withdrew** a finding about the suite under-collecting a file. `npm test` reported 49 files /
+  1213 tests and then 50 / 1215, which reads like a defect and is not one: a second session was
+  committing into the same tree between the two runs, and `6843e77` (+1 test) and `5476999`
+  (+1 file, +1 test) account for the difference exactly. **`0f8420c`'s counts were correct for
+  the tree they were measured on.** Recorded in `docs/testfindings.md` rather than dropped,
+  because the near-miss is worth keeping: two counts taken from a tree somebody else is
+  committing into are not two measurements of one thing, and a dated snapshot needs the commit
+  it was taken at, not only the date.
+
 ### Ratings categories read like every other label
 
 `F-073`. The Scores column showed `content 4 · clarity 5 · difficulty 3` while every other
