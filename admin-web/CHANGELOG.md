@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### The numbers this round was measured on
+
+Re-derived from the runs rather than carried forward, per [testplan.md](docs/testplan.md) §0.
+
+- **Updated** the coverage block in [testfindings.md](docs/testfindings.md) - **93.21 / 86.74 /
+  91.86 / 94.87**, generated from `coverage/coverage-summary.json` with the per-directory rows
+  summed from the same artefact, and the previous round's block kept below it.
+- **Updated** [testplan.md](docs/testplan.md) §3a: Layer 4 was 146 and is **156**; the Playwright
+  suite was 14 specs / 177 tests and is **15 specs, 187 tests**. Both re-derived with
+  `npx playwright test --list`.
+- **Added** a run-log row: check clean at **285 files, 949 edges**; **51 test files, 1219 tests,
+  3 skipped**; **187 Playwright tests in 2.9 minutes**; build in 332ms.
+- The suite grew by 13: ten in `e2e/fields.spec.ts`, one theme declaration test, two catalogue
+  filter tests.
+
 ### Four measured, none applied: symmetry, the log bars, the ratings columns (`F-087` to `F-089`)
 
 Items 4 to 7 of seven. **Measurement only, on the brief: the deviations and one proposed
