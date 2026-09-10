@@ -13,5 +13,10 @@ public enum VoteType {
     /**
      * The user disagrees with the comment.
      */
-    DOWN
+    DOWN,
+
+    /**
+     * The user has not (yet) voted a comment
+     */
+    NONE
 }
