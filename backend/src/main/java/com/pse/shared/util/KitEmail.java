@@ -17,9 +17,14 @@ import org.springframework.http.HttpStatus;
  */
 public final class KitEmail {
 
-    //Now also @kit.edu mails are valid (for two staff members)
+    //Exception for for two staff members mail adresses
     private static final Pattern KIT_EMAIL =
-            Pattern.compile("^[A-Z0-9._%+-]+@(student\\.)?kit\\.edu$", Pattern.CASE_INSENSITIVE);
+            Pattern.compile(
+                    "^(?:[A-Z0-9._%+-]+@student\\.kit\\.edu|staff1@kit\\.edu|staff2@kit\\.edu)$",
+                    Pattern.CASE_INSENSITIVE
+            );
+
+
     private KitEmail() {
     }
 
