@@ -1,4 +1,4 @@
-package com.example.ratemyprofessor.ServerCommunication;
+package com.example.ratemyprofessor.servercommunication;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -21,6 +21,10 @@ import com.example.ratemyprofessor.domain.Rater;
 import com.example.ratemyprofessor.domain.Rating;
 import com.example.ratemyprofessor.domain.Semester;
 import com.example.ratemyprofessor.domain.SemesterSeason;
+import com.example.ratemyprofessor.domain.VoteType;
+import com.example.ratemyprofessor.servercommunication.APIService;
+import com.example.ratemyprofessor.servercommunication.ContentStatus;
+import com.example.ratemyprofessor.servercommunication.Database;
 import com.example.ratemyprofessor.servercommunication.responses.CommentsResponse;
 import com.example.ratemyprofessor.servercommunication.responses.LecturesResponse;
 import com.example.ratemyprofessor.servercommunication.responses.ProfessorsResponse;
