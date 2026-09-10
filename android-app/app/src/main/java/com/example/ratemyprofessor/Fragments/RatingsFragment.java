@@ -224,7 +224,8 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                 requireContext(),
                 comments,
                 RatingsFragment.this,
-                CommentType.COMMENT
+                CommentType.COMMENT,
+                null
         );
         binding.commentList.setAdapter(commentsAdapter);
     }
@@ -803,9 +804,9 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
      * Inserts the answers of a comment right below it.
      */
     @Override
-    public void onOpenReplies(Comment comment) {
+    public void onOpenReplies(Comment comment, VoteType voteType) {
 
-        flowInterface.openReplyFragment(comment);
+        flowInterface.openReplyFragment(comment, voteType);
     }
 
     @Override

@@ -337,7 +337,8 @@ public class NotificationFragment extends Fragment {
                     return;
                 }
                 if (requireActivity() instanceof MainActivity mainActivity) {
-                    mainActivity.openReplyFragment(selectedComment);
+                    // Dont have a way to get the voteType yet
+                    mainActivity.openReplyFragment(selectedComment, null);
                 }
             }
 
