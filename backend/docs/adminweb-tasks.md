@@ -534,12 +534,29 @@ options list alone.
 soft-deleted accounts instead of `400 "Deleted users are not listed"`. It is in the `CHANGELOG`
 under `10.09 (18)`.
 
+**Backend, done — the profile modal opens too.** `GET /users/{id}` and
+`GET /users/{id}/warnings` both answer `200` for a soft-deleted account instead of `404`.
+`CHANGELOG` `10.09 (19)`. So a row on the new list is clickable and the modal renders: the
+anonymised account, and its full warning history.
+
+**They opened together because your own code says they had to.** Your `fetchProfile` reads both
+in one pass and its shared `NotFoundError` branch renders the whole profile as "account gone"
+when *either* answers `404` (`useUserProfile.ts:24-32`). Opening only the account read would have
+changed the contract and left your modal saying exactly what it says today. That is recorded, and
+where it came from is recorded with it — see the note at the end of this section.
+
+**`404` has not gone away, and this is the part not to misread.** It now says one thing instead of
+two. An id that names **no row** is still `404` on both routes. An id that names a **soft-deleted
+row** is `200`. Before this, `404` answered both "no such account" and "that account was deleted"
+and you had no way to tell them apart; now you do. Both halves are pinned by
+`AdminApiIntegrationTests.aDeletedAccountIsReadableWithItsWarningsAndAnUnknownOneIsStillNotFound`.
+
 **Nothing else moved, on purpose.** An unfiltered `GET /users` still excludes deleted accounts,
 and so does a filter for any other status — your account counts come off this listing and
 counting anonymised rows would over-report the platform. `status=DELETED` is the only thing that
-reaches them. And it is **read-only**: every mutating route still answers `404` for a deleted
-account, because `ModeratedStudents.findMutable` refuses one before block, unblock, delete, warn
-or `PATCH` ever runs. There is no restore, by decision.
+reaches them. And all of it is **read-only**: every mutating route still answers `404` for a
+deleted account, because `ModeratedStudents.findMutable` refuses one before block, unblock,
+delete, warn or `PATCH` ever runs. There is no restore, by decision.
 
 **Panel side — the row you get is anonymised.** It carries `id`, `joined`, `status: "DELETED"`,
 `credibilityScore`, `warnings`, `reports`, and `Deleted user 7c9e6679` /
@@ -599,3 +616,16 @@ build it:
 - A `DELETED` row **with a real username** is a self-deletion, not an admin deletion. It will
   have no matching `USER_DELETED` entry. Do not render the missing entry as an error.
 - A row can leave the list on its own, without any admin action, if its owner signs in again.
+
+### One note worth keeping, about how this was decided
+
+The backend was asked whether to open the single read as well, and the question was answered
+**out of `adminweb-consumer-contract.md`** rather than out of the backend: that document records
+that your `fetchProfile` reads the account and its warning history together and collapses a `404`
+from either into one "account gone" branch. That is what showed the two routes had to move as a
+pair, and what ruled out the third option on the table — opening `GET /users/{id}` alone, which
+would have spent a contract change and fixed nothing on your screen.
+
+**This is the first time the consumer contract document changed a backend decision directly**,
+which is the thing it was written for ([ADR-0013](adr/0013-consumer-expectations-in-the-backend-repo.md)).
+Recorded here rather than only in the worklog because it is your document's win as much as ours.

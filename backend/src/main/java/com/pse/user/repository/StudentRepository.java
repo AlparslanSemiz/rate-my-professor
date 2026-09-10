@@ -52,15 +52,6 @@ public interface StudentRepository
     long countByStatus(UserStatus status);
 
     /**
-     * Returns findByIdAndStatusNot.
-     *
-     * @param id the id
-     * @param status the status
-     * @return the result
-     */
-    Optional<Student> findByIdAndStatusNot(UUID id, UserStatus status);
-
-    /**
      * Returns findByIdForUpdate.
      *
      * @param id the id

@@ -470,9 +470,14 @@ class AdminApiIntegrationTests {
                         .header("Authorization", bearer(admin.rawToken())))
                 .andExpect(status().isOk());
 
+        // Inverted, not deleted: this pinned the 404 a deleted account used to read as. It
+        // exists -- anonymised -- so it reads now, and 404 on this route is left meaning only
+        // "no such account". Pinned in full, both halves, by
+        // aDeletedAccountIsReadableWithItsWarningsAndAnUnknownOneIsStillNotFound.
         mockMvc.perform(get("/users/{id}", target.student().getId())
                         .header("Authorization", bearer(admin.rawToken())))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DELETED"));
     }
 
     @Test
@@ -2546,6 +2551,77 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.users[0].status").value("DELETED"))
                 .andExpect(jsonPath("$.users[0].username")
                         .value("Deleted user " + deletedId.toString().substring(0, 8)));
+    }
+
+    /**
+     * The panel's profile modal reads the account and its warning history in one pass and
+     * renders the whole profile as "account gone" when <em>either</em> answers {@code 404}
+     * (`useUserProfile.ts:24-32`, recorded in `adminweb-consumer-contract.md`). So these two
+     * routes had to open together: opening one alone would have changed the contract and
+     * fixed nothing on the screen. They are both read-only paths.
+     *
+     * <p>What did not move is the distinction underneath, and that is the half worth pinning:
+     * {@code 404} still means <b>no such account</b>. A soft-deleted account exists, so it
+     * stopped being reported as missing -- an unknown id has not.
+     */
+    @Test
+    void aDeletedAccountIsReadableWithItsWarningsAndAnUnknownOneIsStillNotFound() throws Exception {
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session target = createSession("student@student.kit.edu", false);
+        UUID deletedId = target.student().getId();
+
+        mockMvc.perform(post("/users/{id}/warnings", deletedId)
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Repeated harassment\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete("/users/{id}", deletedId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk());
+
+        // The account reads, anonymised. The scrub is what it is: the id and the join date
+        // survive it and the identity does not.
+        mockMvc.perform(get("/users/{id}", deletedId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(deletedId.toString()))
+                .andExpect(jsonPath("$.status").value("DELETED"))
+                .andExpect(jsonPath("$.username")
+                        .value("Deleted user " + deletedId.toString().substring(0, 8)));
+
+        // The warning history survives the deletion and is what makes the modal worth
+        // opening: the account is gone, the record of why it was moderated is not.
+        mockMvc.perform(get("/users/{id}/warnings", deletedId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warnings", hasSize(1)))
+                .andExpect(jsonPath("$.warnings[0].message").value("Repeated harassment"));
+
+        // An id that names no row at all is unchanged on both, and this is the assertion that
+        // keeps the change from reading as "404 is gone from these routes".
+        UUID unknown = UUID.randomUUID();
+        mockMvc.perform(get("/users/{id}", unknown)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("User not found"))
+                .andExpect(jsonPath("$.success").value(false));
+        mockMvc.perform(get("/users/{id}/warnings", unknown)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("User not found"))
+                .andExpect(jsonPath("$.success").value(false));
+
+        // Read-only, and deliberately so: ModeratedStudents.findMutable was left alone, so
+        // every mutating route still refuses a deleted target. Visibility cannot grow into a
+        // restore by accident.
+        mockMvc.perform(patch("/users/{id}", deletedId)
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"biography\":\"back\"}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(patch("/users/{id}/unblock", deletedId)
+                        .header("Authorization", bearer(admin.rawToken())))
+                .andExpect(status().isNotFound());
     }
 
     @Test

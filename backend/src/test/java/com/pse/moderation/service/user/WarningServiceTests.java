@@ -319,8 +319,7 @@ import static org.mockito.Mockito.when;
         Student target = student(TARGET_ID, "ada", "ada@student.kit.edu");
         Warning warning = warning(target, "Please be civil");
         warning.setAdmin(null);
-        when(studentRepository.findByIdAndStatusNot(TARGET_ID, UserStatus.DELETED))
-                .thenReturn(Optional.of(target));
+        when(studentRepository.findById(TARGET_ID)).thenReturn(Optional.of(target));
         when(warningRepository.findByStudentOrderByCreatedAtDesc(target))
                 .thenReturn(List.of(warning));
 
@@ -330,13 +329,44 @@ import static org.mockito.Mockito.when;
         assertThat(response.warnings().getFirst().createdFrom()).isNull();
     }
 
+    /**
+     * Inverted, not deleted, and the rename is the point of it. The old name said
+     * {@code deletedStudent}, but what it stubbed was an empty {@code Optional} -- so what it
+     * actually pinned was "nothing came back from the repository, answer 404", which is the
+     * unknown-id rule and is still true. It only read as coverage of the deleted case because
+     * the query it stubbed happened to be the one excluding them.
+     *
+     * <p>The two rules are separate now and are pinned separately, below and here: a deleted
+     * account exists and lists, an unknown id does not and is 404.
+     */
     @Test
-    void getWarningsForStudent_deletedStudent_readsAsNotFound() {
-        when(studentRepository.findByIdAndStatusNot(TARGET_ID, UserStatus.DELETED))
-                .thenReturn(Optional.empty());
+    void getWarningsForStudent_unknownStudent_readsAsNotFound() {
+        when(studentRepository.findById(TARGET_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> warnings().getWarningsForStudent(TARGET_ID))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("User not found");
+    }
+
+    /**
+     * A deleted account keeps its warning history and now answers with it. The history is the
+     * record of why the account was moderated, and it outlives the account for the same reason
+     * the audit entry does -- the panel opens this to find out what happened, at exactly the
+     * moment the account itself can no longer say.
+     */
+    @Test
+    void getWarningsForStudent_deletedStudent_stillListsItsHistory() {
+        Student target = student(TARGET_ID, "Deleted user 11111111", "deleted-x@invalid.local");
+        target.setStatus(UserStatus.DELETED);
+        Warning warning = warning(target, "Please be civil");
+        warning.getAdmin().setStudent(student(CALLER_ID, "operator", "operator@student.kit.edu"));
+        when(studentRepository.findById(TARGET_ID)).thenReturn(Optional.of(target));
+        when(warningRepository.findByStudentOrderByCreatedAtDesc(target))
+                .thenReturn(List.of(warning));
+
+        WarningHistoryResponse response = warnings().getWarningsForStudent(TARGET_ID);
+
+        assertThat(response.warnings()).hasSize(1);
+        assertThat(response.warnings().getFirst().message()).isEqualTo("Please be civil");
     }
 }

@@ -946,3 +946,33 @@ split it.
 Read-only. Every mutating route on a deleted account still answers 404.
 
 Nothing to change if you do not ask for them; no existing call moves.
+
+
+///// 10.09 (19)
+
+
+"GET /users/{id}" and "GET /users/{id}/warnings" read a soft-deleted account.
+
+Was: 404 for a soft-deleted account, on both
+Now: 200 -- the anonymised account, and its warning history
+
+The two move together on purpose. A client that reads an account and its warning history in one
+pass and treats a refusal from either as "this account is gone" would have seen no change at all
+if only one of them opened; opening one alone would have changed the contract and fixed nothing.
+
+"404" has not gone away and now says one thing instead of two. An id that names no row is still
+404 on both routes. An id that names a soft-deleted row -- which exists, anonymised -- is 200.
+Before this, 404 answered both "no such account" and "that account was deleted", and there was no
+way to tell them apart.
+
+What comes back on the account is anonymised, as in 10.09 (18): "id", "joined",
+"credibilityScore", "warnings" and "reports" survive, "Deleted user <first 8 of the id>" stands
+where the identity was, and the real identity is on the "USER_DELETED" audit entry. The warning
+history is not anonymised -- it is the record of why the account was moderated, and it outlives
+the account.
+
+Reading only. Every mutating route on a deleted account still answers 404: the profile edit, the
+block and unblock pair, the delete itself, and issuing, editing or deleting a warning. There is
+no restore.
+
+Nothing to change if you do not open a deleted account; no existing call moves.

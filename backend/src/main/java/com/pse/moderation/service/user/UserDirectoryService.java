@@ -190,8 +190,18 @@ public class UserDirectoryService {
      */
     @Transactional(readOnly = true)
     public UserResponse getStudent(UUID studentId) {
+        // A soft-deleted account reads; it is anonymised, not absent. This used to exclude
+        // them, which made 404 answer two different questions -- "no such account" and "that
+        // account was deleted" -- and left the panel unable to tell them apart. 404 now means
+        // only the first.
+        //
+        // Opened together with WarningService.getWarningsForStudent and not before it: the
+        // panel's profile modal reads both in one pass and renders the whole profile as gone
+        // if either refuses, so one without the other would have changed the contract and
+        // fixed nothing. Reading only -- every mutating route still refuses a deleted target
+        // through ModeratedStudents.findMutable.
         Student student = studentRepository
-                .findByIdAndStatusNot(studentId, UserStatus.DELETED)
+                .findById(studentId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         return mapper.toResponse(student);
     }

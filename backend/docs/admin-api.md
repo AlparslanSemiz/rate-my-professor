@@ -236,6 +236,21 @@ read in this API that does not wrap. `warnings` is the persisted warning count; 
 counts reports against comments authored by the user; `credibilityScore` is the value
 `PATCH /admin/users/{id}` writes, returned by both reads so an edit form can seed its input.
 
+**A soft-deleted account reads here, and `404` still means "no such account".** These are two
+separate things and the distinction is the contract: an id that names no row answers `404`, an id
+that names a soft-deleted row answers `200` with the anonymised account (`status: "DELETED"`,
+`username: "Deleted user <first 8 of the id>"`). `404` used to answer both questions, which left
+no way to tell a deleted account from one that never existed. It no longer does.
+
+The same rule, in the same words, applies to `GET /admin/users/{id}/warnings` — the two open
+together because a client that reads an account and its warning history in one pass sees a
+refusal from either as the whole profile being gone.
+
+**Reading only.** Every mutating route on this resource — `PATCH /admin/users/{id}`, the block and
+unblock pair, `DELETE`, and issuing, editing or deleting a warning — still answers `404` for a
+soft-deleted account. Deletion is irreversible and there is no restore; see
+[ADR-0015](adr/0015-deletion-not-split-from-anonymisation.md).
+
 `lastOnline` is **last API activity, not last login**. It is refreshed as authenticated
 requests come in, which is what makes it meaningful for accounts that stay signed in for
 weeks on one token. The write is throttled to once every five minutes per account, so the
@@ -367,6 +382,14 @@ warning addressed under the wrong student is `404`.
 
 `id` is the warning's own id and is what `PATCH`/`DELETE /admin/users/{id}/warnings/{warningId}`
 address.
+
+**A soft-deleted account's warning history reads, and `404` still means "no such account".** The
+history records why the account was moderated and outlives the account, which is the point of
+being able to open it. An id that names no row is `404`, exactly as before; only the deleted case
+moved. This route and `GET /admin/users/{id}` changed together — see the note there.
+
+Issuing, editing and deleting a warning are unaffected and still answer `404` for a soft-deleted
+account.
 
 `createdFrom` identifies the issuing admin. `id` is that admin's **student** id — the same
 value `GET /admin/auth/me` returns as `user.id`, so a client can tell whether it issued a warning

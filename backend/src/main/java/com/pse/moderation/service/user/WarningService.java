@@ -15,7 +15,6 @@ import com.pse.moderation.repository.WarningRepository;
 import com.pse.security.AuthenticatedUser;
 import com.pse.shared.dto.BasicResponse;
 import com.pse.shared.enums.NotificationType;
-import com.pse.shared.enums.UserStatus;
 import com.pse.shared.error.ApiException;
 import com.pse.social.model.Notification;
 import com.pse.social.repository.NotificationRepository;
@@ -130,8 +129,17 @@ public class WarningService {
      */
     @Transactional(readOnly = true)
     public WarningHistoryResponse getWarningsForStudent(UUID studentId) {
+        // A deleted account keeps its warning history and answers with it: the history records
+        // why the account was moderated, and that is what the panel opens the profile to find
+        // out at the moment the account itself can no longer say. 404 here means "no such
+        // account" and nothing else.
+        //
+        // Opened together with UserDirectoryService.getStudent -- the profile modal reads both
+        // in one pass and treats a 404 from either as "account gone", so these two move as a
+        // pair or not at all. Reading only; issuing, editing and deleting a warning still go
+        // through ModeratedStudents.findMutable, which refuses a deleted target.
         Student target = studentRepository
-                .findByIdAndStatusNot(studentId, UserStatus.DELETED)
+                .findById(studentId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         List<WarningResponse> warnings = warningRepository
                 .findByStudentOrderByCreatedAtDesc(target)
