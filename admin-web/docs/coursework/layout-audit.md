@@ -434,3 +434,20 @@ removed the bars and the navigation block; the hero stays.
 
 1024 still overflows by 204px. That is real content at that width, not repetition.
 
+## Step 2 - cards first, tabs second (`F-065`)
+
+| Route | Tab strip y, before | after |
+| --- | --- | --- |
+| Comments | **117.80** | **220.60** |
+| Lectures & Professors | 220.59 | **220.60** |
+| Bug Reports | 220.59 | **220.60** |
+
+The 102.79px gap is closed; all three strips now start in the same place.
+
+**The estimate in the finding was wrong, and the reason is worth keeping.** It said "1 file,
+~30 min". The catalogue renders `CatalogStats` **once, above** `Tabs`, so its cards are
+tab-independent. Comments rendered a **different** card set inside each panel
+(`ContentStats` for the comments tab, `ReportStats` for the reports tab). Hoisting them
+above the strip therefore means the tab can no longer be uncontrolled: the page has to hold
+the open tab so the numbers can follow it. **3 files**, not 1.
+

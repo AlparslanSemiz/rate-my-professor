@@ -1,7 +1,6 @@
 import type { useModerationContent } from '../hooks/useModerationContent'
 import type { ModeratedItem } from '../model'
 import ContentFilters from './ContentFilters'
-import ContentStats from './ContentStats'
 import ContentTable from './ContentTable'
 
 interface ContentTabProps {
@@ -24,7 +23,6 @@ export default function ContentTab({
 }: ContentTabProps) {
   return (
     <>
-      <ContentStats items={content.items} totalLabel={`Total ${noun}s`} />
       <ContentFilters
         search={content.search}
         status={content.statusFilter}

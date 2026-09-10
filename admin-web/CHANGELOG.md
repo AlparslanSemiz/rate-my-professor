@@ -2,6 +2,38 @@
 
 ## [Unreleased]
 
+### The tab strip starts in the same place on every screen
+
+`F-065`. Comments' strip started at **y=117.80** and the catalogue's and Bug Reports' at
+**y=220.59** - 102.79px apart for the same control. All three are now at **220.60**.
+
+- **Changed** `ModerationPage` to render the stat cards **above** `Tabs`, matching the
+  catalogue, which already rendered `CatalogStats` once above its strip.
+- **Changed** the tab from uncontrolled to controlled. This is the part the estimate in the
+  finding missed: the catalogue's cards are the same on every tab, while Comments has a
+  **different** set per tab (`ContentStats` vs `ReportStats`). Hoisting them means the page
+  must hold the open tab so the numbers follow it. **3 files, not the 1 estimated.**
+- **Removed** `ContentStats` from `ContentTab` and `ReportStats` from `ReportsTab`, which is
+  where they used to live.
+
+### Tests
+
+- **Added** two assertions, both red first: the cards precede the tab strip in document
+  order, and the numbers **swap** when the tab changes. The second exists because hoisting
+  the cards and then freezing them on the first tab's numbers would pass the first.
+- Order is asserted rather than a coordinate, because jsdom has no layout; the browser
+  measurement that this order produces the same y everywhere is in the audit.
+- **Changed** one Playwright assertion in `e2e/moderating-a-comment.spec.ts`, and it is worth
+  saying why rather than calling it a flake. `getByText('Skript ist veraltet - Stand 2019.')`
+  matched **two** nodes - the table cell and the edit dialog's own textarea, which holds the
+  same string. The locator was always ambiguous and passed only while the modal happened to
+  finish animating out first; the extra re-render from hoisting the cards changed that timing.
+  **The modal does close** - `ContentEditModal` calls `onClose()` after a successful save,
+  which was checked before the test was touched. It now waits for the dialog to be hidden and
+  then looks for the text inside the tabpanel, pinning two real behaviours instead of one
+  ambiguous match.
+
+
 ### Dashboard: stop showing the same number three times
 
 `F-066`, option 2. **Removed** `SystemPulse` (the two progress bars) and

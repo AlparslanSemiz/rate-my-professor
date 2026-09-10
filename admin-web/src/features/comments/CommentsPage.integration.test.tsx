@@ -190,6 +190,40 @@ describe('Comments page', () => {
     expect(total).toHaveTextContent(/^3Total comments$/)
   })
 
+  it('puts the numbers above the tab strip, the way every other screen does', async () => {
+    renderComments()
+    await screen.findByText('Reported text')
+
+    // `F-065`. Measured at 1280: this screen's tab strip started at y=117.80 and the catalogue's
+    // at y=220.59 - 102.79px apart for the same control doing the same job. The cause was the
+    // order: the catalogue renders its cards once, above `Tabs`, while this screen rendered a
+    // different card set inside each panel, so the strip came first.
+    //
+    // Asserted as document order rather than as a coordinate, because jsdom has no layout. The
+    // browser measurement that this order produces the same y on every screen is in
+    // `docs/coursework/layout-audit.md`.
+    const cards = screen.getByText('Total comments')
+    const tabs = screen.getByRole('tablist')
+    const cardsComeFirst = cards.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING
+
+    expect(cardsComeFirst).toBeTruthy()
+  })
+
+  it('swaps the numbers when the tab changes, rather than keeping one set', async () => {
+    const user = userEvent.setup()
+    renderComments()
+    await screen.findByText('Reported text')
+
+    // The cards moved out of the panels, so they now have to follow the tab themselves. This is
+    // the assertion that stops them being hoisted and then frozen on the first tab's numbers.
+    expect(screen.getByText('Total comments')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: /Reports/ }))
+
+    await waitFor(() => expect(screen.queryByText('Total comments')).not.toBeInTheDocument())
+    expect(screen.getByRole('tablist')).toBeInTheDocument()
+  })
+
   it('saves only the fields an edit actually changed', async () => {
     const user = userEvent.setup()
     renderComments()

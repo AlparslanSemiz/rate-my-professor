@@ -8,8 +8,10 @@ import PageHeader from '@/components/PageHeader'
 import PageLoader from '@/components/PageLoader'
 import UserProfileModal from '@/features/users/components/UserProfileModal'
 import ContentEditModal from './components/ContentEditModal'
+import ContentStats from './components/ContentStats'
 import ContentTab from './components/ContentTab'
 import ReportsTab from './components/ReportsTab'
+import ReportStats from './components/ReportStats'
 import { useModerationPage, type ModerationApi } from './hooks/useModerationPage'
 import type { ModeratedItem, ReportItem } from './model'
 import { iconSize } from '@/theme'
@@ -42,6 +44,8 @@ export default function ModerationPage({
     contentErrorMessage,
     reportsErrorMessage,
   })
+  /** Which half of the screen is open. Controlled because the cards above the strip follow it. */
+  const [tab, setTab] = useState<'content' | 'reports'>('content')
   const [editing, setEditing] = useState<ModeratedItem | null>(null)
   const [deleting, setDeleting] = useState<ModeratedItem | null>(null)
   const [withdrawing, setWithdrawing] = useState<ReportItem | null>(null)
@@ -54,7 +58,20 @@ export default function ModerationPage({
       <PageHeader title={title} description={description} />
       <ErrorAlert message={page.actions.actionError} />
 
-      <Tabs defaultValue="content" keepMounted={false}>
+      {/*
+        `F-065`: the tab strip started at y=117.80 here and y=220.59 on the catalogue and on
+        Bug Reports, because those render their cards once above `Tabs` while this screen
+        rendered a different card set inside each panel. The cards are hoisted so the strip
+        starts in the same place on every screen; because the two sets differ, the tab has to
+        be controlled rather than uncontrolled so the numbers follow it.
+      */}
+      {tab === 'content' ? (
+        <ContentStats items={page.content.items} totalLabel={`Total ${noun}s`} />
+      ) : (
+        <ReportStats reports={page.reports.items} />
+      )}
+
+      <Tabs value={tab} onChange={(value) => setTab(value === 'reports' ? 'reports' : 'content')} keepMounted={false}>
         <Tabs.List mb={20}>
           <Tabs.Tab value="content" leftSection={<IconMessage size={iconSize.inline} />}>
             All {noun}s ({page.content.items.length})

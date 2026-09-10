@@ -3,7 +3,6 @@ import type { useModerationReports } from '../hooks/useModerationReports'
 import type { ModeratedItem, ReportItem } from '../model'
 import ReportFilters from './ReportFilters'
 import ReportsTable from './ReportsTable'
-import ReportStats from './ReportStats'
 
 interface ReportsTabProps {
   reports: ReturnType<typeof useModerationReports>
@@ -30,7 +29,6 @@ export default function ReportsTab({
 }: ReportsTabProps) {
   return (
     <>
-      <ReportStats reports={reports.items} />
       <ReportFilters
         search={reports.search}
         status={reports.statusFilter}

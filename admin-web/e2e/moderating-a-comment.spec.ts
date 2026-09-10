@@ -38,7 +38,16 @@ test('correcting a comment shows the text the backend now holds', async ({ page 
   await dialog.getByRole('textbox', { name: 'Text' }).fill('Skript ist veraltet - Stand 2019.')
   await dialog.getByRole('button', { name: 'Save changes' }).click()
 
-  await expect(page.getByText('Skript ist veraltet - Stand 2019.')).toBeVisible()
+  // Wait for the dialog to go before looking for the text, and then look for it **in the
+  // table**. The unscoped locator matched two nodes - the table cell and the dialog's own
+  // textarea, which holds the same string - so it only ever passed while the modal happened to
+  // have finished animating out first. Hoisting the stat cards above the tab strip (`F-065`)
+  // added a re-render that changed that timing and turned the latent ambiguity into a failure.
+  // The modal does close: `ContentEditModal` calls `onClose()` after a successful save.
+  await expect(dialog).toBeHidden()
+  await expect(
+    page.getByRole('tabpanel').getByText('Skript ist veraltet - Stand 2019.'),
+  ).toBeVisible()
 })
 
 /**
