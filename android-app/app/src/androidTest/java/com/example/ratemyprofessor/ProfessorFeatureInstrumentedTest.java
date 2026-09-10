@@ -425,10 +425,7 @@ public class ProfessorFeatureInstrumentedTest {
             return null;
         }
 
-        @Override
-        public Call<RatingAverageResponse> getOwnRatings(String token, String lectureId) {
-            return null;
-        }
+
     }
 
     private static class SuccessfulCall<T> implements Call<T> {
