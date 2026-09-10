@@ -30,6 +30,7 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Request;
+import okhttp3.ResponseBody;
 import okio.Timeout;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -52,6 +54,23 @@ import retrofit2.Response;
  */
 @RunWith(RobolectricTestRunner.class)
 public class DatabaseSyncTest {
+
+    @Test
+    public void getInstanceReturnsAnExistingSingleton() throws Exception {
+        Field instanceField = Database.class.getDeclaredField("instance");
+        instanceField.setAccessible(true);
+        Database previousInstance = (Database) instanceField.get(null);
+        TestDatabase expected = new TestDatabase(new RecordingSearchService());
+
+        try {
+            instanceField.set(null, expected);
+
+            assertSame(expected, Database.getInstance(null));
+            assertSame(expected, Database.getInstance(null));
+        } finally {
+            instanceField.set(null, previousInstance);
+        }
+    }
 
     @Test
     public void updateDBRefreshesSuccessfulResponsesIntoSearchService() {
@@ -143,6 +162,25 @@ public class DatabaseSyncTest {
         assertTrue(searchService.insertedProfessors.isEmpty());
         assertTrue(searchService.insertedLectures.isEmpty());
         assertTrue(searchService.insertedComments.isEmpty());
+    }
+
+    @Test
+    public void updateDBRejectsHttpErrorsAndNullEntityLists() {
+        RecordingSearchService searchService = new RecordingSearchService();
+        TestDatabase database = new TestDatabase(searchService);
+        boolean[] callbackResult = {true};
+        ResponseBody errorBody = ResponseBody.create(null, new byte[0]);
+        APIService apiService = apiService(
+                FakeCall.response(Response.error(503, errorBody)),
+                FakeCall.response(new LecturesResponse("ok", true, null)),
+                FakeCall.response(new CommentsResponse("ok", true, Collections.emptyList()))
+        );
+
+        database.updateDB(apiService, successful -> callbackResult[0] = successful);
+
+        assertTrue(searchService.insertedProfessors.isEmpty());
+        assertTrue(searchService.insertedLectures.isEmpty());
+        assertEquals(false, callbackResult[0]);
     }
 
     private static APIService apiService(

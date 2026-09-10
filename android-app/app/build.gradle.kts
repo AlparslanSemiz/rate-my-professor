@@ -110,9 +110,9 @@ val debugCoverageExcludes = listOf(
     "**/*Binding.*",
     "**/*_Impl.*",
     "**/*_Impl*",
-    "**/Activities/**",
-    "**/Adapters/**",
-    "**/Fragments/**"
+//    "**/activities/**",
+//    "**/adapters/**",
+//    "**/fragments/**"
 )
 
 fun debugCoverageClassDirectories() = files(

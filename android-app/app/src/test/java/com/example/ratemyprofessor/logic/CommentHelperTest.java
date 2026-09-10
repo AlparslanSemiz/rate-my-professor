@@ -217,6 +217,38 @@ public class CommentHelperTest {
     }
 
     @Test
+    public void vote_callbackSuccess() {
+        Context context = ApplicationProvider.getApplicationContext();
+        APIService apiService = mock(APIService.class);
+        Call<BasicResponse> call = mock(Call.class);
+        AuthManager authManager = mock(AuthManager.class);
+
+        when(authManager.isLoggedIn()).thenReturn(true);
+        when(apiService.voteComment(anyString(), eq("comment-1"), any())).thenReturn(call);
+
+        try (MockedStatic<AuthManager> authMock = mockStatic(AuthManager.class)) {
+            authMock.when(AuthManager::getInstance).thenReturn(authManager);
+
+            CommentHelper.vote(
+                    context,
+                    apiService,
+                    "comment-1",
+                    VoteType.UP,
+                    CommentType.COMMENT
+            );
+
+            ArgumentCaptor<Callback<BasicResponse>> captor =
+                    ArgumentCaptor.forClass(Callback.class);
+            verify(call).enqueue(captor.capture());
+
+            captor.getValue().onResponse(
+                    call,
+                    Response.success(new BasicResponse("ok", true))
+            );
+        }
+    }
+
+    @Test
     public void submitCommentReport_loggedIn_success_comment() {
         Context context = RuntimeEnvironment.getApplication();
         context.setTheme(R.style.Theme_RateMyProfessor);
@@ -279,6 +311,56 @@ public class CommentHelperTest {
 
             verify(apiService).reportReply(eq("token"), any(CommentReportRequest.class));
             verify(call).enqueue(any());
+        }
+    }
+
+    @Test
+    public void submitCommentReport_callbackHandlesAllFailureResponses() {
+        Context context = RuntimeEnvironment.getApplication();
+        context.setTheme(R.style.Theme_RateMyProfessor);
+        APIService apiService = mock(APIService.class);
+        Call<BasicResponse> call = mock(Call.class);
+        Dialog dialog = mock(Dialog.class);
+        AuthManager authManager = mock(AuthManager.class);
+        LoginSession session = mock(LoginSession.class);
+
+        when(authManager.isLoggedIn()).thenReturn(true);
+        when(session.bearerToken()).thenReturn("token");
+        when(apiService.reportComment(anyString(), any())).thenReturn(call);
+
+        DialogCommentReportBinding binding =
+                DialogCommentReportBinding.inflate(LayoutInflater.from(context));
+        binding.reportReason.setSelection(0);
+
+        try (MockedStatic<AuthManager> authMock = mockStatic(AuthManager.class);
+             MockedStatic<LoginSession> sessionMock = mockStatic(LoginSession.class)) {
+            authMock.when(AuthManager::getInstance).thenReturn(authManager);
+            sessionMock.when(() -> LoginSession.from(any())).thenReturn(session);
+
+            for (int index = 0; index < 3; index++) {
+                CommentHelper.submitCommentReport(
+                        context,
+                        apiService,
+                        binding,
+                        dialog,
+                        "c1",
+                        CommentType.COMMENT
+                );
+            }
+
+            ArgumentCaptor<Callback<BasicResponse>> captor =
+                    ArgumentCaptor.forClass(Callback.class);
+            verify(call, times(3)).enqueue(captor.capture());
+
+            captor.getAllValues().get(0).onResponse(
+                    call,
+                    Response.error(400, ResponseBody.create(null, new byte[0]))
+            );
+            captor.getAllValues().get(1).onResponse(call, Response.success(null));
+            captor.getAllValues().get(2).onResponse(
+                    call,
+                    Response.success(new BasicResponse("rejected", false))
+            );
         }
     }
 

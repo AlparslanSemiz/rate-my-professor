@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import android.app.Application;
 import android.content.Context;
@@ -11,6 +13,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 
 import android.net.ConnectivityManager;
+import android.net.Network;
 
 import androidx.appcompat.app.AppCompatDelegate;
 
@@ -167,20 +170,25 @@ public class SessionApplicationAndUtilityTest {
 
     @Test
     public void networkUtilsReturnsFalseWhenNoActiveNetworkExists() {
-        Context context = RuntimeEnvironment.getApplication();
+        Context context = mock(Context.class);
+        ConnectivityManager connectivityManager = mock(ConnectivityManager.class);
+        when(context.getSystemService(Context.CONNECTIVITY_SERVICE))
+                .thenReturn(connectivityManager);
+        when(connectivityManager.getActiveNetwork()).thenReturn(null);
+
         assertFalse(NetworkUtils.isInternetAvailable(context));
     }
 
     @Test
     public void networkUtilsReturnsFalseWhenNoCapabilitiesExist() {
-        Context context = RuntimeEnvironment.getApplication();
-        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        org.robolectric.shadows.ShadowConnectivityManager shadowCM = org.robolectric.Shadows.shadowOf(cm);
+        Context context = mock(Context.class);
+        ConnectivityManager connectivityManager = mock(ConnectivityManager.class);
+        Network network = mock(Network.class);
+        when(context.getSystemService(Context.CONNECTIVITY_SERVICE))
+                .thenReturn(connectivityManager);
+        when(connectivityManager.getActiveNetwork()).thenReturn(network);
+        when(connectivityManager.getNetworkCapabilities(network)).thenReturn(null);
 
-        // This makes getActiveNetwork() return a non-null network object
-        shadowCM.setDefaultNetworkActive(true);
-
-        // Without adding capabilities, getNetworkCapabilities() returns null
         assertFalse(NetworkUtils.isInternetAvailable(context));
     }
 
