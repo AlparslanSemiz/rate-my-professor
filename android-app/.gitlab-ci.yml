@@ -90,9 +90,11 @@ android:instrumentation-test:
       - app/build/reports/androidTests/
       - app/build/outputs/androidTest-results/
 
+      
 android:sonarcloud:
   extends: .android-gradle
   stage: sonar
+
   variables:
     GIT_DEPTH: "0"
 
@@ -107,7 +109,7 @@ android:sonarcloud:
       ls -lah app/build/reports/jacoco/debugUnitTestCoverage/ || true
 
       echo "=== Java source examples ==="
-      find app/src/main/java -type f -name "*.java" | head -20
+      find app/src/main/java -type f -name "*.java" | head -20 || true
 
       echo "=== JaCoCo source entries ==="
       grep -o '<sourcefile name="[^"]*"' \
