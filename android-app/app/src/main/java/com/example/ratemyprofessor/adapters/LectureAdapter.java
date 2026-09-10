@@ -25,6 +25,12 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
 
     private List<Lecture> lectures;
 
+    /**
+     * Creates a LectureAdapter with the supplied data and interaction listener.
+     *
+     * @param lectures the lecture offerings to display
+     * @param listener the listener notified when the user interacts with an item
+     */
     public LectureAdapter(List<Lecture> lectures, OnLectureClickListener listener) {
         this.lectures = lectures;
         this.listener = listener;
@@ -57,6 +63,11 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
 
         final TextView textView;
 
+        /**
+         * Creates a view holder backed by the supplied item binding.
+         *
+         * @param binding the view binding for the item layout
+         */
         public LectureViewHolder(@NonNull ItemLectureNameBinding binding) {
             super(binding.getRoot());
             textView = binding.semesterName;
@@ -69,6 +80,8 @@ public class LectureAdapter extends RecyclerView.Adapter<LectureAdapter.LectureV
     public interface OnLectureClickListener {
 
         /**
+         * Handles the lecture click event.
+         *
          * @param lectureTitle the name of the clicked lecture
          */
         void onLectureClick(String lectureTitle);

@@ -69,6 +69,9 @@ public class ProfileFragment extends Fragment {
     private String lectureTitle;
     private ControlFlowInterface flowInterface;
 
+    /**
+     * Creates an empty fragment for Android lifecycle instantiation.
+     */
     public ProfileFragment() {
         // Required empty public constructor
     }

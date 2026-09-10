@@ -60,6 +60,8 @@ public final class LoginSession {
     }
 
     /**
+     * Returns the email address saved for the login session.
+     *
      * @return the saved email address, or an empty string when nothing was saved yet
      */
     public String mailAddress() {
@@ -67,6 +69,8 @@ public final class LoginSession {
     }
 
     /**
+     * Returns the saved one-time password.
+     *
      * @return the saved one time password, or an empty string when nothing was saved yet
      */
     public String loginToken() {
@@ -74,6 +78,8 @@ public final class LoginSession {
     }
 
     /**
+     * Returns the saved authentication token.
+     *
      * @return the saved auth token, or an empty string when nothing was saved yet
      */
     public String authToken() {

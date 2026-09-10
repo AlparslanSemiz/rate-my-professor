@@ -55,6 +55,9 @@ import java.util.Date;
  */
 public class DomainModelTest {
 
+    /**
+     * Verifies that semester formats display name correctly.
+     */
     @Test
     public void semesterFormatsDisplayNameCorrectly() {
         // This tests actual logic in Semester.java
@@ -65,6 +68,9 @@ public class DomainModelTest {
         assertEquals("SS2025", summer.getSemesterName());
     }
 
+    /**
+     * Verifies that notification state changes when marked as read.
+     */
     @Test
     public void notificationStateChangesWhenMarkedAsRead() {
         // Tests state transition logic in Notification.java
@@ -77,6 +83,9 @@ public class DomainModelTest {
         assertTrue("Notification should be read after markAsRead()", notification.isRead);
     }
 
+    /**
+     * Verifies that vote correctly links to parent comment.
+     */
     @Test
     public void voteCorrectlyLinksToParentComment() {
         // Verifies data integrity across related domain objects
@@ -92,6 +101,9 @@ public class DomainModelTest {
         assertEquals(VoteType.UP, vote.type());
     }
 
+    /**
+     * Verifies that comment stores vote counts.
+     */
     @Test
     public void commentStoresVoteCounts() {
         // Verifies that vote tracking in comments is consistent
@@ -104,6 +116,9 @@ public class DomainModelTest {
         assertEquals(2, comment.downVotes());
     }
 
+    /**
+     * Verifies that rating category exposes correct display names.
+     */
     @Test
     public void ratingCategoryExposesCorrectDisplayNames() {
         // Verifies that internal categories map to the correct German display strings
@@ -112,6 +127,9 @@ public class DomainModelTest {
         assertEquals("Pace", RatingCategory.LECTURE_PACE.getDisplayName());
     }
 
+    /**
+     * Verifies that report reason formats to string correctly.
+     */
     @Test
     public void reportReasonFormatsToStringCorrectly() {
         // Verifies the custom toString implementation for report reasons
@@ -120,6 +138,9 @@ public class DomainModelTest {
         assertEquals("Other", ReportReason.OTHER.toString());
     }
 
+    /**
+     * Verifies that image retriever requests PNG variant.
+     */
     @Test
     public void imageRetrieverRequestsPngVariant() {
         // Verifies the logic that replaces .svg with .png for Android compatibility
@@ -143,6 +164,9 @@ public class DomainModelTest {
         assertEquals("https://example.com/icon.png", requestedUrl[0]);
     }
 
+    /**
+     * Verifies that domain constructors retain their supplied values.
+     */
     @Test
     public void verifyEssentialConstructors() {
         // Domain Models

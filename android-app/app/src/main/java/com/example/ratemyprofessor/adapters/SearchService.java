@@ -59,20 +59,34 @@ public interface SearchService {
 
     /**
      * Inserts a single professor.
+     *
+     * @param professor the professor data
      */
     //BAD METHOD FIX IN THE FUTURE
     @Insert
     void insertProfessor(Professor professor);
 
+    /**
+     * Inserts professors, replacing existing entries with the same primary key.
+     *
+     * @param professors the professors to cache
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertProfessors(List<Professor> professors);
 
     /**
      * Inserts a single lecture offering.
+     *
+     * @param lecture the lecture offering data
      */
     @Insert
     void insertLecture(Lecture lecture);
 
+    /**
+     * Inserts lecture offerings, replacing existing entries with the same primary key.
+     *
+     * @param lectures the lecture offerings to cache
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertLectures(List<Lecture> lectures);
 
@@ -88,12 +102,23 @@ public interface SearchService {
     @Query("DELETE FROM lectures")
     void deleteLectures();
 
+    /**
+     * Replaces all cached professors in a single database transaction.
+     *
+     * @param professors the professors to cache
+     */
     @Transaction
     default void replaceProfessors(List<Professor> professors) {
         deleteProfessors();
         insertProfessors(professors);
     }
 
+    /**
+     * Replaces all cached lecture offerings and instructor associations in a single transaction.
+     *
+     * @param lectures the lecture offerings to cache
+     * @param instructors the associations between professors and lecture offerings
+     */
     @Transaction
     default void replaceLectures(List<Lecture> lectures, List<Instructor> instructors) {
         deleteLectures();
@@ -105,6 +130,8 @@ public interface SearchService {
     // --- Profile screen, narrowing down one lecture offering ------------------------------
 
     /**
+     * Finds lecture offerings taught by the specified professor.
+     *
      * @param professorId the professor to look up
      * @return every offering held by that professor, sorted by name
      */
@@ -113,6 +140,8 @@ public interface SearchService {
     List<Lecture> getLecturesByProfessor(String professorId);
 
     /**
+     * Finds offerings of a lecture taught by the specified professor.
+     *
      * @param professorId  the professor to look up
      * @param lectureTitle the name of the lecture
      * @return every semester's offering of that lecture by that professor
@@ -122,6 +151,8 @@ public interface SearchService {
     List<Lecture> getLecturesByProfessorAndLecture(String professorId, String lectureTitle);
 
     /**
+     * Finds professors teaching a lecture with the specified title.
+     *
      * @param lectureTitle the name of the lecture
      * @return every professor who holds a lecture with that name
      */
@@ -130,6 +161,8 @@ public interface SearchService {
     List<Professor> getProfessorsByLectureTitle(String lectureTitle);
 
     /**
+     * Returns the distinct lecture titles taught by the specified professor.
+     *
      * @param professorId the professor to look up
      * @return the name of every lecture held by that professor, each one only once
      */
@@ -137,6 +170,8 @@ public interface SearchService {
     List<String> getLectureTitlesByProfessor(String professorId);
 
     /**
+     * Finds the semesters in which a professor taught the specified lecture.
+     *
      * @param professorId  the professor to look up
      * @param lectureTitle the name of the lecture
      * @return every semester in which that professor held that lecture
@@ -161,18 +196,42 @@ public interface SearchService {
 
 
 
+    /**
+     * Inserts a comment into the local database.
+     *
+     * @param comment the selected comment
+     */
     @Insert
     void insertComment(CommentModel comment);
 
+    /**
+     * Inserts comments, replacing existing entries with the same primary key.
+     *
+     * @param comments the comments to cache
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertComments(List<CommentModel> comments);
 
+    /**
+     * Removes all cached comments and replies.
+     */
     @Query("DELETE FROM comments")
     void deleteComments();
 
+    /**
+     * Removes the cached comments and replies for a lecture offering.
+     *
+     * @param lectureId the identifier of the lecture offering
+     */
     @Query("DELETE FROM comments WHERE lectureID = :lectureId")
     void deleteCommentsForLecture(String lectureId);
 
+    /**
+     * Replaces the cached comments for one lecture offering in a single transaction.
+     *
+     * @param lectureId the identifier of the lecture offering
+     * @param comments the comments to cache
+     */
     @Transaction
     default void replaceCommentsForLecture(String lectureId, List<CommentModel> comments) {
         deleteCommentsForLecture(lectureId);
@@ -180,35 +239,88 @@ public interface SearchService {
     }
 
 
+    /**
+     * Finds a cached professor by identifier.
+     *
+     * @param id the unique identifier
+     * @return the matching professor, or null if no entry exists
+     */
     @Query("SELECT * FROM professors WHERE id = :id LIMIT 1")
     Professor getProfessorById(String id);
+    /**
+     * Returns top-level comments for a lecture, ordered by descending upvote count.
+     *
+     * @param lectureId the identifier of the lecture offering
+     * @return the matching entries, or an empty list if none exist
+     */
     @Query("SELECT * FROM comments WHERE lectureID = :lectureId AND parentID IS NULL ORDER BY upVotes DESC")
     List<CommentModel> getComments(String lectureId);
 
+    /**
+     * Returns replies to a comment, ordered by descending upvote count.
+     *
+     * @param parentId the identifier of the parent comment
+     * @return the matching entries, or an empty list if none exist
+     */
     @Query("SELECT * FROM comments WHERE parentID = :parentId ORDER BY upVotes DESC")
     List<CommentModel> getReplies(String parentId);
 
+    /**
+     * Inserts an association between a professor and a lecture offering.
+     *
+     * @param instructor the professor-to-lecture association
+     */
     @Insert
     void insertInstructor(Instructor instructor);
 
+    /**
+     * Inserts instructor associations, replacing existing entries with the same primary key.
+     *
+     * @param instructors the associations between professors and lecture offerings
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertInstructors(List<Instructor> instructors);
 
+    /**
+     * Removes all cached instructor associations.
+     */
     @Query("DELETE FROM instructors")
     void deleteInstructors();
 
+    /**
+     * Returns the cached ratings for a lecture offering and rater.
+     *
+     * @param lectureID the identifier of the lecture offering
+     * @param rater whether the rating is a user rating or an aggregate
+     * @return the matching entries, or an empty list if none exist
+     */
     @Query("SELECT * from ratings WHERE lectureID = :lectureID AND rater = :rater")
     List<Rating> getLectureRatings(String lectureID, Rater rater);
 
+    /**
+     * Inserts a category rating or updates the existing entry with the same primary key.
+     *
+     * @param rating the category rating to store
+     */
     @Upsert
     void upsertRating(Rating rating);
 
+    /**
+     * Removes the cached ratings for a lecture offering and rater.
+     *
+     * @param lectureId the identifier of the lecture offering
+     * @param rater whether the rating is a user rating or an aggregate
+     */
     @Query("DELETE FROM ratings WHERE lectureID = :lectureId AND rater = :rater")
     void deleteLectureRatings(String lectureId, Rater rater);
 
     /**
      * Replaces one lecture's cached ratings for the given rater in a single transaction.
      * This also clears stale values when the server returns fewer categories or no ratings.
+     *
+     * @param lectureId the identifier of the lecture offering
+     * @param rater whether the rating is a user rating or an aggregate
+     * @param ratings the ratings to cache
      */
     @Transaction
     default void replaceLectureRatings(String lectureId, Rater rater, List<Rating> ratings) {
@@ -218,12 +330,30 @@ public interface SearchService {
         }
     }
 
+    /**
+     * Returns the cached lecture offerings with the specified title.
+     *
+     * @param lectureTitle the title of the lecture
+     * @return the matching entries, or an empty list if none exist
+     */
     @Query("SELECT * FROM lectures WHERE name = :lectureTitle")
     List<Lecture> getLecturesByTitle(String lectureTitle);
 
+    /**
+     * Updates the cached average rating for a lecture offering.
+     *
+     * @param lectureId the identifier of the lecture offering
+     * @param averageRating the average rating
+     */
     @Query("UPDATE lectures SET averageRating = :averageRating WHERE id = :lectureId")
     void updateLectureRating(String lectureId, double averageRating);
 
+    /**
+     * Updates the cached average rating for a professor.
+     *
+     * @param professorId the identifier of the professor
+     * @param averageRating the average rating
+     */
     @Query("UPDATE professors SET averageRating = :averageRating WHERE id = :professorId")
     void updateProfessorAverageRating(String professorId, double averageRating);
 }

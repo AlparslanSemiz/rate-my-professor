@@ -25,6 +25,12 @@ public class ProfileProfessorAdapter extends RecyclerView.Adapter<ProfileProfess
     private final OnProfessorClickListener listener;
     private int currentChoice = 0;
 
+    /**
+     * Creates a ProfileProfessorAdapter with the supplied data and interaction listener.
+     *
+     * @param professors the professors to display
+     * @param listener the listener notified when the user interacts with an item
+     */
     public ProfileProfessorAdapter(List<Professor> professors, OnProfessorClickListener listener) {
         this.professors = professors;
         this.listener = listener;
@@ -69,6 +75,11 @@ public class ProfileProfessorAdapter extends RecyclerView.Adapter<ProfileProfess
 
         final TextView textView;
 
+        /**
+         * Creates a view holder backed by the supplied item binding.
+         *
+         * @param binding the view binding for the item layout
+         */
         public ProfessorViewHolder(@NonNull ItemProfNameSmallBinding binding) {
             super(binding.getRoot());
             textView = binding.profName;
@@ -81,6 +92,8 @@ public class ProfileProfessorAdapter extends RecyclerView.Adapter<ProfileProfess
     public interface OnProfessorClickListener {
 
         /**
+         * Handles the professor click event.
+         *
          * @param professor the clicked professor
          */
         void onProfessorClick(Professor professor);

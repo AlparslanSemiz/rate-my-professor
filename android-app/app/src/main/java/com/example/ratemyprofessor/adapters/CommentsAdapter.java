@@ -37,6 +37,15 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
     private final CommentType type;
     private final Context context;
 
+    /**
+     * Creates a CommentsAdapter with the supplied data and interaction listener.
+     *
+     * @param context the Android context used to access resources and services
+     * @param comments the comments to display
+     * @param listener the listener notified when the user interacts with an item
+     * @param type whether the displayed entries are comments or replies
+     * @param voteType the vote associated with the comment
+     */
     public CommentsAdapter(Context context,
                            List<Comment> comments,
                            OnCommentClickListener listener,
@@ -147,6 +156,11 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         final ImageView profilePicture;
 
 
+        /**
+         * Creates a view holder backed by the supplied item binding.
+         *
+         * @param binding the view binding for the item layout
+         */
         public CommentViewHolder(ItemCommentBinding binding) {
             super(binding.getRoot());
 
@@ -174,10 +188,16 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
          * Called when the answers of a comment should be shown.
          *
          * @param comment  the comment whose answers are opened
+         *
+         * @param voteType the vote associated with the comment
          */
         void onOpenReplies(Comment comment);
         /**
          * For voting on a comment or answer.
+         *
+         * @param commentID the identifier of the comment
+         * @param voteType the vote associated with the comment
+         * @param commentType whether the target is a comment or a reply
          */
         void vote(String commentID, VoteType voteType, CommentType commentType);
 

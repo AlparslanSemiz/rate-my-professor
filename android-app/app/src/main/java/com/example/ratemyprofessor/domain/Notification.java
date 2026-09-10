@@ -65,6 +65,11 @@ public class Notification {
      *
      * <p>Delegates to the full constructor and leaves the remaining fields empty, so no code
      * has to deal with null when only the basic data is known.</p>
+     *
+     * @param notificationId the unique notification identifier
+     * @param message the message returned by the server
+     * @param createdAt the time the entry was created
+     * @param isRead whether the notification has been read
      */
     public Notification(String notificationId, String message, Date createdAt, boolean isRead) {
         this(notificationId, message, createdAt, isRead, "", "", "", "", "", "");
@@ -72,6 +77,17 @@ public class Notification {
 
     /**
      * Creates a notification with all details needed to display and open it.
+     *
+     * @param notificationId the unique notification identifier
+     * @param message the message returned by the server
+     * @param createdAt the time the entry was created
+     * @param isRead whether the notification has been read
+     * @param actorUsername the username of the user who triggered the notification
+     * @param replyPreview the preview text of the reply
+     * @param lectureOfferingLabel the display label of the associated lecture offering
+     * @param lectureOfferingId the identifier of the associated lecture offering
+     * @param parentCommentId the identifier of the parent comment
+     * @param replyCommentId the identifier of the reply
      */
     public Notification(
             String notificationId,

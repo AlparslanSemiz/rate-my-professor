@@ -11,8 +11,16 @@ import java.util.List;
 
 import okhttp3.OkHttpClient;
 
+/**
+ * Tests retrofit client behavior.
+ */
 public class RetrofitClientTest {
 
+    /**
+     * Verifies that client DNS keeps only IPv4 addresses.
+     *
+     * @throws Exception if the operation cannot complete
+     */
     @Test
     public void clientDnsKeepsOnlyIpv4Addresses() throws Exception {
         OkHttpClient httpClient =

@@ -38,10 +38,16 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * Tests comment helper behavior.
+ */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 35)
 public class CommentHelperTest {
 
+    /**
+     * Verifies that voting while logged out displays a login message.
+     */
     @Test
     public void vote_notLoggedIn() {
         Context context =
@@ -77,6 +83,9 @@ public class CommentHelperTest {
         }
     }
 
+    /**
+     * Verifies that logged-in users submit votes through the comment endpoint.
+     */
     @Test
     public void vote_loggedIn_comment() {
         Context context =
@@ -118,6 +127,9 @@ public class CommentHelperTest {
         }
     }
 
+    /**
+     * Verifies that logged-in users submit votes through the reply endpoint.
+     */
     @Test
     public void vote_loggedIn_reply() {
         Context context =
@@ -159,6 +171,9 @@ public class CommentHelperTest {
         }
     }
 
+    /**
+     * Verifies that a failed vote request displays an error message.
+     */
     @Test
     public void vote_callbackFailure() {
         Context context =
@@ -216,6 +231,9 @@ public class CommentHelperTest {
         }
     }
 
+    /**
+     * Verifies that a successful vote response is handled.
+     */
     @Test
     public void vote_callbackSuccess() {
         Context context = ApplicationProvider.getApplicationContext();
@@ -248,6 +266,9 @@ public class CommentHelperTest {
         }
     }
 
+    /**
+     * Verifies that a logged-in user can submit a comment report.
+     */
     @Test
     public void submitCommentReport_loggedIn_success_comment() {
         Context context = RuntimeEnvironment.getApplication();
@@ -286,6 +307,9 @@ public class CommentHelperTest {
         }
     }
 
+    /**
+     * Verifies that a logged-in user can submit a reply report.
+     */
     @Test
     public void submitCommentReport_loggedIn_success_reply() {
         Context context = RuntimeEnvironment.getApplication();
@@ -314,6 +338,9 @@ public class CommentHelperTest {
         }
     }
 
+    /**
+     * Verifies that unsuccessful report responses are handled.
+     */
     @Test
     public void submitCommentReport_callbackHandlesAllFailureResponses() {
         Context context = RuntimeEnvironment.getApplication();
@@ -364,6 +391,9 @@ public class CommentHelperTest {
         }
     }
 
+    /**
+     * Verifies that reporting while logged out displays a login message.
+     */
     @Test
     public void submitCommentReport_notLoggedIn_showsToast() {
         Context context = RuntimeEnvironment.getApplication();
@@ -386,6 +416,9 @@ public class CommentHelperTest {
         }
     }
 
+    /**
+     * Verifies that show comment report dialog creates and shows dialog.
+     */
     @Test
     public void showCommentReportDialog_createsAndShowsDialog() {
         Context context = RuntimeEnvironment.getApplication();

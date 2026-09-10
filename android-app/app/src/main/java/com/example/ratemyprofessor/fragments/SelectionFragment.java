@@ -48,6 +48,9 @@ public class SelectionFragment extends Fragment {
      * the search bar again.
      */
     public interface UserInteractionListener {
+        /**
+         * Notifies the host that the user interacted with the search results.
+         */
         void onUserInteractedWithList();
     }
 

@@ -103,12 +103,17 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
     RatingAdapter ratingAdapter;
 
+    /**
+     * Creates an empty fragment for Android lifecycle instantiation.
+     */
     public RatingsFragment() {
         apiService = RetrofitClient.getClient().create(APIService.class);
         // Required empty public constructor
     }
 
     /**
+     * Creates a RatingsFragment with the supplied values.
+     *
      * @param professor the professor holding the offering
      * @param semester  the semester it is held in
      * @param lecture   the offering whose ratings and comments are shown
@@ -791,6 +796,9 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
     /**
      * Inserts the answers of a comment right below it.
+     *
+     * @param comment the selected comment
+     * @param voteType the vote associated with the comment
      */
     @Override
     public void onOpenReplies(Comment comment) {

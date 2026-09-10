@@ -21,8 +21,14 @@ public class Professor {
     @PrimaryKey
     public String id;
 
+    /**
+     * The first name of the professor.
+     */
     public String firstName;
 
+    /**
+     * The last name of the professor.
+     */
     public String lastName;
 
     /**
@@ -35,6 +41,15 @@ public class Professor {
      */
     public int ratingCount;
 
+    /**
+     * Creates a Professor with the supplied values.
+     *
+     * @param id the unique identifier
+     * @param firstName the first name of the professor
+     * @param lastName the last name of the professor
+     * @param averageRating the average rating
+     * @param ratingCount the number of ratings
+     */
     public Professor(@NonNull String id, String firstName, String lastName, float averageRating, int ratingCount) {
         this.id = id;
         this.firstName = firstName;

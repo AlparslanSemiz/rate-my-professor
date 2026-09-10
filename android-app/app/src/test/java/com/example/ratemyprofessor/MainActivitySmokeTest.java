@@ -25,6 +25,9 @@ import org.robolectric.android.controller.ActivityController;
 @RunWith(RobolectricTestRunner.class)
 public class MainActivitySmokeTest {
 
+    /**
+     * Verifies that main activity starts on home screen.
+     */
     @Test
     public void mainActivityStartsOnHomeScreen() {
         MainActivity activity = Robolectric.buildActivity(MainActivity.class).setup().get();
@@ -36,6 +39,9 @@ public class MainActivitySmokeTest {
                 currentFragment instanceof HomeFragment);
     }
 
+    /**
+     * Verifies that bottom navigation switches fragments.
+     */
     @Test
     public void bottomNavigationSwitchesFragments() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);

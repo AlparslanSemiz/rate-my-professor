@@ -33,6 +33,12 @@ public class ListOfMyRatingsAdapter extends RecyclerView.Adapter<ListOfMyRatings
         return new ListOfMyRatingsAdapter.UserRatingViewHolder(binding);
     }
 
+    /**
+     * Creates a ListOfMyRatingsAdapter with the supplied data and interaction listener.
+     *
+     * @param ratings the ratings to display
+     * @param listener the listener notified when the user interacts with an item
+     */
     public ListOfMyRatingsAdapter(List<UserRatingDto> ratings, OnRatingClickListener listener) {
         this.ratings = ratings;
         this.listener = listener;
@@ -64,11 +70,19 @@ public class ListOfMyRatingsAdapter extends RecyclerView.Adapter<ListOfMyRatings
         return ratings.size();
     }
 
+    /**
+     * Holds the views used to display a single user rating item.
+     */
     public static class UserRatingViewHolder extends RecyclerView.ViewHolder {
 
         final TextView lectureName;
         final TextView averageRating;
         final TextView semester;
+        /**
+         * Creates a view holder backed by the supplied item binding.
+         *
+         * @param binding the view binding for the item layout
+         */
         public UserRatingViewHolder(@NonNull ItemUserRatingBinding binding) {
             super(binding.getRoot());
 

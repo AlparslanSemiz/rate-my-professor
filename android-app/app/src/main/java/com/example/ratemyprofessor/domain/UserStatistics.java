@@ -25,6 +25,14 @@ public class UserStatistics {
      */
     private double averageGivenGrade;
 
+    /**
+     * Creates a UserStatistics with the supplied values.
+     *
+     * @param reviewCount the number of reviews written by the user
+     * @param commentCount the number of comments
+     * @param upvoteDownvoteRatio the ratio of upvotes to downvotes
+     * @param averageGivenGrade the average grade given by the user
+     */
     public UserStatistics(int reviewCount, int commentCount, double upvoteDownvoteRatio, double averageGivenGrade) {
         this.reviewCount = reviewCount;
         this.commentCount = commentCount;

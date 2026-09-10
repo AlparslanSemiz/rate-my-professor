@@ -65,11 +65,17 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * Tests professor feature instrumented behavior.
+ */
 @RunWith(AndroidJUnit4.class)
 public class ProfessorFeatureInstrumentedTest {
     private Database database;
     private SearchService searchService;
 
+    /**
+     * Initializes the fixtures required by each test.
+     */
     @Before
     public void setUp() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
@@ -79,11 +85,17 @@ public class ProfessorFeatureInstrumentedTest {
         searchService = database.searchService();
     }
 
+    /**
+     * Releases the resources created for each test.
+     */
     @After
     public void tearDown() {
         database.close();
     }
 
+    /**
+     * Verifies that professor adapter binds full name and item count.
+     */
     @Test
     public void professorAdapterBindsFullNameAndItemCount() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
@@ -101,6 +113,9 @@ public class ProfessorFeatureInstrumentedTest {
         assertEquals("Grace Hopper", nameView.getText().toString());
     }
 
+    /**
+     * Verifies that professor adapter reports zero items for empty list.
+     */
     @Test
     public void professorAdapterReportsZeroItemsForEmptyList() {
         ProfessorAdapter adapter = new ProfessorAdapter(new ArrayList<>(), prof -> {});
@@ -108,6 +123,9 @@ public class ProfessorFeatureInstrumentedTest {
         assertEquals(0, adapter.getItemCount());
     }
 
+    /**
+     * Verifies that search pager adapter creates professor page.
+     */
     @Test
     public void searchPagerAdapterCreatesProfessorPage() {
         // We use ActivityScenario to get a valid FragmentManager/Context
@@ -126,6 +144,9 @@ public class ProfessorFeatureInstrumentedTest {
         }
     }
 
+    /**
+     * Verifies that search service returns professors matching first name ordered by last name.
+     */
     @Test
     public void searchServiceReturnsProfessorsMatchingFirstNameOrderedByLastName() {
         searchService.insertProfessor(new Professor("prof-2", "Grace", "Hopper", 4.8f, 20));
@@ -142,6 +163,9 @@ public class ProfessorFeatureInstrumentedTest {
         assertEquals("Alan", results.get(2).firstName);
     }
 
+    /**
+     * Verifies that replace lecture ratings replaces only the requested cache.
+     */
     @Test
     public void replaceLectureRatingsReplacesOnlyTheRequestedCache() {
         searchService.upsertRating(new Rating(
@@ -168,6 +192,11 @@ public class ProfessorFeatureInstrumentedTest {
         assertEquals(4.0, userRatings.get(0).score, 0.001);
     }
 
+    /**
+     * Verifies that a database refresh replaces cached professors with server data.
+     *
+     * @throws Exception if the operation cannot complete
+     */
     @Test
     public void updateDBReplacesExistingProfessorsWithServerProfessors() throws Exception {
         searchService.insertProfessor(new Professor("old-prof", "Old", "Professor", 1.0f, 1));
@@ -187,6 +216,11 @@ public class ProfessorFeatureInstrumentedTest {
         assertEquals("Ada", results.get(1).firstName);
     }
 
+    /**
+     * Verifies that a database refresh replaces cached lectures with server data.
+     *
+     * @throws Exception if the operation cannot complete
+     */
     @Test
     public void updateDBReplacesExistingLecturesWithServerLectures() throws Exception {
         searchService.insertLecture(new Lecture("old-lecture", "Old Lecture", "000000", 2023, SemesterSeason.WS, true, 0, 0, 0));
@@ -206,6 +240,9 @@ public class ProfessorFeatureInstrumentedTest {
         assertEquals("Softwaretechnik", results.get(1).name);
     }
 
+    /**
+     * Verifies that null response bodies preserve cached data.
+     */
     @Test
     public void updateDBLeavesExistingDataWhenServerBodiesAreNull() {
         searchService.insertProfessor(new Professor("prof-1", "Ada", "Lovelace", 4.5f, 10));
@@ -252,6 +289,12 @@ public class ProfessorFeatureInstrumentedTest {
         private final List<Professor> professors;
         private final List<LectureModel> lectures;
 
+        /**
+         * Creates a FakeAPIService with the supplied values.
+         *
+         * @param professors the professors to store or display
+         * @param lectures the lecture offerings to store or display
+         */
         FakeAPIService(List<Professor> professors, List<LectureModel> lectures) {
             this.professors = professors;
             this.lectures = lectures;
@@ -393,6 +436,11 @@ public class ProfessorFeatureInstrumentedTest {
         private boolean executed;
         private boolean canceled;
 
+        /**
+         * Creates a SuccessfulCall with the supplied values.
+         *
+         * @param body the response body returned by the test call
+         */
         SuccessfulCall(T body) {
             this.body = body;
         }

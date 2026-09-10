@@ -57,6 +57,11 @@ public class SettingsFragment extends Fragment {
 
     /**
      * Inflates the settings layout and prepares the click actions.
+     *
+     * @param inflater the inflater used to create the fragment view
+     * @param container the parent container, or null if the view has no parent
+     * @param savedInstanceState the saved fragment state, or null on first creation
+     * @return the root view of the settings fragment
      */
     @Nullable
     @Override
@@ -206,6 +211,8 @@ public class SettingsFragment extends Fragment {
 
             /**
              * Clears the empty-input error once the user starts typing.
+             *
+             * @param s the updated editable text
              */
             @Override
             public void afterTextChanged(Editable s) {
@@ -312,6 +319,9 @@ public class SettingsFragment extends Fragment {
             call.enqueue(new Callback<>() {
                 /**
                  * Handles the logout response from the backend.
+                 *
+                 * @param call the request that completed
+                 * @param response the HTTP response returned by the server
                  */
                 @Override
                 public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
@@ -334,6 +344,9 @@ public class SettingsFragment extends Fragment {
 
                 /**
                  * Handles network failures while logging out on all devices.
+                 *
+                 * @param call the request that completed
+                 * @param throwable the cause of the request failure
                  */
                 @Override
                 public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {
@@ -380,6 +393,9 @@ public class SettingsFragment extends Fragment {
             call.enqueue(new Callback<>() {
                 /**
                  * Handles the delete-account response from the backend.
+                 *
+                 * @param call the request that completed
+                 * @param response the HTTP response returned by the server
                  */
                 @Override
                 public void onResponse(@NonNull Call<BasicResponse> call, @NonNull Response<BasicResponse> response) {
@@ -402,6 +418,9 @@ public class SettingsFragment extends Fragment {
 
                 /**
                  * Handles network failures during account deletion.
+                 *
+                 * @param call the request that completed
+                 * @param throwable the cause of the request failure
                  */
                 @Override
                 public void onFailure(@NonNull Call<BasicResponse> call, @NonNull Throwable throwable) {

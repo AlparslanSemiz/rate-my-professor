@@ -44,6 +44,11 @@ public class APIServiceHttpIntegrationTest {
     private MockWebServer server;
     private APIService apiService;
 
+    /**
+     * Initializes the fixtures required by each test.
+     *
+     * @throws IOException if the operation cannot complete
+     */
     @Before
     public void setUp() throws IOException {
         server = new MockWebServer();
@@ -61,11 +66,21 @@ public class APIServiceHttpIntegrationTest {
                 .create(APIService.class);
     }
 
+    /**
+     * Releases the resources created for each test.
+     *
+     * @throws IOException if the operation cannot complete
+     */
     @After
     public void tearDown() throws IOException {
         server.shutdown();
     }
 
+    /**
+     * Verifies that request login sends JSON body and parses server response.
+     *
+     * @throws Exception if the operation cannot complete
+     */
     @Test
     public void requestLoginSendsJsonBodyAndParsesServerResponse() throws Exception {
         server.enqueue(new MockResponse()
@@ -86,6 +101,11 @@ public class APIServiceHttpIntegrationTest {
         assertEquals("/auth/request-login", request.getPath());
     }
 
+    /**
+     * Verifies that login sends token and parses rejected response.
+     *
+     * @throws Exception if the operation cannot complete
+     */
     @Test
     public void loginSendsTokenAndParsesRejectedResponse() throws Exception {
         server.enqueue(new MockResponse()
@@ -101,6 +121,11 @@ public class APIServiceHttpIntegrationTest {
         assertFalse(response.body().success());
     }
 
+    /**
+     * Verifies that get professors parses professor list from JSON.
+     *
+     * @throws Exception if the operation cannot complete
+     */
     @Test
     public void getProfessorsParsesProfessorListFromJson() throws Exception {
         server.enqueue(new MockResponse()
@@ -117,6 +142,11 @@ public class APIServiceHttpIntegrationTest {
         assertEquals("Ada", response.body().professors().get(0).firstName);
     }
 
+    /**
+     * Verifies that get lectures parses lecture list from JSON.
+     *
+     * @throws Exception if the operation cannot complete
+     */
     @Test
     public void getLecturesParsesLectureListFromJson() throws Exception {
         server.enqueue(new MockResponse()
@@ -136,6 +166,11 @@ public class APIServiceHttpIntegrationTest {
         assertEquals(SemesterSeason.WS, response.body().lectures().get(0).semesterSeason());
     }
 
+    /**
+     * Verifies that get comments parses comments with date.
+     *
+     * @throws Exception if the operation cannot complete
+     */
     @Test
     public void getCommentsParsesCommentsWithDate() throws Exception {
         server.enqueue(new MockResponse()
@@ -155,6 +190,11 @@ public class APIServiceHttpIntegrationTest {
         assertEquals(2026, comment.createdAt().getYear());
     }
 
+    /**
+     * Verifies that get ratings parses average ratings.
+     *
+     * @throws Exception if the operation cannot complete
+     */
     @Test
     public void getRatingsParsesAverageRatings() throws Exception {
         server.enqueue(new MockResponse()

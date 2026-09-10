@@ -11,6 +11,12 @@ import android.net.NetworkCapabilities;
 public class NetworkUtils {
     private NetworkUtils() {}
 
+    /**
+     * Checks whether Android reports a validated active network.
+     *
+     * @param context the Android context used to access resources and services
+     * @return true if the active network has validated internet access; false otherwise
+     */
     public static boolean isInternetAvailable(Context context) {
         ConnectivityManager cm =
                 (ConnectivityManager) context.getSystemService(

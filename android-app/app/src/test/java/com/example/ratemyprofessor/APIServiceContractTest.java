@@ -24,6 +24,9 @@ import retrofit2.http.Header;
 @RunWith(RobolectricTestRunner.class)
 public class APIServiceContractTest {
 
+    /**
+     * Verifies that retrofit client uses configured base URL and caches instance.
+     */
     @Test
     public void retrofitClientUsesConfiguredBaseUrlAndCachesInstance() {
         Retrofit first = RetrofitClient.getClient();
@@ -36,6 +39,9 @@ public class APIServiceContractTest {
         assertSame(first, second);
     }
 
+    /**
+     * Verifies that API service interface is valid retrofit definition.
+     */
     @Test
     public void apiServiceInterfaceIsValidRetrofitDefinition() {
         Retrofit retrofit = RetrofitClient.getClient();
@@ -48,6 +54,9 @@ public class APIServiceContractTest {
         assertNotNull(service);
     }
 
+    /**
+     * Verifies that secure routes must have authorization header.
+     */
     @Test
     public void secureRoutesMustHaveAuthorizationHeader() {
         Method[] methods = APIService.class.getDeclaredMethods();
