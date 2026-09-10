@@ -1143,7 +1143,7 @@ against the actual call sites listed above.
 | Path / verb | Where it is mentioned | Status |
 | --- | --- | --- |
 | `GET /activity-logs`, `GET /activity-logs/meta` | `src/domain/auditLog.ts:5-7` (comment only) | **Not called.** The Activity Log screen was removed; a routing test asserts the route is gone (`src/App.integration.test.tsx:194-212`). |
-| `GET /data/lectures/all`, `GET /data/professor/all` | `src/api/catalog/CatalogService.ts:29-31` (comment only) | **Not called.** The panel deliberately reads the active-only public endpoints instead. |
+| `GET /data/lectures/all`, `GET /data/professor/all` | `src/api/catalog/CatalogService.ts:29-31` (comment only) | **Not called yet — this row is scheduled to go.** Reading the active-only endpoints instead was reasonable while nothing could deactivate a row; the catalogue form changed that, and the cost is F-42: a deactivated lecture or professor leaves every screen the panel has, taking the id that `PATCH {"active": true}` needs with it. Decided 10 September 2026 that the panel moves its catalogue list onto these two (`docs/adminweb-tasks.md` §2b), on the **unprefixed** paths, with the bearer token. They are admin-only, they return every row with `active`, and they answer today. When the panel ships it, the two routes move into the `consumer-contract` block below and this row is deleted. |
 | `POST /data/lectures`, `POST /data/professor` | Not referenced in `src/` at all | **Not called.** The panel has no catalogue-creation UI. |
 | `POST /auth/logout-all` | Not referenced in `src/` at all | **Not called.** |
 | `GET /admins/validate` | Not referenced in `src/` at all | **Not called.** This answers the open question in `docs/adminweb-tasks-from-backend.md:135` — the backend may delete it. |

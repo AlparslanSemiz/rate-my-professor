@@ -14,6 +14,12 @@ got it `403` on the preflight. It builds with an empty base now, so the calls ar
 Nothing else on this page moved — no route, no field and no response shape has changed since
 the last revision.
 
+**Also revised 10 September:** [task 2b](#2b-deactivating-a-lecture-or-professor-hides-it-from-your-only-list--f-42)
+now carries the measurement you asked for and three costed options for F-42. The short answer
+is that the endpoints you need already exist, already answer in production and are already
+admin-only, so nothing is blocking you — and one instruction on that page was wrong and has
+been corrected. Again, no API change: nothing was implemented in that pass.
+
 ## What changed, in one paragraph
 
 The session you get now depends on **which login endpoint you called**, not on whether the
@@ -279,38 +285,290 @@ gets deleted. That is deliberate: it is how we find out.
 
 ## 2b. Deactivating a lecture or professor hides it from your only list — F-42
 
-Not a backend defect, and not a field name this time: it is which of two routes you read.
+**Answered 10 September 2026. Nothing in the backend is blocking you, and nothing has to be
+built here first.** You asked for this measured rather than guessed, so below is the
+measurement, three options with their real costs, and a recommendation. **No code was written
+in this pass and no public behaviour has changed.**
 
-`GET /data/lectures` and `GET /data/professor` filter to `active = true`. That is what they
-are for — the app must not show a retired lecture. **The panel reads only those two**, so when
-an administrator sets `active: false` from the catalogue form the row leaves the list and there
-is no screen left that can see it. The `PATCH` that would set it back needs the id, and the id
-is only on the row that has just disappeared.
+### The finding, unchanged
 
-The pair that exists for exactly this already answers:
-
-- [ ] Read `GET /data/lectures/all` and `GET /data/professor/all` on the catalogue screen —
-      `/admin/data/lectures/all` and `/admin/data/professor/all` once task 2 is done. They
-      return active and inactive rows, and every row carries `active`.
-- [ ] Add an **All / Active / Inactive** filter over that list, defaulting to Active so the
-      screen looks the way it does today. Inactive is the view that does not exist yet, and it
-      is the one that makes `PATCH {"active": true}` reachable.
+`GET /data/lectures` and `GET /data/professor` filter to `active = true`. That is what they are
+for — the app must not show a retired lecture. **The panel reads only those two**, so when an
+administrator sets `active: false` from the catalogue form the row leaves the list and there is
+no screen left that can see it. The `PATCH {"active": true}` that would undo it needs the id,
+and the id is only on the row that has just disappeared.
 
 Nothing is lost when a row is deactivated, which is worth being precise about: the row keeps its
 id, its ratings and its comments, and `PATCH {"active": true}` restores it. The problem is only
-that the id is no longer on any screen you have, so there is nothing to aim the `PATCH` at.
+that the id is no longer on any screen you have, so there is nothing to aim the `PATCH` at. It
+is one-way from the panel, not one-way in the system.
 
-Your own contract document records `/data/lectures/all` and `/data/professor/all` as **"Not
-called. The panel deliberately reads the active-only public endpoints instead."** That was a
-reasonable choice while nothing could deactivate a row; the catalogue form is what changed it.
-Neither side is wrong on its own — this is a gap between two sensible decisions, which is why no
-test on either side sees it.
+### What was measured
 
-**Until this is done, treat the `active` switch as one-way in the panel.** The backend can
-reverse it, but only through a request the panel does not currently make.
+**1. The unprefixed `/all` twins already exist, and have since the split.**
+[`ModerationCatalogController:75-86`](../src/main/java/com/pse/moderation/controller/ModerationCatalogController.java#L75-L86)
+maps both reads twice:
 
-**Scheduling:** this is agreed for the admin panel's deferred list, to be picked up **after
-submission**. Until then it is a known limitation rather than an open bug.
+```java
+@GetMapping({"/admin/data/lectures/all", "/data/lectures/all"})
+@GetMapping({"/admin/data/professor/all", "/data/professor/all"})
+```
+
+That is the same double mapping `GET /auth/me` and `POST /answers/report` carry, and it arrived
+with `5a11d29 split the admin API from the app API` — it is not something this pass added. **The
+option that looked cheapest on your list is already shipped**; option A below is therefore a
+documentation correction plus your own work, not a backend change.
+
+**2. It answers on the deployed host today.** Curled against `https://ratemyprofessor.dev` on
+10 September 2026, with the serving layer named from the response headers the way F-43 does it:
+
+| Request | Status | Body | Headers say |
+| --- | --- | --- | --- |
+| `GET /admin/data/lectures/all` | `200` | `text/html` — your `index.html`, title *RateMyProfessor Admin Panel* | `cache-control: no-store`, `x-content-type-options: nosniff`, `x-frame-options: DENY`, `referrer-policy: same-origin`, plus `etag`/`last-modified` — **the panel's nginx** |
+| `GET /data/lectures/all` | `401` | `{"message":"Not logged in","success":false}` | `vary: Origin`, `pragma: no-cache`, `expires: 0` — **this backend** |
+| `GET /data/professor/all` | `401` | same | **this backend** |
+| `GET /data/lectures` | `200` | `Found 92 lectures` | **this backend** |
+
+F-43 holds exactly as recorded, and the pair that is reachable in production is the
+**unprefixed** one. The `401` is the good answer here: it means the request reached the API and
+was refused for want of a token, rather than being swallowed by a static server.
+
+**3. Authorization is unchanged and stays in the security chain.**
+[`SecurityConfig:143-147`](../src/main/java/com/pse/config/SecurityConfig.java#L143-L147) matches
+`GET /data/lectures/all` and `GET /data/professor/all` with `hasRole("ADMIN")`, so these two
+reads are admin-only while the rest of `GET /data/**` is public. **Send your bearer token**: an
+anonymous call is the `401` above, and a student token is a `403`.
+
+**4. The response shape is the one you already parse.** Both `/all` routes return the same DTOs
+through the same mappers as the lists you read now — `LecturesResponse` and `ProfessorsResponse`
+— and are ordered in the database query, not in the response builder
+([`LectureService:208-216`](../src/main/java/com/pse/lecture/service/LectureService.java#L208-L216),
+[`ProfessorService:60-70`](../src/main/java/com/pse/professor/service/ProfessorService.java#L60-L70)):
+lectures by name, professors by last name then first name. Every field your contract document
+lists for `GET /data/lectures` and `GET /data/professor` is present, `active` included — and
+your mapper already reads `active`, because the active-only lists carry it too. **No new field,
+no new shape, no new parsing.**
+
+**5. Both routes are already pinned by tests here**, so this is not a surface that can quietly
+change under you: `AdminApiIntegrationTests:1624-1643` asserts anonymous `401` / student `403` /
+admin `200` on both unprefixed paths, `AdminApiPathSplitTests:90-91` covers the `/admin` twins,
+and `OpenApiResponseValidationTests:68-69` validates both responses against the published schema.
+
+**6. Nothing is misbehaving in production yet, and that is measurable.** The public catalogue
+today serves 92 lectures and 132 professors, and **not one row carries `active: false`** —
+including the professors nested inside each lecture. The switch has never been used on the
+deployed data, which is why F-42 has never actually cost anyone a row. It is a trap that is
+still armed, not a fire.
+
+### A correction to what this page previously told you
+
+The checklist here used to say to read *"`/admin/data/lectures/all` and `/admin/data/professor/all`
+once task 2 is done"*. **Task 2 is withdrawn** and that instruction is now wrong — it would aim
+both calls at your own static server and get `200 text/html`. Read the **unprefixed** pair, and
+treat that as permanent, for the same reason every other call on this page stays unprefixed.
+
+### The three options, costed
+
+**Option A — read `GET /data/lectures/all` and `GET /data/professor/all`.** The pattern you
+named: the same double mapping as `/auth/me` and `/answers/report`.
+
+- **Routes affected: none.** Both already exist, both already reachable, both already admin-only.
+- **Backend code: zero.** Backend documentation: this page, the *"Not called"* row in
+  `adminweb-consumer-contract.md:1146`, and the route tables in `admin-api.md:604,611`, which
+  list only the `/admin` form of the pair.
+- **Tests that change: none, until you ship.** When your contract document gains the two rows,
+  `ConsumerContractSweepTests` goes red on purpose in two places — the `admin-web` route count
+  (42 → 44) and `UNCLAIMED_BY_EITHER_CONSUMER` (60 → 58). Both are one-line deliberate edits,
+  and their going red is the sweep doing its job: it is how the backend learns you moved.
+- **Client-visible change: none.** No `CHANGELOG` entry, because nothing about the API changes.
+- **Estimate:** backend ~1 hour, all of it documentation, and it can happen before or after you.
+  Panel ~1 hour, as already estimated on the board: point the catalogue list at `/all` and add
+  an **All / Active / Inactive** filter defaulting to Active, so the screen looks the way it does
+  today and Inactive becomes the view that makes `PATCH {"active": true}` reachable.
+
+**Option B — fix the host routing, F-43's real fix.**
+
+- **Where it lives:** one nginx on the deployment host, which splits `/admin/` to your container
+  and everything else to this backend ([deployment.md](deployment.md#public-address-and-request-path)).
+  Its configuration is version controlled in **none of the three repositories**, so this is not a
+  merge request anywhere; it is a change by whoever owns the VM.
+- **What it would buy for F-42: nothing.** The data you need is already reachable without it.
+  It only makes the documented `/admin/**` paths callable — a documentation-alignment win, not a
+  feature.
+- **Risk:** high, and there is precedent. F-44 broke panel login for a day over the same
+  same-origin surface. Moving the panel off `/admin/` means a new `VITE_BASE_PATH`, a rebuild and
+  a redeploy, and every existing `/admin/` link breaks. Moving the API under `/api` needs a
+  prefix-stripping rule that does not exist — measured: `GET https://ratemyprofessor.dev/api/health`
+  answers this backend's own `404 {"message":"Not found"}`, so an `/api` prefix arrives here
+  intact and unstripped.
+- **Already decided against on 10 September**, with F-44 as the reason. Reopening it is an ADR,
+  not a task.
+- **Estimate:** not ours to give; cross-repo, plus a redeploy, plus the rebuild on your side.
+
+**Option C — a parameter on the existing lists, e.g. `GET /data/lectures?includeInactive=true`.**
+
+- **Files:** `LectureController`, `ProfessorController`, `LectureService` (which already has the
+  private `getLectures(boolean)` this would expose), `ProfessorService` (which would need the
+  same split), `SecurityConfig`, plus the generated OpenAPI schema.
+- **The problem is authorization, and it is not a detail.** Spring's `requestMatchers` match a
+  path and a verb, **not a query parameter**. `GET /data/lectures` must stay public for the app,
+  so the admin-only rule for `includeInactive=true` cannot live in the security chain — it has to
+  become an `isAdmin()` check inside the handler. That is the exact shape this repository already
+  removed and wrote a comment against: `POST /data/professor` used to carry an in-handler check
+  that answered an authenticated non-admin `200 {"success": false}` and an anonymous caller a
+  `500`, because it dereferenced a null principal
+  ([`SecurityConfig:86-91`](../src/main/java/com/pse/config/SecurityConfig.java#L86-L91)).
+  Reintroducing it re-opens a fixed defect. Leaving the parameter open to everyone instead is
+  worse: the app's *"a retired lecture must not be shown"* rule would then be one query parameter
+  away from anybody.
+- **It is also invisible to the sweep that guards these routes.** `ApiAuthorizationMatrixTests`
+  classifies `GET /data/lectures` and `GET /data/professor` as public and calls them without
+  parameters, so a new admin-only behaviour hidden behind a parameter value would pass that sweep
+  without ever being looked at.
+- **Tests that change:** `LectureControllerTests`, `ProfessorControllerTests`, `LectureServiceTests`,
+  `LectureApiIntegrationTests`, `ProfessorApiIntegrationTests`, `OpenApiContractTests` and
+  `AdminApiDocumentationDriftTests` (new parameter in the published schema), plus a new
+  authorization test that the matrix sweep cannot express today. The consumer-contract block is
+  keyed by verb and path and has no column for a query parameter, so its format would move too.
+- **Client-visible: yes.** New request parameter on two public routes → a `CHANGELOG` entry in
+  the same commit, `admin-api.md`, and both consumer contract documents.
+- **Estimate:** ~3–4 hours of code and tests, plus an authorization design question that is worth
+  more than the feature.
+- **Is it cleaner than two parallel list routes?** No. One route whose response depends on the
+  caller's role puts a role decision in a handler instead of in the chain, and makes one path
+  answer two different questions. Two routes make the difference visible in the security
+  configuration, in the OpenAPI document and in your own call sites.
+
+### Decided 10 September 2026: option A
+
+Options B and C were put up with their costs and **both were rejected**. B costs a deployment
+change and buys nothing for this feature; C costs a public contract change, a new authorization
+surface inside a handler and a re-opened defect, to arrive at exactly the same rows. Option A
+needs no backend code at all: the routes exist, they are reachable in production, they are
+admin-only in the security chain, they serve the shape you already parse, and they are pinned by
+three tests.
+
+**The instruction, exactly.**
+
+- [ ] Call **`GET /data/lectures/all`** and **`GET /data/professor/all`**. **Unprefixed — no
+      `/admin`.** `GET /admin/data/lectures/all` is your own static server on the deployed host
+      and comes back `200 text/html`; there is nothing to parse in it and no error to catch.
+      Empty API base, same-origin, exactly like every other call you make today.
+- [ ] **Send the bearer token.** These are the only two reads under `/data` that are not public:
+      the rule is `hasRole("ADMIN")` in `SecurityConfig`, so an anonymous call is
+      `401 {"message":"Not logged in","success":false}` and a non-admin token is `403`. There is
+      no per-request flag and nothing to opt into — an administrator session is the whole
+      requirement.
+- [ ] **Parse them with the mapper you already have.** The response is the same DTO the
+      active-only lists return, through the same mappers: `{"message","success","lectures":[…]}`
+      and `{"message","success","professors":[…]}`. Every field your contract document lists for
+      `GET /data/lectures` and `GET /data/professor` is present and unchanged, and both lists
+      arrive ordered by the database query — lectures by name, professors by last name then
+      first name. **No new field, no new shape, no new parsing.**
+- [ ] **Read `active` on each row.** It is a boolean, it is already in your contract, and on
+      these two routes it is the only thing that distinguishes the extra rows from the ones you
+      see today. `lectures[].active` and `professors[].active`; the professors nested inside a
+      lecture carry their own `active` too.
+- [ ] **Add the All / Active / Inactive filter**, defaulting to **Active**, so the screen looks
+      the way it does today. Inactive is the view that does not exist yet, and it is the one that
+      makes `PATCH {"active": true}` reachable — which is the whole of F-42.
+- [ ] **Do not switch the app-facing screens to `/all`.** The active-only lists are the app's
+      contract, and the point of the pair is that one of them filters.
+
+**Backend side, for the record.** `admin-api.md` now lists both paths for each `/all` read and
+says which one is reachable, and the *"Not called"* row in `adminweb-consumer-contract.md` now
+records the decision instead of the old rationale. **No `CHANGELOG` entry**, because no
+client-visible behaviour changed — this was a documentation correction, not an API change.
+`ConsumerContractSweepTests` will go red when your contract document gains the two rows; that is
+deliberate and it is the backend's cue, not yours. Tell us when you have shipped it and the two
+counts get moved in one commit here.
+
+### A defect found while measuring — F-47, opened, not fixed
+
+**`active = false` is honoured by exactly two queries. Every other route serves and mutates the
+row unchanged.** A `grep` for `isActive()`, `setActive(` and `ActiveTrue` across `src/main/java`
+returns seventeen lines, and the only two that gate anything are the active-only list queries
+themselves: `LectureRepository.findByActiveTrueOrderByNameAsc` and
+`ProfessorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc`. Everything else writes the
+flag, audits it, or copies it into a response. Three consequences, each reachable:
+
+1. **The single reads do not filter.**
+   [`LectureService.getLecture:96-98`](../src/main/java/com/pse/lecture/service/LectureService.java#L96-L98)
+   is a plain `findById`, and
+   [`ProfessorService.getProfessor:82-84`](../src/main/java/com/pse/professor/service/ProfessorService.java#L82-L84)
+   a plain `findWithLecturesById`. Both routes are public
+   (`ApiAuthorizationMatrixTests.PUBLIC_ROUTES:98-101`), so `GET /data/lectures/{id}` on a
+   deactivated lecture answers `200` to an **anonymous** caller. Anyone holding an id — a
+   bookmark, a cached screen, a `lectureId` on a rating — still reads the row.
+2. **A deactivated lecture can still be rated and commented on.**
+   [`RatingService:72`](../src/main/java/com/pse/rating/service/RatingService.java#L72) resolves the
+   target through `lectureService.getById` with no active check, and the comment path does the
+   same. So deactivation does not stop new content arriving on the row.
+3. **A deactivated professor stays visible in the public lecture list.**
+   [`LectureResponseMapper:63-66`](../src/main/java/com/pse/lecture/mapper/LectureResponseMapper.java#L63-L66)
+   sorts `lecture.getProfessors()` without filtering, so a professor who has left
+   `GET /data/professor` is still nested in every active lecture they teach — and still inside the
+   generated `title` string, which is prose and cannot carry a flag.
+
+**Why this is on this page.** Your feature makes "inactive" a state an operator can see and
+choose. Whatever the panel presents as hidden is only half hidden in the app, and (2) is the one
+that produces *new* data on a row somebody has retired.
+
+**Now pinned, deliberately not fixed.** All three are characterization tests as of this pass —
+current behaviour, pinned on purpose, with the open question named in each javadoc:
+
+| Consequence | Test |
+| --- | --- |
+| (1) lecture read | `LectureApiIntegrationTests.getLectureByIdStillServesADeactivatedLectureToAnAnonymousCaller` |
+| (1) professor read | `ProfessorApiIntegrationTests.getProfessorByIdStillServesADeactivatedProfessorToAnAnonymousCaller` |
+| (2) rating | `RatingServiceTests.submitRatingIsAcceptedForADeactivatedLecture` |
+| (2) comment | `CommentServiceTests.submitCommentIsAcceptedForADeactivatedLecture` |
+| (3) staff list and title | `LectureResponseMapperTests.toResponse_deactivatedProfessor_staysInTheListAndInTheTitle` |
+
+Each was written inverted first — asserting the behaviour a fix would produce — and each was run
+and seen **red** before being flipped, so none of them is a test that passes by looking at
+nothing. **Nothing was fixed**: whichever way the product question below is answered, these five
+assertions get inverted rather than deleted, and closing (2) would be client-visible and carry a
+`CHANGELOG` entry.
+
+Nothing was observed misbehaving in production, for the reason in measurement 6 — there are no
+inactive rows there at all.
+
+### The product question behind F-47, which is yours as much as ours
+
+**Does `active = false` mean *hidden from the catalogue*, or *retired*?** Nobody has answered
+that, and the three consequences above are not the same kind of thing until somebody does:
+
+- **Hidden from the catalogue** — a display rule. Then the current behaviour is right in all
+  three places, F-47 closes as "working as intended", and the only thing that changes is this
+  documentation. Your Inactive view is then exactly what the flag was always for.
+- **Retired** — a lifecycle state. Then (1) and (2) are defects: a row nobody can find in the
+  catalogue is still readable by id by an anonymous caller, and still collecting new ratings and
+  comments. (2) is the one that matters, because it produces *new* data on a row an operator has
+  deliberately taken out of circulation.
+
+**(3) is the one likely to be deliberate either way.** Who taught a lecture is a fact about the
+past; filtering a departed professor out of the lecture they actually taught rewrites it, and the
+title string is prose that cannot carry a flag anyway. **(2) reads as an oversight** — nothing in
+the code says it was considered. That distinction is the finding's real content, and it is
+recorded so the next person does not have to re-derive it.
+
+**Why it is on this page:** your feature is what turns "inactive" from a flag nobody sets into a
+state an operator can see and choose, so the answer changes what your Inactive view means. If it
+means *retired*, an Inactive row should probably not be presented as something students can still
+reach. **Decision after submission**; recorded on the board in [TODO.md](TODO.md) as items 37
+(the defect) and 38 (this question), and pinned meanwhile by the five tests above.
+
+**Estimate once decided:** the pins are written, so the remaining cost is the rule itself —
+roughly half a day for the *retired* reading (a filter on two reads plus a guard on two writes,
+five assertions inverted, a `CHANGELOG` entry), and nothing at all for the other.
+
+### Scheduling
+
+Unchanged: the panel work is agreed for the deferred list, **after submission**. What changed
+today is that it is no longer waiting on anything from the backend. Until it is done, **treat
+the `active` switch as one-way in the panel** — the backend can reverse it, but only through a
+request the panel does not currently make.
 
 ## 3. Handle a session that ends during the day
 

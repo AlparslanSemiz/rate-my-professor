@@ -1172,6 +1172,39 @@ and one new `RatingCategory` would crash the app's rating screen.
 - **Anything about a third consumer.** Two are inventoried. A client nobody has audited is
   invisible to this layer, and the routes-claimed-by-nobody count is the only hint it gives.
 
+## Characterization: what `active = false` actually stops
+
+Five tests added on 10 September pin [F-47](test-findings.md#f-47--active--false-is-honoured-by-exactly-two-queries-so-a-deactivated-row-is-still-read-still-rated-and-still-shown).
+They assert **current** behaviour on purpose, and each javadoc says so and names the open product
+question (`docs/TODO.md` item 38) rather than implying the behaviour is intended.
+
+Where each one sits, and why it sits there rather than one layer up:
+
+| Claim | Layer | Test | Why this layer |
+| --- | --- | --- | --- |
+| A deactivated lecture is served by id to an anonymous caller | API / role | `LectureApiIntegrationTests.getLectureByIdStillServesADeactivatedLectureToAnAnonymousCaller` | The claim contains "anonymous", so it needs the security chain. A unit test on `LectureService` could only say `findById` does not filter, which is half the sentence. |
+| Same for a professor | API / role | `ProfessorApiIntegrationTests.getProfessorByIdStillServesADeactivatedProfessorToAnAnonymousCaller` | As above. |
+| A deactivated lecture still accepts a rating | Unit | `RatingServiceTests.submitRatingIsAcceptedForADeactivatedLecture` | Pure service logic with a mocked repository: no chain, no database and no route are involved in the rule being pinned. |
+| A deactivated lecture still accepts a comment | Unit | `CommentServiceTests.submitCommentIsAcceptedForADeactivatedLecture` | As above. |
+| A deactivated professor stays in the lecture's staff list and in its `title` | Unit | `LectureResponseMapperTests.toResponse_deactivatedProfessor_staysInTheListAndInTheTitle` | The mapper is a pure function; the fixture is a `LinkedHashSet`, for the reason the tests around it already record. |
+
+**The two API-layer tests assert the pair, not the route.** Each performs the single read *and*
+the list it disappeared from, in one test, because the finding is the difference between them. A
+test that only asserted `200` on the single read would pass just as well if the list stopped
+filtering.
+
+**Each was seen red before it was seen green.** All five were written inverted — asserting what a
+fix would produce — run, and flipped only once the failure had been observed. The reds are quoted
+in the finding, and they are the reason these are not five tests that pass by looking at nothing.
+
+**Two of them state the rule twice on purpose.** The service tests end in
+`verify(deactivated, never()).isActive()`: the service does not ask. The `lenient()` stub above it
+is the same evidence in another form — a strict stub of `isActive()` would fail as an unnecessary
+stub, because nothing calls it.
+
+**Nothing here belongs in the integration layer.** None of the five asks a question H2 cannot
+answer, and three of them touch no database at all.
+
 ## Where the suite stops
 
 *Deliberately uncovered* below names the **classes** nobody tests and why. This section names

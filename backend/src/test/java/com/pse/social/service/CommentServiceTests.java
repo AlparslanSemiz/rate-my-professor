@@ -90,6 +90,48 @@ import static org.mockito.Mockito.*;
         verifyNoInteractions(auditWriter);
     }
 
+    /**
+     * Characterization of F-47, the comment half of the second consequence. <b>Current
+     * behaviour, not intended behaviour</b> -- see items 37 and 38 in {@code docs/TODO.md}, and
+     * {@code RatingServiceTests.submitRatingIsAcceptedForADeactivatedLecture}, which pins the
+     * same rule on the other write path.
+     *
+     * <p>{@code submitComment} resolves the lecture through {@code LectureService.getById}
+     * and checks only that it exists, so a deactivated lecture keeps collecting comments
+     * while being invisible in the catalogue.
+     *
+     * <p>The {@code lenient()} is the finding: the service never asks. Invert this test when
+     * the rule arrives; do not delete it.
+     */
+    @Test
+    void submitCommentIsAcceptedForADeactivatedLecture() {
+
+        Student student = mock(Student.class);
+        Lecture deactivated = mock(Lecture.class);
+        CommentSubmitRequest request = mock(CommentSubmitRequest.class);
+
+        UUID lectureId = UUID.randomUUID();
+
+        lenient().when(deactivated.isActive()).thenReturn(false);
+
+        when(request.lectureID()).thenReturn(lectureId.toString());
+        when(request.content()).thenReturn("still reachable");
+        when(lectureService.getById(lectureId)).thenReturn(deactivated);
+        lenient().when(deactivated.getCode()).thenReturn("ALT");
+        lenient().when(deactivated.getName()).thenReturn("Alte Vorlesung");
+
+        BasicResponse response = commentService.submitComment(student, request);
+
+        assertThat(response.success()).isTrue();
+
+        ArgumentCaptor<Comment> captor = ArgumentCaptor.forClass(Comment.class);
+        verify(commentRepository).save(captor.capture());
+        assertThat(captor.getValue().getLecture()).isSameAs(deactivated);
+
+        verify(deactivated, never()).isActive();
+    }
+
+
 
 
     @Test

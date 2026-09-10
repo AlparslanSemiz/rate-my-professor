@@ -141,7 +141,11 @@ defect; it found a different kind.
 
 **F-42 has a number but is not one of the fifty.** It is a defect in the admin panel that this
 API cannot pin with a test, recorded [at the end of the findings](#f-42--deactivating-a-catalogue-row-hides-it-from-the-only-list-the-panel-reads)
-with the reason it is not an entry.
+with the reason it is not an entry. **Neither are F-43 to F-47**, which came after this register
+closed. Four of those five are in deployment configuration or in the panel; the exception is
+[F-47](#f-47--active--false-is-honoured-by-exactly-two-queries-so-a-deactivated-row-is-still-read-still-rated-and-still-shown),
+which is in this application and **is** pinned — five characterization tests, awaiting a product
+decision rather than a fix.
 
 **Two entries are open: F-29, which no commit can close, and F-34, which is a product
 decision rather than a defect.** Everything else is fixed or closed by a recorded decision.
@@ -2155,6 +2159,77 @@ outside could not tell.**
 
 **Found by** running V3 of the deployment verification — grepping the live bundle for the URL
 that was supposed to be gone — and getting the pre-fix file back.
+
+---
+
+### F-47 — `active = false` is honoured by exactly two queries, so a deactivated row is still read, still rated and still shown
+
+**Not counted in the fifty above**, which is the register the Kontrollphase pass closed. Unlike
+[F-42](#f-42--deactivating-a-catalogue-row-hides-it-from-the-only-list-the-panel-reads),
+[F-43](#f-43--the-deployed-host-serves-the-panel-at-admin-so-every-admin-api-route-is-unreachable-in-production)
+and F-44, that is **not** for want of a test: this one is in this application, it is pinnable
+here, and it is pinned — five characterization tests, named below.
+
+**What.** Deactivation is a list filter and nothing more. A `grep` for `isActive()`, `setActive(`
+and `ActiveTrue` across `src/main/java` returns seventeen lines, and the only two that gate
+anything are the active-only list queries themselves — `LectureRepository.findByActiveTrueOrderByNameAsc`
+and `ProfessorRepository.findByActiveTrueOrderByLastNameAscFirstNameAsc`. Everything else writes
+the flag, audits it, or copies it into a response. Three consequences follow, and each is reachable:
+
+1. **The single reads do not filter.** `LectureService.getLecture:96-98` is a plain `findById`,
+   `ProfessorService.getProfessor:82-84` a plain `findWithLecturesById`, and both routes are
+   public (`ApiAuthorizationMatrixTests.PUBLIC_ROUTES:98-101`). So a deactivated row is served in
+   full to a caller who is not signed in and holds nothing but the id — and ids outlive the list,
+   on a bookmark, on a cached screen, or as `lectureId` on a rating.
+2. **A deactivated lecture still takes new content.** `RatingService:72` and
+   `CommentService:70` both resolve their target through `LectureService.getById` and check only
+   that it exists.
+3. **A deactivated professor stays in the public lecture list.** `LectureResponseMapper:63` sorts
+   `lecture.getProfessors()` without filtering, so someone who has left `GET /data/professor` is
+   still nested in every active lecture they teach, and still inside the generated `title`, which
+   is prose and cannot carry a flag.
+
+**Pinned by**, one row per consequence, each a characterization test whose javadoc says so:
+
+| | Test |
+| --- | --- |
+| (1) lecture | `LectureApiIntegrationTests.getLectureByIdStillServesADeactivatedLectureToAnAnonymousCaller` |
+| (1) professor | `ProfessorApiIntegrationTests.getProfessorByIdStillServesADeactivatedProfessorToAnAnonymousCaller` |
+| (2) rating | `RatingServiceTests.submitRatingIsAcceptedForADeactivatedLecture` |
+| (2) comment | `CommentServiceTests.submitCommentIsAcceptedForADeactivatedLecture` |
+| (3) staff list and title | `LectureResponseMapperTests.toResponse_deactivatedProfessor_staysInTheListAndInTheTitle` |
+
+**Each was seen red before it was green.** All five were written inverted first — asserting the
+behaviour a fix would produce — run, and flipped only after the failure was observed:
+`Status expected:<404> but was:<200>` for the two reads, `[nothing was thrown]` for the two
+writes, and `["Abt=false", "Sanders=true"] to contain exactly ["Sanders=true"]` for the mapper.
+The two service tests state the finding a second way, as `verify(deactivated, never()).isActive()`
+— the service does not ask — and the `lenient()` stub above that line exists for the same reason:
+a strict stub of `isActive()` would fail as an unnecessary one, which is itself the evidence.
+
+**Deliberately not fixed, and the reason is not caution.** The three are not the same kind of
+thing until one question is answered: **does `active = false` mean *hidden from the catalogue*,
+or *retired*?** If it is a display rule, the current behaviour is right in all three places and
+this closes as working as intended. If it is a lifecycle state, (1) and (2) are defects. **(3) is
+likely deliberate either way** — who taught a lecture is a fact about the past, and filtering a
+departed professor out of the lecture they actually taught rewrites it. **(2) reads as an
+oversight**: nothing in either service says the question was considered. That distinction is the
+finding's real content; without it a later reader has only "three behaviours, unfixed" and has to
+re-derive which of them anyone meant. Recorded as `docs/TODO.md` item 38, for decision after
+submission. Closing (2) would be client-visible and carries a `CHANGELOG` entry, and every one of
+the five assertions is written to be **inverted, not deleted**.
+
+**Nothing is misbehaving in production, and that is measured rather than assumed.** Curled on
+10 September: `GET /data/lectures` serves 92 lectures and `GET /data/professor` 132 professors,
+and **not one row carries `active: false`** — including the professors nested inside each
+lecture. The flag has never been set on the deployed data. That is the same fact that explains
+why F-42 has never actually cost anyone a row: both findings are traps that are still armed
+rather than fires, and both become live the moment the panel's catalogue form is used in anger.
+
+**Found by** reading every consumer of the `active` flag while measuring F-42 for the admin
+panel — a pass scoped to measurement and options, `docs/adminweb-tasks.md` §2b. The method is the
+one F-39, F-40 and F-42 came from, pointed at a *field* rather than at a route: ask what reads it,
+then ask what does not.
 
 ---
 

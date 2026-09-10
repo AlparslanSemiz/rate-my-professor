@@ -172,6 +172,50 @@ class LectureApiIntegrationTests {
                         .value("Lineare Algebra 1"));
     }
 
+    /**
+     * Characterization of F-47, first of three. <b>This pins current behaviour, not intended
+     * behaviour.</b> Whether a deactivated lecture should still be readable by id is an open
+     * product question -- "does {@code active = false} mean hidden from the catalogue, or
+     * retired?" -- recorded as item 38 in {@code docs/TODO.md}, with the defect itself as item
+     * 37, and answered after submission.
+     *
+     * <p>{@code GET /data/lectures} filters to {@code active = true}, which the test above
+     * pins. {@code LectureService.getLecture} does not: it is a plain {@code findById}, and
+     * the route is public. So the row the catalogue hides is served in full to a caller who
+     * is not signed in at all and holds nothing but the id -- and ids outlive the list, on a
+     * bookmark, on a cached screen, or as {@code lectureId} on a rating.
+     *
+     * <p>Written to be inverted rather than deleted. If the answer is "retired", the two
+     * expectations below become {@code isNotFound()} and {@code $.lecture} absent, and that
+     * is a client-visible change carrying a {@code CHANGELOG} entry.
+     */
+    @Test
+    void getLectureByIdStillServesADeactivatedLectureToAnAnonymousCaller() throws Exception {
+
+        Lecture inactive = new Lecture();
+        inactive.setName("Alte Vorlesung");
+        inactive.setCode("ALT");
+        inactive.setSemesterYear(2024);
+        inactive.setSemesterSeason(SemesterSeason.SS);
+        inactive.setActive(false);
+
+        inactive = lectureRepository.saveAndFlush(inactive);
+
+        // No Authorization header on purpose: the anonymous half is the whole point.
+        mockMvc.perform(get("/data/lectures/{id}", inactive.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.lecture.name").value("Alte Vorlesung"))
+                .andExpect(jsonPath("$.lecture.active").value(false));
+
+        // The list it disappeared from, asserted in the same test so the pair is the finding
+        // rather than two separate facts about two routes.
+        mockMvc.perform(get("/data/lectures"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lectures", hasSize(0)));
+    }
+
+
 
     @Test
     void getLectureReturnsLectureWhenItExists() throws Exception {

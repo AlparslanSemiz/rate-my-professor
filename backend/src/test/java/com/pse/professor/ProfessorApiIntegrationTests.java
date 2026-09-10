@@ -168,6 +168,43 @@ class ProfessorApiIntegrationTests {
                         .value("Kühnlein"));
     }
 
+    /**
+     * Characterization of F-47, and the mirror of
+     * {@code LectureApiIntegrationTests.getLectureByIdStillServesADeactivatedLectureToAnAnonymousCaller}.
+     * <b>Current behaviour, not intended behaviour</b>: the open product question is recorded
+     * as item 38 in {@code docs/TODO.md}, the defect as item 37.
+     *
+     * <p>{@code GET /data/professor} filters to {@code active = true}, which the test above
+     * pins; {@code ProfessorService.getProfessor} is a plain {@code findWithLecturesById} and
+     * the route is public, so the deactivated row is served to an anonymous caller holding
+     * the id.
+     *
+     * <p>Invert, do not delete: if the answer is "retired", this becomes {@code isNotFound()}
+     * with {@code $.professor} absent.
+     */
+    @Test
+    void getProfessorByIdStillServesADeactivatedProfessorToAnAnonymousCaller() throws Exception {
+
+        Professor inactive = new Professor();
+        inactive.setFirstName("Grace");
+        inactive.setLastName("Hopper");
+        inactive.setActive(false);
+
+        inactive = professorRepository.saveAndFlush(inactive);
+
+        // No Authorization header on purpose.
+        mockMvc.perform(get("/data/professor/{id}", inactive.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.professor.lastName").value("Hopper"))
+                .andExpect(jsonPath("$.professor.active").value(false));
+
+        mockMvc.perform(get("/data/professor"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.professors", hasSize(0)));
+    }
+
+
 
     @Test
     void getProfessorReturnsProfessorWhenItExists() throws Exception {

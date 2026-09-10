@@ -95,6 +95,61 @@ class RatingServiceTests {
         verifyNoInteractions(auditWriter);
     }
 
+    /**
+     * Characterization of F-47, second of three. <b>This pins current behaviour, not intended
+     * behaviour</b>: whether {@code active = false} should close a lecture to new content is
+     * the open product question recorded as item 38 in {@code docs/TODO.md}, the defect as
+     * item 37.
+     *
+     * <p>{@code submitRating} resolves its target through {@code LectureService.getById} and
+     * checks only that it exists. Deactivating a lecture therefore removes it from the
+     * catalogue while leaving it open to new ratings from anyone who still holds the id --
+     * this is the consequence of the three that produces <em>new</em> data on a row somebody
+     * has retired, and the one that reads as an oversight rather than as a decision.
+     *
+     * <p>The {@code lenient()} below is the finding stated as a stub: the service never asks
+     * whether the lecture is active, so a strict stub would fail as an unnecessary one. When
+     * the rule arrives, that {@code lenient()} becomes a real stub and the assertions below
+     * become an {@code ApiException}. Invert it; do not delete it.
+     */
+    @Test
+    void submitRatingIsAcceptedForADeactivatedLecture() {
+
+        Student student = mock(Student.class);
+        Lecture deactivated = mock(Lecture.class);
+        RatingRequest request = mock(RatingRequest.class);
+        RatingTopicRequest organization = mock(RatingTopicRequest.class);
+
+        UUID studentId = UUID.randomUUID();
+        UUID lectureId = UUID.randomUUID();
+
+        lenient().when(deactivated.isActive()).thenReturn(false);
+
+        when(student.getId()).thenReturn(studentId);
+        when(request.lectureId()).thenReturn(lectureId);
+        when(request.topics()).thenReturn(List.of(organization));
+        when(organization.category()).thenReturn(RatingCategory.ORGANIZATION);
+        when(organization.value()).thenReturn(4.0);
+        when(lectureService.getById(lectureId)).thenReturn(deactivated);
+        when(ratingRepository.findByStudentIdAndLectureId(studentId, lectureId))
+                .thenReturn(Optional.empty());
+        when(deactivated.getCode()).thenReturn("ALT");
+        when(deactivated.getName()).thenReturn("Alte Vorlesung");
+        when(deactivated.getId()).thenReturn(lectureId);
+
+        BasicResponse response = ratingService.submitRating(student, request);
+
+        assertThat(response.success()).isTrue();
+
+        ArgumentCaptor<Rating> captor = ArgumentCaptor.forClass(Rating.class);
+        verify(ratingRepository).saveAndFlush(captor.capture());
+        assertThat(captor.getValue().getLecture()).isSameAs(deactivated);
+
+        // Said directly, because it is the defect rather than a side effect of it.
+        verify(deactivated, never()).isActive();
+    }
+
+
 
     @Test
     void submitRatingCreatesNewRatingAndAddsOverallTopic() {

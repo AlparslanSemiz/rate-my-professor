@@ -598,17 +598,24 @@ disappears from both**, so the panel has no way back to it through those endpoin
 the `/all` variants below instead when building the management view; they are
 admin-only and return every row regardless of `active`.
 
+**Both `/all` reads answer on two paths**, the `/admin` one and the unprefixed one, from a
+single handler. That matters for a deployed client rather than for this document: on the
+deployed host `/admin/**` is the panel's own static server (F-43), so **the unprefixed path
+is the one a panel can actually call** — `GET /admin/data/lectures/all` comes back as the
+panel's `index.html`. The panel's catalogue view therefore reads `GET /data/lectures/all`
+and `GET /data/professor/all`, and sends its bearer token with them.
+
 | Method and path | Body | Notes |
 | --- | --- | --- |
 | `GET /data/lectures` | — | Public. Active lectures only. |
-| `GET /admin/data/lectures/all` | — | Admin-only. Every lecture, active or not. |
+| `GET /admin/data/lectures/all`, `GET /data/lectures/all` | — | Admin-only, both paths, one handler (`ModerationCatalogController.getAllLectures`). Every lecture, active or not, ordered by name. The unprefixed path is **not** legacy and is not being retired: it is the one reachable on the deployed host, and it is what the panel calls. `hasRole("ADMIN")` is matched in `SecurityConfig` for the unprefixed path and by the `/admin/**` rule for the other, so the two cannot answer differently. Anonymous is `401`, a student token is `403`. |
 | `GET /data/lectures/{id}` | — | Public. An unknown id answers a real HTTP `404 {"message":"Lecture not found","success":false}`. Earlier revisions of this table promised a `200` with a `"lecture":null` body; that was true until 9.09 and the key is gone with it — see the `CHANGELOG`. |
 | `POST /admin/data/lectures` | `{"name","code","semesterYear","semesterSeason","active","professorIds"}` | Refused with a plain `403` by the security chain when the caller is not an admin. `active` is currently ignored; new lectures are always created active, but the field must be **present** — omitting it answers `400 {"message":"Invalid request"}`. A duplicate name answers `409`, and a `professorIds` entry that does not resolve answers `404`; both keep the body they always had — `{"message", "success": false}`. `LECTURE_CREATED` audit event, which is deliberately **not** revertible: undoing a creation is a deletion. |
 | `POST /data/lectures` | same | **Legacy, removed once the panel has moved.** Same write, same `409` and `404`, and refused with a plain `403` by the security chain exactly like the `/admin` version. Earlier revisions of this table described a `200 {"success":false}` here; that was never true of this path — `SecurityConfig` has always matched it. |
 | `PATCH /admin/data/lectures/{id}` | any subset of `{"name","code","semesterYear","semesterSeason","active","lectureType","professorIds"}` | `LECTURE_UPDATED` audit event. |
 | `DELETE /admin/data/lectures/{id}` | none | Deletes the lecture and every comment, answer and rating filed under it. Use `active = false` instead to take a lecture out of the app while keeping its history. `LECTURE_DELETED` audit event. |
 | `GET /data/professor` | — | Public. Active professors only. |
-| `GET /admin/data/professor/all` | — | Admin-only. Every professor, active or not. |
+| `GET /admin/data/professor/all`, `GET /data/professor/all` | — | Admin-only, both paths, one handler (`ModerationCatalogController.getAllProfessors`). Every professor, active or not, ordered by last name then first name. The unprefixed path is the one reachable on the deployed host and is not being retired — same rule and same refusals as the lecture pair above. |
 | `GET /data/professor/{id}` | — | Public. An unknown id answers `404 {"message":"Professor not found","success":false}`, with no `"professor"` key — it answered `200 {"success":false}` until 9.09. |
 | `GET /data/professor/id?firstName=&lastName=` | — | Public. Returns a bare UUID string, or `null` if no match — not wrapped in a response object. |
 | `POST /admin/data/professor` | `{"firstName","lastName","lectureIDs"}` | Refused with a plain `403`, like `POST /admin/data/lectures`. A duplicate first+last name answers `409`, and a `lectureIDs` entry that does not resolve answers `404`; both keep the body they always had. `PROFESSOR_CREATED` audit event, not revertible for the same reason. |

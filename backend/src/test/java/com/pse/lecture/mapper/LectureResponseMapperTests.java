@@ -96,6 +96,40 @@ class LectureResponseMapperTests {
                 .isEqualTo("SS26 Algorithmen 1 \u2014 Uebungsleiter 1, Uebungsleiter 2, Peter Sanders");
     }
 
+    /**
+     * Characterization of F-47, third of three. <b>This pins current behaviour, not intended
+     * behaviour</b>, and of the three it is the one most likely to be deliberate: who taught
+     * a lecture is a fact about the past, and hiding it would rewrite it. The open product
+     * question is item 38 in {@code docs/TODO.md}, the defect item 37.
+     *
+     * <p>{@code toResponse} sorts {@code lecture.getProfessors()} without filtering, so a
+     * professor who has left {@code GET /data/professor} is still nested in every active
+     * lecture they teach -- carrying {@code active: false}, which a client can act on -- and
+     * still inside the generated {@code title}, which is prose and cannot carry a flag. The
+     * title is the half worth pinning: it is what a client renders when it renders one string
+     * instead of three.
+     *
+     * <p>Invert, do not delete, if the answer is that the staff list follows the catalogue.
+     */
+    @Test
+    void toResponse_deactivatedProfessor_staysInTheListAndInTheTitle() {
+
+        Professor retired = professor("Gerda", "Abt");
+        retired.setActive(false);
+
+        Lecture lecture = lectureTaughtBy(retired, professor("Peter", "Sanders"));
+
+        LectureResponse response = LectureResponseMapper.toResponse(lecture);
+
+        assertThat(response.professors())
+                .extracting(professor -> professor.lastName() + "=" + professor.active())
+                .containsExactly("Abt=false", "Sanders=true");
+
+        assertThat(response.title())
+                .isEqualTo("SS26 Algorithmen 1 \u2014 Gerda Abt, Peter Sanders");
+    }
+
+
     /** A winter lecture is the case a client formatting this itself gets wrong. */
     @Test
     void toResponse_winterSemester_labelsBothYears() {
