@@ -45,7 +45,17 @@ export default function RecentRegistrations({
         <Text fw={600} c={chrome.textPrimary} size="sm">
           Newest members
         </Text>
-        <UnstyledButton style={{ cursor: 'pointer' }} onClick={onViewAll}>
+        {/*
+          The arrow is drawn, not announced. Without the label the control's accessible name was
+          "See everyone \u2192" - a glyph doing an icon's job, which `docs/DESIGN.md` bans for
+          `@tabler/icons-react`. Replacing it with an icon is a visual change; naming the control
+          is not, so the glyph stays on screen and stops being part of the name.
+        */}
+        <UnstyledButton
+          style={{ cursor: 'pointer' }}
+          onClick={onViewAll}
+          aria-label="See everyone"
+        >
           <Text size="xs" c={KIT.green}>
             See everyone →
           </Text>

@@ -88,17 +88,22 @@ own `fetch` double.
 | Layer | Pattern | Files | Tests |
 | --- | --- | --- | --- |
 | Unit | `*.unit.test.*` | 28 | 182 |
-| Integration | `*.integration.test.*` | 19 | 956 (+3 skipped) |
-| Routing | `src/App.integration.test.tsx` (one of the 19) | 1 | 20 |
-| End-to-end | `e2e/*.spec.ts`, Playwright, `npm run test:e2e` | 10 | 68 |
+| Integration | `*.integration.test.*` | 21 | 1025 (+3 skipped) |
+| Routing | `src/App.integration.test.tsx` (one of the 21) | 1 | 20 |
+| End-to-end | `e2e/*.spec.ts`, Playwright, `npm run test:e2e` | 14 | 177 |
 | Static gates | — | — | `npm run lint`, `npm run check:cycles`, `npm run check:docs`, `npm run typecheck`, `npm run build` |
 
-**Total: 48 files, 1196 tests and 3 skipped, green** (2026-09-09, after the
-five-layer test package), plus **13 Playwright specs, 172 tests** in the end-to-end
+**Total: 49 files, 1207 tests and 3 skipped, green** (2026-09-10, after the
+release-readiness audit), plus **14 Playwright specs, 177 tests** in the end-to-end
 layer, which run separately and are not counted in the Vitest total. Coverage
-**93.09 / 86.61 / 91.56 / 94.76**.
+**93.1 / 86.66 / 91.56 / 94.76**.
 
-The unit count did not move at all — 28 files, 182 tests, exactly as before. Every one
+The audit added one integration file (`WarnForm.integration.test.tsx`, the first
+component test for a surface only a modal can reach), one Playwright spec
+(`document-head.spec.ts`) and one route sweep inside the existing accessibility file.
+
+The paragraph below is about the round before it, and its point still holds: the unit
+count did not move at all — 28 files, 182 tests, exactly as before. Every one
 of the 792 new tests is an integration test, because every layer added this round asks
 what happens when two things meet: a service and a response, a screen and a payload, a
 rendered tree and axe. The three skipped are the list-cardinality cases on the dashboard,
@@ -472,3 +477,57 @@ them is a forecast.
 Every executed scenario and every defect gets a row in
 [testfindings.md](testfindings.md). Fixes are described in `CHANGELOG.md`; the
 finding is then marked resolved and points at the change.
+
+## 11. Release-readiness audit — 2026-09-10
+
+A one-off pass before the hand-in, run as **measure first, then fix only what carries no
+visual risk**. Everything it found is in [testfindings.md](testfindings.md) as `F-043`…`F-060`;
+everything it deliberately left is in [TODO.md](TODO.md) with an estimate. This section
+records what was in scope and — the part worth writing down — what was not, and why.
+
+### What it measured
+
+| # | Question | Answer, in one line |
+| --- | --- | --- |
+| A1 | Does the bundle leak anything, and what does it cost? | **No secrets.** Zero JWTs, zero key-shaped assignments, no backend host baked in. The six admin addresses are there and are [ADR 0010](adr/0010-admin-email-list-in-the-bundle.md)'s accepted case, verified rather than assumed; the seventh hit was the email field's *placeholder*. **Source maps are not published** — Vite's default, confirmed on a clean build. First load ~220 KB gzipped; all 10 screens are code-split per [ADR 0007](adr/0007-route-based-lazy-loading.md). Three dead or dev-only files ship (`F-053`). |
+| A2 | What does the document head say? | `<title>` and `lang` were already right — checked, because a starter default is the usual finding. Description, robots and a tab-sized favicon were missing (`F-043`, fixed). |
+| A3 | Do images and icons carry names? | The panel's **only** `<img>` has `alt` and explicit dimensions; all 14 icon-only `ActionIcon`s have `aria-label`. Two real gaps (`F-044`, `F-045`, both fixed) and one systemic one (`F-051`). |
+| A4 | What happens on a path that does not exist? | **No broken internal link** — the route table was *generated* from `constants/routes.ts` and cross-checked against every navigation target: 9 declared, 9 mounted, 15 targets, no orphans either way. Unknown paths redirect to the dashboard silently (`F-046`); the panel emits no anchors at all (`F-048`). |
+| A5 | Do the forms mark, tie and lock? | Submit locking is sound everywhere. **No form has field-level validation**, so no field is tied to its message (`F-049`); `F-031` is fixed for sign-in only. Four modals are dismissible mid-save (`F-050`). |
+| A6 | Is transport safe? | Reported, not changed. Three headers exist but not on `assets/`; no CSP, no HSTS; HTTPS **unverifiable from this repository** (`F-052`). |
+| A7 | Does the panel obey its own design rules? | Zero emoji, zero `hsl()`/`rgb()`, zero Mantine `shadow=` props. Violations in six categories: `F-055`…`F-060`. Listed, none fixed. |
+
+### What was excluded, and why
+
+The panel is an **internal tool behind a login wall**, not a public marketing site. The
+following were considered and ruled out of scope by that fact, rather than skipped:
+
+- **Privacy policy, terms of service, cookie banner.** The panel sets no cookie for
+  tracking, has no public visitors and collects nothing from anyone who is not already a
+  named operator with a KIT account. The consent surface these documents exist for does
+  not exist here. Any obligation that does apply attaches to the *student app* and its
+  backend, not to this console.
+- **Sitemap, social preview image, Open Graph and Twitter cards.** These exist to make a
+  page findable and attractive when shared. This panel is the opposite case: `F-043` added
+  a `noindex` and a `Disallow: /` precisely so that it is *not* found.
+- **Analytics.** Adding a third-party script to an admin console means sending operator
+  behaviour off-site. That is a decision with a privacy cost and no measurement need — the
+  audit trail already records what operators do, and it stays on the backend.
+- **Marketing CTA, pricing, testimonials.** [DESIGN.md](DESIGN.md) already bans
+  "marketing furniture generally" and "fabricated statistics, testimonials or activity".
+  Nothing here would have a customer to convert.
+- **`robots.txt` — the one exception.** An indexing block *was* wanted and was added. Note
+  `F-047`: under the `/admin/` base path it is served where no crawler reads it, which
+  leaves the meta tag doing the real work.
+- **A 404 screen.** Not a scope exclusion — a deferral. `F-046` records the behaviour and
+  TODO.md prices it at ~2 h. A new screen needs the pass DESIGN.md asks for, and this
+  round changed nothing visual on purpose.
+
+### What this audit is not
+
+It is a **read of the repository plus a clean build**. It did not run against the deployed
+host, so nothing here establishes that HTTPS is enforced, that HSTS is set, or what the
+host-level proxy in front of nginx does — that proxy is not in this repository, and
+`F-052` says so rather than implying coverage. It also did not open a modal or a non-default
+tab while scanning, which is layer 5's standing limit and is how `F-044` survived until a
+component test looked at it directly.

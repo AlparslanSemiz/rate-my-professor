@@ -2,6 +2,119 @@
 
 ## [Unreleased]
 
+### Release-readiness audit: measured everything, changed four things
+
+A pass before the hand-in, run as **measure first, fix only what carries no visual risk**.
+Eighteen findings recorded (`F-043`…`F-060`): **three fixed in the same round and fifteen
+deferred**, each with an estimate in [TODO.md](docs/TODO.md). `F-031`, which predates this
+pass, is closed as well — four fixes in all. What was in scope, and more usefully what was
+ruled out and why, is [testplan.md §11](docs/testplan.md).
+
+The panel is an internal tool behind a login wall, so the public-site checklist does not apply
+to it: no privacy policy, terms, cookie banner, sitemap, social preview, analytics or marketing
+copy. That is written down in the test plan rather than silently skipped, because "we did not
+do it" and "it does not apply" are different answers and only one of them is defensible.
+
+#### `index.html`, `public/robots.txt`, `public/favicon-32.png`
+
+- **Added** `<meta name="description">` and `<meta name="robots" content="noindex,nofollow">`,
+  and a `robots.txt` that disallows everything. An admin console on a public host had nothing
+  discouraging a search index. `F-043`.
+- **Added** `favicon-32.png`, the existing mark resized with ImageMagick — no new artwork. The
+  favicon had been the 512x512, 139,062-byte Play Store launcher icon, which loads correctly
+  and looks right and is 136 KB to fill a 16 px square.
+- **Unchanged on purpose:** `<title>` and `lang="en"`. Both were already correct, which was
+  measured rather than assumed — a Vite starter's leftover `Vite + React + TS` is the usual
+  finding here and this was not one.
+- **Not achieved, and recorded rather than glossed:** the small favicon **cost about 1.5 KB
+  instead of saving 135 KB**, because `BrandMark` still imports the full-size PNG for the mark
+  it draws at 34 px, and the browser used to serve both from that one file. Shrinking that
+  asset is `F-054` and wants a look on a HiDPI display. Separately, under the `/admin/` base
+  path `robots.txt` is served where no crawler reads it, leaving the meta tag as the half that
+  works — `F-047`, and a job for the host proxy.
+
+#### `src/features/users/components/WarnForm.tsx`
+
+- **Fixed** the one unlabelled input in the panel: the warning message field had a placeholder
+  and no accessible name, so a moderator's `Textarea` announced as a bare textbox. Its sibling
+  `WarningEditor` already sets exactly this label, which is what makes it an omission rather
+  than a decision. `F-044`.
+
+#### `src/features/dashboard/components/RecentRegistrations.tsx`
+
+- **Fixed** a control named by a glyph. "See everyone →" had no `aria-label`, so the arrow was
+  part of the button's accessible name. The arrow stays on screen; it is now drawn and not
+  announced. `F-045`. Worth noting how it survived: a search for emoji across all of `src/`
+  returns **zero**, and this is the banned "glyph as an icon" pattern in a character that
+  search does not match.
+
+#### `src/features/auth/`
+
+- **Fixed** `F-031`: the sign-in email field now reports `aria-invalid` and an
+  `aria-describedby` that resolves to the refusal, so a screen-reader user who tabs back to
+  the field hears why it was rejected instead of silence.
+- **How, because the obvious route does not work.** Mantine's `Input` builds its own
+  `aria-describedby` from the wrapper context and spreads it *after* the caller's props, so an
+  `aria-describedby` handed to `TextInput` is silently overwritten with `undefined`. That was
+  measured against the library, not guessed. The association therefore goes through the one
+  slot Mantine will point at: `description` carries the sentence and is `clip`-hidden,
+  `error` carries it so `aria-invalid` is reported, and `withErrorStyles={false}` plus a
+  wrapper order without `'error'` stop Mantine drawing or colouring anything for it.
+- **The cost, recorded.** The sentence is now in the DOM twice, so six existing queries that
+  matched it unscoped had to be scoped to the alert — four in `App.integration.test.tsx`, one
+  in `LoginPage.integration.test.tsx`, and one Playwright locator that strict mode rejected
+  outright. Those queries now assert the message is *in the alert*, which is what they always
+  meant. Doing this nine more times is the wrong answer; `F-049` says the right one is a real
+  `validate` config per form.
+- **One thing the approach nearly cost, caught by measuring instead of asserting.** Mantine
+  reserves a 5px gap under an input whenever a description exists, so hiding the description
+  was not enough — the submit button still moved down 5px the moment an address was refused.
+  Measured in Chromium by comparing the input-to-button distance in both states (56px, then
+  61px), then pinned to 0 in the same styles object. It is 56px in both states now, the border
+  stays the theme's `rgb(33, 38, 45)` rather than red, and `data-error` is `null`. **"No visual
+  change" is a claim that had to be measured, and the first version of this fix would have
+  failed it.**
+- **Unchanged on purpose:** the field is not given Mantine's `error` styling, which would turn
+  it red. The message is already on screen and this round changed nothing visual.
+
+### Unchanged on purpose
+
+- **Source maps.** Already absent from production — `vite.config.ts` sets no `build` key, so
+  Vite's `sourcemap: false` default applies, and a clean build emits no `.map`. Verified on the
+  built output rather than read off the config, and left alone: there was nothing to fix.
+- **Every A7 design violation.** Six categories, listed in `F-055`…`F-060`: two accent ramps
+  outside the KIT palette reaching the screen, 27 colour literals outside the theme (one of
+  them the exact yellow `palette.ts` says it rejected), five shadows on chrome that does not
+  float while the modals the rule reserves them for have none, 19 off-scale radii, two font
+  stacks that disagree about Inter, and a fifth font weight. Every one of them moves something
+  on screen, which is the pass [DESIGN.md](docs/DESIGN.md) asks for and not a freeze.
+- **The nginx headers.** `A6` of the audit was explicitly a read. The three headers that exist
+  are not inherited into the `assets/` block, there is no CSP and no HSTS, and whether HTTPS is
+  enforced **cannot be established from this repository** because TLS terminates on a proxy
+  that is not in it. `F-052`, and it belongs in the deployment request rather than in a commit
+  here.
+- **The 404 screen.** Deferred, not excluded: `F-046` records that an unknown path lands on the
+  dashboard silently. A new screen needs a design pass.
+
+### Tests
+
+- **Added** `e2e/document-head.spec.ts` — five tests over title, `lang`, description, the two
+  indexing blocks, and a favicon byte budget. Three were red before the fix.
+- **Added** `src/features/users/components/WarnForm.integration.test.tsx` — the field has a
+  name *and* still has its placeholder, so removing either goes red. `WarnForm` is reached only
+  through a modal, which is why no route scan could ever have caught `F-044`.
+- **Added** `controls that name themselves in words` to `src/App.a11y.integration.test.tsx` —
+  every route, every focusable control, failing on any accessible name containing an arrow or
+  geometric-shape glyph. Red on the dashboard first.
+- **Changed** the `F-031` assertion in the same file from `expect(tied).toBe(false)` to `true`,
+  so it went red before the fix and green after, and **scoped six queries** across three files
+  to the alert.
+- **Verified by generation, not by hand:** the route/link cross-check in `A4` was produced by
+  parsing `constants/routes.ts` and the `<Route>` elements and diffing them against every
+  navigation target in `src/` — 9 declared, 9 mounted, 15 targets, no orphans in either
+  direction, so there is no broken internal link.
+
+
 ### The Activity Log screen is back, and the two logs are one feature now
 
 **[ADR 0002](docs/adr/0002-delete-the-activity-log-screen.md) is superseded by

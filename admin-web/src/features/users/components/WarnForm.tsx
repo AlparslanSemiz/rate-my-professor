@@ -47,6 +47,13 @@ export default function WarnForm({
         Issue a warning to {userName}
       </Text>
       <Textarea
+        /*
+         * The heading above says who is being warned, but it is a `Text`, not a label, so the
+         * field itself announced as a bare textbox. The placeholder is not a substitute: it
+         * disappears as soon as the operator types. `WarningEditor` already names its field the
+         * same way, which is what makes this an omission rather than a decision.
+         */
+        aria-label="Warning message"
         placeholder="Describe the reason for this warning..."
         value={message}
         onChange={(event) => setMessage(event.currentTarget.value)}

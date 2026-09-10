@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { http } from 'msw'
@@ -71,7 +71,11 @@ describe('Login page', () => {
     await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), 'student@student.kit.edu')
     await user.click(screen.getByRole('button', { name: 'Send me a code' }))
 
-    expect(await screen.findByText(/no login code was sent/)).toBeInTheDocument()
+    // Scoped to the alert: since `F-031` the same sentence is also carried, hidden, in the
+    // email field's description, so an unscoped match now finds it twice. This asserts the
+    // copy the operator can see.
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByText(/no login code was sent/)).toBeInTheDocument()
     // Nothing went out. The list is a usability gate, and this is the gate working.
     expect(requestsTo('POST', '/api/auth/request-login')).toHaveLength(0)
   })

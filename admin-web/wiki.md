@@ -731,8 +731,24 @@ location /admin/ {
 ```
 
 Hashed assets are served with a one-year immutable cache; `index.html` is sent
-with `no-store` so a released build is picked up on the next page load. To
-release a new version, push to `main` and trigger the manual `web:deploy` job; to
+with `no-store` so a released build is picked up on the next page load.
+
+The panel asks not to be indexed: `index.html` carries
+`<meta name="robots" content="noindex,nofollow">` and `public/robots.txt` disallows
+everything. Note that `robots.txt` follows the bundle's base path, so on a
+deployment under `/admin/` it is served at `/admin/robots.txt` — where a crawler
+does not look. Serving one at the domain root is the host proxy's job (`F-047`).
+
+**Security headers are incomplete, and this is recorded rather than fixed.**
+`nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: same-origin` are set on the
+HTML location only; the `assets/` location is a more specific prefix with its own
+`add_header`, and nginx does not inherit — so JS, CSS and images are served with none
+of the three. There is no `Content-Security-Policy` and no `Strict-Transport-Security`
+in this repository, and because TLS terminates on a host-level proxy that is not in
+it, whether HTTPS is enforced cannot be verified from here. See `F-052` in `docs/testfindings.md`
+in the repository.
+
+To release a new version, push to `main` and trigger the manual `web:deploy` job; to
 roll back, run `web:deploy` again against an older commit's pipeline.
 
 The production backend is outside this repository and must implement the API

@@ -44,6 +44,7 @@ export default function LoginPage() {
           form={login.form}
           step={login.step}
           loading={login.loading}
+          error={login.error}
           onRequestCode={login.requestCode}
           onVerifyCode={login.verifyCode}
           onUseDifferentEmail={login.useDifferentEmail}

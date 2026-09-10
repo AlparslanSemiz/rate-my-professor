@@ -33,7 +33,11 @@ test('refuses an address outside the admin team without asking the backend', asy
   await page.getByPlaceholder('admin@student.kit.edu').fill('jemand@student.kit.edu')
   await page.getByRole('button', { name: 'Send me a code' }).click()
 
-  await expect(page.getByText(/no login code was sent/)).toBeVisible()
+  // Scoped to the alert. Since `F-031` the same sentence is also carried, hidden, in the email
+  // field's description so that a screen reader reaching the field hears why it was refused -
+  // so an unscoped match now finds it twice and strict mode rejects the locator. This asserts
+  // the copy the operator can actually see, which is what the test always meant.
+  await expect(page.getByRole('alert').getByText(/no login code was sent/)).toBeVisible()
   await expect(page.getByPlaceholder('Code from your email')).toBeHidden()
   expect(requests.filter((url) => url.includes('/auth/request-login'))).toHaveLength(0)
 })

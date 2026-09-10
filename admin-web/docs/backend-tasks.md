@@ -4,7 +4,9 @@ Hand this file to the backend repository. It holds everything the admin panel
 needs from the backend and cannot do itself. Section A is the elevated operator;
 section F is the contract gaps the panel still works around. Sections G and H
 ask for nothing — they are notices, kept here so that nobody schedules a change on
-an assumption this file can correct.
+an assumption this file can correct. Section J is about how the panel is *served*
+rather than about the API, and is here because the proxy in front of it is not in
+our repository.
 
 ---
 
@@ -265,3 +267,71 @@ from. The one that has to be settled first is whether anonymisation is reversibl
 at all: if it is not, what is being asked for is "reactivate an anonymised
 account" rather than "undo the delete", and it needs to be named that way before
 anybody builds it.
+---
+
+# J. Serving the panel: headers and indexing
+
+Two things the panel cannot set for itself, both found in a release-readiness audit
+on 2026-09-10. Neither is an API change and neither blocks anything today. They are
+here because the container in this repository listens on port 80 and something in
+front of it terminates TLS — and that something is not in this repository, so we can
+neither configure it nor verify it.
+
+## J1. Security headers do not reach the panel's assets
+
+`docker/nginx.prod.conf.template` sets three headers:
+
+```nginx
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "DENY" always;
+add_header Referrer-Policy "same-origin" always;
+```
+
+They are inside `location ${ADMIN_BASE_PATH}`. The block above it,
+`location ${ADMIN_BASE_PATH}assets/`, is a **more specific prefix match** and declares
+its own `add_header` for caching — and nginx does not inherit `add_header` into a
+block that has any of its own. So every JavaScript, CSS and image request, which is
+most of the panel's requests, is served with **none of the three**. `/healthz` the same.
+
+**What we would like.** If the reverse proxy in front of this container sets these
+headers for the whole host, nothing needs doing and we would like to know that so the
+finding can be closed. If it does not, they should be set either there or by repeating
+them in the `assets/` block here — we have not made that change because the audit that
+found it was explicitly a read of the deployment, not an edit of it.
+
+**What is not established.** There is no `Content-Security-Policy` and no
+`Strict-Transport-Security` anywhere in this repository, and no HTTPS listener or
+HTTP-to-HTTPS redirect in our nginx config. We cannot tell from here whether HTTPS is
+enforced or whether HSTS is set. **Please confirm both.** That is the single largest
+blind spot in the audit.
+
+Tracked as `F-052` in `docs/testfindings.md`.
+
+## J2. `robots.txt` needs to be at the domain root, not under `/admin/`
+
+The panel is an internal tool behind a login wall and should not be in a search index.
+It now carries `<meta name="robots" content="noindex,nofollow">` in `index.html`, and
+we added `public/robots.txt` with:
+
+```
+User-agent: *
+Disallow: /
+```
+
+**That file does not do what it looks like it does on this deployment.** Vite copies
+`public/` into `dist/`, and the Dockerfile copies `dist/` to
+`/usr/share/nginx/html${VITE_BASE_PATH}` — so it is served at `/admin/robots.txt`, and
+a crawler only ever reads `https://<host>/robots.txt`. The meta tag is therefore the
+half that actually works, and it only works for a crawler that has already fetched the
+page.
+
+**What we would like.** A `robots.txt` at the domain root that disallows at least
+`/admin/`. Whether the rest of the host should be disallowed is your call — it depends
+on what else is served there, which we do not know. If one already exists, please tell
+us what it says so we do not add a conflicting one.
+
+**What must not change:** the panel's own `Disallow: /` file should stay where it is.
+It is correct for any deployment served from a root, and removing it would leave only
+the meta tag.
+
+Tracked as `F-047` in `docs/testfindings.md`.

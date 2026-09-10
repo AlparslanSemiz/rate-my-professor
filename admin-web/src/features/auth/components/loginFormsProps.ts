@@ -17,4 +17,11 @@ export interface LoginFormsProps {
   onRequestCode: () => void
   onVerifyCode: () => void
   onUseDifferentEmail: () => void
+  /**
+   * The refusal currently on screen, or `''` when there is none.
+   *
+   * `LoginPage` renders it in the page-level alert; the email step needs the same sentence to
+   * tie it to the field it refuses, so the text travels rather than being looked up.
+   */
+  error: string
 }

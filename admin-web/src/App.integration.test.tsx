@@ -89,6 +89,20 @@ const systemStatus: SystemStatus = {
   gitlabEnabled: false,
 }
 
+/**
+ * @param message the sentence the sign-in screen should be showing
+ * @returns the alert carrying it
+ *
+ * Scoped to the alert rather than to the document. Since `F-031` the refused sentence is also
+ * carried, hidden, in the email field's description so that a screen reader reaching the field
+ * hears why it was refused - so an unscoped `getByText` now legitimately matches twice. What
+ * these tests mean is that the message is *on screen*, which is the alert's copy.
+ */
+async function findAlertWith(message: string | RegExp) {
+  const alert = await screen.findByRole('alert')
+  return within(alert).getByText(message)
+}
+
 describe('App routing and authentication', () => {
   beforeEach(() => {
     apiClient.setToken(null)
@@ -254,9 +268,11 @@ describe('App routing and authentication', () => {
     await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), 'someone@student.kit.edu')
     await user.click(screen.getByRole('button', { name: 'Send me a code' }))
 
-    expect(await screen.findByText(
-      'You do not have access to this panel. It is limited to the admin team, so no login code was sent.'
-    )).toBeInTheDocument()
+    expect(
+      await findAlertWith(
+        'You do not have access to this panel. It is limited to the admin team, so no login code was sent.',
+      ),
+    ).toBeInTheDocument()
     // No request at all: the address is checked before the backend is asked anything.
     expect(requestsTo('POST', '/api/auth/request-login')).toHaveLength(0)
     expect(screen.queryByPlaceholderText('Code from your email')).not.toBeInTheDocument()
@@ -299,7 +315,7 @@ describe('App routing and authentication', () => {
     await user.click(screen.getByRole('button', { name: 'Send me a code' }))
 
     expect(
-      await screen.findByText(
+      await findAlertWith(
         'Too many login codes have been requested. Wait a minute, then ask for a new one.',
       ),
     ).toBeInTheDocument()
@@ -397,7 +413,7 @@ describe('App routing and authentication', () => {
 
     render(<App />)
 
-    expect(await screen.findByText(SESSION_EXPIRED_MESSAGE)).toBeInTheDocument()
+    expect(await findAlertWith(SESSION_EXPIRED_MESSAGE)).toBeInTheDocument()
     expect(window.location.pathname).toBe('/login')
     expect(localStorage.getItem('token')).toBeNull()
   })
@@ -411,7 +427,7 @@ describe('App routing and authentication', () => {
     window.history.pushState({}, '', '/audit-logs')
 
     render(<App />)
-    await screen.findByText(SESSION_EXPIRED_MESSAGE)
+    await findAlertWith(SESSION_EXPIRED_MESSAGE)
 
     await user.type(screen.getByPlaceholderText('admin@student.kit.edu'), adminUser.email)
     await user.click(screen.getByRole('button', { name: 'Send me a code' }))

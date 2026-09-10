@@ -1,0 +1,5 @@
+# The admin panel is an internal tool behind a login wall. Nothing here is meant to be found
+# from a search engine, and every path below the root is either the panel itself or an asset
+# that only makes sense inside it.
+User-agent: *
+Disallow: /

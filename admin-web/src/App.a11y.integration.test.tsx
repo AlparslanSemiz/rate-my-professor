@@ -257,6 +257,57 @@ describe('the keyboard', () => {
   })
 })
 
+/**
+ * Arrows and geometric shapes, which stand in for an icon without being one.
+ *
+ * `docs/DESIGN.md` bans an emoji used as an icon because the panel has `@tabler/icons-react`.
+ * A bare `\u2192` is the same substitution in a character the emoji sweep does not catch, and when it
+ * sits inside a control it becomes part of that control's name — so a screen reader reads the
+ * glyph out, or drops it, and neither is what the label meant to say.
+ */
+const GLYPH_STANDING_IN_FOR_AN_ICON = /[\u2190-\u21FF\u25A0-\u25FF\u2B00-\u2BFF]/u
+
+/**
+ * @param element a control the keyboard can reach
+ * @returns the name a screen reader would announce for it
+ *
+ * `aria-label` wins over content, which is the only part of the accessible-name algorithm this
+ * panel exercises: no control here is named by `aria-labelledby` or by a `title`.
+ */
+function accessibleName(element: HTMLElement): string {
+  return (element.getAttribute('aria-label') ?? element.textContent ?? '').trim()
+}
+
+describe('controls that name themselves in words', () => {
+  beforeEach(() => {
+    apiClient.setToken(null)
+    seedDb(sweepFixture())
+    setSessionUser({
+      id: adminAccount.id,
+      username: adminAccount.username,
+      kitEmail: adminAccount.kitEmail,
+      role: 'ADMIN',
+    })
+  })
+
+  it.each(ROUTES)('$name \u2014 no control leans on a glyph for its name', async (route) => {
+    const { container } = await openRoute(route)
+
+    const focusable = focusableIn(container)
+    // A route that offered nothing would pass the filter below vacuously. The guard counts
+    // controls rather than *named* controls: the sign-in screen opens with its submit button
+    // disabled, so at first render it offers exactly one control and that one has no name of
+    // its own — which is the keyboard sweep's business above, not this test's.
+    expect(focusable.length).toBeGreaterThan(0)
+
+    const leaning = focusable.filter((element) =>
+      GLYPH_STANDING_IN_FOR_AN_ICON.test(accessibleName(element)),
+    )
+
+    expect(leaning.map((element) => accessibleName(element))).toEqual([])
+  })
+})
+
 describe('information that colour alone would carry', () => {
   beforeEach(() => {
     apiClient.setToken(null)
@@ -309,11 +360,12 @@ describe('a form field and the message about it', () => {
       describedBy !== null &&
       describedBy.split(/\s+/).some((id) => document.getElementById(id)?.textContent?.trim())
 
-    // `F-031`, recorded and not fixed. The address is refused by `adminAccess` before any
-    // request goes out, and the sentence explaining that is rendered in the page-level
-    // `ErrorAlert` above the form rather than on the field — so it is announced when the alert
-    // appears, and a screen-reader user who then tabs back to the input hears nothing about why
-    // it was rejected.
-    expect(tied).toBe(false)
+    // `F-031`, fixed. The address is refused by `adminAccess` before any request goes out, and
+    // the sentence explaining that is still rendered in the page-level `ErrorAlert` above the
+    // form — but the field now points at it, so a screen-reader user who tabs back to the input
+    // hears why it was rejected instead of silence. The field is deliberately *not* given
+    // Mantine's `error` prop, which would also turn it red: this is an announcement fix, not a
+    // visual one.
+    expect(tied).toBe(true)
   })
 })
