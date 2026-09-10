@@ -35,7 +35,7 @@ The wrong turn is part of the reasoning.
 | # | Decision | Status |
 | --- | --- | --- |
 | [0001](0001-tanstack-query-as-the-data-layer.md) | TanStack Query is the data layer | Accepted |
-| [0002](0002-delete-the-activity-log-screen.md) | The Activity Log screen is deleted, not merged into the audit log | Accepted |
+| [0002](0002-delete-the-activity-log-screen.md) | The Activity Log screen is deleted, not merged into the audit log | Superseded by [0016](0016-the-activity-log-screen-returns.md) |
 | [0003](0003-remove-the-system-status-screen.md) | The System Status *screen* is removed; the endpoint stays | Accepted |
 | [0004](0004-elevated-operator-is-behaviour-not-a-role.md) | The elevated operator is a behavioural privilege, never a role | Accepted |
 | [0005](0005-central-theme-no-hex-literals.md) | Colour, spacing and typography come from the theme; components carry no hex literals | Accepted |
@@ -49,6 +49,11 @@ The wrong turn is part of the reasoning.
 | [0013](0013-errors-are-types-not-status-codes.md) | Errors are types, not status codes | Accepted — applied twice since |
 | [0014](0014-public-data-is-readonly.md) | Public data is readonly, and services get a narrow transport | Accepted |
 | [0015](0015-panel-test-layers-answer-the-panels-own-questions.md) | The panel's test layers answer the panel's questions, not the backend's | Accepted |
+| [0016](0016-the-activity-log-screen-returns.md) | The Activity Log screen returns, on the audit log's own code | Accepted |
+
+0002 and 0016 are the pair worth reading together: the first deleted a screen on the strength
+of "nobody is using it", and the second put it back a day later. Neither is deleted, and 0016
+says what 0002 assumed and what that assumption cost.
 
 0010 and 0011 are the two the panel is most likely to be challenged on. Both are
 written as defences rather than as announcements, and both state what they cost.

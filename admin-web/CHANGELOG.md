@@ -2,6 +2,178 @@
 
 ## [Unreleased]
 
+### The Activity Log screen is back, and the two logs are one feature now
+
+**[ADR 0002](docs/adr/0002-delete-the-activity-log-screen.md) is superseded by
+[ADR 0016](docs/adr/0016-the-activity-log-screen-returns.md).** 0002 deleted the screen on
+2026-09-09 on the grounds that nobody was reading it. That was wrong, and the person who can
+settle it has said so. Nothing else changed: the backend never stopped serving `/activity-logs`
+or `/activity-logs/meta`, with the same parameters, the same cursor contract and the same entry
+shape.
+
+0002 predicted the cost — *"restoring it means writing it again… the cost is a copy, not a
+design"* — and this is about not paying it that way. `src/features/audit-logs/` is now
+`src/features/logs/`, holding **both** screens over one reader, one filter bar, one table, one
+row and one details modal. They read two halves of one backend table separated by `actor.type`;
+two feature folders sharing 90% of their files would have been the liability 0002 named.
+
+#### `src/api/logs`
+
+- **Added** `LogReaderService<TEntry>` and `LogMetaService`, replacing their `AuditLog*`
+  namesakes, parameterised by a `LogResource` — the path, and the key the list arrives under.
+  That is the whole difference between the two endpoints, which is the reasoning `ContentService`
+  already applies to `/comments` and `/answers`. Both halves are written down rather than one
+  derived from the other: the path is kebab and the key is camel, and inventing a conversion
+  would put a naming rule in the panel that the backend never promised.
+- **Added** `ActivityLogsService` — two services, not three. There is no reverter and no room
+  for one: these entries are creations, sign-ins and refusals, none of which the backend will
+  undo. The absence is the difference between the two logs.
+- **Split** `auditLogMapper.ts` into `logMapper.ts`. `toLogEntry` defaults `changes` and
+  `metadata` — the `F-021` fix, which both logs need — and `toAuditLog` adds the three revert
+  defaults on top. An activity entry is not mapped through the second, so revert fields the
+  shared table might carry are dropped rather than modelled.
+- **Renamed** `AuditLogPage.auditLogs` to `LogPage<TEntry>.entries`. The wire key belongs to
+  `LogResource`; naming it in the domain type too would make a caller that pages both logs read
+  two different fields for the same thing.
+
+#### `src/domain/auditLog.ts`
+
+- **Added** `ACTIVITY_ACTIONS` — the ten the backend documents: eight student actions and the
+  two refusals — plus `ActivityAction`, `LogAction`, and `REFUSAL_ACTIONS` with its guard. A
+  list rather than an `_REFUSED` suffix rule, because a rule would quietly claim every future
+  action ending that way is a refusal the panel understands.
+- **Added** three administrative actions the list never had: `BUG_REPORT_ISSUE_CREATED`,
+  `LECTURE_CREATED`, `PROFESSOR_CREATED`. That is `C-10` in `docs/consumer-findings.md` — the
+  compiled list was three values behind — and restoring one half of the vocabulary carefully
+  while leaving the other stale would have been an odd place to stop.
+
+#### `src/features/logs`
+
+- **Added** `logScreen.ts`, holding what actually differs as one value: title, columns, the
+  row's summary, the badge colour, whether the actor-type filter is offered, and the wording. A
+  component that asked "which log am I?" would be the second copy in disguise, and there would
+  be nowhere to look to find out what the two screens disagree about.
+- **Undoing is deliberately not a field on that record.** A field would imply the activity
+  screen could have one. `LogDetails` takes a slot and `AuditLogsPage` composes `ChangeList` and
+  `RevertSection` into it; `ActivityLogsPage` is typed on `AuditEntry`, which carries no
+  `revertible`, and imports neither the section nor the hook nor the confirmation. A test
+  asserts the absence three ways.
+- **Added** the actor-type filter, which closes `C-11`. `toLogQueryParams` has always built an
+  `actorType` parameter and `AuditLogFilters` has always declared it; the control went with the
+  activity screen in September. The audit screen deliberately does **not** offer it — every
+  entry there is administrative, so it would narrow a list that is already narrowed, and adding
+  a control to a shipped screen is a visual change this cycle does not make.
+- `LogFilterInputs.tsx` is shared again. It lived in `src/components/` until it was moved *into*
+  the audit feature because the activity screen — its second importer — had been deleted.
+
+### `F-028` reduced from 14 cases to 12, and its account of two of them corrected
+
+Sharing the row meant guarding it. The action now goes through `logEnumLabel` (label when it is
+a non-empty string, the shared empty marker otherwise) and through `auditActionColor`, which
+takes `unknown` — it was typed on the `AuditAction` union so a caller could not pass a typo, and
+every caller turned out to be a log row handing over `entry.action` straight off the wire, where
+that union is a claim about the backend rather than about the code.
+
+**The finding's account was wrong and this corrects it.** It attributed the audit screen's two
+cases to `auditActionColor` alone. Removing each guard on its own turns **both** cases red on its
+own, so the action went through *two* unguarded mechanisms stacked, and the original triage could
+not see the second because the first crashed first.
+
+`enumLabel` itself is **not** touched: guarding it would close ten more cases across four
+screens, and what an unknown enum should read as there is a wording decision this cycle does not
+make.
+
+### Every modal, form and keyboard path measured in a browser
+
+The browser layer measured eight routes and nothing inside them — `docs/worklog.md` calls that
+the previous round's largest stated gap. **10 specs / 68 tests → 13 specs / 172 tests.**
+
+#### `e2e/measure.ts` — new
+
+The measurements, written once, after being four inline `page.evaluate` bodies with four
+different ideas of what a control's name is. The first read `aria-label` and nothing else, so
+every `<label>`-associated input came back nameless and the first run reported a dozen unnamed
+controls that are in fact labelled. A function cannot be passed into an `evaluate` body, so the
+only way to have one definition is to have one call. It also measures links, `[role=button]`,
+inputs and selects — not just `<button>`, which is why `F-037` names exactly one link.
+
+`settled()` waits for a modal to finish animating. Without it axe read half-faded surfaces and
+the same page answered `3 passed / 0 failed / 5 undetermined` on one run and `7 / 1 / 0` on the
+next; the first set of pins written was wrong for that reason.
+
+#### `e2e/surfaces.ts`, `e2e/surfaces.spec.ts`, `e2e/keyboard.spec.ts`, `e2e/faults.spec.ts` — new
+
+Eleven modals and four forms, each measured at 800, 1024 and 1440 for overflow, target size,
+contrast in three buckets, tab order, focus trap, Escape and focus return. Four flows driven with
+**no `click()` in the file**. Every `?fault=` state measured rather than screenshotted.
+
+The registry is hand-written — whether a control opens a dialog is only knowable by pressing it —
+so two guards keep it honest: every entry must really open a dialog with the name it claims, and
+every route must either appear in it or be named as having none, with a reason.
+
+### Fixed
+
+#### `src/theme/components.ts`
+
+- **`Modal` sets `closeButtonProps`, `Select` and `MultiSelect` set `clearButtonProps`.**
+  Mantine draws an unlabelled close button unless it is given a name, so a screen reader
+  announced the first control of **all eleven dialogs** as "button". The jsdom accessibility
+  layer scans each route as it first renders and never opens a modal, which is exactly why it
+  passed all nine routes while this was true of every dialog. Set on the theme rather than on
+  eleven elements, because it is one decision and the eleventh is the one that gets forgotten.
+  No visual change: an accessible name is not painted.
+
+#### `src/components/ConfirmModal.tsx`
+
+- **Added** a `useEffect` that captures what had focus when the modal opens and restores it when
+  it closes. Mantine restores focus itself, but only for a modal still mounted when it closes,
+  and three of the four callers render this as `{confirming && <ConfirmModal … />}` — so Escape
+  left a keyboard operator on `document.body`. `AdminLayout` already treats exactly this as a
+  defect for its own notice; the panel had the opinion and had not applied it here.
+
+### Tests
+
+- **Layer 1** — three sweep rows, so `API_ENDPOINTS` goes **42 → 44** with no counter to edit;
+  `API_CALLS` is 49. A new case serves each log under the other's noun and requires both to
+  throw: a shared reader whose two halves could drift would read an empty page off a working
+  backend.
+- **Layer 3a** — nothing written. It reads `API_ENDPOINTS`, so 589 → 617 cases on their own.
+- **Layer 3b** — a seventh screen with **an empty `crashesOn`**, which is the assertion: it is
+  the screen most likely to be handed an action the panel has never heard of.
+- **Layer 5** — a ninth route, clean.
+- **Layer 4** — now measures at **800px** as well. It said "nothing below 1024", one width more
+  cautious than its own finding requires.
+- **MSW** — `handlers/auditLogs.ts` becomes `handlers/logs.ts`, generic over the resource the way
+  `contentHandlers` already is over comments and answers. Revert is mounted on the audit path
+  only, so a panel that tried to revert an activity entry fails the suite loudly.
+- `src/App.integration.test.tsx` — the two assertions that pinned the screen as *gone* are
+  **inverted rather than deleted**, so the record of what changed is in the test as well as in
+  the ADR.
+
+### Found and recorded, not fixed
+
+- **`F-038`** — contrast fails inside six of the eleven dialogs. The half of `F-035` the gradient
+  was hiding: a modal sits on a flat surface, so axe can decide it, and it fails.
+- **`F-039`** — three controls per catalogue editor that nothing names. `NumberInputProps`
+  exposes no naming prop for its steppers, which is why the other two were fixed and these were
+  not.
+- **`F-040`** — touch targets under 24x24 inside the two catalogue editors.
+- **`F-041`** — **the demo backend served no lectures, professors or ratings at all**, so the
+  catalogue's modals were unreachable by any test and every catalogue figure the browser layer
+  had recorded was measured against an empty table. Seeded, and it immediately produced a
+  `22x22` touch target that had been invisible.
+- **`F-042`** — once the `Professors` field has been focused, **Escape never closes the lecture
+  editor again**, and the second press drops focus on `document.body`.
+
+### Unchanged on purpose
+
+- **`enumLabel` is still unguarded**, and `F-028` is still open with 12 of its 14 cases.
+- **The audit screen still offers no actor-type filter**, though the control now exists.
+- **`F-012`, `F-019`, `F-022`, `F-026`, `F-027`, `F-029`, `F-031` … `F-037`** are all still on
+  the deferred list. Everything fixed this cycle was one file and invisible; everything else
+  either changes behaviour, changes the theme, or wants a visual pass.
+- **At and below 768px is still recorded as *not measured*, not passed** — `F-019`.
+
 ### The deployed panel calls its own origin now, and can be logged into again
 
 **`Was:`** `VITE_API_BASE_URL=https://server.example.org` — an absolute URL, baked

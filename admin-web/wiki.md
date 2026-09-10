@@ -45,6 +45,7 @@ service over HTTP and holds no database or API of its own — point
 | Lectures & Professors | Edit and remove lectures and professors, reassign who teaches what, and remove individual ratings |
 | Bug Reports | Review submitted problems, rewrite the title or description, update status or severity, delete, and open a GitLab issue |
 | Audit Logs | Filter and inspect administrative actions, including before/after values, and undo a field edit |
+| Activity Logs | The other half of the same table: what students did in the app, and the two kinds of refusal. Nothing here can be undone, and no undo control is drawn |
 | Help | In-panel guidance |
 
 Answers are replies to a comment, not a separate top-level feed, so they have no
@@ -156,6 +157,8 @@ no request reaches a controller.
    from the reports tab.
 5. Open **Bug Reports** and update a report's status or severity.
 6. Open **Audit Logs** and locate the actions performed in the previous steps.
+7. Open **Activity Logs** and filter by `Who = User` to see the student side of
+   the same table, including any refused sign-in.
 7. Inspect an audit event to compare its before and after values.
 8. Sign out and verify that protected routes return to the login page.
 
@@ -217,7 +220,7 @@ src/
 ├── context/      Application-wide authentication state
 ├── domain/       Shared domain types, enums and their guards
 ├── features/     Feature-owned pages, components, hooks, model and tests
-│   ├── audit-logs/
+│   ├── logs/            # both log screens, over one reader and one table
 │   ├── auth/
 │   ├── catalog/
 │   ├── comments/
@@ -426,10 +429,15 @@ back. The endpoint answers `503` until the backend is given `GITLAB_BASE_URL`,
 | `GET` | `/audit-logs` | Filtered, cursor-paginated administrative history |
 | `GET` | `/audit-logs/meta` | Actors, actions, target types and actor types for that log |
 | `POST` | `/audit-logs/:id/revert` | Undo the field edit an entry recorded |
+| `GET` | `/activity-logs` | The same, for what students did in the app and what was refused |
+| `GET` | `/activity-logs/meta` | The vocabulary that log's filters offer |
 
-The backend also serves `/activity-logs` from the same table, with the same
-parameters, for what students did in the app. The panel has no screen for it and
-does not call it. `/audit-logs` returns its array as `auditLogs`:
+Both paths are one table split by `actor.type`, and they take the same
+parameters, page on the same cursor and return the same entry shape. Only
+`/audit-logs` offers a revert. Each returns its array under its own noun —
+`/audit-logs` under `auditLogs`, `/activity-logs` under `activityLogs` — which
+is the one thing a single reader has to be told, and is why
+`src/api/logs/logResource.ts` writes both down:
 
 | Query parameter | Meaning |
 | --- | --- |
@@ -540,9 +548,21 @@ One table holds both logs, split by the scope an action belongs to.
 `/audit-logs` serves what admins did through the panel — sign-in and sign-out,
 user edits, warnings, blocks and deletions, content and report moderation, bug
 report changes, and catalogue edits. The other half, `/activity-logs`, is what
-students did in the app plus the refusals; the panel had a screen for it until
-2026-09-09 and no longer does, so `src/domain/auditLog.ts` models the
-administrative vocabulary only.
+students did in the app plus the two refusals, `LOGIN_REFUSED` and
+`ACCESS_REFUSED`.
+
+The panel reads both. It had no Activity Log screen between 2026-09-09 and
+2026-09-10 — see [ADR 0016](docs/adr/0016-the-activity-log-screen-returns.md) —
+and `src/domain/auditLog.ts` models both vocabularies again. Neither list is a
+filter: the dropdowns are built from `/…/meta` and the tables render whatever
+they are given, so a deployment logging something newer than the bundle shows
+the new action rather than failing.
+
+The two screens are one feature, `src/features/logs/`, over one reader, one
+filter bar, one table, one row and one details modal. What differs is a value —
+`logScreen.ts` — and not a shape. Undoing is the exception and is expressed by
+type rather than by a flag: the activity screen is typed on `AuditEntry`, which
+carries no `revertible`, so an undo control cannot be drawn on it.
 
 Audit entries contain snapshots of their actor and target labels, so they remain
 understandable even if the original user or report is later deleted. Every
@@ -562,7 +582,8 @@ boundaries:
 
 - The login page and the authenticated application layout are separate chunks.
 - Dashboard, Users, Comments, Lectures & Professors, Bug Reports, Audit Logs,
-  and Help are separate page chunks.
+  Activity Logs and Help are separate page chunks. The two log screens share the
+  code in `src/features/logs/`, which the bundler hoists into a chunk of its own.
 - `PageLoader` provides feedback while a requested chunk is loading.
 
 The initial production bundle therefore contains only the application shell and

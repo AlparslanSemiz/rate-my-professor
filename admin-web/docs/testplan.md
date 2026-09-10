@@ -93,10 +93,10 @@ own `fetch` double.
 | End-to-end | `e2e/*.spec.ts`, Playwright, `npm run test:e2e` | 10 | 68 |
 | Static gates | — | — | `npm run lint`, `npm run check:cycles`, `npm run check:docs`, `npm run typecheck`, `npm run build` |
 
-**Total: 47 files, 1138 tests and 3 skipped, green** (2026-09-09, after the
-five-layer test package), plus **10 Playwright specs, 68 tests** in the end-to-end
+**Total: 48 files, 1196 tests and 3 skipped, green** (2026-09-09, after the
+five-layer test package), plus **13 Playwright specs, 172 tests** in the end-to-end
 layer, which run separately and are not counted in the Vitest total. Coverage
-**92.96 / 86.46 / 91.52 / 94.61**.
+**93.09 / 86.61 / 91.56 / 94.76**.
 
 The unit count did not move at all — 28 files, 182 tests, exactly as before. Every one
 of the 792 new tests is an integration test, because every layer added this round asks
@@ -148,21 +148,27 @@ layer that does not say what it fails to answer is claiming everything.
 
 | Layer | The question it answers | What it does **not** answer | Tool | State |
 | --- | --- | --- | --- | --- |
-| **1 — Call surface** | What did the panel actually send? Path, verb, `Authorization`, whether a `Content-Type` was set at all, body fields, query string — for every one of the 42 endpoints. | Whether the backend agrees with any of it. That needs the schema. | Vitest + MSW + the request recorder; the endpoint list discovered from `src/api/**` by `import.meta.glob`, never hand-written | **Done.** `src/api/callSurface.integration.test.ts`, 54 tests |
+| **1 — Call surface** | What did the panel actually send? Path, verb, `Authorization`, whether a `Content-Type` was set at all, body fields, query string — for every one of the **44** endpoints. | Whether the backend agrees with any of it. That needs the schema. | Vitest + MSW + the request recorder; the endpoint list discovered from `src/api/**` by `import.meta.glob`, never hand-written | **Done.** `src/api/callSurface.integration.test.ts`, 58 tests |
 | **2 — Contract** | Do the panel's types match the backend's own OpenAPI document? | Everything. | `openapi-typescript` through `npx` | **Not built.** `docs/api/openapi.json` is not in this repository; see [ADR 0008](adr/0008-generated-schema-is-the-contract-authority.md) |
-| **3a — Resilience, service layer** | What does the panel raise when the backend misbehaves? Nine failing statuses, a network error, an empty body, a body that is not JSON, a `2xx` refusal, and `204 No Content` — per endpoint. | Whether the backend ever behaves that way, and what a *screen* does with the answer. | Vitest + MSW, driving services directly | **Done.** `src/api/responseShapes.integration.test.ts`, 589 tests |
-| **3b — Resilience, screen layer** | What does a screen do with a payload that parsed cleanly and is still wrong? Every read field removed one at a time, nested objects nulled, scalars given the wrong type, lists of 0/1/3, a slow read. | **Detail views.** See below — this is the largest stated gap in the round. | Vitest + MSW + React Testing Library, with a boundary that records crashes | **Done.** `src/features/degradedPayloads.integration.test.tsx`, 120 tests + 3 skipped |
-| **4 — Real browser** | Does it fit, does focus behave, are the targets big enough, and what is the contrast? Everything jsdom answers *wrongly* rather than not at all. | Anything below 800px — see `F-019`. And 89% of the contrast question, which axe cannot decide against a gradient (`F-035`). | Playwright + `@axe-core/playwright`, Chromium | **Done.** `e2e/layout.spec.ts`, `e2e/focus.spec.ts`, `e2e/a11y.spec.ts`, 43 tests |
-| **5 — Accessibility** | Can the panel be operated without a mouse, and does its markup carry what colour carries? Eight routes under every axe rule that does not need layout. | `color-contrast` and `target-size`, switched off **by name** — every element in jsdom is 0x0. Handed to layer 4. Also: non-default tabs, unopened modals, and anything a real assistive technology does. | Vitest + `axe-core` driven directly — no `jest-axe` | **Done.** `src/App.a11y.integration.test.tsx`, 27 tests |
-| **6 — End-to-end** | Do two whole flows work in a browser — blocking an account, and escalating a bug report? | Anything about the real backend. It has **never** run against one. | Playwright, Chromium, against MSW | **Done.** 10 specs, 68 tests |
+| **3a — Resilience, service layer** | What does the panel raise when the backend misbehaves? Nine failing statuses, a network error, an empty body, a body that is not JSON, a `2xx` refusal, and `204 No Content` — per endpoint. | Whether the backend ever behaves that way, and what a *screen* does with the answer. | Vitest + MSW, driving services directly | **Done.** `src/api/responseShapes.integration.test.ts`, 617 tests — the count is derived, so the two activity endpoints appeared here without a line being written |
+| **3b — Resilience, screen layer** | What does a screen do with a payload that parsed cleanly and is still wrong? Every read field removed one at a time, nested objects nulled, scalars given the wrong type, lists of 0/1/3, a slow read. | **Detail views** — still, at this layer. It answers for list reads only. Layer 4 now opens every modal (`e2e/surfaces.spec.ts`), so the gap is narrower than it was and is *not* closed: a missing **field** inside a detail view is caught by nothing, because that spec measures layout, naming and focus rather than payloads. | Vitest + MSW + React Testing Library, with a boundary that records crashes | **Done.** `src/features/degradedPayloads.integration.test.tsx`, 136 tests + 3 skipped, over 7 screens |
+| **4 — Real browser** | Does it fit, does focus behave, are the targets big enough, and what is the contrast? Everything jsdom answers *wrongly* rather than not at all. | Anything **at or below 768px** — see `F-019`; 800 is now measured. And most of the contrast question *on the routes*, which axe cannot decide against a gradient (`F-035`) — though inside a modal it can, and does (`F-038`). Payload shapes: this layer measures pixels and focus, not fields. | Playwright + `@axe-core/playwright`, Chromium | **Done.** `e2e/layout.spec.ts`, `e2e/focus.spec.ts`, `e2e/a11y.spec.ts`, and since 2026-09-10 `e2e/surfaces.spec.ts` (11 modals and 4 forms at three widths), `e2e/keyboard.spec.ts` and `e2e/faults.spec.ts` — 141 tests |
+| **5 — Accessibility** | Can the panel be operated without a mouse, and does its markup carry what colour carries? Nine routes under every axe rule that does not need layout. | `color-contrast` and `target-size`, switched off **by name** — every element in jsdom is 0x0. Handed to layer 4. Also: non-default tabs, unopened modals, and anything a real assistive technology does. | Vitest + `axe-core` driven directly — no `jest-axe` | **Done.** `src/App.a11y.integration.test.tsx`, 30 tests |
+| **6 — End-to-end** | Do whole flows work in a browser — signing in, blocking an account, moderating a comment, escalating a bug report, undoing a change — and do four of them work **with no mouse at all**? | Anything about the real backend. It has **never** run against one. | Playwright, Chromium, against MSW | **Done.** 13 specs, 172 tests |
 | **— Mutation testing** | Would the suite notice if the code were wrong? | — | Stryker | **Not built**, deliberately. See `docs/TODO.md` |
 
 ### What layer 3b does not reach, said plainly
 
-**Detail views are not swept.** The user profile modal, the audit detail panel, the bug-report
-modal and the catalogue edit modals each need a second request and an interaction to open, and
-none of them is exercised by the degraded-payload layer. It answers for **list reads only**, on
-six screens. A missing field inside a detail view would not be caught by anything in this suite.
+**Detail views are not swept — and the gap moved on 2026-09-10 rather than closing.** The user
+profile modal, the audit and activity detail panels, the bug-report modal and the catalogue edit
+modals each need a second request and an interaction to open, and none of them is exercised by
+the degraded-payload layer. It answers for **list reads only**, on seven screens.
+
+`e2e/surfaces.spec.ts` now opens all eleven of them in a browser, so they are no longer
+unmeasured — it found five findings on its first run. But it measures **layout, naming, focus
+and contrast**, not payloads. *A missing field inside a detail view is still caught by nothing
+in this suite*, and that sentence is unchanged on purpose. The two layers reach the same modals
+and ask different questions of them.
 
 Two smaller limits belong with it. The catalogue's Professors and Ratings tables sit behind tabs
 the layer does not open, so `F-032` was found on two of the four tables that have it and read off
@@ -177,14 +183,15 @@ claims everything.
 
 | Layer | Candidates scanned | Result |
 | --- | --- | --- |
-| **1 — Call surface** | **106 methods** discovered across `src/api/**`, covering all **42 endpoints**. 85 exercised by 46 calls; 21 are the four transport classes, exempt with a written reason each. | **Clean.** Every endpoint sends the path, verb, `Authorization`, `Content-Type` presence, body and query string that `consumer-contract.md` describes. No finding. |
-| **3a — Resilience, service** | **42 endpoints x 13 failing answers = 546 cases.** | **Clean.** Every one raises the right `ApiError` subclass with the right `transient` and a non-empty message. The two findings from this layer came from the 42 **`204`** cases, which are counted separately. |
-| **3b — Resilience, screen** | **6 screens**, field lists generated from the fixtures' own keys: 123 cases. | **The Dashboard is clean on every single case** — every field removed, every nested object nulled, every wrong type. Its code comments claim it defends against a missing counter and it does. List cardinality 0/1/3 clean on all five list screens; the loading state genuinely visible on all six. |
+| **1 — Call surface** | **108 methods** discovered across `src/api/**`, covering all **44 endpoints**. 87 exercised by 49 calls; 21 are the four transport classes, exempt with a written reason each. The activity log added two endpoints and no new class: it is the same reader and meta service pointed at a second `LogResource`. | **Clean.** Every endpoint sends the path, verb, `Authorization`, `Content-Type` presence, body and query string that `consumer-contract.md` describes. No finding. |
+| **3a — Resilience, service** | **44 endpoints x 13 failing answers = 572 cases.** | **Clean.** Every one raises the right `ApiError` subclass with the right `transient` and a non-empty message. The two findings from this layer came from the 42 **`204`** cases, which are counted separately. |
+| **3b — Resilience, screen** | **7 screens**, field lists generated from the fixtures' own keys: 139 cases. | **The Dashboard is clean on every single case** — every field removed, every nested object nulled, every wrong type. Its code comments claim it defends against a missing counter and it does. List cardinality 0/1/3 clean on all five list screens; the loading state genuinely visible on all six. |
 | **4 — Real browser, target size** | **103 controls** across eight routes, measured with `getBoundingClientRect`, none left undetermined. | Not clean — `F-037`. Recorded here because axe's own `target-size` rule **passed all eight routes** over the same controls: it grants exceptions for spacing and inline targets. Two tools, two answers. |
-| **4 — Real browser, layout** | Eight routes at 1024px and 1440px; four tables; the longest content the columns can be handed; three alert-strip combinations. | **Clean at 1440px** — no page scrolls sideways, and all four tables fit exactly (1134 = 1134). The strips push nothing off screen with one strip or with two. `F-036` is the 1024px result. |
-| **4 — Real browser, focus** | Modal trap, Escape, focus return, and Enter on a control inside a clickable row. | **Clean.** The trap holds when tabbed one past its last control, Escape returns focus **to the opener** rather than `document.body`, and `F-008`'s fix holds in a real browser, where the suppressed synthetic click was the actual mechanism. |
-| **5 — Accessibility** | Eight routes, every axe rule that runs in jsdom; every focusable control; every row control on Comments; every rendered badge. | **Six of the eight routes clean.** Every focusable control on all eight takes focus; every row control on Comments is reachable; **no badge anywhere carries its meaning in colour alone.** |
-| **6 — End-to-end, network** | Every response on all eight routes whose path starts with `/api/`, read through `Response.fromServiceWorker()`. | **Clean — nothing reaches the network.** This was **not** true before this round: the browser worker had no catalogue slice, so `/data/lectures`, `/data/professor` and `/ratings` went through the Vite proxy to the deployed backend, from a suite whose premise is that it contacts nothing. Nobody noticed because no spec opened the catalogue. |
+| **4 — Real browser, layout** | Nine routes at **800, 1024 and 1440px**; five tables; the longest content the columns can be handed; three alert-strip combinations; and eleven dialogs at the same three widths. | **Clean at 1440px** — no page scrolls sideways, and all four tables fit exactly (1134 = 1134). The strips push nothing off screen with one strip or with two. `F-036` is the 1024px result. |
+| **4 — Real browser, focus** | Modal trap, Escape, focus return, and Enter on a control inside a clickable row — on **one** modal until 2026-09-10, on **eleven** since. | **Clean on the one, and not on the eleven.** The trap holds everywhere and no dialog carries a positive `tabindex`. Escape returning focus to the opener held for the modal it was written against and **failed on three confirmations**, which unmount before Mantine can restore — fixed in `ConfirmModal`. `F-042` is the lecture editor, where Escape stops closing the dialog at all. A clean result on one instance of a component said nothing about the other ten. |
+| **6 — Keyboard, end to end** | Signing in, blocking a user, hiding a comment and undoing an audit entry, driven with **no `click()` anywhere in the file**. | **Clean, and this is the round's most useful negative result — with its scope: four flows, one browser, 1440px.** It also measured the distances: 16 tab presses to a comment's edit control, 24 to a revertible audit entry, and the sign-in screen has exactly **one** tab stop until an address is typed, because its button is `disabled` until then. |
+| **5 — Accessibility** | Nine routes, every axe rule that runs in jsdom; every focusable control; every row control on Comments; every rendered badge. | **Six of the eight routes clean.** Every focusable control on all eight takes focus; every row control on Comments is reachable; **no badge anywhere carries its meaning in colour alone.** |
+| **6 — End-to-end, network** | Every response on all nine routes whose path starts with `/api/`, read through `Response.fromServiceWorker()`. | **Clean — nothing reaches the network.** This was **not** true before this round: the browser worker had no catalogue slice, so `/data/lectures`, `/data/professor` and `/ratings` went through the Vite proxy to the deployed backend, from a suite whose premise is that it contacts nothing. Nobody noticed because no spec opened the catalogue. |
 
 
 ## 4. Commands
@@ -229,13 +236,13 @@ The full local gate before submitting a change:
 
 ## 6. Automated coverage
 
-Coverage as of 2026-09-09: **92.96% statements / 86.46% branches / 91.52% functions
-/ 94.61% lines.** Per-directory figures are in
+Coverage as of 2026-09-10: **93.09% statements / 86.61% branches / 91.56% functions
+/ 94.76% lines.** Per-directory figures are in
 [testfindings.md](testfindings.md#coverage), generated from
 `coverage/coverage-summary.json` rather than transcribed. Per section 0, that report
 is the authority and every number in this document is a dated snapshot of it.
 
-### 6.1 API service layer — 13 files, 725 tests
+### 6.1 API service layer — 14 files, 759 tests
 
 Every service package has a unit test pinning the request shape and the mapping of
 the response onto the panel's types, including error paths.
@@ -249,8 +256,8 @@ the response onto the panel's types, including error paths.
 | `catalog/CatalogService` | 5 |
 | `catalog/RatingsService`, `system/SystemStatusService` | 4 each |
 | `client/bodylessWrites` | 11 |
-| `callSurface` — the layer 1 sweep and its ratchet | 54 |
-| `responseShapes` — the layer 3a matrix | 589 |
+| `callSurface` — the layer 1 sweep and its ratchet | 58 |
+| `responseShapes` — the layer 3a matrix | 617 |
 
 `ApiClient` carries the cross-cutting rules: the bearer token, `401` ending the
 session, and an unreachable backend *not* ending it. `AuthService` covers `/auth/me`
@@ -265,7 +272,7 @@ client was deliberately changed to set the header always, six of its assertions 
 red, and the change was reverted. A test pinning correct behaviour has no defect to
 fail against, so it is worth nothing until it has been shown to fail.
 
-### 6.2 Feature pages — 9 files, 221 tests
+### 6.2 Feature pages — 10 files, 244 tests
 
 | Page | Tests | Notable coverage |
 | --- | --- | --- |
@@ -273,8 +280,9 @@ fail against, so it is worth nothing until it has been shown to fail.
 | `comments/CommentsPage` | 19 | Reported content, thread expansion, moderation actions across both tabs |
 | `catalog/CatalogPage` | 16 | Lecture and professor editing, the warning before a record is switched inactive, a refused save keeping the editor open with what was typed |
 | `feedback/FeedbackPage` | 13 | Bug reports, the History tab, the GitLab control when `gitlabEnabled` is false, a refused deletion |
-| `audit-logs/AuditLogsPage` | 12 |
-| `degradedPayloads` — the layer 3b matrix, over six screens | 123 (3 skipped) | Every read field removed one at a time, nested objects nulled, scalars given the wrong type, lists of 0/1/3, and a slow read — asserting the screen still shows something rather than the boundary's fallback |
+| `logs/AuditLogsPage` | 12 | The one screen that filters and pages **server-side**, so every assertion is about the query string that went out |
+| `logs/ActivityLogsPage` | 7 | Only what differs from its sibling: the actor-type filter, the metadata summary, and that **no undo control exists anywhere on it** |
+| `degradedPayloads` — the layer 3b matrix, over seven screens | 139 (3 skipped) | Every read field removed one at a time, nested objects nulled, scalars given the wrong type, lists of 0/1/3, and a slow read — asserting the screen still shows something rather than the boundary's fallback |
 | `dashboard/DashboardPage` | 6 | Stat cards, a partial read keeping the half that arrived, `counts: null` not read as zeros |
 | `auth/LoginPage` | 6 | The two-step flow; an address outside the team never reaches `request-login` |
 | `help/HelpPage` | 1 | Sections start collapsed and open on click |
@@ -284,7 +292,7 @@ fail against, so it is worth nothing until it has been shown to fail.
 | Area | Files | Tests | Coverage |
 | --- | --- | --- | --- |
 | `src/App.integration.test.tsx` | 1 | 20 |
-| `src/App.a11y.integration.test.tsx` — the layer 5 scan | 1 | 27 | axe over all eight routes, focus reachability, keyboard reach to row actions, badge text, and the login field's label and error association |
+| `src/App.a11y.integration.test.tsx` — the layer 5 scan | 1 | 30 | axe over all nine routes, focus reachability, keyboard reach to row actions, badge text, and the login field's label and error association |
 | `src/context` | 1 | 16 | Session restore, a stored session carrying `isSuperAdmin`, rejection of a malformed one, withdrawal of an elevation `/auth/me` no longer reports, and a check that fails without being refused being reported rather than swallowed (`F-013`) |
 | `src/theme` | 1 | 8 | That inputs and modals are painted by the theme with no `styles` prop, and that a component-level override lands on top of it |
 | `src/features/*/model` | 6 | 32 | `feedback` (8), `catalog/edit` (6), `moderation` (6), `users/userEdit` (5), `catalog/catalog` (4), `catalog/deletion` (3) |
@@ -363,9 +371,22 @@ deliberately: the panel is an internal desktop tool, and a cross-browser matrix 
 buy coverage of a problem nobody has reported at the cost of a suite nobody runs.
 Nothing is known about Firefox or Safari, and nothing should be claimed.
 
-**It runs at desktop widths only.** Every spec uses the default `Desktop Chrome`
-viewport. The panel is in fact unusable below 768px — the sidebar covers the whole
-screen (`F-019`) — and no end-to-end test noticed, because none looks there.
+**It runs at desktop widths only.** The measuring specs set 800, 1024 and 1440
+explicitly; the flow specs use the default `Desktop Chrome` viewport. The panel is in
+fact unusable at and below 768px — the sidebar covers the whole screen (`F-019`) — and
+that is **recorded as not measured rather than passed**: one test pins the dead zone at
+320, 480, 640 and 768 and pins 800 as the first width at which there is a panel on
+screen to measure at all.
+
+**Since 2026-09-10 it also opens things.** Eleven modals and four forms
+(`e2e/surfaces.spec.ts`), four flows driven with no mouse at all
+(`e2e/keyboard.spec.ts`) and every `?fault=` state (`e2e/faults.spec.ts`). Two limits
+belong with that. The modal registry is **hand-written** — whether a control opens a
+dialog is only knowable by pressing it — so it is guarded the way the call-surface
+ratchet is: every entry must really open a dialog with the name it claims, and every
+route must either appear in it or be named as having none, with a reason. And the
+keyboard specs establish **four flows, in one browser, at one width**; nothing is
+claimed about the flows they do not walk.
 
 Running against no backend is a decision, not an omission: these flows are also what
 gets walked by hand at the Abnahme, and pinning them to a deployment would make them

@@ -1,6 +1,6 @@
 # 0002 — The Activity Log screen is deleted, not merged into the audit log
 
-**Status:** Accepted
+**Status:** Superseded by [0016](0016-the-activity-log-screen-returns.md)
 **Date:** 2026-09-09
 
 ## Decision
