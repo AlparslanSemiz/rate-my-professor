@@ -55,7 +55,7 @@ classDiagram
     }
 
     class LoginCodeService {
-        +requestLoginCode()
+        +requestLogin()
     }
     class SessionIssuer {
         +login()
@@ -71,8 +71,9 @@ classDiagram
     }
 
     class OtpService {
-        +generate()
+        +issue()
         +consume()
+        +invalidate()
     }
     class RateLimitService {
         +consume()
@@ -80,6 +81,9 @@ classDiagram
         +reset()
     }
     class StudentProvisioning
+    class AccountReactivator {
+        +reactivate()
+    }
     class SessionAuditWriter
     class AdminBootstrapPolicy
     class AdminSuperuserPolicy
@@ -104,6 +108,7 @@ classDiagram
     LoginCodeService --> OtpService
     LoginCodeService --> RateLimitService
     LoginCodeService --> LoginCodeDelivery
+    LoginCodeService --> AccountReactivator
 
     SessionIssuer --> OtpService
     SessionIssuer --> RateLimitService
@@ -116,6 +121,14 @@ classDiagram
     SuccessfulLoginListener --> LoginSuccessDelivery
     SuccessfulLoginListener --> LoginLocationService
 ```
+
+**`AccountReactivator` is one class for one decision.** It holds what a request for a login code
+does to an account that deleted itself, which was written inline in `LoginCodeService` until
+10 September. It is drawn separately because that decision is an open question
+([F-48](test-findings.md#f-48--an-unauthenticated-caller-can-undo-somebodys-account-deletion)):
+whichever way it is answered, the change lands in that box and not in the middle of a method
+about mailing codes. Its transaction boundary is the second reason — a `@Transactional` method
+called from inside `LoginCodeService` would not be proxied at all.
 
 **Two things the picture is for.** `LoginCodeDelivery` and `LoginSuccessDelivery` are
 *interfaces*, and that is the seam every test substitutes — the real SMTP adapter is never

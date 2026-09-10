@@ -1,8 +1,10 @@
 # Demo notes
 
 What to show, in what order, and the three switches not to touch while showing it. Written
-against the code on **9 September**; every claim here names the file it was read from, because a
-demo note that has drifted is worse than none.
+against the code on **9 September** and **re-checked line by line on 10 September**; every claim
+here names the file it was read from, because a demo note that has drifted is worse than none.
+Several line numbers below moved between those two dates and were corrected — which is the
+argument for citing them rather than against it.
 
 ---
 
@@ -15,16 +17,25 @@ obvious reading of it is wrong:
 - **Nothing is deleted and nothing is irreversible.** The row keeps its id, its ratings, its
   comments and its history. `active = false` is what you use *instead* of deleting.
 - **The API can undo it.** `PATCH /data/lectures/{id}` and `PATCH /data/professor/{id}` accept
-  `{"active": true}` (`LectureModerationService:108`, `ProfessorModerationService:76`), and
-  `GET /data/lectures/all` / `GET /data/professor/all` return deactivated rows on purpose —
-  `ModerationCatalogController:38-40` says so in as many words: *"the public reads filter to
+  `{"active": true}` (`LectureModerationService:127-129`, `ProfessorModerationService:93-95`),
+  and `GET /data/lectures/all` / `GET /data/professor/all` return deactivated rows on purpose —
+  `ModerationCatalogController:37-40` says so in as many words: *"the public reads filter to
   `active = true`: a deactivated lecture or professor would otherwise be unreachable from the
   panel to correct or reactivate."*
 - **The panel does not call those two routes.** It reads only the active-only
-  `GET /data/lectures` and `GET /data/professor`
-  (`docs/adminweb-consumer-contract.md`, rows 27 and 30); the `/all` pair is recorded there as
-  **"Not called"**. So the deactivated row leaves every screen the panel has, and the `PATCH`
-  that would restore it needs an id that is no longer displayed anywhere.
+  `GET /data/lectures` and `GET /data/professor`; the `/all` pair is recorded in
+  `docs/adminweb-consumer-contract.md` as **not called**. So the deactivated row leaves every
+  screen the panel has, and the `PATCH` that would restore it needs an id that is no longer
+  displayed anywhere.
+- **The routes it would have to call already exist, unprefixed, and already answer in
+  production.** Measured on 10 September: `GET /data/lectures/all` answers `401` JSON from this
+  backend, while `GET /admin/data/lectures/all` answers `200 text/html` from the panel's own
+  nginx (F-43). So the fix needs no backend change at all — **decided 10 September, option A**,
+  `docs/adminweb-tasks.md` §2b — and the panel work is scheduled after submission. Nothing about
+  that changes what to do during the demo.
+- **Nothing on the deployed data is deactivated today**, checked the same day: 92 lectures and
+  132 professors, not one with `active: false`. So the demo starts from a clean state on this
+  and the only way to break it is to use the switch.
 
 **So it is one-way from the panel, not one-way in the system.** In a demo that is the same
 inconvenience — there is no screen to undo it on — which is why the switch stays untouched.
@@ -39,13 +50,13 @@ consumer contract layer exists to find. Recorded rather than fixed — **F-42**,
 after submission.
 
 Deleting is a separate and louder thing: `DELETE /data/lectures/{id}` takes every comment,
-answer and rating filed under the lecture with it (`LectureModerationService:149-155`). Not part
+answer and rating filed under the lecture with it (`LectureModerationService:180-190`). Not part
 of the demo either.
 
 ## Do not spend: the login rate limit
 
 One 15-minute window, four budgets, and the demo only ever spends the first two
-(`RateLimitProperties`, `application.properties:52-57`):
+(`RateLimitProperties`, `application.properties:58-63`):
 
 | Budget | Per window | Property |
 |---|---|---|
@@ -69,7 +80,7 @@ reloading.
 With `GITLAB_BASE_URL` / `GITLAB_PROJECT_ID` / `GITLAB_TOKEN` unset, the integration is off:
 `GET /system/status` reports `gitlabEnabled: false` and the panel **hides** the "create issue"
 action on a bug report. `POST /reports/{id}/gitlab-issue` answers `503` if called anyway
-(`application.properties:66-72`).
+(`application.properties:75-81`).
 
 That is the designed behaviour and the reason the flag is on `/system/status` at all — the
 alternative is a button that looks live and fails when pressed. If somebody asks where the
@@ -92,7 +103,7 @@ consumer contract layer gets told, this is the example.
 ## Clean data state before starting
 
 1. **An admin account that can log in.** The bootstrap list is
-   `app.auth.admin-bootstrap-emails` (`application.properties:37`); an address on it becomes an
+   `app.auth.admin-bootstrap-emails` (`application.properties:43`); an address on it becomes an
    administrator on first login. Confirm the one being used is on the list *before* the room is
    watching, and remember that confirming it costs one of the three code requests.
 2. **A second, ordinary student account** — the moderation screens are dull with nothing to
