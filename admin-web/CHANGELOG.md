@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### The card row needed nothing, and that is a measurement
+
+`F-068` closed **without a code change.** Re-measured after the tab-strip fix: at 1440 every
+card on every screen is **273.5** wide at **x=272 / 559.5 / 847 / 1134.5**; at 1024 every
+card is **353** at **x=272 / 639**. `statGridCols` is already `{base: 1, sm: 2, lg: 4}`, so
+the row is a fixed four-column grid and the cards are equal-width and aligned everywhere.
+
+What the finding actually recorded was the **count** - Users has 3 where the others have 4 -
+and an empty slot there is an accepted outcome, not a defect. Audit and Activity keep zero,
+which is right: an event stream has nothing to count.
+
+Also surfaced and also not a defect: at 1024 Comments' cards start at y=138.8 against 117.8
+elsewhere, because its longer page description wraps at that width. Content, not layout.
+
+
 ### The Dashboard's title is a title
 
 `F-064` and `F-071`, closed together by one change. `PageHeader` is the only component in

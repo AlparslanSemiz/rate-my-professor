@@ -464,3 +464,19 @@ the shape is structural rather than drawn per screen.
 **One visible consequence:** the greeting was 32px and `PageHeader` sets 28px. That is the
 change, not a side effect - the size was per-screen too.
 
+## Step 4 - the card row (`F-068`), no code change
+
+| Width | Card widths | x positions | Screens |
+| --- | --- | --- | --- |
+| 1440 | **273.5**, all | 272 / 559.5 / 847 / 1134.5 | Users (3), Catalog (4), Comments (4) |
+| 1024 | **353**, all | 272 / 639 | same |
+
+`statGridCols` is already `{base: 1, sm: 2, lg: 4}`. The row **is** a fixed four-column
+grid, and the cards are equal-width and aligned on every screen at both widths - so the
+standard asked for was already in place. What `F-068` recorded was the **count**, and an
+empty slot on Users is now an accepted outcome rather than a defect.
+
+Surfaced by the re-measurement and also not a defect: at 1024 Comments' cards start at
+**y=138.8** against **117.8** elsewhere, because its longer page description wraps to a
+second line at that width. Content, not layout.
+
