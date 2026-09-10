@@ -19,7 +19,6 @@ import com.example.ratemyprofessor.domain.Comment;
 import com.example.ratemyprofessor.domain.Lecture;
 import com.example.ratemyprofessor.domain.Professor;
 import com.example.ratemyprofessor.domain.Semester;
-import com.example.ratemyprofessor.domain.VoteType;
 import com.example.ratemyprofessor.fragments.HomeFragment;
 import com.example.ratemyprofessor.fragments.RatingsFragment;
 import com.example.ratemyprofessor.fragments.ProfileFragment;
