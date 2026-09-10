@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
-import { TestResizeObserver, createTestStorage } from './testDoubles'
+import { TestFontFaceSet, TestResizeObserver, createTestStorage } from './testDoubles'
 
 const localStorageMock = createTestStorage()
 const sessionStorageMock = createTestStorage()
@@ -14,6 +14,11 @@ Object.defineProperty(window, 'ResizeObserver', {
 Object.defineProperty(globalThis, 'ResizeObserver', {
   writable: true,
   value: TestResizeObserver,
+})
+
+Object.defineProperty(document, 'fonts', {
+  writable: true,
+  value: new TestFontFaceSet(),
 })
 
 Object.defineProperty(window, 'localStorage', {

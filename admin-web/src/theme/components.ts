@@ -23,6 +23,16 @@ import { chrome } from './chrome'
  * `Input` to everything built on it, but not `styles`, so theming `Input` alone would leave
  * `Select` and the rest unstyled.
  */
+/**
+ * How far a text box grows before it scrolls inside itself instead.
+ *
+ * Twelve lines is about 260px at the panel's line height, which fits inside the shortest
+ * dialog the modal shell allows (630px at a 700px viewport) with room for the controls under
+ * it. Past this the field scrolls rather than the dialog, so a long value never pushes a Save
+ * button out of reach.
+ */
+const TEXTAREA_MAX_ROWS = 12
+
 const inputStyles = {
   input: {
     background: chrome.surfaceSunken,
@@ -53,7 +63,23 @@ export const components: MantineThemeComponents = {
   }),
 
   TextInput: TextInput.extend({ styles: inputStyles }),
-  Textarea: Textarea.extend({ styles: inputStyles }),
+  /**
+   * Grows with what is typed into it, up to {@link TEXTAREA_MAX_ROWS}.
+   *
+   * `autosize` is the load-bearing prop, and not for the reason it sounds like. Mantine drops
+   * `minRows` and `maxRows` entirely unless it is set - `Textarea.tsx` reads
+   * `const autosizeProps = shouldAutosize ? { maxRows, minRows } : {}` - so the five call sites
+   * that each asked for a floor of 5, 4, 3, 2 and 2 rows were all getting the browser's default
+   * two, and the comment editor hid 22px of a 191-character comment mid-sentence. `F-084`.
+   *
+   * Declared here rather than at the five call sites because it is one decision. The floors
+   * stay where they are: each field knows how much it expects to hold, and this only makes
+   * those numbers take effect.
+   */
+  Textarea: Textarea.extend({
+    styles: inputStyles,
+    defaultProps: { autosize: true, maxRows: TEXTAREA_MAX_ROWS },
+  }),
   /**
    * `clearButtonProps` for the same reason as `Modal`'s close button below: a clearable
    * `Select` draws an unlabelled button and a screen reader announces it as "button". Found by

@@ -727,3 +727,76 @@ to the pixel. Not fixed here; fixed by `F-066` and re-measured because the repor
 The report was that `From` is narrow while `To` takes the full width. That is `F-067`'s
 838.5px measurement and it closed with the filter bar shell: both are **170** now. Section 6
 above carries the numbers.
+
+# Section 11: the seven-item round (2026-09-10)
+
+Measured at 1440x900 and 1024x900 against the mock backend, tolerance 1px. Items 1 to 3 are
+fixes and carry before/after; items 4 to 7 are measurement only.
+
+## 11.1 Every multi-line box was two and a half lines tall, whatever it asked for
+
+`minRows` is declared at all five call sites and applied at none of them. Mantine's
+`Textarea.tsx` reads `const autosizeProps = shouldAutosize ? { maxRows, minRows } : {}`, so
+without `autosize` the two props are dropped before they reach the DOM and the browser's
+default `rows=2` stands. Every box measured **2.5 rows** including padding.
+
+| Field | asks for | rows before | rows after | box before | box after |
+| --- | --- | --- | --- | --- | --- |
+| comment editor / Text | 5 | **2.5** | **5.6** | 54 | **121** |
+| bug report / Description | 4 | **2.5** | **4.6** | 54 | **99** |
+| warn form / Warning message | 3 | **2.5** | **3.5** | 51 | **71** |
+| user edit / Biography | 2 | **2.5** | **2.5** | 54 | **55** |
+| warning editor / Warning message | 2 | **2.5** | **2.5** | 46 | **47** |
+
+The two that ask for 2 were already getting about 2, which is why this survived: the defect is
+invisible in the two smallest fields and worst in the largest.
+
+### What was cut off, in characters
+
+The seeded value is the fixture's own content; `long` is the `long-content` fault's 264-character
+German prose, the longest string the fixtures hold.
+
+| Field | value | shown before | shown after |
+| --- | --- | --- | --- |
+| comment editor | 191 (seeded) | **164** - cut at "…Wer das ohne Tutorium s" | **191** |
+| comment editor | 264 (long) | **152** | **264** |
+| bug report | 264 (long) | **142** | **264** |
+| warn form | 264 (long) | **153** | **264** |
+| biography | 264 (long) | **142** | **264** |
+| warning editor | 264 (long) | **160** | **264** |
+
+The comment editor is the one an operator meets: **27 of 191 characters hidden mid-sentence**
+on the fixture's own comment, with no scrollbar drawn until the box is focused.
+
+### The ceiling, and what it protects
+
+Filled with 1500 characters, the comment editor stops at **275px (12.7 rows)**, takes
+`overflow-y: auto` and scrolls **inside itself**. The dialog stays 556px and does not scroll;
+the document stays 900 and does not grow; Save stays on screen at y=675.
+
+### The dialog was never the problem, and the brief's second requirement was already met
+
+| viewport | dialog max-height | dialog scrollHeight | dialog scrolls | body overflow | document grows |
+| --- | --- | --- | --- | --- | --- |
+| 900 | **810** | 1130 | **yes** | hidden | no |
+| 700 | **630** | 1130 | **yes** | hidden | no |
+
+Mantine's `.mantine-Modal-content` already carries `max-height: calc(100dvh - 2 x yOffset)` with
+`overflow-y: auto`, and `body` is `overflow: hidden` while a dialog is open. So a dialog taller
+than the viewport already scrolls itself and cannot scroll the page. **A modal body cap was
+planned and then not applied**: it would have nested a second scroller inside one that works.
+Measured, not assumed - an earlier reading of this took `.mantine-Modal-body` (1069px,
+`overflow: visible`) for the scroller and concluded the opposite.
+
+Dialog heights after, all inside the 810 cap: comment editor 335 -> **402**, bug report
+583 -> **627**, warn form 737 -> **778**, biography 810 -> **810**, warning editor 586 -> **622**.
+
+### Not changed under this item, and why
+
+`MetadataList.tsx:43` sets `wrap="nowrap"` on a metadata value with no `minWidth: 0`, and
+`ChangeList.tsx`'s value box has no `maxHeight`. Both are read-only text in the audit detail
+panel, not inputs, and neither pushed anything in this round's measurements. Left alone rather
+than swept in.
+
+**Opened by 11.1:** `F-084`.
+

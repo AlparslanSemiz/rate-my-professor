@@ -2,6 +2,72 @@
 
 ## [Unreleased]
 
+### Every multi-line box shows what is in it (`F-084`)
+
+Item 1 of seven. Measured first, in
+[docs/coursework/layout-audit.md](docs/coursework/layout-audit.md) §11.1, then fixed, then
+measured again.
+
+**What was wrong.** All five `Textarea`s in the panel declare a floor - `minRows` of 5, 4, 3, 2
+and 2 - and none of them was getting it. Mantine drops `minRows` and `maxRows` unless `autosize`
+is set, and `autosize` appeared **zero times** in the repository, so every box rendered at the
+browser's default two rows: **2.5 rows including padding, at both 1440 and 1024**. The comment
+editor showed **164 of its comment's 191 characters**, cut mid-sentence, with no scrollbar drawn
+until the box is focused.
+
+#### `src/theme/components.ts`
+
+- **Added** `defaultProps: { autosize: true, maxRows: TEXTAREA_MAX_ROWS }` to the `Textarea`
+  entry, and `TEXTAREA_MAX_ROWS = 12` with the reasoning above it. One place, not five: the call
+  sites keep their own floors, and this only makes the numbers they already declare take effect.
+  After: **5.6, 4.6, 3.5, 2.5 and 2.5 rows**, nothing hidden in any field at either width.
+
+#### `e2e/fields.spec.ts` - new
+
+- **Added** ten tests, the five fields at two widths, each measured holding its fixture value and
+  then the 264-character `long-content` string. **Red first**, all ten, on `the comment editor
+  declares minRows=5 / Received: 2.5`.
+- The page assertion is a **delta**, not "the page must not scroll": Users at 1024 is 963px tall
+  before anything is opened, so the absolute form failed on the route rather than on the field
+  and said nothing about either.
+
+#### `src/test/setup.ts`, `src/test/testDoubles.ts`
+
+- **Added** a `document.fonts` double beside `ResizeObserver` and `matchMedia`. Autosizing runs
+  in jsdom too, and Mantine's font-loading effect calls `document.fonts.addEventListener`
+  **unguarded**, which jsdom does not implement. It only reached `theme.integration.test.tsx`,
+  because every other component test renders through a bare `MantineProvider` and so never sees
+  the panel's own defaults - worth knowing, and left as it is.
+
+#### `src/theme/theme.integration.test.tsx`
+
+- **Added** a test that the theme still declares the growth and the ceiling. Asserted on the
+  theme object rather than on a rendered box, because Mantine turns autosizing **off** whenever
+  `NODE_ENV` is `test`: jsdom cannot answer the behavioural question at all, and
+  `e2e/fields.spec.ts` is what does.
+
+### Unchanged on purpose
+
+- **A cap on the modal body was planned, approved and then not applied**, because the
+  measurement said it was already there. `.mantine-Modal-content` carries
+  `max-height: calc(100dvh - 2 x yOffset)` with `overflow-y: auto` - **810px at a 900px viewport,
+  630 at 700** - and scrolls itself while `body` stays `overflow: hidden`. Adding a second cap
+  would have nested a scroller inside a working one. Filled with 1500 characters the comment
+  editor stops at 275px, scrolls **inside the field**, and leaves the dialog at 556, the document
+  at 900 and Save on screen at y=675.
+- **`MetadataList.tsx` and `ChangeList.tsx`** were measured and left. Both hold read-only text in
+  the audit detail panel rather than inputs, and neither pushed anything in this round.
+
+### The numbers this round was measured on
+
+Re-derived from the runs, per [testplan.md](docs/testplan.md) §0.
+
+- **Updated** [testplan.md](docs/testplan.md) §3a: Layer 4 was 146 and is **156** (layout 37,
+  focus 12, a11y 9, surfaces 71, keyboard 4, faults 13, **fields 10**); the Playwright suite was
+  14 specs / 177 tests and is **15 specs, 187 tests**.
+- **Added** a §3b scope row for the new layer-4 sweep, saying what it scanned and what it found.
+- Vitest: **51 files, 1217 passed, 3 skipped**. `npm run check` clean at 285 files, 949 edges.
+
 ### The numbers this round was measured on
 
 Re-derived from the runs rather than carried forward, per [testplan.md](docs/testplan.md) §0.

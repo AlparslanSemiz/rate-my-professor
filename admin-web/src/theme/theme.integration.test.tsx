@@ -89,6 +89,23 @@ describe('panel theme', () => {
     expect(field).toHaveStyle({ background: chrome.surfaceSunken })
   })
 
+  /**
+   * Asserted on the theme object rather than on a rendered box, and that is not laziness.
+   * Mantine turns autosizing **off** whenever `NODE_ENV` is `test` (`shouldAutosize = autosize
+   * && getEnv() !== 'test'`), so every textarea in this suite renders as a plain two-row box
+   * however the theme is configured. jsdom cannot answer this question; `e2e/fields.spec.ts`
+   * measures the behaviour in a browser. What this pins is the declaration - that the decision
+   * is still made once, here, rather than drifting back to five call sites.
+   */
+  it('declares that a textarea grows with its content, with a ceiling', () => {
+    const textarea = theme.components?.Textarea
+
+    expect(textarea?.defaultProps).toMatchObject({ autosize: true })
+    // A ceiling, whatever it is: without one the field grows without limit and pushes the
+    // dialog's own controls out of reach. `F-084`.
+    expect(textarea?.defaultProps?.maxRows).toBeGreaterThan(0)
+  })
+
   it('paints the app shell navbar without a styles prop', () => {
     const { container } = renderThemed(
       <AppShell navbar={{ width: 240, breakpoint: 'sm' }} padding={0}>
