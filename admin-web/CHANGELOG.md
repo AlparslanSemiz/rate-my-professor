@@ -2,6 +2,44 @@
 
 ## [Unreleased]
 
+### Layout audit, section 2: what moves when something is pressed
+
+Measurement only. **No code changed**, and the report says why for each of the three fixes
+the brief pre-authorised. Numbers are in
+[docs/coursework/layout-audit.md](docs/coursework/layout-audit.md); the measuring spec is
+deliberately not in this repository, because `playwright.config.ts` is shared with CI and
+is not touched before delivery.
+
+- **Added** `docs/coursework/layout-audit.md`. Tolerance 1px, everything from
+  `getBoundingClientRect`, `scrollWidth`/`clientWidth` or `getComputedStyle`.
+- **Measured clean:** six modals open and close with **0.00px** drift on every anchor;
+  tab switching on two routes moves nothing above the strip; typing and applying a filter
+  move nothing; expanding a comment's answers leaves the rows above it at **0**. A warning
+  strip costs exactly **70.00px** and moves everything below it together.
+- **Opened** `F-062` to `F-065`: `scrollbar-gutter` is `auto` while overflow differs per
+  route; the loading state is a fixed 200px box where 900-1123px of content goes; the
+  Dashboard has no `h1`; the tab strip starts 102.79px lower on two routes.
+
+### Unchanged on purpose
+
+- **All three pre-authorised fixes were declined on the measurements**, not skipped.
+  There is **no fake vertical scrollbar** - seven of eight routes report exactly 0
+  overflow at 1440x900 and the Dashboard's 223px is real content. The **scrollbar-induced
+  shift could not be reproduced**, because this Chromium's scrollbar is an overlay and
+  took 0px of width on every route, so applying `scrollbar-gutter: stable` would be a fix
+  with no number behind it. And there is **no skeleton to resize**.
+- **`F-036` was referenced, not re-derived.** Horizontal table overflow at 1024 is already
+  measured and recorded; this audit opened no new finding for it.
+
+### Two limits of the measurement, recorded rather than glossed
+
+- The **two-strip case is unmeasured**: `?fault=system-status` produces no strip on
+  `/users`, so asking for both faults still rendered one.
+- The **loading transition was not observed**, only computed: MSW answers from a service
+  worker, and Playwright's `page.route` does not sit in front of one, so a 600ms injected
+  delay changed nothing and `sawSpinner` was false on all eight routes.
+
+
 ### The em dash is gone from interface text, and there is now a rule saying so
 
 `F-061`. The instruction was to remove every long dash from user-visible text. Two earlier
