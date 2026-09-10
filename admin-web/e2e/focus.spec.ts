@@ -32,9 +32,10 @@ const MIN_TARGET = 24
  *
  *   - **`Sign out`, 61x21** — the sidebar, so on all eight signed-in routes. Three pixels short.
  *   - **`See everyone →`, 90x17** — the dashboard's link out to Users. Seven pixels short.
- *   - **`22x22`, every row action on Comments** — the expand toggle and the edit and delete
- *     icons on every row. Two pixels short on both axes, and these are the panel's actual
- *     moderation controls.
+ *   - **`22x22`, every row action on Comments and on the catalogue** — the expand toggle and
+ *     the edit and delete icons on every row. Two pixels short on both axes, and these are the
+ *     panel's actual moderation controls. The catalogue's were invisible to this measurement
+ *     until the demo backend was given rows to draw (`F-041`).
  *
  * Pinned as sizes rather than labels so the fixture's names can change without touching it. A
  * new undersized control with a new box turns the route red; raising one of these does too.
@@ -49,7 +50,12 @@ const KNOWN_UNDERSIZED: Readonly<Record<string, readonly string[]>> = {
   Dashboard: ['61x21', '90x17'],
   Users: ['61x21'],
   Comments: ['22x22', '61x21'],
-  'Lectures & Professors': ['61x21'],
+  /**
+   * `22x22` appeared here on 2026-09-10 without the panel changing: the demo backend served no
+   * lectures at all until then, so this route's table had a header and no rows and there were
+   * no row actions to measure. The edit and delete icons were always this size — `F-041`.
+   */
+  'Lectures & Professors': ['22x22', '61x21'],
   'Bug Reports': ['61x21'],
   'Audit Logs': ['61x21'],
   // Measured, not assumed: the run reports 11 visible buttons and one undersized box, the

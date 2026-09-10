@@ -230,6 +230,105 @@ export function demoBackend(): Partial<MswDb> {
       },
     ],
     gitlabEnabled: true,
+    /**
+     * Real KIT lectures, and the reason they are here at all: **the demo backend served none.**
+     * Every catalogue measurement the browser layer has ever taken was taken against a table
+     * with a header and no rows, and the catalogue's edit and delete modals were unreachable in
+     * a browser — nothing could click a row action that was never drawn. `F-041`.
+     *
+     * `Lineare Algebra I` is deliberately inactive: the catalogue's own notice about
+     * deactivated rows had no row to show it for either.
+     */
+    lectures: [
+      {
+        id: 'lecture-1',
+        name: 'Programmieren',
+        code: 'IN1IPRO',
+        semesterYear: 2026,
+        semesterSeason: 'WINTER',
+        active: true,
+        lectureType: 'LECTURE_AND_EXERCISE',
+        professors: [
+          { id: 'professor-1', firstName: 'Anna', lastName: 'Brandenburger', active: true },
+        ],
+        commentCount: 2,
+        ratingCount: 2,
+      },
+      {
+        id: 'lecture-2',
+        name: 'Lineare Algebra I',
+        code: 'MATHIN1',
+        semesterYear: 2025,
+        semesterSeason: 'WINTER',
+        active: false,
+        lectureType: 'LECTURE_ONLY',
+        professors: [
+          { id: 'professor-2', firstName: 'Jürgen', lastName: 'Kellermann', active: true },
+        ],
+        commentCount: 1,
+        ratingCount: 1,
+      },
+      {
+        id: 'lecture-3',
+        name: 'Grundlagen der Rechnernetze und verteilten Systeme',
+        code: 'IN1GRNVS',
+        semesterYear: 2026,
+        semesterSeason: 'SUMMER',
+        active: true,
+        lectureType: 'LECTURE_AND_EXERCISE',
+        professors: [
+          { id: 'professor-1', firstName: 'Anna', lastName: 'Brandenburger', active: true },
+          { id: 'professor-3', firstName: 'Sofia', lastName: 'Weiß-Lindemann', active: true },
+        ],
+        commentCount: 0,
+        ratingCount: 1,
+      },
+    ],
+    professors: [
+      {
+        id: 'professor-1',
+        firstName: 'Anna',
+        lastName: 'Brandenburger',
+        active: true,
+        lectureIds: ['lecture-1', 'lecture-3'],
+        averageRating: 4.2,
+        ratingCount: 3,
+      },
+      {
+        id: 'professor-2',
+        firstName: 'Jürgen',
+        lastName: 'Kellermann',
+        active: true,
+        lectureIds: ['lecture-2'],
+        averageRating: 2.8,
+        ratingCount: 1,
+      },
+      {
+        id: 'professor-3',
+        firstName: 'Sofia',
+        lastName: 'Weiß-Lindemann',
+        active: false,
+        lectureIds: ['lecture-3'],
+        averageRating: 0,
+        ratingCount: 0,
+      },
+    ],
+    ratings: [
+      {
+        id: 'rating-1',
+        lectureId: 'lecture-1',
+        createdAt: '2026-09-07T11:20:00Z',
+        author: { id: 'user-1', name: 'Lena Hoffmann' },
+        scores: { content: 4, clarity: 5, difficulty: 3 },
+      },
+      {
+        id: 'rating-2',
+        lectureId: 'lecture-2',
+        createdAt: '2026-09-05T16:45:00Z',
+        author: { id: 'user-3', name: 'Mira Kowalski' },
+        scores: { content: 2, clarity: 3, difficulty: 5 },
+      },
+    ],
     auditMeta: {
       actors: [
         {

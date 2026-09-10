@@ -7,6 +7,7 @@ import { db } from './db'
 import { failure, ok } from './envelope'
 import { handlers } from './handlers'
 import { setSessionUser } from './handlers/auth'
+import { without } from './wire'
 
 /**
  * Failures the panel can be asked to render, by adding `?fault=<name>` to any URL.
@@ -91,6 +92,50 @@ const FAULTS: Record<string, () => HttpHandler[]> = {
   'block-refused': () => [
     http.patch(apiUrl('/users/:id/block'), () =>
       failure(409, 'Administrator accounts cannot be blocked.'),
+    ),
+  ],
+  /**
+   * A log's filter vocabulary failing while its entries arrive.
+   *
+   * The two log screens read `/…/meta` and `/…` as separate queries, and only the second one
+   * has rows to show. What an operator gets when the vocabulary is missing — dropdowns with no
+   * options above a table that works — is a state nothing reaches by clicking.
+   */
+  'log-meta': () => [
+    http.get(apiUrl('/activity-logs/meta'), () => failure(500, 'Filter vocabulary unavailable.')),
+    http.get(apiUrl('/audit-logs/meta'), () => failure(500, 'Filter vocabulary unavailable.')),
+  ],
+  /**
+   * A log whose actions the panel does not know, in the **two** ways that can happen.
+   *
+   * The first entry's `action` is *absent*, which is `F-028` — the panel called `.split('_')`
+   * and `.endsWith(…)` on `undefined` and the `ErrorBoundary` replaced the whole screen with
+   * "This page could not be displayed.". The rest carry a value the panel has simply never
+   * heard of, which is not a defect at all: the compiled action lists are not filters, the
+   * dropdowns come from `/…/meta`, and `consumer-findings.md` C-10 already records the bundle
+   * running behind the backend's vocabulary. A newer deployment is the ordinary case.
+   *
+   * Both are here because they look identical in a bug report and are not the same thing: one
+   * is the panel crashing, the other is the panel doing its job.
+   */
+  'unknown-action': () => [
+    http.get(apiUrl('/audit-logs'), () =>
+      ok({
+        auditLogs: db.auditLogs.map((entry, index) =>
+          index === 0
+            ? without({ ...entry }, 'action')
+            : { ...entry, action: 'LECTURE_ARCHIVED' },
+        ),
+        nextCursor: null,
+      }),
+    ),
+    http.get(apiUrl('/activity-logs'), () =>
+      ok({
+        activityLogs: db.activityLogs.map((entry, index) =>
+          index === 0 ? without({ ...entry }, 'action') : { ...entry, action: 'PROFILE_VIEWED' },
+        ),
+        nextCursor: null,
+      }),
     ),
   ],
   /**

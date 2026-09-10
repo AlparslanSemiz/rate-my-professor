@@ -6,6 +6,7 @@
 // the shared config so the guard still holds for every other spec.
 
 import { expect, test } from '@playwright/test'
+import { MEASURABLE_WIDTHS } from './measure'
 import { ROUTES, open } from './routes'
 import { signIn } from './signIn'
 
@@ -22,8 +23,15 @@ import { signIn } from './signIn'
 
 /** The panel's own navbar width above the breakpoint, from `AdminLayout`'s `AppShell`. */
 const NAVBAR_WIDTH = 240
-/** Widths worth measuring at, once `F-019` has taken the narrow ones away. */
-const USABLE_WIDTHS = [1024, 1440]
+/**
+ * Widths worth measuring at, once `F-019` has taken the narrow ones away.
+ *
+ * **800 is now measured too.** It used to say "nothing below 1024", which was one width more
+ * cautious than the finding requires: the test below pins the navbar at 240px from 800 up, so
+ * from 800 up there is a panel on screen to measure. Everything at or below 768 is still
+ * recorded as *not measured* rather than passed.
+ */
+const USABLE_WIDTHS = MEASURABLE_WIDTHS
 /** The routes that draw a `<table>`, so an empty measurement loop cannot pass as a clean one. */
 const ROUTES_WITH_TABLES = new Set(['Users', 'Comments', 'Lectures & Professors', 'Audit Logs', 'Activity Logs'])
 /** Where `F-019` lives. Mantine's `sm` is 48em; the navbar is uncollapsed at and below it. */
@@ -57,7 +65,7 @@ test('the panel cannot be measured at or below 768px, and the boundary is 800', 
   for (const width of UNUSABLE_WIDTHS) {
     expect(await widthOfNavAt(width), `navbar at ${width}px`).toBe(width)
   }
-  for (const width of [800, ...USABLE_WIDTHS]) {
+  for (const width of USABLE_WIDTHS) {
     expect(await widthOfNavAt(width), `navbar at ${width}px`).toBe(NAVBAR_WIDTH)
   }
 })
