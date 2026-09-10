@@ -27,15 +27,18 @@ const HANDED_OVER_FROM_JSDOM = ['color-contrast', 'target-size'] as const
 /**
  * Violations recorded rather than fixed, by route.
  *
- * `F-034` — the dashboard's "Head straight to any section." subtitle is `chrome.textDim`
- * (`#6b7280`) on the panel gradient (`#171b23`) at 12px: **3.56:1**, where WCAG AA asks 4.5:1
- * for text that size. One element fails as the eight routes first render; the token is used 60
- * times across 37 files, 30 of them at `size="xs"`, so the risk is far wider than the
- * measurement — and changing it is a theme change, which this round does not make.
+ * `F-034` recorded the one contrast failure this layer could measure: the dashboard's
+ * "Head straight to any section." subtitle, `chrome.textDim` (`#6b7280`) on the panel gradient
+ * (`#171b23`) at 12px, **3.56:1** against the 4.5:1 WCAG AA asks for text that size.
+ *
+ * **It is gone, and not because the token changed.** That sentence was the description of the
+ * "Jump to" block, which `F-066` removed for repeating three destinations the sidebar already
+ * offers. The failing node went with it, so this map is empty and the dashboard is expected to
+ * be clean. `chrome.textDim` is still used 60 times across 37 files, 30 of them at `size="xs"`,
+ * so the *risk* `F-034` described is unchanged - what is gone is the one node that proved it.
+ * An empty map is the honest state: nothing here is exempt any more.
  */
-const KNOWN: Readonly<Record<string, readonly string[]>> = {
-  Dashboard: ['color-contrast'],
-}
+const KNOWN: Readonly<Record<string, readonly string[]>> = {}
 
 /** @returns how many nodes that rule reached in each of axe's three answers */
 function tally(results: Awaited<ReturnType<AxeBuilder['analyze']>>, rule: string) {

@@ -2,6 +2,45 @@
 
 ## [Unreleased]
 
+### Dashboard: stop showing the same number three times
+
+`F-066`, option 2. **Removed** `SystemPulse` (the two progress bars) and
+`ModuleNavigation` ("Jump to"), and `ModuleCard` with it, which nothing else used.
+
+- The bars were a **third** rendering of the active share and a **second** of the admin
+  count. "Jump to" repeated three destinations the sidebar offers at all times.
+- **Overflow at 1440 goes from 223px to 0**, and 1280 likewise. 1024 goes from 642 to 204,
+  which is real content at that width rather than repetition. Standalone numbers on the
+  screen drop from 8 to 6.
+- **Checked before removing anything:** `Last updated` is in the hero, labelled `Updated`.
+  It was the one value with no second home, so it was confirmed present rather than
+  assumed. Nothing moved.
+- **Still repeated, and accepted under option 2:** the hero's `Reports waiting 1` and the
+  card's `Open reports 1`.
+
+### `F-034` closes with it, and not by changing a token
+
+The panel's one measurable colour-contrast failure was the **"Head straight to any section."**
+subtitle at 3.56:1 - the description of the "Jump to" block. Removing the block removed the
+failing node. Measured after: `a11y Dashboard: contrast passed=4 failed=0 undetermined=56`, so
+`e2e/a11y.spec.ts`'s known-violation map is now **empty** and no route is exempt any more.
+
+**What this does not fix:** `chrome.textDim` is still used 60 times across 37 files, 30 of them
+at `size="xs"`, on backgrounds axe cannot resolve (`F-035`). The risk `F-034` described is
+unchanged; the one node that proved it is gone. A token change is still the real fix.
+
+### Tests
+
+- **Changed** the `F-030` pin in `src/App.a11y.integration.test.tsx` from "both progress
+  bars are named" to "there are no progress bars", inverted rather than deleted so it still
+  fails if an unnamed bar comes back.
+- **Emptied** the known-violation map in `e2e/a11y.spec.ts`. It went red first, which is how
+  `F-034`'s closure was noticed at all rather than assumed.
+- **Added** a dashboard assertion that no bar, no "Jump to" and no "How things are running"
+  render, that `Updated` still does, and that every counter the removed blocks were derived
+  from survives. Seen red first.
+
+
 ### Layout audit, sections 3 to 9: one fix, seven findings, six standards proposed
 
 Measurement round. **One declaration changed**; everything else is measured, costed and

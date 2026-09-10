@@ -151,6 +151,28 @@ describe('Dashboard page', () => {
     expect(shares).toContain('67%')
   })
 
+  it('shows each number once, and keeps the reading time', async () => {
+    renderDashboard()
+    await screen.findByText('Total users')
+
+    // `F-066`. The dashboard rendered four facts eight times and overflowed the viewport by
+    // 223px doing it. The two progress bars were a third rendering of the active share and a
+    // second of the admin count, and "Jump to" repeated three sidebar destinations that are on
+    // screen the whole time. Both blocks are gone; the cards keep every number they carried.
+    expect(screen.queryAllByRole('progressbar')).toHaveLength(0)
+    expect(screen.queryByText('Admin share of accounts')).not.toBeInTheDocument()
+    expect(screen.queryByText('Jump to')).not.toBeInTheDocument()
+    expect(screen.queryByText('How things are running')).not.toBeInTheDocument()
+
+    // The one value that lived nowhere else. It stays in the hero, labelled `Updated`, rather
+    // than going with the blocks that were removed.
+    expect(screen.getByText('Updated')).toBeInTheDocument()
+
+    // What must survive: every counter the removed blocks were derived from.
+    expect(statValue('Admin accounts')).toBe('1')
+    expect(screen.getAllByText('Active accounts').length).toBeGreaterThan(0)
+  })
+
   it('reports a failed first load instead of claiming the platform is empty', async () => {
     vi.mocked(systemStatusService.getStatus).mockRejectedValue(new Error('Counters are unavailable.'))
     vi.mocked(usersService.list).mockRejectedValue(new Error('Counters are unavailable.'))

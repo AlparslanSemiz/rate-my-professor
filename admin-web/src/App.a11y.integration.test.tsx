@@ -162,23 +162,14 @@ describe('every route, scanned by axe', () => {
     expect(violations.map((violation) => violation.id).sort()).toEqual([...route.knownViolations].sort())
   })
 
-  it('names both of the dashboard\'s progress bars', async () => {
+  it('has no progress bars left to name', async () => {
     await openRoute(ROUTES.find((route) => route.name === 'Dashboard')!)
 
-    // `F-030`, fixed. `SystemPulse` draws one `Progress` per metric with the visible label in a
-    // *sibling* `<Text>`, so a sighted operator read "Active accounts 62%" while a screen reader
-    // read an unnamed progressbar twice — axe's `aria-progressbar-name`, at `serious`.
-    //
-    // Asserted by accessible name rather than left to the route scan above, because the scan
-    // would go equally green if the bars stopped rendering at all. Mantine forwards `aria-label`
-    // from `<Progress>` onto the element that carries `role="progressbar"`, which is the part
-    // that had to be measured rather than assumed.
-    const bars = await screen.findAllByRole('progressbar')
-    expect(bars).toHaveLength(2)
-    expect(bars.map((bar) => bar.getAttribute('aria-label'))).toEqual([
-      'Active accounts',
-      'Admin share of accounts',
-    ])
+    // `F-030` named the dashboard's two progress bars, and this assertion pinned those names so
+    // the route scan could not go green by the bars simply disappearing. `F-066` then removed
+    // `SystemPulse` outright, because both bars re-rendered numbers the cards already carried.
+    // The pin is inverted rather than deleted: it still fails if a bar comes back unnamed.
+    expect(screen.queryAllByRole('progressbar')).toHaveLength(0)
   })
 
   it('says which rules it could not run, rather than counting them as passes', () => {

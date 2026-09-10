@@ -406,3 +406,31 @@ the browser before touching the file:
 `nowrap` is one declaration, changes no type and no colour, and clips nothing today. **The
 trade it makes:** a longer label added later would overflow rather than wrap. That is
 recorded in a comment at the change.
+
+---
+
+# Applied changes, before and after
+
+## Step 1 - Dashboard, option 2 (`F-066`)
+
+Removed: the two progress bars (`SystemPulse`) and the "Jump to" block
+(`ModuleNavigation`, and `ModuleCard` with it, which nothing else used).
+
+| Measurement | Before | After |
+| --- | --- | --- |
+| document `scrollHeight` at 1440 | 1123 | **900** |
+| **overflow at 1440** | **223** | **0** |
+| overflow at 1280 | 223 | **0** |
+| overflow at 1024 | 642 | **204** |
+| standalone numbers rendered | 8 | **6** |
+
+**Verified before removing anything:** `Last updated` is in the hero, labelled `Updated`,
+with seconds. It was the one value that existed nowhere else, so it had to be confirmed
+present rather than assumed - it is, and nothing moved.
+
+**What is still repeated, and is accepted under option 2:** the hero's `Reports waiting 1`
+and the card's `Open reports 1` are still the same number under two names. Option 2 only
+removed the bars and the navigation block; the hero stays.
+
+1024 still overflows by 204px. That is real content at that width, not repetition.
+
