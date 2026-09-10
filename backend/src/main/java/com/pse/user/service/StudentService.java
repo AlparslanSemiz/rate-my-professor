@@ -3,9 +3,14 @@ package com.pse.user.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.service.AuditWriter;
 import com.pse.lecture.mapper.LectureResponseMapper;
+import com.pse.moderation.mapper.UserResponseMapper;
 import com.pse.rating.service.RatingAverages;
 import com.pse.lecture.dto.response.LectureResponse;
 import com.pse.lecture.model.Lecture;
@@ -39,14 +44,18 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
 
+    private final AuditWriter auditWriter;
+
 
     /**
      * Creates StudentService.
      *
      * @param studentRepository the studentRepository
+     * @param auditWriter the auditWriter
      */
-    public StudentService(StudentRepository studentRepository) {
+    public StudentService(StudentRepository studentRepository, AuditWriter auditWriter) {
         this.studentRepository = studentRepository;
+        this.auditWriter = auditWriter;
     }
 
 
@@ -143,6 +152,7 @@ public class StudentService {
      *
      * @throws ApiException if the operation fails
      */
+    @Transactional
     public BasicResponse deleteAccount(Student student) {
 
         if (student == null) {
@@ -153,6 +163,33 @@ public class StudentService {
         if (!softDeleteByKitEmail(student.getKitEmail())) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Student not found");
         }
+
+        // The status change and this entry commit together or not at all -- hence the
+        // @Transactional above, which is the whole reason it is there. Without it the two are
+        // separate commits and a crash between them leaves an account DELETED with nothing
+        // recording that it ever happened, which is the exact state the entry exists to deny.
+        //
+        // REQUIRED rather than REQUIRES_NEW, and the difference is not cosmetic.
+        // AuditWriter.writeRefusal uses REQUIRES_NEW because its callers throw immediately
+        // afterwards and would take the record down with their rollback. Nothing here throws
+        // after this point, so a suspended second transaction would only make the entry
+        // survive a failure of the deletion it claims to describe.
+        //
+        // The label is UserResponseMapper.label, not a string built here. It is the one
+        // authority for how a student names itself in an audit entry, and the admin panel
+        // reads target_label to recover the identity of a deleted account -- see
+        // docs/adminweb-tasks.md section 6. Two spellings of that format would be two answers
+        // to a question the panel asks once.
+        auditWriter.writeStudentAction(
+                student,
+                AuditAction.USER_SELF_DELETED,
+                AuditTargetType.USER,
+                student.getId(),
+                UserResponseMapper.label(student),
+                // States what separates this from an admin deletion: nothing was scrubbed, so
+                // the row keeps the real address this entry also carries.
+                Map.of("anonymized", false)
+        );
 
         return new BasicResponse("Deleted Account successfully: " + student.getKitEmail(), true);
     }

@@ -1205,6 +1205,28 @@ stub, because nothing calls it.
 **Nothing here belongs in the integration layer.** None of the five asks a question H2 cannot
 answer, and three of them touch no database at all.
 
+## The account lifecycle from the app side, and the check that is missing under it
+
+Five tests added on 10 September cover what a student does to their own account. Two record a
+behaviour that was added ([ADR-0016](adr/0016-self-service-lifecycle-recorded-not-authorised.md));
+three are **characterizations** of [F-48](test-findings.md#f-48--an-unauthenticated-caller-can-undo-somebodys-account-deletion),
+which is deliberately unfixed, and each of those says so in its javadoc.
+
+| Claim | Layer | Test | Why this layer |
+| --- | --- | --- | --- |
+| An anonymous caller revives a self-deleted account | API / role | `AuthApiIntegrationTests.anAnonymousLoginCodeRequestBringsBackAnAccountThatDeletedItself` | The claim is "anonymous, through the public route", so nothing below the security chain can make it. It also runs the whole shape end to end — register, self-delete, revive — which is how the two findings are shown to be one story. |
+| Both entries are served on the administrative log and neither can be reverted | API / role | `AdminApiIntegrationTests.selfDeletionAndRevivalAreServedOnTheAdministrativeLogAndNeitherCanBeReverted` | `revertible` and `revertBlockedReason` are computed per read, and the scope decision is only observable in which endpoint answers. This is the assertion that keeps `CHANGELOG` `10.09 (20)` and the response from drifting apart. |
+| The account is back **before a code exists** | Unit | `LoginCodeServiceTests.requestLoginRevivesADeletedAccountBeforeTheCodeIsEvenIssued` | Ordering, asserted with `InOrder` against mocks. The API test can show the effect; only this one shows that the flip precedes the code, which is the defect rather than its consequence. |
+| The revival outlives the failure of the request that caused it | Unit | `LoginCodeServiceTests.theRevivalOfADeletedAccountOutlivesAFailureToSendTheCode` | Delivery has to be made to throw, which is a mock's job. |
+| The deletion and the revival are recorded, with the right action, label and metadata | Unit | `StudentServiceTests.deleteAccount_existingStudent_recordsTheDeletionAgainstTheAccountItself`, both tests in `AccountReactivatorTests` | Pure collaborator verification. The label is asserted in full because the panel recovers a deleted account's identity from `target_label`, so its format is a contract and not a detail. |
+
+**Every one was seen red first**, including the two that describe behaviour that already existed:
+the ordering test by asserting the reverse order, the others by asserting the state or the action
+a fix would produce. The reds are quoted in [worklog.md](worklog.md).
+
+**Nothing here is in the integration layer.** None of the five asks a question H2 cannot answer,
+and three of them touch no database at all.
+
 ## Where the suite stops
 
 *Deliberately uncovered* below names the **classes** nobody tests and why. This section names

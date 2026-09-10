@@ -295,6 +295,14 @@ matching `USER_DELETED` entry from `GET /admin/audit-logs` — its `target.label
 before the scrub. `target.label` is a **display string**, not two fields: render it, do not
 split it.
 
+**Two kinds of deletion reach this list, and only one of them is anonymised.** The paragraph
+above is the admin deletion. An account that deleted *itself* from the student app
+(`PATCH /account/deleteAccount`) is **not** scrubbed: it keeps its real `username` and
+`kitEmail` on the row, and its audit entry is **`USER_SELF_DELETED`**, not `USER_DELETED`.
+So a `DELETED` row carrying a real identity is a self-deletion, and the entry to look for is
+the other one. A self-deleted account can also **leave this list on its own**, without any
+administrative action — see `USER_SELF_REACTIVATED` below.
+
 For dashboard counters, prefer `GET /admin/system/status` — its `counts` block already carries
 users, active users, admins, lectures, comments, answers, ratings, open reports and audit
 events, and `counts.users` excludes soft-deleted accounts. Polling the full user listing for
@@ -852,7 +860,12 @@ Otherwise it answers `409` with a machine-readable `reason`:
 
 **Deletions cannot be reversed and refuse rather than half-applying.** `USER_DELETED`
 anonymises the account and `LECTURE_DELETED` takes its comments, answers and ratings with it;
-nothing in the log carries the removed data, so there is nothing to restore from. `reason` is
+nothing in the log carries the removed data, so there is nothing to restore from.
+`USER_SELF_DELETED` and `USER_SELF_REACTIVATED` are refused for the same reason and by the same
+rule — they are lifecycle events with an empty `changes` map, so there is no field diff to
+invert. That is deliberate for the second one in particular: making an account's revival
+revertible would be a restore route arriving through the revert machinery, and there is no
+restore. `reason` is
 the only field added to any error body in this API, and it is omitted entirely when absent, so
 every other error response is unchanged.
 
@@ -866,7 +879,8 @@ every other error response is unchanged.
   `COMMENT_REPORT_STATUS_CHANGED`, `COMMENT_REPORT_DELETED`,
   `ANSWER_REPORT_STATUS_CHANGED`, `ANSWER_REPORT_DELETED`, `BUG_REPORT_UPDATED`,
   `BUG_REPORT_ISSUE_CREATED`, `BUG_REPORT_DELETED`, `LECTURE_CREATED`, `LECTURE_UPDATED`,
-  `LECTURE_DELETED`, `PROFESSOR_CREATED`, `PROFESSOR_UPDATED`, `PROFESSOR_DELETED`
+  `LECTURE_DELETED`, `PROFESSOR_CREATED`, `PROFESSOR_UPDATED`, `PROFESSOR_DELETED`,
+  `USER_SELF_DELETED`, `USER_SELF_REACTIVATED`
 - Student activity: `USER_LOGIN`, `USER_LOGOUT`, `COMMENT_CREATED`, `ANSWER_CREATED`,
   `RATING_SUBMITTED`, `COMMENT_REPORT_CREATED`, `ANSWER_REPORT_CREATED`,
   `BUG_REPORT_CREATED`
@@ -888,6 +902,48 @@ transaction.
 administrator and the actor was an [elevated operator](#elevated-operators) — that is,
 when elevation is what allowed the action. `actor.role` stays `"ADMIN"`: elevation is not
 a role, and this is where the distinction is recorded instead.
+
+### The account lifecycle from the app side
+
+Two actions record what a student did to their own account. Both are **administrative** scope
+and answer on `GET /admin/audit-logs`, not on `/activity-logs`, even though `actor.type` is
+`USER`: the scope follows the log a reader needs rather than the actor, the same rule that puts
+a refused *admin* login in the activity log. The reader here is an operator asking where an
+account went, and half a lifecycle on each of two screens answers nobody.
+
+| Action | Written when | `metadata` |
+| --- | --- | --- |
+| `USER_SELF_DELETED` | `PATCH /account/deleteAccount` | `{"anonymized": false}` |
+| `USER_SELF_REACTIVATED` | a deleted account is set back to `ACTIVE` | `{"trigger":"LOGIN_CODE_REQUEST","callerAuthenticated":false}` |
+
+```json
+{
+  "id":"audit-uuid",
+  "action":"USER_SELF_DELETED",
+  "createdAt":"2026-09-10T09:12:00.000Z",
+  "actor":{"type":"USER","id":"uuid","name":"ada","email":"ada@student.kit.edu","role":"STUDENT"},
+  "target":{"type":"USER","id":"uuid","label":"ada (ada@student.kit.edu)"},
+  "changes":{},
+  "metadata":{"anonymized":false},
+  "revertible":false,
+  "revertBlockedReason":"ACTION_NOT_REVERTIBLE",
+  "revertedByAuditId":null
+}
+```
+
+`anonymized: false` is what separates it from `USER_DELETED`: the administrative path scrubs the
+account in the same transaction and this one does not, so both the row and this entry's
+`target.label` carry the real identity.
+
+**`callerAuthenticated: false` is literal, and it is the part to read carefully.** A deleted
+account is set back to `ACTIVE` when a login code is **requested** for its address, not when one
+is entered, and `POST /auth/request-login` is public. The caller who triggered the revival
+therefore proved nothing and need not be the account's owner. The actor recorded is the account
+itself, because there is no identified actor to name. **This entry records that behaviour; it
+does not authorise it, and the behaviour is an open defect rather than a feature of the API.**
+
+Neither action is revertible, and neither is elevated: they have no administrative actor to
+elevate.
 
 ### Student activity
 

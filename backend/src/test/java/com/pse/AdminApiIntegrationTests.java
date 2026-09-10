@@ -3208,6 +3208,73 @@ class AdminApiIntegrationTests {
                 .andExpect(jsonPath("$.reports").value(1));
     }
 
+    /**
+     * The client-visible half of the two new actions, asserted against the response an
+     * operator actually reads rather than against the row in the table.
+     *
+     * <p>Both are {@code ADMINISTRATIVE} scope, so they answer on {@code GET /audit-logs} beside
+     * {@code USER_DELETED} rather than on {@code /activity-logs} — which matters because the
+     * admin panel deleted its activity-log screen, so an {@code ACTIVITY} entry would have been
+     * a record nobody can read. Both are non-revertible with
+     * {@code revertBlockedReason: "ACTION_NOT_REVERTIBLE"}: recording the revival as a
+     * {@code USER_UPDATED} field diff instead would have handed the panel a working undo and put
+     * a restore route into the product through the back door of the revert machinery, which
+     * {@code docs/adr/0015-deletion-not-split-from-anonymisation.md} refuses.
+     *
+     * <p>This is the shape written into the {@code CHANGELOG} under {@code 10.09 (20)}, and it is
+     * here so that the entry and the response cannot drift apart.
+     */
+    @Test
+    void selfDeletionAndRevivalAreServedOnTheAdministrativeLogAndNeitherCanBeReverted()
+            throws Exception {
+
+        Session admin = createSession("admin@student.kit.edu", true);
+        Session student = createSession("leaving@student.kit.edu", false);
+
+        mockMvc.perform(patch("/account/deleteAccount")
+                        .header("Authorization", bearer(student.rawToken())))
+                .andExpect(status().isOk());
+
+        // Anonymous, no header: this is the revival, and it is F-48 rather than a feature.
+        mockMvc.perform(post("/auth/request-login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"leaving@student.kit.edu\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/audit-logs")
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .param("action", "USER_SELF_DELETED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.auditLogs", hasSize(1)))
+                .andExpect(jsonPath("$.auditLogs[0].actor.type").value("USER"))
+                .andExpect(jsonPath("$.auditLogs[0].actor.role").value("STUDENT"))
+                .andExpect(jsonPath("$.auditLogs[0].target.type").value("USER"))
+                .andExpect(jsonPath("$.auditLogs[0].target.label")
+                        .value("leaving (leaving@student.kit.edu)"))
+                .andExpect(jsonPath("$.auditLogs[0].metadata.anonymized").value(false))
+                .andExpect(jsonPath("$.auditLogs[0].revertible").value(false))
+                .andExpect(jsonPath("$.auditLogs[0].revertBlockedReason")
+                        .value("ACTION_NOT_REVERTIBLE"));
+
+        mockMvc.perform(get("/audit-logs")
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .param("action", "USER_SELF_REACTIVATED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.auditLogs", hasSize(1)))
+                .andExpect(jsonPath("$.auditLogs[0].actor.type").value("USER"))
+                .andExpect(jsonPath("$.auditLogs[0].metadata.trigger")
+                        .value("LOGIN_CODE_REQUEST"))
+                .andExpect(jsonPath("$.auditLogs[0].metadata.callerAuthenticated").value(false))
+                .andExpect(jsonPath("$.auditLogs[0].revertible").value(false));
+
+        // Neither reaches the activity log, which is the half of the scope decision that a
+        // reader would otherwise have to take on trust.
+        mockMvc.perform(get("/activity-logs")
+                        .header("Authorization", bearer(admin.rawToken()))
+                        .param("action", "USER_SELF_DELETED"))
+                .andExpect(status().isBadRequest());
+    }
+
     private Session createSession(String email, boolean adminRole) {
         Student student = createStudent(email);
         Admin admin = null;

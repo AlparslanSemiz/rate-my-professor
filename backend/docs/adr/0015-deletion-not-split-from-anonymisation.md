@@ -81,10 +81,16 @@ requirement; restoration was the proposed mechanism.
   display string. If it ever needs the name and address as separate values, the fix is typed
   fields on the audit entry, not a `split()` in the panel.
 - **F-46 is now load-bearing in two directions.** It is a defect on its own terms, and it is the
-  first thing to close if this decision is ever revisited.
-- **Self-deletions are outside all of it.** The app's own `PATCH /account/deleteAccount` neither
-  anonymises nor audits (F-46), so a self-deleted account appears in the new listing under its
-  real name with no `USER_DELETED` entry to join against.
+  first thing to close if this decision is ever revisited. **Closed on 10 September** as far as
+  the record goes — see [ADR-0016](0016-self-service-lifecycle-recorded-not-authorised.md) — but
+  the reason it was load-bearing here was never the missing entry. It was the revival, and that
+  is now **F-48**, still open: an unauthenticated caller can put a deleted account back to
+  `ACTIVE`. **That is what has to close before this decision is revisited**, because a scrub-later
+  window would give such a caller something to undo.
+- **Self-deletions are outside all of it.** The app's own `PATCH /account/deleteAccount` does not
+  anonymise, so a self-deleted account appears in the new listing under its real name. It does
+  now carry an audit entry — `USER_SELF_DELETED`, not `USER_DELETED`, which is the constant to
+  join against.
 
 ## Sources
 

@@ -859,21 +859,63 @@ If you need the name and the address as separate fields, **say so and we will ad
 audit entry as typed values** — that is a backend change, cheap, and the right place for it. It
 is not a change you can make safely on your side by splitting a string.
 
-### What this still does not cover — F-46
+### What this used to not cover — F-46, now closed on the backend side
 
-The pairing above sees **admin deletions only**. An account that deleted itself through the
-app's `PATCH /account/deleteAccount` writes **no audit entry at all** and is not anonymised, so
-it appears in your new `status=DELETED` list carrying its real name — with nothing in the audit
-log explaining when or why it went. Worse, because its address is intact, requesting a login
-code for it silently flips it back to `ACTIVE`.
+**This section replaces the one you were sent.** When these documents went out, the pairing above
+saw **admin deletions only**: an account that deleted itself through the app's
+`PATCH /account/deleteAccount` wrote **no audit entry at all**, so it appeared in your
+`status=DELETED` list carrying its real name with nothing anywhere saying when or why it left.
+That was F-46, and it is fixed. `CHANGELOG` `10.09 (20)`.
 
-That is F-46, recorded in `docs/TODO.md` and **deliberately not fixed before submission** — it
-touches the account lifecycle. Two consequences for your screen, both worth knowing before you
-build it:
+**Two new `action` values, and you need no release to see them.** Your filter dropdown is built
+from `GET /audit-logs/meta` rather than from a compiled-in list
+(`src/api/logs/AuditLogMetaService.ts`), and an unrecognised action already renders through your
+default colour — so both values appear in the filter on their own, and rows carrying them render
+today. **Nothing on your side has to change for this to work.** What follows is what they mean.
 
-- A `DELETED` row **with a real username** is a self-deletion, not an admin deletion. It will
-  have no matching `USER_DELETED` entry. Do not render the missing entry as an error.
-- A row can leave the list on its own, without any admin action, if its owner signs in again.
+- **`USER_SELF_DELETED`** — the account deleted itself from the app. Pair it with the
+  `status=DELETED` row exactly as you already pair `USER_DELETED`: `target.label` carries the
+  real identity and `createdAt` is the moment it happened, which you could not get before.
+  `metadata.anonymized` is `false`, and that is the difference that matters: **a self-deleted
+  account is not scrubbed**, so the row on your list already carries the real username and
+  address. You do not need the audit entry to name it; you need the entry to date it.
+- **`USER_SELF_REACTIVATED`** — the account came back. This is the event you had no way to see
+  at all, and it is why a row could vanish from your list with no explanation.
+
+**Both are on `GET /audit-logs`**, beside `USER_DELETED` — not on `/activity-logs`, which you
+removed. That was decided with your removed screen in mind: an entry on a log nobody reads is
+not a record.
+
+**Neither is revertible.** Both come back `revertible: false` with
+`revertBlockedReason: "ACTION_NOT_REVERTIBLE"`, so your revert control stays hidden on them, as
+it does for `USER_DELETED`. There is still no restore, by decision
+([ADR-0015](adr/0015-deletion-not-split-from-anonymisation.md)).
+
+**Update the rule this page gave you.** It used to say *"a `DELETED` row with a real username is
+a self-deletion and will have no matching `USER_DELETED` entry — do not render the missing entry
+as an error."* The first half still holds. The second no longer does: it now has a matching
+**`USER_SELF_DELETED`** entry. If you wrote a branch around the missing entry, that branch is
+what to change, and it is the only thing on your side that this touches.
+
+### What is still not covered — F-48, open
+
+**A row can still leave your list without any administrative action, and now you can see it
+happen.** What has not changed is *why* it happens: the account is set back to `ACTIVE` when a
+login code is **requested** for its address, not when one is entered, and `POST /auth/request-login`
+is public. So the party who revives an account **need not be its owner and need not identify
+themselves at all** — `metadata.callerAuthenticated` is `false` on every one of these entries,
+and it is literal rather than defensive.
+
+That is **F-48**, an authorization defect, open and deliberately not fixed before submission —
+the three options and their costs are in `docs/TODO.md` item 39, and the decision is a product
+one. Two things worth knowing while you build the screen:
+
+- **`USER_SELF_REACTIVATED` does not name who asked.** The actor on the entry is the account
+  itself, because there is no identified actor to record. Do not render it as "the owner signed
+  back in" — that is what it usually is and not what it says.
+- **A revived account is fully back in the app**: its real username returns on every comment and
+  answer it wrote, and its ratings return to the public averages. If an operator is looking at
+  this list because somebody asked to be forgotten, that is the fact they need.
 
 ### One note worth keeping, about how this was decided
 

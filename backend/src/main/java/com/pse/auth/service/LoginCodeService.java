@@ -28,6 +28,8 @@ public class LoginCodeService {
     private final LoginCodeDelivery loginCodeDelivery;
     private final RateLimitProperties rateLimits;
 
+    private final AccountReactivator accountReactivator;
+
     /**
      * Creates LoginCodeService.
      *
@@ -36,19 +38,22 @@ public class LoginCodeService {
      * @param rateLimitService the rateLimitService
      * @param loginCodeDelivery the loginCodeDelivery
      * @param rateLimits the rateLimits
+     * @param accountReactivator the accountReactivator
      */
     public LoginCodeService(
             StudentRepository studentRepository,
             OtpService otpService,
             RateLimitService rateLimitService,
             LoginCodeDelivery loginCodeDelivery,
-            RateLimitProperties rateLimits
+            RateLimitProperties rateLimits,
+            AccountReactivator accountReactivator
     ) {
         this.studentRepository = studentRepository;
         this.otpService = otpService;
         this.rateLimitService = rateLimitService;
         this.loginCodeDelivery = loginCodeDelivery;
         this.rateLimits = rateLimits;
+        this.accountReactivator = accountReactivator;
     }
 
     /**
@@ -74,8 +79,11 @@ public class LoginCodeService {
 
         if (existing != null) {
             if (existing.getStatus() == UserStatus.DELETED) {
-                existing.setStatus(UserStatus.ACTIVE);
-                studentRepository.save(existing);
+                // Requesting a code for a deleted account brings it back -- deliberately, since
+                // commit bf86ee6. What is not deliberate is that it happens here, on an
+                // unauthenticated request, rather than when the code is entered: see F-48 and
+                // AccountReactivator, which owns that decision and now records the event.
+                accountReactivator.reactivate(existing);
             } else if (!existing.getStatus().canLogIn()) {
                 // Blocked/suspended accounts still must not receive a login code.
                 return new BasicResponse("Login code sent", true);

@@ -8,6 +8,7 @@ import com.pse.shared.enums.UserStatus;
 import com.pse.shared.error.ApiException;
 import com.pse.user.model.Student;
 import com.pse.user.repository.StudentRepository;
+import org.mockito.InOrder;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -62,6 +63,9 @@ class LoginCodeServiceTests {
     private LoginCodeDelivery loginCodeDelivery;
 
     @Mock
+    private AccountReactivator accountReactivator;
+
+    @Mock
     private HttpServletRequest httpRequest;
 
     private LoginCodeService loginCodeService;
@@ -69,11 +73,115 @@ class LoginCodeServiceTests {
     @BeforeEach
     void setUp() {
         loginCodeService = new LoginCodeService(studentRepository, otpService, rateLimitService,
-                loginCodeDelivery, RATE_LIMITS);
+                loginCodeDelivery, RATE_LIMITS, accountReactivator);
     }
 
 
 
+
+    /**
+     * Characterization of F-48, at the layer where the ordering is visible. <b>Current
+     * behaviour, not intended behaviour</b>: the open question is {@code docs/TODO.md} item 39,
+     * and {@code AuthApiIntegrationTests.anAnonymousLoginCodeRequestBringsBackAnAccountThatDeletedItself}
+     * pins the same rule end to end, through the public route and with no credentials at all.
+     *
+     * <p>What this one adds is the <b>sequence</b>, which is the whole defect: the account is
+     * back before {@code OtpService.issue} has produced a code and long before anybody could
+     * have entered one. Reviving an account therefore costs a caller nothing but knowing the
+     * address. If the rule becomes "the code has to be entered", this ordering is what breaks,
+     * and it should: invert it, do not delete it.
+     *
+     * <p>The stub mutates the account it is handed because the production collaborator does --
+     * {@code requestLogin} reads {@code getStatus()} again below the branch to decide whether a
+     * code may be issued at all, so a reactivation that did not mutate the instance would leave
+     * the caller refusing to send to an account it has just revived. Stating that here keeps the
+     * coupling visible instead of leaving it to be rediscovered.
+     */
+    @Test
+    void requestLoginRevivesADeletedAccountBeforeTheCodeIsEvenIssued() {
+
+        OTPRequest request = mock(OTPRequest.class);
+
+        Student deleted = new Student();
+        deleted.setUsername("gone");
+        deleted.setKitEmail("gone@student.kit.edu");
+        deleted.setStatus(UserStatus.DELETED);
+
+        when(request.email()).thenReturn("gone@student.kit.edu");
+        when(httpRequest.getRemoteAddr()).thenReturn("203.0.113.7");
+        when(rateLimitService.emailSubject("gone@student.kit.edu")).thenReturn("email-subject");
+        when(rateLimitService.ipSubject("203.0.113.7")).thenReturn("ip-subject");
+        when(studentRepository.findByKitEmail("gone@student.kit.edu"))
+                .thenReturn(Optional.of(deleted));
+        when(otpService.issue("gone@student.kit.edu")).thenReturn("ABC234");
+
+        doAnswer(invocation -> {
+            invocation.getArgument(0, Student.class).setStatus(UserStatus.ACTIVE);
+            return null;
+        }).when(accountReactivator).reactivate(deleted);
+
+
+        BasicResponse response = loginCodeService.requestLogin(request, httpRequest);
+
+
+        InOrder order = inOrder(accountReactivator, otpService, loginCodeDelivery);
+        order.verify(accountReactivator).reactivate(deleted);
+        order.verify(otpService).issue("gone@student.kit.edu");
+        order.verify(loginCodeDelivery).send("gone@student.kit.edu", "ABC234");
+
+        // Indistinguishable from the response a live address gets, which is deliberate and is
+        // not the defect: a different answer here would make this route an account-enumeration
+        // oracle. The defect is what happened to the account before the answer was written.
+        assertThat(response.success()).isTrue();
+        assertThat(response.message()).isEqualTo("Login code sent");
+    }
+
+    /**
+     * Characterization of F-48's second half: <b>the revival outlives the failure of the request
+     * that caused it</b>. Delivery throws, the caller is answered {@code 500}, the one-time
+     * password is invalidated -- and the account stays revived, because
+     * {@code AccountReactivator} committed before the mail was attempted.
+     *
+     * <p>That is deliberate in the sense that nothing was changed when the reactivation moved
+     * into its own transaction: widening the boundary to cover delivery would have fixed half of
+     * F-48 as a side effect of a refactor. Invert this when the product decision is taken.
+     */
+    @Test
+    void theRevivalOfADeletedAccountOutlivesAFailureToSendTheCode() {
+
+        OTPRequest request = mock(OTPRequest.class);
+
+        Student deleted = new Student();
+        deleted.setUsername("gone");
+        deleted.setKitEmail("gone@student.kit.edu");
+        deleted.setStatus(UserStatus.DELETED);
+
+        when(request.email()).thenReturn("gone@student.kit.edu");
+        when(httpRequest.getRemoteAddr()).thenReturn("203.0.113.7");
+        when(rateLimitService.emailSubject("gone@student.kit.edu")).thenReturn("email-subject");
+        when(rateLimitService.ipSubject("203.0.113.7")).thenReturn("ip-subject");
+        when(studentRepository.findByKitEmail("gone@student.kit.edu"))
+                .thenReturn(Optional.of(deleted));
+        when(otpService.issue("gone@student.kit.edu")).thenReturn("ABC234");
+
+        doAnswer(invocation -> {
+            invocation.getArgument(0, Student.class).setStatus(UserStatus.ACTIVE);
+            return null;
+        }).when(accountReactivator).reactivate(deleted);
+
+        doThrow(new IllegalStateException("smtp is down"))
+                .when(loginCodeDelivery).send("gone@student.kit.edu", "ABC234");
+
+
+        assertThatThrownBy(() -> loginCodeService.requestLogin(request, httpRequest))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Could not send login code");
+
+
+        verify(accountReactivator).reactivate(deleted);
+        verify(otpService).invalidate("gone@student.kit.edu");
+        assertThat(deleted.getStatus()).isEqualTo(UserStatus.ACTIVE);
+    }
 
     @Test
     void requestLoginNormalizesEmailAndSendsCode() {

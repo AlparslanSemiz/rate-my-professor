@@ -141,11 +141,14 @@ defect; it found a different kind.
 
 **F-42 has a number but is not one of the fifty.** It is a defect in the admin panel that this
 API cannot pin with a test, recorded [at the end of the findings](#f-42--deactivating-a-catalogue-row-hides-it-from-the-only-list-the-panel-reads)
-with the reason it is not an entry. **Neither are F-43 to F-47**, which came after this register
-closed. Four of those five are in deployment configuration or in the panel; the exception is
+with the reason it is not an entry. **Neither are F-43 to F-48**, which came after this register
+closed. Four of those six are in deployment configuration or in the panel; the two exceptions are
+in this application and both **are** pinned, each awaiting a product decision rather than a fix:
 [F-47](#f-47--active--false-is-honoured-by-exactly-two-queries-so-a-deactivated-row-is-still-read-still-rated-and-still-shown),
-which is in this application and **is** pinned — five characterization tests, awaiting a product
-decision rather than a fix.
+five characterization tests, and
+[F-48](#f-48--an-unauthenticated-caller-can-undo-somebodys-account-deletion), three.
+**F-46 is closed** — the half of it that was a missing record; the half that was underneath it is
+F-48.
 
 **Two entries are open: F-29, which no commit can close, and F-34, which is a product
 decision rather than a defect.** Everything else is fixed or closed by a recorded decision.
@@ -2230,6 +2233,71 @@ rather than fires, and both become live the moment the panel's catalogue form is
 panel — a pass scoped to measurement and options, `docs/adminweb-tasks.md` §2b. The method is the
 one F-39, F-40 and F-42 came from, pointed at a *field* rather than at a route: ask what reads it,
 then ask what does not.
+
+
+### F-48 — an unauthenticated caller can undo somebody's account deletion
+
+**Not counted in the fifty above**, which closed with the Kontrollphase pass, and pinned here by
+three characterization tests rather than fixed.
+
+**What.** `LoginCodeService.requestLogin` sets a soft-deleted account back to `ACTIVE` when a
+login code is **requested** for its address — not when one is entered. `POST /auth/request-login`
+is public (`SecurityConfig:52`, `ApiAuthorizationMatrixTests.PUBLIC_ROUTES:93`). So anybody who
+knows a KIT address that deleted itself can bring that account back with one anonymous request,
+having proved nothing at all. The status is committed before the code is mailed, so the revival
+also survives a delivery failure that answers the caller `500`.
+
+**What it is not.** It is **not account takeover**: the code still goes to the KIT address, so
+the caller who triggers this cannot sign in and reads nothing. Saying so is part of the finding
+— an overstated severity is as useless as a missed one.
+
+**What it is.** `UserStatus.DELETED` is consulted at seventeen sites in `src/main/java`, and
+returning to `ACTIVE` reverses the reads. Three of them are what this costs:
+
+- `SocialResponseMapper:70` and `:111` render a `DELETED` author as `"Deleted User"`, so the
+  person's real username returns on **every comment and answer they ever wrote**;
+- `RatingAverages:85` and `LectureResponseMapper:73` drop a `DELETED` user's ratings, so their
+  ratings **return to the public averages**;
+- `UserDirectoryService:119` excludes them from `GET /users`, so the row **leaves the panel's
+  `status=DELETED` list** and rejoins the ordinary one.
+
+A third party can therefore undo somebody's decision to delete their account and put their name
+back into the public app. The request-code rate limits (`request-email` 3 per 15 minutes,
+`request-ip` 20) bound the rate and not the effect: one call is enough for one account.
+
+**Opened as its own number rather than left under F-46.** F-46 recorded that neither the
+self-deletion nor the revival was audited, and described the result as *invisible, unaudited,
+silently restorable* — an operator's blind spot. That was measured, and the record turned out to
+be the smaller half: **this is a missing authorization check, not a missing log line.** The audit
+half is closed ([ADR-0016](adr/0016-self-service-lifecycle-recorded-not-authorised.md),
+`CHANGELOG` `10.09 (20)`) and this is what was underneath it.
+
+**Pinned by**, all three characterizations of behaviour deliberately left in place:
+
+| Claim | Test |
+| --- | --- |
+| An anonymous request revives a self-deleted account, end to end through the public routes | `AuthApiIntegrationTests.anAnonymousLoginCodeRequestBringsBackAnAccountThatDeletedItself` |
+| The account is back **before a code even exists** — the ordering is the defect | `LoginCodeServiceTests.requestLoginRevivesADeletedAccountBeforeTheCodeIsEvenIssued` |
+| The revival outlives the failure of the request that caused it | `LoginCodeServiceTests.theRevivalOfADeletedAccountOutlivesAFailureToSendTheCode` |
+
+Each was seen red before it was green: `expected: DELETED but was: ACTIVE` for the first and
+third, and a Mockito `VerificationInOrderFailure` for the second when the order was asserted the
+other way round. Before this pass **no test reached the branch at all** — `LoginCodeServiceTests`
+did not contain the word `DELETED`, which is F-46's own [P-2](#p-2--integration-tests-hide-unit-targets)
+observation and the reason the branch could be this old and this unexamined.
+
+**Deliberately not fixed, and the behaviour is deliberate in origin.** Commit `bf86ee6`,
+"Deleted User can login again", added the revival on purpose, so *that* signing in undoes your
+own deletion is settled and is not what is reported here. What was never decided is that it
+happens **before anyone proves they hold the address**. Four options are costed in
+[TODO.md](TODO.md) item 39 — move the flip to a completed login (~4–6 h, and it inverts
+`SessionIssuerTests:516-525`), remove the revival (~1–2 h), put it behind a mailed confirmation
+(~1–2 days), or leave it now that every revival is recorded. The decision is a product one and is
+taken after submission. All three tests invert rather than delete when it is.
+
+**Found by** measuring F-46 for the admin panel — being asked whether the reactivation left a
+record, and reading `LoginCodeService:63-84` line by line instead of summarising it. The record
+was the question; the missing check was in the same nine lines.
 
 ---
 

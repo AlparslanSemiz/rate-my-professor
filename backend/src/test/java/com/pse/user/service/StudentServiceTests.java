@@ -1,5 +1,8 @@
 package com.pse.user.service;
 
+import com.pse.audit.model.AuditAction;
+import com.pse.audit.model.AuditTargetType;
+import com.pse.audit.service.AuditWriter;
 import com.pse.shared.dto.BasicResponse;
 import com.pse.user.dto.UserRatingResponse;
 import com.pse.lecture.model.Lecture;
@@ -24,12 +27,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -50,8 +55,11 @@ class StudentServiceTests {
     @Mock
     private StudentRepository studentRepository;
 
+    @Mock
+    private AuditWriter auditWriter;
+
     private StudentService service() {
-        return new StudentService(studentRepository);
+        return new StudentService(studentRepository, auditWriter);
     }
 
     private static Student student() {
@@ -355,5 +363,41 @@ class StudentServiceTests {
                 .isEqualTo(HttpStatus.NOT_FOUND);
 
         verify(studentRepository, never()).save(any());
+        verifyNoInteractions(auditWriter);
+    }
+
+    /**
+     * The self-deletion is recorded, which it was not until F-46 was measured: the three
+     * classes on this path held no {@code AuditWriter} at all, so an account could leave with
+     * nothing anywhere saying it had.
+     *
+     * <p>{@code USER_SELF_DELETED} rather than {@code USER_DELETED} because the two are not the
+     * same event -- the admin path anonymises the row in the same transaction and this one does
+     * not, so the account keeps its real address, and the admin panel is told in writing that a
+     * {@code DELETED} row with a real username has no {@code USER_DELETED} entry. The metadata
+     * says so as a value rather than only in prose.
+     *
+     * <p>The label comes from {@code UserResponseMapper.label} and is asserted here in full,
+     * because the panel recovers a deleted account's identity from {@code target_label} and this
+     * assertion is what stops the format drifting away from the one that document promises.
+     */
+    @Test
+    void deleteAccount_existingStudent_recordsTheDeletionAgainstTheAccountItself() {
+        // Given
+        Student student = student();
+        when(studentRepository.findByKitEmail("ada@kit.edu")).thenReturn(Optional.of(student));
+
+        // When
+        service().deleteAccount(student);
+
+        // Then
+        verify(auditWriter).writeStudentAction(
+                eq(student),
+                eq(AuditAction.USER_SELF_DELETED),
+                eq(AuditTargetType.USER),
+                eq(STUDENT_ID),
+                eq("ada (ada@kit.edu)"),
+                eq(Map.of("anonymized", false))
+        );
     }
 }

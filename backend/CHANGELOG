@@ -976,3 +976,71 @@ block and unblock pair, the delete itself, and issuing, editing or deleting a wa
 no restore.
 
 Nothing to change if you do not open a deleted account; no existing call moves.
+
+
+///// 10.09 (20)
+
+
+Two new "action" values in "GET /audit-logs" and "GET /audit-logs/meta":
+"USER_SELF_DELETED" and "USER_SELF_REACTIVATED".
+
+Was: an account that deleted itself through the app left no audit entry at all, and an account
+     that came back left none either
+Now: both write an entry, in the administrative log
+
+Until now "GET /audit-logs?action=USER_DELETED" answered for admin deletions only. An account
+that deleted itself from the app wrote nothing anywhere, so a "DELETED" row in
+"GET /users?status=DELETED" with a real username was the only sign it had ever happened, and
+there was nothing at all saying when. Both halves of the lifecycle are recorded now.
+
+"USER_SELF_DELETED" -- "PATCH /account/deleteAccount", the app's own deletion.
+
+    {
+      "action":"USER_SELF_DELETED",
+      "createdAt":"...",
+      "actor":{"type":"USER","id":"uuid","name":"ada","email":"ada@student.kit.edu","role":"STUDENT"},
+      "target":{"type":"USER","id":"uuid","label":"ada (ada@student.kit.edu)"},
+      "changes":{},
+      "metadata":{"anonymized":false},
+      "revertible":false,
+      "revertBlockedReason":"ACTION_NOT_REVERTIBLE",
+      "revertedByAuditId":null
+    }
+
+"anonymized":false is what separates it from "USER_DELETED": the admin path scrubs the account
+in the same transaction and this one does not, so the row keeps its real address.
+
+"USER_SELF_REACTIVATED" -- a deleted account set back to ACTIVE.
+
+    {
+      "action":"USER_SELF_REACTIVATED",
+      "createdAt":"...",
+      "actor":{"type":"USER","id":"uuid","name":"ada","email":"ada@student.kit.edu","role":"STUDENT"},
+      "target":{"type":"USER","id":"uuid","label":"ada (ada@student.kit.edu)"},
+      "changes":{},
+      "metadata":{"trigger":"LOGIN_CODE_REQUEST","callerAuthenticated":false},
+      "revertible":false,
+      "revertBlockedReason":"ACTION_NOT_REVERTIBLE",
+      "revertedByAuditId":null
+    }
+
+Read "callerAuthenticated":false literally. The account is revived when a login code is
+REQUESTED, not when one is entered, and "POST /auth/request-login" is public -- so the caller
+who triggered this proved nothing and need not be the account's owner. The actor is the account
+because there is no identified actor to name. That behaviour is an open defect and is not fixed
+by this entry; the entry records it.
+
+Both are "ADMINISTRATIVE" scope, so they appear in "GET /audit-logs" next to "USER_DELETED" and
+not in "GET /activity-logs", even though the actor is a student. The reader who needs them is an
+operator asking where an account went.
+
+Neither is revertible. Both carry "revertible":false and an empty "changes", and both are
+outside the revertible set, so "POST /audit-logs/{id}/revert" refuses them with
+"ACTION_NOT_REVERTIBLE". There is still no restore.
+
+Nothing to change. The action filter on "GET /audit-logs" is built from
+"GET /audit-logs/meta", so the two values appear in it without a client release, and an
+unrecognised action renders through the panel's default. If you match on action names, add
+these two; if you filter by "USER_DELETED" to find deleted accounts, note that self-deletions
+are under "USER_SELF_DELETED" and are NOT anonymised -- their "target.label" and the user row
+both carry the real identity.
