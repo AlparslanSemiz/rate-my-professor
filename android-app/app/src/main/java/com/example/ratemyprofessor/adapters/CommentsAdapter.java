@@ -73,15 +73,20 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
                     .into(holder.profilePicture);
         }
 
+        System.out.println(comment.userVote());
         holder.userName.setText(comment.studentUsername());
         holder.commentContent.setText(comment.content());
         holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
         holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
-        System.out.println(comment.userVote());
         if (comment.userVote() == VoteType.UP) {
             holder.upVoteButton.setImageResource(R.drawable.upvote_icon_filled);
+            holder.downVoteButton.setImageResource(R.drawable.downvote_icon);
         } else if (comment.userVote() == VoteType.DOWN) {
+            holder.upVoteButton.setImageResource(R.drawable.upvote_icon);
             holder.downVoteButton.setImageResource(R.drawable.downvote_icon_filled);
+        } else {
+            holder.upVoteButton.setImageResource(R.drawable.upvote_icon);
+            holder.downVoteButton.setImageResource(R.drawable.downvote_icon);
         }
 
 
@@ -93,16 +98,30 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
                 Toast.makeText(context, "You are not logged in.", Toast.LENGTH_SHORT).show();
                 return;
             }
+            int newUpVotes = comment.upVotes();
+            int newDownVotes = comment.downVotes();
             if (comment.userVote() == VoteType.UP) {
-                holder.upVoteCount.setText(String.valueOf(comment.upVotes() - 1));
-                holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
+                newUpVotes--;
+                VoteType newType = VoteType.NONE;
+
+                Comment updatedComment = getNewComment(comment, newDownVotes, newUpVotes, newType);
+                comments.set(position, updatedComment);
+                notifyItemChanged(position);
+
+                listener.vote(comment.commentID(), VoteType.NONE, type);
             } else {
-                holder.upVoteCount.setText(String.valueOf(comment.upVotes() + 1));
-                holder.downVoteCount.setText(String.valueOf(comment.downVotes()));
+                newUpVotes++;
+                if (comment.userVote() == VoteType.DOWN) {
+                    newDownVotes--;
+                }
+                VoteType newType = VoteType.UP;
+
+                Comment updatedComment = getNewComment(comment, newDownVotes, newUpVotes, newType);
+                comments.set(position, updatedComment);
+                notifyItemChanged(position);
+
+                listener.vote(comment.commentID(), VoteType.UP, type);
             }
-            holder.upVoteButton.setImageResource(R.drawable.upvote_icon_filled);
-            holder.downVoteButton.setImageResource(R.drawable.downvote_icon);
-            listener.vote(comment.commentID(), VoteType.UP, type);
         });
 
         holder.downVoteButton.setOnClickListener(v -> {
@@ -110,16 +129,32 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
                 Toast.makeText(context, "You are not logged in.", Toast.LENGTH_SHORT).show();
                 return;
             }
+            int newUpVotes = comment.upVotes();
+            int newDownVotes = comment.downVotes();
             if (comment.userVote() == VoteType.DOWN) {
-                holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
-                holder.downVoteCount.setText(String.valueOf(comment.downVotes() - 1));
+                newDownVotes--;
+                VoteType newType = VoteType.NONE;
+
+                Comment updatedComment = getNewComment(comment, newDownVotes, newUpVotes, newType);
+
+                comments.set(position, updatedComment);
+                notifyItemChanged(position);
+
+                listener.vote(comment.commentID(), VoteType.NONE, type);
             } else {
-                holder.upVoteCount.setText(String.valueOf(comment.upVotes()));
-                holder.downVoteCount.setText(String.valueOf(comment.downVotes() + 1));
+                newDownVotes++;
+                if (comment.userVote() == VoteType.UP) {
+                    newUpVotes--;
+                }
+                VoteType newType = VoteType.DOWN;
+
+                Comment updatedComment = getNewComment(comment, newDownVotes, newUpVotes, newType);
+
+                comments.set(position, updatedComment);
+                notifyItemChanged(position);
+
+                listener.vote(comment.commentID(), VoteType.UP, type);
             }
-            holder.upVoteButton.setImageResource(R.drawable.upvote_icon);
-            holder.downVoteButton.setImageResource(R.drawable.downvote_icon_filled);
-            listener.vote(comment.commentID(), VoteType.DOWN, type);
         });
         if (type == CommentType.REPLY) {
             holder.showCommentButton.setVisibility(View.INVISIBLE);
@@ -130,6 +165,22 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             holder.reportButton.setOnClickListener(v ->listener.reportComment(comment.commentID()));
         }
 
+    }
+
+    private Comment getNewComment(Comment comment, int newDownVotes, int newUpVotes, VoteType newType) {
+        return new Comment(
+                comment.commentID(),
+                comment.content(),
+                comment.status(),
+                comment.studentUsername(),
+                comment.lectureID(),
+                comment.profilePicture(),
+                comment.createdAt(),
+                newDownVotes,
+                newUpVotes,
+                newType,
+                comment.answers()
+        );
     }
 
     /**

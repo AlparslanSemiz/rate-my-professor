@@ -247,7 +247,6 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
             );
             runOnUiThread(() -> {
                 if (!serverCommentsLoaded) {
-                    System.out.println("Hier");
                     showComments(cachedComments);
                 }
             });
@@ -270,22 +269,6 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
                 serverCommentsLoaded = true;
                 List<Comment> freshComments = new ArrayList<>(body.comments());
-                System.out.println("___");
-                System.out.println("Request");
-                System.out.println("Token: " + session.bearerToken());
-                System.out.println("lectureId: " + lecture.id);
-                System.out.println("___");
-                System.out.println("Response: ");
-                System.out.println("commentId: " + freshComments.get(0));
-                System.out.println("content: " + freshComments.get(0).content());
-                System.out.println("status: " + freshComments.get(0).status());
-                System.out.println("studentUsername: " + freshComments.get(0).studentUsername());
-                System.out.println("lectureID: " + freshComments.get(0).lectureID());
-                System.out.println("profilePicture: " + freshComments.get(0).profilePicture());
-                System.out.println("createdAt: " + freshComments.get(0).createdAt());
-                System.out.println("downVotes: " + freshComments.get(0).downVotes());
-                System.out.println("upVotes: " + freshComments.get(0).upVotes());
-                System.out.println("userVote: " + freshComments.get(0).userVote());
                 showComments(freshComments);
 
                 List<CommentModel> models = commentsToModels(freshComments);
@@ -798,7 +781,6 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
      * Inserts the answers of a comment right below it.
      *
      * @param comment the selected comment
-     * @param voteType the vote associated with the comment
      */
     @Override
     public void onOpenReplies(Comment comment) {

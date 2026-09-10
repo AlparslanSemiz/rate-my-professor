@@ -46,9 +46,11 @@ import retrofit2.Response;
 public class ReplyFragment extends Fragment implements CommentsAdapter.OnCommentClickListener {
 
     private Comment comment;
-    private VoteType voteType;
     private FragmentReplyBinding binding;
     private final APIService apiService;
+    private VoteType mainCommentVote;
+    private int mainCommentUpVotes;
+    private int mainCommentDownvotes;
 
     /**
      * Creates an empty fragment for Android lifecycle instantiation.
@@ -61,12 +63,10 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
      * Creates a ReplyFragment with the supplied values.
      *
      * @param comment the selected comment
-     * @param voteType the vote associated with the comment
      */
     public ReplyFragment(Comment comment) {
         apiService = RetrofitClient.getClient().create(APIService.class);
         this.comment = comment;
-        this.voteType = voteType;
     }
 
     @Override
@@ -90,6 +90,10 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
                     .load(comment.profilePicture().replaceFirst("svg", "png"))
                     .into(mainComment.profilePicture);
         }
+
+        mainCommentVote = comment.userVote();
+        mainCommentDownvotes = comment.downVotes();
+        mainCommentUpVotes = comment.upVotes();
 
         mainComment.userName.setText(comment.studentUsername());
         mainComment.contentText.setText(comment.content());
@@ -143,11 +147,26 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
                 Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
                 return;
             }
-            mainComment.upvotesNum.setText(String.valueOf(comment.upVotes() + 1));
-            mainComment.downvotesNum.setText(String.valueOf(comment.downVotes()));
-            mainComment.upvoteIcon.setImageResource(R.drawable.upvote_icon_filled);
-            mainComment.downvoteIcon.setImageResource(R.drawable.downvote_icon);
-            vote(comment.commentID(), VoteType.UP, CommentType.COMMENT);
+            if (mainCommentVote == VoteType.UP) {
+                mainCommentUpVotes--;
+                mainComment.upvotesNum.setText(String.valueOf(mainCommentUpVotes));
+                mainComment.downvotesNum.setText(String.valueOf(mainCommentDownvotes));
+                mainComment.upvoteIcon.setImageResource(R.drawable.upvote_icon);
+                mainComment.downvoteIcon.setImageResource(R.drawable.downvote_icon);
+                vote(comment.commentID(), VoteType.NONE, CommentType.COMMENT);
+                mainCommentVote = VoteType.NONE;
+            } else {
+                mainCommentUpVotes++;
+                if (mainCommentVote == VoteType.DOWN) {
+                    mainCommentDownvotes--;
+                }
+                mainComment.upvotesNum.setText(String.valueOf(mainCommentUpVotes));
+                mainComment.downvotesNum.setText(String.valueOf(mainCommentDownvotes));
+                mainComment.upvoteIcon.setImageResource(R.drawable.upvote_icon_filled);
+                mainComment.downvoteIcon.setImageResource(R.drawable.downvote_icon);
+                vote(comment.commentID(), VoteType.UP, CommentType.COMMENT);
+                mainCommentVote = VoteType.UP;
+            }
         });
 
         mainComment.downvoteIcon.setOnClickListener(v -> {
@@ -155,11 +174,26 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
                 Toast.makeText(getContext(), "You are not logged in.", Toast.LENGTH_SHORT).show();
                 return;
             }
-            mainComment.upvotesNum.setText(String.valueOf(comment.upVotes()));
-            mainComment.downvotesNum.setText(String.valueOf(comment.downVotes() + 1));
-            mainComment.upvoteIcon.setImageResource(R.drawable.upvote_icon);
-            mainComment.downvoteIcon.setImageResource(R.drawable.downvote_icon_filled);
-            vote(comment.commentID(), VoteType.DOWN, CommentType.COMMENT);
+            if (mainCommentVote == VoteType.DOWN) {
+                mainCommentDownvotes--;
+                mainComment.upvotesNum.setText(String.valueOf(mainCommentUpVotes));
+                mainComment.downvotesNum.setText(String.valueOf(mainCommentDownvotes));
+                mainComment.upvoteIcon.setImageResource(R.drawable.upvote_icon);
+                mainComment.downvoteIcon.setImageResource(R.drawable.downvote_icon);
+                vote(comment.commentID(), VoteType.NONE, CommentType.COMMENT);
+                mainCommentVote = VoteType.NONE;
+            } else {
+                mainCommentDownvotes++;
+                if (mainCommentVote == VoteType.UP) {
+                    mainCommentUpVotes--;
+                }
+                mainComment.upvotesNum.setText(String.valueOf(mainCommentUpVotes));
+                mainComment.downvotesNum.setText(String.valueOf(mainCommentDownvotes));
+                mainComment.upvoteIcon.setImageResource(R.drawable.upvote_icon);
+                mainComment.downvoteIcon.setImageResource(R.drawable.downvote_icon_filled);
+                vote(comment.commentID(), VoteType.DOWN, CommentType.COMMENT);
+                mainCommentVote = VoteType.DOWN;
+            }
         });
         mainComment.commentsIcon.setOnClickListener(v -> {});
         mainComment.commentsNum.setText(String.valueOf(comment.answers().size()));
