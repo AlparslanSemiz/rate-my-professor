@@ -8,17 +8,15 @@ import static org.junit.Assert.assertTrue;
 
 import android.content.Intent;
 
-import com.example.ratemyprofessor.Activities.LoginActivity;
-import com.example.ratemyprofessor.Activities.MainActivity;
+import com.example.ratemyprofessor.activities.LoginActivity;
+import com.example.ratemyprofessor.activities.MainActivity;
 import android.app.Application;
-import android.content.Intent;
 
-import com.example.ratemyprofessor.Activities.MainActivity;
-import com.example.ratemyprofessor.Activities.StartActivity;
-import com.example.ratemyprofessor.ServerCommunication.NetworkUtils;
-import com.example.ratemyprofessor.ServerCommunication.AuthManager;
-import com.example.ratemyprofessor.ServerCommunication.LoginSession;
-import com.example.ratemyprofessor.ServerCommunication.Responses.AuthState;
+import com.example.ratemyprofessor.activities.StartActivity;
+import com.example.ratemyprofessor.servercommunication.NetworkUtils;
+import com.example.ratemyprofessor.servercommunication.AuthManager;
+import com.example.ratemyprofessor.servercommunication.LoginSession;
+import com.example.ratemyprofessor.servercommunication.responses.AuthState;
 
 import org.junit.After;
 import org.junit.Test;
@@ -29,8 +27,6 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.shadows.ShadowActivity;
-import org.robolectric.RuntimeEnvironment;
-import org.robolectric.Shadows;
 
 /**
  * Verifies the startup routing logic (devMode, offline handling, login checks).

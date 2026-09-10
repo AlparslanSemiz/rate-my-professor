@@ -13,16 +13,16 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
-import com.example.ratemyprofessor.DomainModel.CommentType;
-import com.example.ratemyprofessor.DomainModel.VoteType;
+import com.example.ratemyprofessor.domain.CommentType;
+import com.example.ratemyprofessor.domain.VoteType;
 import com.example.ratemyprofessor.R;
-import com.example.ratemyprofessor.ServerCommunication.APIService;
-import com.example.ratemyprofessor.ServerCommunication.AuthManager;
-import com.example.ratemyprofessor.ServerCommunication.LoginSession;
-import com.example.ratemyprofessor.ServerCommunication.ReportReason;
-import com.example.ratemyprofessor.ServerCommunication.Requests.CommentReportRequest;
-import com.example.ratemyprofessor.ServerCommunication.Requests.VoteRequest;
-import com.example.ratemyprofessor.ServerCommunication.Responses.BasicResponse;
+import com.example.ratemyprofessor.servercommunication.APIService;
+import com.example.ratemyprofessor.servercommunication.AuthManager;
+import com.example.ratemyprofessor.servercommunication.LoginSession;
+import com.example.ratemyprofessor.servercommunication.ReportReason;
+import com.example.ratemyprofessor.servercommunication.requests.CommentReportRequest;
+import com.example.ratemyprofessor.servercommunication.requests.VoteRequest;
+import com.example.ratemyprofessor.servercommunication.responses.BasicResponse;
 import com.example.ratemyprofessor.databinding.DialogCommentReportBinding;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 

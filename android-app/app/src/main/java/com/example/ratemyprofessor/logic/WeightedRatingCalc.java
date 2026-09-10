@@ -1,7 +1,7 @@
 package com.example.ratemyprofessor.logic;
 
-import com.example.ratemyprofessor.DomainModel.RatingCategory;
-import com.example.ratemyprofessor.ServerCommunication.Responses.TopicAverageResponse;
+import com.example.ratemyprofessor.domain.RatingCategory;
+import com.example.ratemyprofessor.servercommunication.responses.TopicAverageResponse;
 
 import java.util.List;
 

@@ -17,17 +17,17 @@
         android:theme="@style/Theme.RateMyProfessor"
         android:usesCleartextTraffic="true">
         <activity
-            android:name=".Activities.MainActivity"
+            android:name=".activities.MainActivity"
             android:exported="false" />
         <activity
-            android:name=".Activities.EnterAuthTokenActivity"
+            android:name=".activities.EnterAuthTokenActivity"
             android:exported="false" />
         <activity
-            android:name=".Activities.LoginActivity"
+            android:name=".activities.LoginActivity"
             android:exported="false">
         </activity>
         <activity
-            android:name=".Activities.StartActivity"
+            android:name=".activities.StartActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

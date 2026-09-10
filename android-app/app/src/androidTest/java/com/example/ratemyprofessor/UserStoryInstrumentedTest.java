@@ -2,7 +2,6 @@ package com.example.ratemyprofessor;
 
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
-import static androidx.test.espresso.action.ViewActions.typeText;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
@@ -11,7 +10,7 @@ import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
-import com.example.ratemyprofessor.Activities.LoginActivity;
+import com.example.ratemyprofessor.activities.LoginActivity;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -46,8 +45,8 @@ public class UserStoryInstrumentedTest {
     public void mainActivityShowsBottomNavigation() {
         // Use an intent to trigger SKIP_LOGIN behavior if possible, 
         // or just launch MainActivity directly.
-        try (androidx.test.core.app.ActivityScenario<com.example.ratemyprofessor.Activities.MainActivity> scenario =
-                     androidx.test.core.app.ActivityScenario.launch(com.example.ratemyprofessor.Activities.MainActivity.class)) {
+        try (androidx.test.core.app.ActivityScenario<com.example.ratemyprofessor.activities.MainActivity> scenario =
+                     androidx.test.core.app.ActivityScenario.launch(com.example.ratemyprofessor.activities.MainActivity.class)) {
             onView(withId(R.id.custom_bottom_nav))
                     .check(matches(isDisplayed()));
         }

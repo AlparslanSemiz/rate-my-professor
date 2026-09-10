@@ -6,14 +6,11 @@ import android.os.Looper;
 
 import androidx.fragment.app.Fragment;
 
-import com.example.liquidglass.LiquidGlassTabBar;
 import com.example.liquidglass.LiquidGlassView;
-import com.example.ratemyprofessor.Activities.MainActivity;
-import com.example.ratemyprofessor.DomainModel.Professor;
-import com.example.ratemyprofessor.Fragments.HomeFragment;
-import com.example.ratemyprofessor.Fragments.ProfileFragment;
-import com.example.ratemyprofessor.Fragments.SearchFragment;
-import com.example.ratemyprofessor.Fragments.SettingsFragment;
+import com.example.ratemyprofessor.activities.MainActivity;
+import com.example.ratemyprofessor.domain.Professor;
+import com.example.ratemyprofessor.fragments.HomeFragment;
+import com.example.ratemyprofessor.fragments.ProfileFragment;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

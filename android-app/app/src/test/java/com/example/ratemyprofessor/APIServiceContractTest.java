@@ -5,8 +5,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import com.example.ratemyprofessor.ServerCommunication.APIService;
-import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
+import com.example.ratemyprofessor.servercommunication.APIService;
+import com.example.ratemyprofessor.servercommunication.RetrofitClient;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

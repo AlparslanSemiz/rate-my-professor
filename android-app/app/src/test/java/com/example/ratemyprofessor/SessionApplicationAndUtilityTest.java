@@ -11,17 +11,15 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 
 import android.net.ConnectivityManager;
-import android.net.NetworkCapabilities;
 
 import androidx.appcompat.app.AppCompatDelegate;
 
-import com.example.ratemyprofessor.Adapters.LocalDateTimeConverter;
-import com.example.ratemyprofessor.Adapters.MainViewModel;
-import com.example.ratemyprofessor.ServerCommunication.AuthManager;
-import com.example.ratemyprofessor.ServerCommunication.LoginSession;
-import com.example.ratemyprofessor.ServerCommunication.NetworkUtils;
-import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
-import com.example.ratemyprofessor.ServerCommunication.Responses.AuthState;
+import com.example.ratemyprofessor.adapters.LocalDateTimeConverter;
+import com.example.ratemyprofessor.adapters.MainViewModel;
+import com.example.ratemyprofessor.servercommunication.AuthManager;
+import com.example.ratemyprofessor.servercommunication.LoginSession;
+import com.example.ratemyprofessor.servercommunication.NetworkUtils;
+import com.example.ratemyprofessor.servercommunication.responses.AuthState;
 import com.example.ratemyprofessor.logic.RatingColorCalculator;
 import com.example.ratemyprofessor.logic.SearchViewModel;
 
@@ -32,7 +30,6 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 
-import java.lang.reflect.Constructor;
 import java.time.LocalDateTime;
 
 /**

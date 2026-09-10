@@ -13,14 +13,14 @@ import androidx.room.Room;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
-import com.example.ratemyprofessor.Adapters.LectureAdapter;
-import com.example.ratemyprofessor.Adapters.SearchPagerAdapter;
-import com.example.ratemyprofessor.Adapters.SearchService;
-import com.example.ratemyprofessor.DomainModel.Lecture;
-import com.example.ratemyprofessor.DomainModel.Professor;
-import com.example.ratemyprofessor.DomainModel.SemesterSeason;
-import com.example.ratemyprofessor.Fragments.SelectionFragment;
-import com.example.ratemyprofessor.ServerCommunication.Database;
+import com.example.ratemyprofessor.adapters.LectureAdapter;
+import com.example.ratemyprofessor.adapters.SearchPagerAdapter;
+import com.example.ratemyprofessor.adapters.SearchService;
+import com.example.ratemyprofessor.domain.Lecture;
+import com.example.ratemyprofessor.domain.Professor;
+import com.example.ratemyprofessor.domain.SemesterSeason;
+import com.example.ratemyprofessor.fragments.SelectionFragment;
+import com.example.ratemyprofessor.servercommunication.Database;
 
 import org.junit.After;
 import org.junit.Before;
@@ -164,8 +164,8 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void searchPagerAdapterCreatesLecturePage() {
-        try (androidx.test.core.app.ActivityScenario<com.example.ratemyprofessor.Activities.MainActivity> scenario =
-                     androidx.test.core.app.ActivityScenario.launch(com.example.ratemyprofessor.Activities.MainActivity.class)) {
+        try (androidx.test.core.app.ActivityScenario<com.example.ratemyprofessor.activities.MainActivity> scenario =
+                     androidx.test.core.app.ActivityScenario.launch(com.example.ratemyprofessor.activities.MainActivity.class)) {
             scenario.onActivity(activity -> {
                 Fragment host = activity.getSupportFragmentManager().findFragmentById(R.id.fragment_container);
                 SearchPagerAdapter adapter = new SearchPagerAdapter(host, () -> {});
@@ -181,8 +181,8 @@ public class SearchAndFilterInstrumentedTest {
 
     @Test
     public void searchPagerAdapterTreatsUnknownPositionAsLecturePage() {
-        try (androidx.test.core.app.ActivityScenario<com.example.ratemyprofessor.Activities.MainActivity> scenario =
-                     androidx.test.core.app.ActivityScenario.launch(com.example.ratemyprofessor.Activities.MainActivity.class)) {
+        try (androidx.test.core.app.ActivityScenario<com.example.ratemyprofessor.activities.MainActivity> scenario =
+                     androidx.test.core.app.ActivityScenario.launch(com.example.ratemyprofessor.activities.MainActivity.class)) {
             scenario.onActivity(activity -> {
                 Fragment host = activity.getSupportFragmentManager().findFragmentById(R.id.fragment_container);
                 SearchPagerAdapter adapter = new SearchPagerAdapter(host, () -> {});
