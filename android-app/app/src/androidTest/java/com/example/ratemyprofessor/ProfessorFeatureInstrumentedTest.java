@@ -19,6 +19,9 @@ import com.example.ratemyprofessor.Adapters.SearchService;
 import com.example.ratemyprofessor.DomainModel.Lecture;
 import com.example.ratemyprofessor.DomainModel.LectureModel;
 import com.example.ratemyprofessor.DomainModel.Professor;
+import com.example.ratemyprofessor.DomainModel.Rater;
+import com.example.ratemyprofessor.DomainModel.Rating;
+import com.example.ratemyprofessor.DomainModel.RatingCategory;
 import com.example.ratemyprofessor.DomainModel.SemesterSeason;
 import com.example.ratemyprofessor.Fragments.SelectionFragment;
 import com.example.ratemyprofessor.ServerCommunication.APIService;
@@ -137,6 +140,32 @@ public class ProfessorFeatureInstrumentedTest {
         assertEquals("Grace", results.get(0).firstName);
         assertEquals("Ada", results.get(1).firstName);
         assertEquals("Alan", results.get(2).firstName);
+    }
+
+    @Test
+    public void replaceLectureRatingsReplacesOnlyTheRequestedCache() {
+        searchService.upsertRating(new Rating(
+                "lecture-1", RatingCategory.ROOM, 2.0, Rater.AVERAGE
+        ));
+        searchService.upsertRating(new Rating(
+                "lecture-1", RatingCategory.ROOM, 4.0, Rater.USER
+        ));
+
+        searchService.replaceLectureRatings(
+                "lecture-1",
+                Rater.AVERAGE,
+                Collections.singletonList(new Rating(
+                        "lecture-1", RatingCategory.ORGANIZATION, 4.5, Rater.AVERAGE
+                ))
+        );
+
+        List<Rating> averages = searchService.getLectureRatings("lecture-1", Rater.AVERAGE);
+        List<Rating> userRatings = searchService.getLectureRatings("lecture-1", Rater.USER);
+        assertEquals(1, averages.size());
+        assertEquals(RatingCategory.ORGANIZATION, averages.get(0).category);
+        assertEquals(4.5, averages.get(0).score, 0.001);
+        assertEquals(1, userRatings.size());
+        assertEquals(4.0, userRatings.get(0).score, 0.001);
     }
 
     @Test
@@ -337,6 +366,11 @@ public class ProfessorFeatureInstrumentedTest {
 
         @Override
         public Call<RatingCategoriesResponse> getCategories(String lectureId) {
+            return null;
+        }
+
+        @Override
+        public Call<RatingAverageResponse> getOwnRatings(String token, String lectureId) {
             return null;
         }
 

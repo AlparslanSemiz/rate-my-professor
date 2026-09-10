@@ -467,6 +467,11 @@ public class DatabaseSyncTest {
         }
 
         @Override
+        public void deleteLectureRatings(String lectureId, Rater rater) {
+
+        }
+
+        @Override
         public List<Lecture> getLecturesByTitle(String lectureTitle) {
             return Collections.emptyList();
         }
