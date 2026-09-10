@@ -5,31 +5,57 @@ single-responsibility refactor ([ADR 0008](adr/0008-single-responsibility-refact
 are holding an older diagram, the old-to-new mapping is in
 [test-plan.md](test-plan.md#the-single-responsibility-refactor).
 
-**What is drawn, and what is left out on purpose.** Collaborators, taken from constructor
-injection — so an arrow means "this class cannot be built without that one", which is the
-relationship that actually constrains the design. **No getters or setters**: every entity here
-is a Lombok `@Getter @Setter` record of its columns, and drawing thirty accessors per box would
-bury the two or three relationships that matter. Entities are drawn with their **relations**,
-not their fields.
+**What is drawn, and what is left out on purpose.** Collaborators, mostly taken from constructor
+injection — so an arrow usually means "this class cannot be built without that one", which is the
+relationship that actually constrains the design. Some targets are `final` utility classes with
+private constructors, called statically rather than injected (`RevertValues`, `LectureLabels`,
+the response mappers, `TokenHasher`); an arrow to one of those means "calls", not "holds".
+**No getters or setters**: every entity here is a Lombok `@Getter @Setter` record of its columns,
+and drawing thirty accessors per box would bury the two or three relationships that matter.
+Entities are drawn with their **relations**, not their fields.
 
-Arrows read **depends on** (`-->`) unless labelled. `..|>` is *implements*.
+**These diagrams are selective, and that is the point rather than an omission.** What is drawn is
+the classes that carry a decision: controllers, services, the seams behind interfaces, and the
+handful of shared pieces everything reuses. What is deliberately **not** drawn is everything that
+carries no decision — repositories (one Spring Data interface per entity, all alike), request and
+response DTOs, the entities themselves, enums and exceptions. Four packages have no diagram at
+all: `com.pse.config`, `com.pse.user`, `com.pse.system` and `com.pse.health`; `SecurityConfig`
+appears as a foreign box in diagram 6 because the chain is a decision, and the rest of its
+package is wiring. `com.pse.security` is the only package drawn completely. **102 of the
+project's 258 source files appear here**, and a box being absent means "nothing here turns on it",
+never "this does not exist".
+
+**Reading the arrows.**
+
+| | |
+| --- | --- |
+| `-->` | depends on — holds it, or calls it statically |
+| `..>` | uses it in passing: a value it returns or a type it names, not a collaborator |
+| `..|>` | implements |
+| `<-->` | both directions; used once, for the lecture/professor join |
+| `"1" --> "*"` | multiplicity, where the code fixes one |
 
 **Package separation** is one diagram per package: the heading names the package, and every box
-without a stereotype belongs to it. A box carrying a package name as a stereotype —
-`<<com.pse.audit>>` on `AuditWriter` in diagram 2, for instance — is a class from **another**
-package, drawn because something in this one cannot be built without it. Those five boxes are
-where the package boundaries are actually crossed, and they are the arrows worth arguing about.
+without a **package-name** stereotype belongs to it. A box carrying one — `<<com.pse.audit>>` on
+`AuditWriter` in diagram 2, for instance — is a class from **another** package, drawn because
+something in this one cannot be built without it. `<<interface>>` and `<<enumeration>>` say what
+a box *is*, not where it lives, and do not mark it foreign.
+
+**Those boxes are not every place a package boundary is crossed**, and it would be wrong to read
+them that way: they are the crossings that matter to the picture they appear in. `AuditWriter`
+alone is injected by a dozen services across `moderation`, `lecture`, `professor`, `rating` and
+`auth`, and drawing every one of those arrows would turn six readable diagrams into one unreadable
+graph — which is the same reason there is no whole-application picture: 258 classes in one graph
+is a picture of nothing.
 
 **These diagrams have not been rendered.** There is no Mermaid renderer on the machine they were
 written on and no CI job that renders them, so what has been checked is structural: six balanced
-```mermaid``` fences, every arrow endpoint a declared class, and **all 99 class names verified to
-resolve to a file under `src/main`** (9 September). Syntax is limited on purpose to what the rest
-of this file already uses — `class`, `-->`, `..|>` and `<<stereotype>>` — rather than
-`namespace` blocks, so that a renderer that handles one diagram handles all six.
-**A look at the GitLab preview is still needed** before this goes in front of anyone.
-
-One diagram per area rather than one whole-application picture: the whole thing is 256 classes
-and a single graph of it is a picture of nothing.
+```mermaid``` fences, every arrow endpoint a declared class, and **all 108 boxes verified to
+resolve to a type under `src/main`** — 102 source files plus the six nested handler classes —
+re-checked on 10 September, along with every declared member. `<-->` at the end of diagram 5 is the one construct worth watching in a real renderer.
+**A look at the GitLab preview is still needed** before this goes in front of anyone; exporting
+these as images is `docs/TODO.md` item 43, and is only needed if the submission format asks for a
+PDF.
 
 ---
 
@@ -94,7 +120,12 @@ classDiagram
     class LoginSuccessDelivery {
         <<interface>>
     }
+    class LoginCodeMail
+    class LoginNotificationMail
     class SuccessfulLoginListener
+    class AuditWriter {
+        <<com.pse.audit>>
+    }
 
     AuthController --> LoginCodeService
     AuthController --> SessionIssuer
@@ -118,8 +149,14 @@ classDiagram
     SessionRevoker --> SessionAuditWriter
     IdentityService --> AdminSuperuserPolicy
 
+    SessionAuditWriter --> AuditWriter
+    AccountReactivator --> AuditWriter
+
+    LoginCodeMail ..|> LoginCodeDelivery
+    LoginNotificationMail ..|> LoginSuccessDelivery
+    LoginNotificationMail --> LoginLocationService
+
     SuccessfulLoginListener --> LoginSuccessDelivery
-    SuccessfulLoginListener --> LoginLocationService
 ```
 
 **`AccountReactivator` is one class for one decision.** It holds what a request for a login code
@@ -131,11 +168,14 @@ about mailing codes. Its transaction boundary is the second reason — a `@Trans
 called from inside `LoginCodeService` would not be proxied at all.
 
 **Two things the picture is for.** `LoginCodeDelivery` and `LoginSuccessDelivery` are
-*interfaces*, and that is the seam every test substitutes — the real SMTP adapter is never
-constructed in a test, which is why `MailService` sits under *Deliberately uncovered* rather
-than being a gap. And **which controller you log in through decides the session**, not who you
-are: both controllers reach the same `SessionIssuer`, and the schedule is a property of the
-endpoint.
+*interfaces*, and that is the seam every test substitutes: `LoginCodeMail` and
+`LoginNotificationMail` are `@Profile("!test")`, so the real SMTP adapters are never constructed
+in a test at all. That is why the mail classes sit under *Deliberately uncovered* rather than
+being a gap — and it is why `SuccessfulLoginListener` depends only on the interface. The
+location lookup hangs off `LoginNotificationMail`, the implementation, not off the listener:
+the listener neither knows nor can reach it. And **which controller you log in through decides
+the session**, not who you are: both controllers reach the same `SessionIssuer`, and the schedule
+is a property of the endpoint.
 
 ---
 
@@ -158,6 +198,12 @@ classDiagram
     class SocialResponseMapper
     class ContentAudit
     class AnswerCleanup
+    class LectureService {
+        <<com.pse.lecture>>
+    }
+    class LectureModerationService {
+        <<com.pse.moderation>>
+    }
     class AuditWriter {
         <<com.pse.audit>>
     }
@@ -175,7 +221,7 @@ classDiagram
     ContentReportService --> AuditWriter
 
     CommentService ..> LectureService : resolves the lecture
-    AnswerCleanup <-- LectureModerationService : cascade on delete
+    LectureModerationService --> AnswerCleanup : cascade on delete
 ```
 
 `ContentAudit` and `SocialResponseMapper` are the two pieces the five services must **not**
@@ -242,6 +288,11 @@ classDiagram
     ModerationCommentService --> ReportOutcome
     ModerationAnswerReportService --> ReportOutcome
 
+    ContentModerationService --> UserReferenceMapper
+    ModerationCommentService --> UserReferenceMapper
+    ModerationAnswerReportService --> UserReferenceMapper
+    RatingModerationService --> UserReferenceMapper
+
     ModerationCatalogController --> LectureModerationService
     ModerationCatalogController --> ProfessorModerationService
     LectureModerationService --> CatalogueEdits
@@ -253,7 +304,6 @@ classDiagram
     ModerationBugReportService --> GitLabClient
     RestClientGitLabClient ..|> GitLabClient
 
-    UserResponseMapper ..> UserReferenceMapper
 ```
 
 **`ModerationCommentService` and `ModerationAnswerReportService` are deliberately still two
@@ -293,8 +343,20 @@ classDiagram
     class WarningRevertHandler
     class BugReportRevertHandler
     class ContentRevertHandler
+    class ContentRevertHandler_CommentHandler
+    class ContentRevertHandler_AnswerHandler
     class ReportStatusRevertHandler
+    class ReportStatusRevertHandler_CommentReportHandler
+    class ReportStatusRevertHandler_AnswerReportHandler
     class CatalogueRevertHandler
+    class CatalogueRevertHandler_LectureHandler
+    class CatalogueRevertHandler_ProfessorHandler
+    class ModerationCommentService {
+        <<com.pse.moderation>>
+    }
+    class LectureModerationService {
+        <<com.pse.moderation>>
+    }
 
     AuditLogController --> AuditLogService
     AuditLogController --> AuditRevertService
@@ -303,32 +365,58 @@ classDiagram
     AuditLogService --> AuditRevertService
     AuditCursorCodec --> KeysetCursorCodec
 
-    AuditRevertService --> AuditRevertHandler
+    AuditRevertService "1" --> "*" AuditRevertHandler
     AuditRevertService --> AuditRevertContext
+    AuditRevertService --> RevertValues
+
     UserRevertHandler ..|> AuditRevertHandler
     WarningRevertHandler ..|> AuditRevertHandler
     BugReportRevertHandler ..|> AuditRevertHandler
-    ContentRevertHandler ..|> AuditRevertHandler
-    ReportStatusRevertHandler ..|> AuditRevertHandler
-    CatalogueRevertHandler ..|> AuditRevertHandler
+
+    ContentRevertHandler *-- ContentRevertHandler_CommentHandler
+    ContentRevertHandler *-- ContentRevertHandler_AnswerHandler
+    ContentRevertHandler_CommentHandler ..|> AuditRevertHandler
+    ContentRevertHandler_AnswerHandler ..|> AuditRevertHandler
+
+    ReportStatusRevertHandler *-- ReportStatusRevertHandler_CommentReportHandler
+    ReportStatusRevertHandler *-- ReportStatusRevertHandler_AnswerReportHandler
+    ReportStatusRevertHandler_CommentReportHandler ..|> AuditRevertHandler
+    ReportStatusRevertHandler_AnswerReportHandler ..|> AuditRevertHandler
+
+    CatalogueRevertHandler *-- CatalogueRevertHandler_LectureHandler
+    CatalogueRevertHandler *-- CatalogueRevertHandler_ProfessorHandler
+    CatalogueRevertHandler_LectureHandler ..|> AuditRevertHandler
+    CatalogueRevertHandler_ProfessorHandler ..|> AuditRevertHandler
 
     UserRevertHandler --> RevertValues
     WarningRevertHandler --> RevertValues
-    ContentRevertHandler --> RevertValues
-    ReportStatusRevertHandler --> RevertValues
-    CatalogueRevertHandler --> RevertValues
+    ContentRevertHandler_CommentHandler --> RevertValues
+    ContentRevertHandler_AnswerHandler --> RevertValues
+    ReportStatusRevertHandler_CommentReportHandler --> RevertValues
+    CatalogueRevertHandler_LectureHandler --> RevertValues
+    CatalogueRevertHandler_ProfessorHandler --> RevertValues
 
-    ReportStatusRevertHandler ..> ModerationCommentService : replays through
-    CatalogueRevertHandler ..> LectureModerationService : replays through
+    ReportStatusRevertHandler_CommentReportHandler ..> ModerationCommentService : replays through
+    CatalogueRevertHandler_LectureHandler ..> LectureModerationService : replays through
 ```
+
+**`Outer_Inner` is a nested class.** `ContentRevertHandler`, `ReportStatusRevertHandler` and
+`CatalogueRevertHandler` are `final` classes that implement nothing themselves; each holds
+**two** `@Component` inner classes (comment/answer, lecture/professor) and **those** are the
+beans that implement `AuditRevertHandler`. So the picture shows nine handlers from six files,
+which is what the container actually has, and the composition arrows show which file each pair
+lives in. Mermaid has no syntax for a nested type, hence the underscore. The pairs are where
+[F-31](test-findings.md#f-31--reverting-a-report-status-is-impossible-on-exactly-the-changes-worth-reverting)
+was found — one half of a pair behaving differently from the other is exactly the shape that
+finding had.
 
 **The dashed arrows out of the handlers are the design.** `applyInverse` does not write fields
 itself; it calls the same service the panel calls, so a revert goes through every guard and
-writes its own audit entry. `ContentRevertHandler`, `ReportStatusRevertHandler` and
-`CatalogueRevertHandler` each hold **two** `@Component` inner classes (comment/answer,
-lecture/professor) — nine handler beans from six files, and the pairs are where
-[F-31](test-findings.md#f-31--reverting-a-report-status-is-impossible-on-exactly-the-changes-worth-reverting)
-was found.
+writes its own audit entry.
+
+**`AuditRevertService "1" --> "*" AuditRevertHandler`** is a `Map<AuditTargetType,
+AuditRevertHandler>`: Spring injects every handler bean and the service selects one by target
+type. That is why adding a handler is a new file rather than an edit to a switch.
 
 ---
 
@@ -377,7 +465,6 @@ classDiagram
 
     LectureService --> LectureResponseMapper
     ProfessorService --> ProfessorResponseMapper
-    LectureResponseMapper --> LectureLabels
     LectureResponseMapper --> RatingAverages
     ProfessorResponseMapper --> ProfessorRatings
     ProfessorRatings --> RatingAverages
@@ -396,6 +483,14 @@ from this one edge. Both mappers sort explicitly because of it.
 
 `ProfessorRatings` exists because two unrelated places need the same walk — every rating on
 every lecture a professor teaches — and must not disagree about it.
+
+**`LectureLabels` is drawn here and called from nowhere here**, which is deliberate rather than
+an oversight. It owns one rule — how a lecture names itself as a single string,
+`"M-INFO-101 — Algorithmen 1"` — and every caller is in `social` or `moderation`: the comment,
+answer, vote and report services, and five moderation services. It lives in this package because
+the rule is about a lecture, and it is a class of its own because it was once five private copies
+that had to agree and nothing made them. Drawing its nine inbound arrows from two other diagrams
+would say less than this paragraph does.
 
 ---
 
@@ -447,7 +542,6 @@ classDiagram
     GlobalExceptionHandler --> ApiException
     GlobalExceptionHandler --> BasicResponse
     GlobalExceptionHandler --> ApiErrorResponse
-    KeysetPage --> KeysetCursorCodec
 ```
 
 **`AuthenticatedUser` is the reason the ownership sweep found no IDOR.** Every app-tier handler
