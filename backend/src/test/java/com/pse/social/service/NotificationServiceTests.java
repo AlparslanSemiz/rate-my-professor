@@ -4,10 +4,10 @@ import com.pse.lecture.model.Lecture;
 import com.pse.shared.dto.BasicResponse;
 import com.pse.shared.enums.NotificationType;
 import com.pse.shared.enums.UserStatus;
-import com.pse.social.dto.request.*;
 import com.pse.social.dto.response.NotificationsResponse;
 import com.pse.social.model.*;
 import com.pse.social.repository.*;
+import com.pse.shared.enums.SemesterSeason;
 import com.pse.shared.error.ApiException;
 import com.pse.user.model.Student;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
@@ -22,6 +22,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,7 +43,6 @@ import static org.mockito.Mockito.*;
         notificationService = new NotificationService(notificationRepository);
     }
 
-
     @Test
     void getNotificationsReturnsDeletedUserForAnswerNotification() {
 
@@ -60,6 +61,12 @@ import static org.mockito.Mockito.*;
         Lecture lecture = new Lecture();
         lecture.setId(UUID.randomUUID());
         lecture.setName("Algorithmen 1");
+        lecture.setCode("ALG1");
+        lecture.setSemesterYear(2026);
+        lecture.setSemesterSeason(SemesterSeason.SS);
+        lecture.setProfessors(new HashSet<>());
+        lecture.setComments(new ArrayList<>());
+        lecture.setRatings(new ArrayList<>());
 
         Comment ownComment = new Comment();
         ownComment.setId(UUID.randomUUID());
@@ -96,7 +103,6 @@ import static org.mockito.Mockito.*;
         assertThat(notificationResponse.ownCommentID())
                 .isEqualTo(ownComment.getId());
     }
-
 
     @Test
     void getNotificationsReturnsWarningNotification() {
