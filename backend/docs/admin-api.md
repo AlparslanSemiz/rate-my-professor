@@ -34,8 +34,19 @@ carried the same status and the same `"Not found"` body.
 ## Path migration
 
 Every administrative route now answers under `/admin` as well as on its old path. The rule
-is mechanical: the new path is `/admin` plus the old one. The legacy paths still work so
-the panel can move at its own pace, and they are removed once it has.
+is mechanical: the new path is `/admin` plus the old one.
+
+**The legacy paths are not being removed.** This section used to say they existed so the panel
+could move at its own pace and would go once it had. That was the plan until 10 September, when
+the deployment made the decision instead: on the deployed host `/admin/` is routed to the admin
+panel's own static container, so **every `/admin/**` route here is answered by the panel's
+`index.html` and never reaches this application** (F-43). The migration was therefore withdrawn
+rather than deferred — see [adminweb-tasks.md](adminweb-tasks.md), which marks both migration
+tasks as withdrawn — and **the unprefixed paths are the production contract permanently.**
+
+The `/admin` twins are still real, still tested and still documented below, and they are what a
+client would use if the routing ever changed. They are not, today, callable from the deployed
+panel.
 
 | Old | New |
 | --- | --- |
@@ -57,8 +68,9 @@ Three things deliberately do **not** move:
 - **The public catalogue reads** — `GET /data/lectures`, `GET /data/lectures/{id}`,
   `GET /data/professor`, `GET /data/professor/{id}`, `GET /data/professor/id` — stay on the
   app API. The panel calls them there. Serving the same rows under `/admin` would put one
-  resource behind two different authorization outcomes, and the `/admin/data/.../all`
-  listings already cover what the panel needs beyond them.
+  resource behind two different authorization outcomes, and the `/all` listings already cover
+  what the panel needs beyond them — on their **unprefixed** paths, `GET /data/lectures/all` and
+  `GET /data/professor/all`, which are the ones reachable on the deployed host.
 - **`GET /admins/validate`** is legacy and undocumented; `GET /admin/auth/me` answers the
   same question with more. It is being retired, not moved. `/admin/**` matches whole
   segments, so it is untouched by the new prefix.
