@@ -1,6 +1,6 @@
 # Consumer Findings — Android Client
 
-Risks observed while extracting [consumer-contract.md](consumer-contract.md). **Read-only
+Risks observed while extracting [frontend-consumer-contract.md](frontend-consumer-contract.md). **Read-only
 audit — nothing in this repository was changed.** Every claim carries a file and line
 reference; where the source does not settle a question it is marked *undetermined* with the
 reason.

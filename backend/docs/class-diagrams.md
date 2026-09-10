@@ -48,14 +48,31 @@ alone is injected by a dozen services across `moderation`, `lecture`, `professor
 graph — which is the same reason there is no whole-application picture: 258 classes in one graph
 is a picture of nothing.
 
-**These diagrams have not been rendered.** There is no Mermaid renderer on the machine they were
-written on and no CI job that renders them, so what has been checked is structural: six balanced
-```mermaid``` fences, every arrow endpoint a declared class, and **all 108 boxes verified to
-resolve to a type under `src/main`** — 102 source files plus the six nested handler classes —
-re-checked on 10 September, along with every declared member. `<-->` at the end of diagram 5 is the one construct worth watching in a real renderer.
-**A look at the GitLab preview is still needed** before this goes in front of anyone; exporting
-these as images is `docs/TODO.md` item 43, and is only needed if the submission format asks for a
-PDF.
+**These diagrams are now rendered, and each image below is checked against its source.** They
+were structural-only until 10 September: six balanced ```mermaid``` fences, every arrow endpoint a
+declared class, and **all 108 boxes verified to resolve to a type under `src/main`** — 102 source
+files plus the six nested handler classes. That count was re-confirmed against the fences when the
+images were made: 116 `class` declarations across the six diagrams, **108 unique**, the difference
+being the deliberate crossings a class appears in more than one picture for.
+
+**How the images were produced**, so they can be reproduced rather than trusted:
+`@mermaid-js/mermaid-cli` (`mmdc` 11.17.0) against each extracted fence, `-b white -s 2`, giving
+PNGs 1568px wide. They live in `docs/diagrams/` and are committed, because the submission is a PDF
+plus a repository link and a diagram that only exists in a renderer is no good to either. **The
+renderer is not installed in this repository and there is no CI job for it** — it was installed
+outside the tree for this pass, so regenerating an image is a manual step, and the fence below
+each image stays the source of truth.
+
+**Every image was opened and compared to its fence.** `<-->` at the end of diagram 5 — the one
+construct the previous pass flagged as worth watching in a real renderer — draws correctly, as a
+bidirectional association between `Lecture` and `Professor` with `*` at both ends. Nothing
+rendered as a Mermaid error box.
+
+**One diagram does not survive a portrait PDF page and it is diagram 3.** At 1568×194 it is
+roughly 8:1, because six independent controller trees lay out side by side; scaled to a normal
+text width its boxes end up about 1.5 mm tall. It is correct and it is unreadable on A4 portrait.
+It needs a landscape page, a full-page rotation, or splitting into two pictures — a redraw, so it
+is recorded rather than done: `docs/TODO.md` item 47.
 
 ---
 
@@ -63,6 +80,11 @@ PDF.
 
 The area with the most collaborators, because logging in touches rate limiting, one-time codes,
 mail delivery, audit and two different session schedules.
+
+![auth package class diagram](diagrams/1-auth.png)
+
+**Mermaid source**, kept below the image on purpose: the image is what a PDF shows, and the
+fence is what stays reviewable and diffable in the repository.
 
 ```mermaid
 classDiagram
@@ -183,6 +205,11 @@ is a property of the endpoint.
 
 What `SocialService` (591 lines) became.
 
+![social package class diagram](diagrams/2-social.png)
+
+**Mermaid source**, kept below the image on purpose: the image is what a PDF shows, and the
+fence is what stays reviewable and diffable in the repository.
+
 ```mermaid
 classDiagram
     direction LR
@@ -233,6 +260,11 @@ decision, which has three states that look alike from outside.
 ## 3. `com.pse.moderation` — the administrative surface
 
 The largest area, and the one where the twin pairs live.
+
+![moderation package class diagram](diagrams/3-moderation.png)
+
+**Mermaid source**, kept below the image on purpose: the image is what a PDF shows, and the
+fence is what stays reviewable and diffable in the repository.
 
 ```mermaid
 classDiagram
@@ -316,6 +348,11 @@ which is why both point at it.
 ---
 
 ## 4. `com.pse.audit` and `com.pse.audit.revert` — the trail, and undoing one field
+
+![audit and audit.revert class diagram](diagrams/4-audit.png)
+
+**Mermaid source**, kept below the image on purpose: the image is what a PDF shows, and the
+fence is what stays reviewable and diffable in the repository.
 
 ```mermaid
 classDiagram
@@ -422,6 +459,11 @@ type. That is why adding a handler is a new file rather than an edit to a switch
 
 ## 5. `com.pse.lecture` / `professor` / `rating` — the catalogue and what it is judged by
 
+![lecture, professor and rating class diagram](diagrams/5-catalogue.png)
+
+**Mermaid source**, kept below the image on purpose: the image is what a PDF shows, and the
+fence is what stays reviewable and diffable in the repository.
+
 ```mermaid
 classDiagram
     direction LR
@@ -495,6 +537,11 @@ would say less than this paragraph does.
 ---
 
 ## 6. `com.pse.security` and `com.pse.shared` — the chain, and what everything reuses
+
+![security and shared class diagram](diagrams/6-security-shared.png)
+
+**Mermaid source**, kept below the image on purpose: the image is what a PDF shows, and the
+fence is what stays reviewable and diffable in the repository.
 
 ```mermaid
 classDiagram

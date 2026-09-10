@@ -1,6 +1,6 @@
 # Consumer findings — `admin-web`
 
-Risks found while writing [consumer-contract.md](consumer-contract.md). **Nothing was
+Risks found while writing [adminweb-consumer-contract.md](adminweb-consumer-contract.md). **Nothing was
 changed.** This is a reading of the client as it stands at commit `b49a84b`
 (branch `hard-refactoring`, 2026-09-09), recorded so the backend can decide what to
 test and what to warn us about.
@@ -148,7 +148,7 @@ the literal service-file path.
 A search of `src/` for the string `/admin` returns no HTTP path — only route constants
 for the panel's own URLs.
 
-All 42 paths are in Table 1 of [consumer-contract.md](consumer-contract.md). Removing
+All 42 paths are in Table 1 of [adminweb-consumer-contract.md](adminweb-consumer-contract.md). Removing
 the legacy routes breaks every screen simultaneously.
 
 Already tracked as `H2` in `docs/backend-tasks.md:221-241` and `F-005` in
@@ -526,7 +526,7 @@ The admin panel calls no vote endpoint. A case-insensitive search for `vote` acr
 prose mentions in `docs/admin-api.md` (lines 406, 481, 874) describing cascade
 behaviour and what is not audited.
 
-The full call inventory is Table 1 of [consumer-contract.md](consumer-contract.md);
+The full call inventory is Table 1 of [adminweb-consumer-contract.md](adminweb-consumer-contract.md);
 no entry addresses votes. Votes are a student-app concern; this panel deletes content
 and the backend cascades the votes with it
 (`src/api/moderation/CommentsService.ts:18-21`).
