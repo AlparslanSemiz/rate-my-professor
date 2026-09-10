@@ -14,6 +14,23 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
  * Provides CorsConfig.
+ *
+ * <p><b>This allow-list is not what carries the admin panel, and the reason lives in another
+ * file.</b> The panel is served from the same host that proxies this backend, so its calls are
+ * same-origin and Spring never consults the list at all: it compares the {@code Origin} header
+ * against the request URL it reconstructs, and matching origins short-circuit the check. That
+ * reconstruction is only correct behind the proxy while
+ * {@code server.forward-headers-strategy=framework} is set in {@code application.properties}.
+ *
+ * <p>Remove or change that property — it reads like logging and link-building configuration and
+ * has no visible connection to CORS — and every same-origin call from the panel starts failing
+ * the check here instead of bypassing it, which means an opaque {@code 403 Invalid CORS request}
+ * on login with nothing in this class to explain it. Measured against the deployed host: with
+ * neither hostname in the list, a preflight carrying the page's own origin answered 200 while
+ * one carrying a stranger's answered 403.
+ *
+ * <p>So what this list actually governs is callers that are <i>not</i> same-origin. See
+ * {@code docs/deployment.md}, "Public address and request path".
  */
 @Configuration
 public class CorsConfig {

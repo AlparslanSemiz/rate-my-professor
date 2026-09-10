@@ -2129,10 +2129,22 @@ that a sweep must be shown capable of going red. The same argument applies here 
 been made: a passing deploy and an absent deploy are indistinguishable from outside, because
 the only assertion is liveness.
 
-**What would close it.** An assertion on identity rather than liveness — the deploy job, or a
-scheduled check, reading the served `index.html` and comparing the asset hashes (or an embedded
-build id) against the artefact just built. Cheap, and it turns "did that land?" from a manual
-curl into a job result.
+**What would close it.** An assertion on identity rather than liveness: after the container
+swap, read the hashed asset name out of the served page and compare it to the one in the image
+that was just built. Vite's asset names are content-derived, so they differ exactly when the
+served container is not the artefact built — which is the case the `200` check cannot see.
+
+```
+built=$(docker run --rm --entrypoint sh "$IMAGE" -c 'ls /usr/share/nginx/html/admin/assets/index-*.js' | xargs -n1 basename)
+served=$(curl -s "http://127.0.0.1:${WEB_PORT:-8081}/admin/" | grep -oE 'index-[A-Za-z0-9_-]+\.js' | head -1)
+test "$built" = "$served" || { echo "served $served, built $built"; exit 1; }
+```
+
+**Estimate:** ~30 minutes in the panel repository, and the second half of that is the part that
+matters — proving it goes red, by running the deploy without the container swap and watching the
+job fail. A verification that has never been seen red is the thing this repository already
+refuses to count. Another ~15 minutes gives the backend's scheduled `health:check` the same
+treatment against a build id, since it has the same shape.
 
 **Deliberately not fixed here.** This pass changed no code, and the job in question is in the
 panel repository. It is also not the reason this particular deployment is stale — as far as
