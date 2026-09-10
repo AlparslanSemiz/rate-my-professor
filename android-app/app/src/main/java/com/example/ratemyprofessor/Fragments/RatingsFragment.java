@@ -96,6 +96,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
 
     private final APIService apiService;
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private SearchService searchService;
     FragmentRatingsBinding binding;
 
     List<Comment> comments;
@@ -126,6 +127,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         binding = FragmentRatingsBinding.inflate(inflater, container, false);
+        searchService = Database.getInstance(requireContext()).searchService();
         binding.lectureTitle.setText(lecture.name);
         binding.term.setText(semester.getSemesterName());
         binding.commentList.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -381,15 +383,15 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                         return;
                     }
 
-                    List<TopicAverageResponse> ratings = body.ratings();
+                    List<TopicAverageResponse> ratings = new ArrayList<>(body.ratings());
                     // Dont know why we even get "null" categories but it happens
                     ratings.removeIf(rating -> rating.category() == null);
                     ratings.removeIf(rating -> rating.category().equals(RatingCategory.OVERALL));
-                    if (body.ratings().isEmpty()) {
+                    updateLocalRatingsFromResponse(ratings);
+                    if (ratings.isEmpty()) {
                         setEmptyRating();
                         return;
                     }
-                    updateLocalRatingsFromResponse(ratings);
                     loadOwnRatings(ratings);
                 }
 
@@ -633,17 +635,12 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         executorService.execute(() -> call.enqueue(new Callback<>() {
             @Override
             public void onResponse(Call<LectureDetailResponse> call1, Response<LectureDetailResponse> response) {
-                if (response.isSuccessful()) {
-                    double averageRating = response.body().lecture().averageRating();
-
-                    binding.averageLectureRating.setText(
-                            String.format(Locale.ROOT, RATING_FORMAT, averageRating));
-
-                    binding.averageLectureRating.setTextColor(
-                            RatingColorCalculator.calculateColour(binding.averageLectureRating.getContext(),
-                                    averageRating));
-
+                LectureDetailResponse body = response.body();
+                if (!response.isSuccessful() || body == null || body.lecture() == null) {
+                    return;
                 }
+
+                applyLectureAverageFromServer(body.lecture().averageRating());
             }
 
             @Override
@@ -769,24 +766,7 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
                 if (response.isSuccessful() && response.body() != null) {
                     LectureDetailResponse lectureDetail = response.body();
                     LectureResponse lectureResponse = lectureDetail.lecture();
-                    float newAverage = (float) lectureResponse.averageRating();
-                    lecture.averageRating = newAverage;
-
-                    binding.averageLectureRating.setText(String.valueOf(newAverage));
-                    binding.averageLectureRating.setTextColor(RatingColorCalculator.calculateColour(
-                            binding.averageLectureRating.getContext(), newAverage));
-
-                    // Update Room database
-                    executorService.execute(() -> {
-                        SearchService searchService =
-                                Database.getInstance(requireContext()).searchService();
-
-                        searchService.updateLectureRating(lectureId, newAverage);
-
-                        searchService.getLecture(professor.id, lecture.name,
-                                lecture.semesterYear, lecture.semesterSeason);
-
-                    });
+                    applyLectureAverageFromServer(lectureResponse.averageRating());
                 }
             }
 
@@ -834,13 +814,41 @@ public class RatingsFragment extends Fragment implements CommentsAdapter.OnComme
         });
     }
     private void updateLocalRatingsFromResponse(List<TopicAverageResponse> ratingResponses) {
-        SearchService searchService = Database.getInstance(getContext()).searchService();
         executorService.execute(() -> {
+            List<Rating> ratings = new ArrayList<>();
             for (TopicAverageResponse ratingResponse: ratingResponses){
-                Rating rating = new Rating(lecture.id, ratingResponse.category(), ratingResponse.value(), Rater.AVERAGE);
-                searchService.upsertRating(rating);
+                ratings.add(new Rating(
+                        lecture.id,
+                        ratingResponse.category(),
+                        ratingResponse.value(),
+                        Rater.AVERAGE
+                ));
             }
+            searchService.replaceLectureRatings(lecture.id, Rater.AVERAGE, ratings);
         });
+    }
+
+    /**
+     * Applies a fresh overall lecture average to the screen, the in-memory model and Room.
+     */
+    private void applyLectureAverageFromServer(double averageRating) {
+        lecture.averageRating = averageRating;
+        runOnUiThread(() -> {
+            binding.averageLectureRating.setText(
+                    String.format(Locale.ROOT, RATING_FORMAT, averageRating)
+            );
+            binding.averageLectureRating.setTextColor(
+                    RatingColorCalculator.calculateColour(
+                            binding.averageLectureRating.getContext(),
+                            averageRating
+                    )
+            );
+        });
+
+        executorService.execute(() -> searchService.updateLectureRating(
+                lecture.id,
+                averageRating
+        ));
     }
     /**
      * Shows a short message to the user, if the screen is still on display.

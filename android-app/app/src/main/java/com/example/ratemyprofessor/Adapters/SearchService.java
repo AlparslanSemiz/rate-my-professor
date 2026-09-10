@@ -203,6 +203,21 @@ public interface SearchService {
     @Upsert
     void upsertRating(Rating rating);
 
+    @Query("DELETE FROM ratings WHERE lectureID = :lectureId AND rater = :rater")
+    void deleteLectureRatings(String lectureId, Rater rater);
+
+    /**
+     * Replaces one lecture's cached ratings for the given rater in a single transaction.
+     * This also clears stale values when the server returns fewer categories or no ratings.
+     */
+    @Transaction
+    default void replaceLectureRatings(String lectureId, Rater rater, List<Rating> ratings) {
+        deleteLectureRatings(lectureId, rater);
+        for (Rating rating : ratings) {
+            upsertRating(rating);
+        }
+    }
+
     @Query("SELECT * FROM lectures WHERE name = :lectureTitle")
     List<Lecture> getLecturesByTitle(String lectureTitle);
 

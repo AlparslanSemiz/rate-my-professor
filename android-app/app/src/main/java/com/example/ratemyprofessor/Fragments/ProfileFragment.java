@@ -22,7 +22,11 @@ import com.example.ratemyprofessor.DomainModel.Lecture;
 import com.example.ratemyprofessor.DomainModel.Professor;
 import com.example.ratemyprofessor.DomainModel.SelectionType;
 import com.example.ratemyprofessor.DomainModel.Semester;
+import com.example.ratemyprofessor.ServerCommunication.APIService;
 import com.example.ratemyprofessor.ServerCommunication.Database;
+import com.example.ratemyprofessor.ServerCommunication.RetrofitClient;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorDetailResponse;
+import com.example.ratemyprofessor.ServerCommunication.Responses.ProfessorResponse;
 
 import com.example.ratemyprofessor.databinding.FragmentProfileBinding;
 import com.example.ratemyprofessor.logic.RatingColorCalculator;
@@ -32,6 +36,10 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * This fragment is the second step of lecture offering selection. Here a professor or
@@ -56,6 +64,7 @@ public class ProfileFragment extends Fragment {
     private SelectionType selectionType;
     private Professor professor;
     private SearchService service;
+    private APIService apiService;
     private ExecutorService executor;
     private String lectureTitle;
     private ControlFlowInterface flowInterface;
@@ -95,6 +104,7 @@ public class ProfileFragment extends Fragment {
         binding.backButton.setOnClickListener(v -> requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
         service = Database.getInstance(requireContext()).searchService();
+        apiService = RetrofitClient.getClient().create(APIService.class);
         executor = Executors.newSingleThreadExecutor();
 
         // Displaying average rating in the header
@@ -114,10 +124,7 @@ public class ProfileFragment extends Fragment {
 
     private void displayHeaderRating() {
         if (selectionType == SelectionType.PROFESSORS) {
-            binding.averageRatingBackground.setText(String.format(Locale.ROOT, RATING_FORMAT,
-                    professor.averageRating));
-            binding.averageRatingBackground.setTextColor(RatingColorCalculator.calculateColour(requireContext(),
-                    professor.averageRating));
+            displayProfessorRatingFromCacheAndRefresh();
         } else {
             executor.execute(new Runnable() {
                 @Override
@@ -135,6 +142,72 @@ public class ProfileFragment extends Fragment {
                 }
             });
         }
+    }
+
+    /**
+     * Shows the locally cached professor rating first and then replaces it with the latest
+     * value from the server. A failed request deliberately leaves the cached value visible.
+     */
+    private void displayProfessorRatingFromCacheAndRefresh() {
+        String professorId = professor.id;
+
+        executor.execute(() -> {
+            Professor cachedProfessor = service.getProfessorById(professorId);
+            float cachedAverage = cachedProfessor != null
+                    ? cachedProfessor.averageRating
+                    : professor.averageRating;
+
+            professor.averageRating = cachedAverage;
+            runOnUiThread(() -> {
+                showProfessorRating(cachedAverage);
+                refreshProfessorRatingFromServer(professorId);
+            });
+        });
+    }
+
+    private void refreshProfessorRatingFromServer(String professorId) {
+        apiService.getProfessor(professorId).enqueue(new Callback<>() {
+            @Override
+            public void onResponse(@NonNull Call<ProfessorDetailResponse> call,
+                                   @NonNull Response<ProfessorDetailResponse> response) {
+                ProfessorDetailResponse body = response.body();
+                if (!response.isSuccessful() || body == null || !body.success()
+                        || body.professor() == null) {
+                    Log.d(TAG, "Could not refresh rating for professor " + professorId);
+                    return;
+                }
+
+                ProfessorResponse serverProfessor = body.professor();
+                float updatedAverage = (float) serverProfessor.averageRating();
+                professor.averageRating = updatedAverage;
+                runOnUiThread(() -> showProfessorRating(updatedAverage));
+
+                if (!executor.isShutdown()) {
+                    executor.execute(() -> service.updateProfessorAverageRating(
+                            professorId,
+                            updatedAverage
+                    ));
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<ProfessorDetailResponse> call,
+                                  @NonNull Throwable throwable) {
+                Log.d(TAG, "Could not refresh rating for professor " + professorId,
+                        throwable);
+            }
+        });
+    }
+
+    private void showProfessorRating(double averageRating) {
+        binding.averageRatingBackground.setText(String.format(
+                Locale.ROOT,
+                RATING_FORMAT,
+                averageRating
+        ));
+        binding.averageRatingBackground.setTextColor(
+                RatingColorCalculator.calculateColour(requireContext(), averageRating)
+        );
     }
 
     /**
@@ -324,7 +397,6 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        displayHeaderRating();
         showSemesters();
     }
 }
