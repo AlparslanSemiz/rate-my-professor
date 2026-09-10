@@ -32,6 +32,14 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
 
     private final Context context;
 
+    /**
+     * Creates a ProfileSemesterAdapter with the supplied data and interaction listener.
+     *
+     * @param context the Android context used to access resources and services
+     * @param semesters the semesters available for selection
+     * @param lectures the lecture offerings to display
+     * @param listener the listener notified when the user interacts with an item
+     */
     public ProfileSemesterAdapter(Context context, List<Semester> semesters, List<Lecture> lectures, OnSemesterClickListener listener) {
         this.context = context;
         this.semesters = semesters;
@@ -76,6 +84,11 @@ public class ProfileSemesterAdapter extends RecyclerView.Adapter<ProfileSemester
         final TextView textView;
         final TextView averageRating;
 
+        /**
+         * Creates a view holder backed by the supplied item binding.
+         *
+         * @param binding the view binding for the item layout
+         */
         public SemesterViewHolder(@NonNull ItemLectureSemesterWithRatingBinding binding) {
             super(binding.getRoot());
             textView = binding.lectureNameForProfile;

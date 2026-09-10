@@ -41,11 +41,17 @@ import java.time.LocalDateTime;
 @RunWith(RobolectricTestRunner.class)
 public class SessionApplicationAndUtilityTest {
 
+    /**
+     * Restores the default night mode after each test.
+     */
     @After
     public void resetNightMode() {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
     }
 
+    /**
+     * Verifies that login session persists and clears values.
+     */
     @Test
     public void loginSessionPersistsAndClearsValues() {
         Application context = RuntimeEnvironment.getApplication();
@@ -78,6 +84,9 @@ public class SessionApplicationAndUtilityTest {
         assertFalse(LoginSession.from(context).isLoggedIn());
     }
 
+    /**
+     * Verifies that my application applies saved dark mode.
+     */
     @Test
     public void myApplicationAppliesSavedDarkMode() {
         SharedPreferences settings = cleanSettings();
@@ -90,6 +99,9 @@ public class SessionApplicationAndUtilityTest {
         assertEquals(AppCompatDelegate.MODE_NIGHT_YES, AppCompatDelegate.getDefaultNightMode());
     }
 
+    /**
+     * Verifies that my application applies saved light mode.
+     */
     @Test
     public void myApplicationAppliesSavedLightMode() {
         SharedPreferences settings = cleanSettings();
@@ -102,6 +114,9 @@ public class SessionApplicationAndUtilityTest {
         assertEquals(AppCompatDelegate.MODE_NIGHT_NO, AppCompatDelegate.getDefaultNightMode());
     }
 
+    /**
+     * Verifies that rating colours clamp values on light background.
+     */
     @Test
     @Config(qualifiers = "notnight")
     public void ratingColoursClampValuesOnLightBackground() {
@@ -116,6 +131,9 @@ public class SessionApplicationAndUtilityTest {
         assertEquals(158, Color.green(high));
     }
 
+    /**
+     * Verifies that rating colours use full brightness on dark background.
+     */
     @Test
     @Config(qualifiers = "night")
     public void ratingColoursUseFullBrightnessOnDarkBackground() {
@@ -126,6 +144,9 @@ public class SessionApplicationAndUtilityTest {
         assertEquals(0, Color.blue(middle));
     }
 
+    /**
+     * Verifies that auth manager holds singleton state.
+     */
     @Test
     public void authManagerHoldsSingletonState() {
         AuthManager manager = AuthManager.getInstance();
@@ -138,6 +159,9 @@ public class SessionApplicationAndUtilityTest {
         assertEquals(manager, AuthManager.getInstance());
     }
 
+    /**
+     * Verifies that main view model triggers refresh when logged in.
+     */
     @Test
     public void mainViewModelTriggersRefreshWhenLoggedIn() {
         AuthManager.getInstance().setAuthState(AuthState.LOGGED_IN);
@@ -145,6 +169,9 @@ public class SessionApplicationAndUtilityTest {
         // Just verify constructor doesn't crash, refresh logic is side-effect heavy
     }
 
+    /**
+     * Verifies that search view model publishes and clears query.
+     */
     @Test
     public void searchViewModelPublishesAndClearsQuery() {
         SearchViewModel viewModel = new SearchViewModel();
@@ -158,6 +185,9 @@ public class SessionApplicationAndUtilityTest {
         assertEquals("", viewModel.getQuery().getValue());
     }
 
+    /**
+     * Verifies that local date time converter handles nulls and round trip.
+     */
     @Test
     public void localDateTimeConverterHandlesNullsAndRoundTrip() {
         assertNull(LocalDateTimeConverter.fromLocalDateTime(null));
@@ -168,6 +198,9 @@ public class SessionApplicationAndUtilityTest {
         assertEquals(now, LocalDateTimeConverter.toLocalDateTime(string));
     }
 
+    /**
+     * Verifies that network utils returns false when no active network exists.
+     */
     @Test
     public void networkUtilsReturnsFalseWhenNoActiveNetworkExists() {
         Context context = mock(Context.class);
@@ -179,6 +212,9 @@ public class SessionApplicationAndUtilityTest {
         assertFalse(NetworkUtils.isInternetAvailable(context));
     }
 
+    /**
+     * Verifies that network utils returns false when no capabilities exist.
+     */
     @Test
     public void networkUtilsReturnsFalseWhenNoCapabilitiesExist() {
         Context context = mock(Context.class);
@@ -192,6 +228,9 @@ public class SessionApplicationAndUtilityTest {
         assertFalse(NetworkUtils.isInternetAvailable(context));
     }
 
+    /**
+     * Verifies that network utils returns true when network is validated.
+     */
     @Test
     public void networkUtilsReturnsTrueWhenNetworkIsValidated() {
         Context context = RuntimeEnvironment.getApplication();

@@ -5,8 +5,17 @@ import com.example.ratemyprofessor.servercommunication.responses.TopicAverageRes
 
 import java.util.List;
 
+/**
+ * Calculates a weighted average of rating topics while excluding the overall category.
+ */
 public final class WeightedRatingCalc {
 
+    /**
+     * Calculates the category-weighted average, excluding entries in the overall category.
+     *
+     * @param ratings the category averages to combine; may be null or empty
+     * @return the weighted average, -1 for null or empty input, or NaN if the total weight is zero
+     */
     public static double calcRating(List<TopicAverageResponse> ratings) {
         if (ratings == null || ratings.isEmpty()) {
             return -1;

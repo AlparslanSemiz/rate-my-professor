@@ -42,6 +42,9 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
 
     /**
      * Constructor for the rating adapter. Removes "overall" rating from each list
+     *
+     * @param ratings the ratings to display
+     * @param userRatings the current user ratings, or null if unavailable
      */
     public RatingAdapter(ArrayList<TopicAverageResponse> ratings, ArrayList<TopicAverageResponse> userRatings) {
         this.ratings = ratings;
@@ -54,10 +57,20 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
         }
     }
 
+    /**
+     * Returns the mutable category-to-score map used when submitting user ratings.
+     *
+     * @return the mutable map of category scores to submit
+     */
     public Map<RatingCategory, Double> getChangedRatings() {
         return changedRatings;
     }
 
+    /**
+     * Returns the list of average ratings displayed by this adapter.
+     *
+     * @return the average ratings held by this adapter
+     */
     public List<TopicAverageResponse> getRatings() {
         return ratings;
     }
@@ -120,6 +133,11 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
         final RatingBar userRatingBar;
         final TextView userRatingNum;
 
+        /**
+         * Creates a view holder backed by the supplied item binding.
+         *
+         * @param binding the view binding for the item layout
+         */
         public RatingViewHolder(@NonNull ItemRatingBinding binding) {
             super(binding.getRoot());
 
@@ -131,6 +149,12 @@ public class RatingAdapter extends RecyclerView.Adapter<RatingAdapter.RatingView
             userRatingNum = binding.yourRatingNum;
         }
 
+        /**
+         * Connects user changes on the rating bar to the supplied category and listener.
+         *
+         * @param category the rating category
+         * @param listener the listener notified when the user interacts with an item
+         */
         public void setCategory(RatingCategory category, OnRatingChangedListener listener) {
 
             userRatingBar.setOnRatingBarChangeListener(

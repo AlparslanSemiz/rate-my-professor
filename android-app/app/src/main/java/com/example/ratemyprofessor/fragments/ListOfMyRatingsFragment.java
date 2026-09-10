@@ -35,6 +35,9 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * Displays the ratings submitted by the current user and opens the selected lecture profile.
+ */
 public class ListOfMyRatingsFragment extends Fragment {
 
     private FragmentListOfMyRatingsBinding binding;
@@ -49,6 +52,9 @@ public class ListOfMyRatingsFragment extends Fragment {
 
     private static final String TAG = "ListOfMyRatings";
 
+    /**
+     * Creates an empty fragment for Android lifecycle instantiation.
+     */
     public ListOfMyRatingsFragment() {
         apiService = RetrofitClient.getClient().create(APIService.class);
     }
@@ -126,6 +132,11 @@ public class ListOfMyRatingsFragment extends Fragment {
         }
     }
 
+    /**
+     * Displays the supplied user ratings in the list and registers the selection callback.
+     *
+     * @param ratings the ratings to display
+     */
     public void showRatings(List<UserRatingDto> ratings) {
         RecyclerView recyclerView = binding.listOfMyRatingsList;
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -135,6 +146,10 @@ public class ListOfMyRatingsFragment extends Fragment {
 
     /**
      * Passes the user to the lecture offering tab when the corresponding rating is clicked.
+     *
+     * @param semester the selected semester
+     * @param profId the identifier of the professor
+     * @param lectureName the name of the lecture
      */
     public void openRating(Semester semester, String profId, String lectureName) {
         executor.execute(() -> {

@@ -52,5 +52,11 @@ public interface ControlFlowInterface {
      */
     void openLectureProfile(Professor professor, Semester semester, Lecture lecture);
 
+    /**
+     * Opens the replies to the selected comment with its current vote state.
+     *
+     * @param comment the selected comment
+     * @param voteType the vote associated with the comment
+     */
     void openReplyFragment(Comment comment, VoteType voteType);
 }

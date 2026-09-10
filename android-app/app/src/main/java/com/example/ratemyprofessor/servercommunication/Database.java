@@ -47,7 +47,15 @@ import retrofit2.Response;
 @TypeConverters(LocalDateTimeConverter.class)
 public abstract class Database extends RoomDatabase {
 
+    /**
+     * Receives the result of a local database refresh.
+     */
     public interface UpdateCallback {
+        /**
+         * Reports whether the database refresh completed successfully.
+         *
+         * @param successful whether the update completed successfully
+         */
         void onComplete(boolean successful);
     }
 
@@ -70,8 +78,16 @@ public abstract class Database extends RoomDatabase {
      */
     private static volatile Database instance;
 
+    /**
+     * Creates the database base instance used by the Room implementation.
+     */
     public Database() {}
 
+    /**
+     * Returns the Room data access object for cached search and rating data.
+     *
+     * @return the generated data access object
+     */
     public abstract SearchService searchService();
 
 
@@ -111,6 +127,12 @@ public abstract class Database extends RoomDatabase {
         updateDB(apiService, successful -> { });
     }
 
+    /**
+     * Refreshes professors and lectures asynchronously and reports whether both updates succeeded.
+     *
+     * @param apiService the service used to create backend requests
+     * @param callback the callback notified when the update completes
+     */
     public void updateDB(APIService apiService, UpdateCallback callback) {
         if (NO_UPDATE) {
             callback.onComplete(true);
@@ -151,6 +173,11 @@ public abstract class Database extends RoomDatabase {
         );
     }
 
+    /**
+     * Creates the single-thread executor used for database updates.
+     *
+     * @return a new single-thread executor
+     */
     protected ExecutorService createUpdateExecutor() {
         return Executors.newSingleThreadExecutor();
     }

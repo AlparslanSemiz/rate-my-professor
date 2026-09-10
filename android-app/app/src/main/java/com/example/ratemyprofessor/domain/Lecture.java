@@ -59,8 +59,24 @@ public class Lecture {
      */
     public int ratingCount;
 
+    /**
+     * The average rating.
+     */
     public double averageRating;
 
+    /**
+     * Creates a Lecture with the supplied values.
+     *
+     * @param id the unique identifier
+     * @param name the name of the lecture
+     * @param code the lecture code
+     * @param semesterYear the year of the semester
+     * @param semesterSeason the season of the semester
+     * @param active whether the entry is active
+     * @param commentCount the number of comments
+     * @param ratingCount the number of ratings
+     * @param averageRating the average rating
+     */
     public Lecture(@NonNull String id, String name, String code, int semesterYear, SemesterSeason semesterSeason,
                    boolean active, int commentCount, int ratingCount, double averageRating) {
         this.name = name;

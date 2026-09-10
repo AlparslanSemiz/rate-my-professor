@@ -8,6 +8,8 @@ import com.example.ratemyprofessor.domain.Semester;
 public interface OnSemesterClickListener {
 
     /**
+     * Handles the semester click event.
+     *
      * @param semester the clicked semester
      */
     void onSemesterClick(Semester semester);

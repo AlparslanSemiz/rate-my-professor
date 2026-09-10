@@ -24,6 +24,12 @@ public class ProfileLectureAdapter extends RecyclerView.Adapter<ProfileLectureAd
     private final OnLectureClickListener listener;
     private int currentChoice = 0;
 
+    /**
+     * Creates a ProfileLectureAdapter with the supplied data and interaction listener.
+     *
+     * @param lectures the lecture offerings to display
+     * @param listener the listener notified when the user interacts with an item
+     */
     public ProfileLectureAdapter(List<String> lectures, OnLectureClickListener listener) {
         this.lectures = lectures;
         this.listener = listener;
@@ -68,6 +74,11 @@ public class ProfileLectureAdapter extends RecyclerView.Adapter<ProfileLectureAd
 
         final TextView textView;
 
+        /**
+         * Creates a view holder backed by the supplied item binding.
+         *
+         * @param binding the view binding for the item layout
+         */
         public LectureViewHolder(@NonNull ItemLectureNameSmallBinding binding) {
             super(binding.getRoot());
             textView = binding.lectureNameForProfile;
@@ -80,6 +91,8 @@ public class ProfileLectureAdapter extends RecyclerView.Adapter<ProfileLectureAd
     public interface OnLectureClickListener {
 
         /**
+         * Handles the lecture click event.
+         *
          * @param lectureTitle the name of the clicked lecture
          */
         void onLectureClick(String lectureTitle);

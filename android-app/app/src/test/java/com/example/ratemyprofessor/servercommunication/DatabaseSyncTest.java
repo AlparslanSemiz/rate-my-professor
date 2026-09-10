@@ -55,6 +55,11 @@ import retrofit2.Response;
 @RunWith(RobolectricTestRunner.class)
 public class DatabaseSyncTest {
 
+    /**
+     * Verifies that get instance returns an existing singleton.
+     *
+     * @throws Exception if the operation cannot complete
+     */
     @Test
     public void getInstanceReturnsAnExistingSingleton() throws Exception {
         Field instanceField = Database.class.getDeclaredField("instance");
@@ -72,6 +77,9 @@ public class DatabaseSyncTest {
         }
     }
 
+    /**
+     * Verifies that successful refresh responses are written through the data access object.
+     */
     @Test
     public void updateDBRefreshesSuccessfulResponsesIntoSearchService() {
         RecordingSearchService searchService = new RecordingSearchService();
@@ -143,6 +151,9 @@ public class DatabaseSyncTest {
         assertTrue(searchService.insertedComments.isEmpty());
     }
 
+    /**
+     * Verifies that failed or incomplete refresh responses do not overwrite cached data.
+     */
     @Test
     public void updateDBSkipsWritesWhenResponsesFailOrContainNoEntities() {
         RecordingSearchService searchService = new RecordingSearchService();
@@ -164,6 +175,9 @@ public class DatabaseSyncTest {
         assertTrue(searchService.insertedComments.isEmpty());
     }
 
+    /**
+     * Verifies that HTTP errors and null entity lists are rejected during refresh.
+     */
     @Test
     public void updateDBRejectsHttpErrorsAndNullEntityLists() {
         RecordingSearchService searchService = new RecordingSearchService();

@@ -36,6 +36,12 @@ public class NotificationAdapter
             DateFormat.SHORT
     );
 
+    /**
+     * Creates a NotificationAdapter with the supplied data and interaction listener.
+     *
+     * @param notifications the notifications to display
+     * @param listener the listener notified when the user interacts with an item
+     */
     public NotificationAdapter(
             List<Notification> notifications,
             OnNotificationClickListener listener
@@ -76,6 +82,11 @@ public class NotificationAdapter
 
         private final ItemNotificationBinding binding;
 
+        /**
+         * Creates a view holder backed by the supplied item binding.
+         *
+         * @param binding the view binding for the item layout
+         */
         public NotificationViewHolder(ItemNotificationBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
@@ -148,6 +159,8 @@ public class NotificationAdapter
     public interface OnNotificationClickListener {
 
         /**
+         * Handles the notification click event.
+         *
          * @param notification the clicked notification
          */
         void onNotificationClick(Notification notification);

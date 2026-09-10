@@ -9,5 +9,11 @@ import com.example.ratemyprofessor.domain.RatingCategory;
  */
 public interface OnRatingChangedListener {
 
+    /**
+     * Reports a change to the user rating for a category.
+     *
+     * @param category the rating category
+     * @param value the rating value
+     */
     void onRatingChanged(RatingCategory category, double value);
 }

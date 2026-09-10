@@ -45,6 +45,8 @@ public class RetrofitClient {
     private static final Retrofit retrofit = buildRetrofit();
 
     /**
+     * Returns the shared Retrofit client used for backend requests.
+     *
      * @return the shared Retrofit client used by every server request of the app
      */
     public static Retrofit getClient() {

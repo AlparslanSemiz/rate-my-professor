@@ -32,11 +32,24 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * Provides dialogs and backend requests for reporting and voting on comments and replies.
+ */
 public final class CommentHelper {
     private CommentHelper() {
         // static helper class
     }
 
+    /**
+     * Submits the selected report reason and text for a comment or reply when the user is logged in.
+     *
+     * @param context the Android context used to access resources and services
+     * @param apiService the service used to create backend requests
+     * @param dialogBinding the binding containing the selected reason and report text
+     * @param dialog the report dialog to dismiss
+     * @param commentID the identifier of the comment
+     * @param type whether the target is a comment or a reply
+     */
     public static void submitCommentReport(Context context,
                                             APIService apiService,
                                             DialogCommentReportBinding dialogBinding, Dialog dialog,
@@ -90,6 +103,15 @@ public final class CommentHelper {
         dialog.dismiss();
     }
 
+    /**
+     * Displays a dialog for selecting a report reason and entering an explanation.
+     *
+     * @param layoutInflater the inflater used to create the report dialog
+     * @param apiService the service used to create backend requests
+     * @param context the Android context used to access resources and services
+     * @param commentID the identifier of the comment
+     * @param type whether the target is a comment or a reply
+     */
     public static void showCommentReportDialog(LayoutInflater layoutInflater, APIService apiService, Context context, String commentID, CommentType type) {
         DialogCommentReportBinding dialogBinding = DialogCommentReportBinding.inflate(layoutInflater);
 
@@ -122,6 +144,8 @@ public final class CommentHelper {
 
             /**
              * Clears the empty-input error once the user starts typing.
+             *
+             * @param s the updated editable text
              */
             @Override
             public void afterTextChanged(Editable s) {
@@ -137,6 +161,15 @@ public final class CommentHelper {
         dialog.show();
     }
 
+    /**
+     * Submits a vote on a comment or reply when the user is logged in and displays request failures.
+     *
+     * @param context the Android context used to access resources and services
+     * @param apiService the service used to create backend requests
+     * @param commentID the identifier of the comment
+     * @param voteType the vote associated with the comment
+     * @param commentType whether the target is a comment or a reply
+     */
     public static void vote(Context context, APIService apiService, String commentID, VoteType voteType, CommentType commentType) {
         LoginSession session = LoginSession.from(context);
         String authToken = session.bearerToken();

@@ -25,6 +25,12 @@ public class SearchPagerAdapter extends FragmentStateAdapter {
 
     private final SelectionFragment.UserInteractionListener userInteractionListener;
 
+    /**
+     * Creates a SearchPagerAdapter with the supplied data and interaction listener.
+     *
+     * @param fragment the fragment hosting the search pages
+     * @param userInteractionListener the listener notified when the user interacts with a search result
+     */
     public SearchPagerAdapter(@NonNull Fragment fragment, SelectionFragment.UserInteractionListener userInteractionListener) {
         super(fragment);
         this.userInteractionListener = userInteractionListener;

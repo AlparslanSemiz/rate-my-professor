@@ -50,10 +50,19 @@ public class ReplyFragment extends Fragment implements CommentsAdapter.OnComment
     private FragmentReplyBinding binding;
     private final APIService apiService;
 
+    /**
+     * Creates an empty fragment for Android lifecycle instantiation.
+     */
     public ReplyFragment() {
         apiService = RetrofitClient.getClient().create(APIService.class);
         // Required empty public constructor
     }
+    /**
+     * Creates a ReplyFragment with the supplied values.
+     *
+     * @param comment the selected comment
+     * @param voteType the vote associated with the comment
+     */
     public ReplyFragment(Comment comment, VoteType voteType) {
         apiService = RetrofitClient.getClient().create(APIService.class);
         this.comment = comment;

@@ -22,10 +22,16 @@ import org.junit.runner.RunWith;
 @RunWith(AndroidJUnit4.class)
 public class UserStoryInstrumentedTest {
 
+    /**
+     * The activity rule.
+     */
     @Rule
     public ActivityScenarioRule<LoginActivity> activityRule =
             new ActivityScenarioRule<>(LoginActivity.class);
 
+    /**
+     * Verifies that a KIT student can navigate login flow.
+     */
     @Test
     public void kitStudentCanNavigateLoginFlow() {
         // Step 1: LoginActivity - Enter Email
@@ -41,6 +47,9 @@ public class UserStoryInstrumentedTest {
         // Note: This might still fail if the mock server isn't running or real network fails.
     }
 
+    /**
+     * Verifies that main activity shows bottom navigation.
+     */
     @Test
     public void mainActivityShowsBottomNavigation() {
         // Use an intent to trigger SKIP_LOGIN behavior if possible, 

@@ -11,6 +11,11 @@ public class AuthManager {
     private AuthState authState = AuthState.LOGGED_OUT;
 
     private AuthManager() {}
+    /**
+     * Returns the shared authentication manager, creating it on first access.
+     *
+     * @return the shared authentication manager
+     */
     public static synchronized AuthManager getInstance() {
         if (instance == null) {
             instance = new AuthManager();
@@ -18,10 +23,20 @@ public class AuthManager {
         return instance;
     }
 
+    /**
+     * Updates the authentication state held by this manager.
+     *
+     * @param authState the new authentication state
+     */
     public void setAuthState(AuthState authState) {
         this.authState = authState;
     }
     
+    /**
+     * Checks whether the stored authentication state is logged in.
+     *
+     * @return true if the state is LOGGED_IN; false otherwise
+     */
     public boolean isLoggedIn() {
         return this.authState == AuthState.LOGGED_IN;
     }

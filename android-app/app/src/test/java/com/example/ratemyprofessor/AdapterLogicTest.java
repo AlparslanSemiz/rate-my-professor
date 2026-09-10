@@ -44,6 +44,9 @@ import java.util.List;
 @RunWith(RobolectricTestRunner.class)
 public class AdapterLogicTest {
 
+    /**
+     * Verifies that professor adapter binds full name.
+     */
     @Test
     public void professorAdapterBindsFullName() {
         Context context = RuntimeEnvironment.getApplication();
@@ -60,6 +63,9 @@ public class AdapterLogicTest {
         assertEquals("Ada Lovelace", nameView.getText().toString());
     }
 
+    /**
+     * Verifies that lecture adapter returns correct item count.
+     */
     @Test
     public void lectureAdapterReturnsCorrectItemCount() {
         List<Lecture> list = new ArrayList<>();
@@ -70,6 +76,9 @@ public class AdapterLogicTest {
         assertEquals(1, adapter.getItemCount());
     }
 
+    /**
+     * Verifies that notification adapter shows unread indicator.
+     */
     @Test
     public void notificationAdapterShowsUnreadIndicator() {
         Context context = RuntimeEnvironment.getApplication();
@@ -90,6 +99,9 @@ public class AdapterLogicTest {
         assertEquals(View.INVISIBLE, indicator.getVisibility());
     }
 
+    /**
+     * Verifies that comments adapter binds content.
+     */
     @Test
     public void commentsAdapterBindsContent() {
         Context context = RuntimeEnvironment.getApplication();
@@ -109,6 +121,9 @@ public class AdapterLogicTest {
         assertEquals("5", upvoteView.getText().toString());
     }
 
+    /**
+     * Verifies that list of my ratings adapter formats semester.
+     */
     @Test
     public void listOfMyRatingsAdapterFormatsSemester() {
         Context context = RuntimeEnvironment.getApplication();
@@ -127,6 +142,9 @@ public class AdapterLogicTest {
         assertEquals(expected, semesterView.getText().toString());
     }
 
+    /**
+     * Verifies that rating adapter returns correct item count.
+     */
     @Test
     public void ratingAdapterReturnsCorrectItemCount() {
         ArrayList<TopicAverageResponse> list = new ArrayList<>();

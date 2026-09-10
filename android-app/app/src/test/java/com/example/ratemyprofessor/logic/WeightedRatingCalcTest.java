@@ -9,8 +9,14 @@ import org.junit.Test;
 
 import java.util.List;
 
+/**
+ * Tests weighted rating calc behavior.
+ */
 public class WeightedRatingCalcTest {
 
+    /**
+     * Verifies that the weighted average excludes the overall category.
+     */
     @Test
     public void calcRatingUsesWeightsAndIgnoresOverall() {
         List<TopicAverageResponse> ratings = List.of(
@@ -27,11 +33,17 @@ public class WeightedRatingCalcTest {
         assertEquals(2.4, result, 0.0001);
     }
 
+    /**
+     * Verifies that null rating input returns minus one.
+     */
     @Test
     public void calcRatingReturnsMinusOneForNull() {
         assertEquals(-1.0, WeightedRatingCalc.calcRating(null), 0.0);
     }
 
+    /**
+     * Verifies that an empty rating list returns minus one.
+     */
     @Test
     public void calcRatingReturnsMinusOneForEmptyList() {
         assertEquals(-1.0, WeightedRatingCalc.calcRating(List.of()), 0.0);

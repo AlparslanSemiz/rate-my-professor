@@ -15,12 +15,20 @@ import com.example.ratemyprofessor.servercommunication.RetrofitClient;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Refreshes cached professors and lectures when the saved data is stale and the user is logged in.
+ */
 public class MainViewModel extends AndroidViewModel {
 
     private static final String SYNC_STORAGE = "sync_state";
     private static final String LAST_SUCCESSFUL_SYNC = "last_successful_sync";
     private static final long REFRESH_INTERVAL_MILLIS = TimeUnit.HOURS.toMillis(6);
 
+    /**
+     * Creates the view model and refreshes local data if needed.
+     *
+     * @param application the application whose local data is refreshed
+     */
     public MainViewModel(@NonNull Application application) {
         super(application);
         refreshLocalDataIfStale();

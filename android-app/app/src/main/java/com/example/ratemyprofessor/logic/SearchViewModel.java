@@ -20,6 +20,8 @@ public class SearchViewModel extends ViewModel {
     private final MutableLiveData<String> query = new MutableLiveData<>("");
 
     /**
+     * Returns the query.
+     *
      * @return the current search query as an observable value
      */
     public LiveData<String> getQuery() {

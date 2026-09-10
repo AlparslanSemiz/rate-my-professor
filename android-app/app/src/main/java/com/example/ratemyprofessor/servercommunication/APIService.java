@@ -177,6 +177,10 @@ public interface APIService {
 
     /**
      * Submits a new rating
+     *
+     * @param token the Authorization header value, including the Bearer prefix
+     * @param request the request body sent to the server
+     * @return the call to execute or enqueue for the server response
      */
     @POST("/ratings/rate")
     Call<ServerResponse> submitRating(
@@ -197,6 +201,14 @@ public interface APIService {
             @Body SubmitAnswerRequest request
     );
 
+    /**
+     * Creates a request to vote on a top-level comment.
+     *
+     * @param token the Authorization header value, including the Bearer prefix
+     * @param commentID the identifier of the comment
+     * @param request the request body sent to the server
+     * @return the call to execute or enqueue for the server response
+     */
     @POST("/social/comments/vote/comment/{comment_id}")
     Call<BasicResponse> voteComment(
             @Header("Authorization") String token,
@@ -204,6 +216,14 @@ public interface APIService {
             @Body VoteRequest request
     );
 
+    /**
+     * Creates a request to vote on a reply.
+     *
+     * @param token the Authorization header value, including the Bearer prefix
+     * @param answerID the identifier of the reply
+     * @param request the request body sent to the server
+     * @return the call to execute or enqueue for the server response
+     */
     @POST("/social/comments/vote/answer/{answer_id}")
     Call<BasicResponse> voteAnswer(
             @Header("Authorization") String token,
@@ -232,43 +252,89 @@ public interface APIService {
 
     /**
      * Get all Ratings from a specific user
+     *
+     * @param token the Authorization header value, including the Bearer prefix
+     * @return the call to execute or enqueue for the server response
      */
     @GET("/account/ratings")
     Call<UserRatingResponse> getUserRatings(
             @Header("Authorization") String token
     );
 
+    /**
+     * Creates a request to report a comment.
+     *
+     * @param token the Authorization header value, including the Bearer prefix
+     * @param request the request body sent to the server
+     * @return the call to execute or enqueue for the server response
+     */
     @POST("/social/comments/report")
     Call<BasicResponse> reportComment(
             @Header("Authorization") String token,
             @Body CommentReportRequest request
     );
 
+    /**
+     * Creates a request to report a reply.
+     *
+     * @param token the Authorization header value, including the Bearer prefix
+     * @param request the request body sent to the server
+     * @return the call to execute or enqueue for the server response
+     */
     @POST("/answers/report")
     Call<BasicResponse> reportReply(
             @Header("Authorization") String token,
             @Body CommentReportRequest request
     );
 
+    /**
+     * Creates a request to download the image at the supplied URL.
+     *
+     * @param url the image URL
+     * @return the call to execute or enqueue for the server response
+     */
     @GET
     Call<ResponseBody> downloadImage(@Url String url);
 
+    /**
+     * Creates a request to retrieve the current user notifications.
+     *
+     * @param token the Authorization header value, including the Bearer prefix
+     * @return the call to execute or enqueue for the server response
+     */
     @GET("/social/notifications")
     Call<NotificationsResponse> getNotifications(
             @Header("Authorization") String token
     );
 
+    /**
+     * Creates a request to mark a notification as seen.
+     *
+     * @param token the Authorization header value, including the Bearer prefix
+     * @param notificationId the unique notification identifier
+     * @return the call to execute or enqueue for the server response
+     */
     @PATCH("/social/notifications/{notification_id}")
     Call<BasicResponse> markNotificationsAsSeen(
             @Header("Authorization") String token,
             @Path("notification_id") String notificationId
     );
 
+    /**
+     * Creates a request to retrieve the rating categories for a lecture offering.
+     *
+     * @param lectureId the identifier of the lecture offering
+     * @return the call to execute or enqueue for the server response
+     */
     @GET("/ratings/{lectureId}/categories")
     Call<RatingCategoriesResponse> getCategories(@Path("lectureId") String lectureId);
 
     /**
      * Interface used for bug reports
+     *
+     * @param token the Authorization header value, including the Bearer prefix
+     * @param request the request body sent to the server
+     * @return the call to execute or enqueue for the server response
      */
     @POST("/reports")
     Call<BasicResponse> reportBug(
@@ -276,6 +342,13 @@ public interface APIService {
             @Body BugReportRequest request
     );
 
+    /**
+     * Creates a request to retrieve the current user ratings for a lecture offering.
+     *
+     * @param token the Authorization header value, including the Bearer prefix
+     * @param lectureId the identifier of the lecture offering
+     * @return the call to execute or enqueue for the server response
+     */
     @GET("/ratings/own/{lectureId}")
     Call<RatingAverageResponse> getOwnRatings(
             @Header("Authorization") String token,

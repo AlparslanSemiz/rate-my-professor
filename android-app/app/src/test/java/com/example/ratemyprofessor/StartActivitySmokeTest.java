@@ -34,12 +34,18 @@ import org.robolectric.shadows.ShadowActivity;
 @RunWith(RobolectricTestRunner.class)
 public class StartActivitySmokeTest {
 
+    /**
+     * Clears saved login credentials before each test.
+     */
     @After
     public void clearSession() {
         LoginSession.from(RuntimeEnvironment.getApplication()).clear();
         AuthManager.getInstance().setAuthState(AuthState.LOGGED_OUT);
     }
 
+    /**
+     * Verifies that development mode opens the main activity.
+     */
     @Test
     public void startsMainActivityWhenDevModeIsTrue() {
         Intent intent = new Intent(RuntimeEnvironment.getApplication(), StartActivity.class);
@@ -53,6 +59,9 @@ public class StartActivitySmokeTest {
         assertEquals(MainActivity.class.getName(), startedIntent.getComponent().getClassName());
     }
 
+    /**
+     * Verifies that offline startup opens the main activity.
+     */
     @Test
     public void startsMainActivityWhenOffline() {
         try (MockedStatic<NetworkUtils> networkMock = mockStatic(NetworkUtils.class)) {
@@ -67,6 +76,9 @@ public class StartActivitySmokeTest {
         }
     }
 
+    /**
+     * Verifies that startup opens the login activity when no session exists.
+     */
     @Test
     public void startsLoginActivityWhenNotLoggedIn() {
         // Assuming clean session (Robolectric clear storage by default)
@@ -82,6 +94,9 @@ public class StartActivitySmokeTest {
         }
     }
 
+    /**
+     * Verifies that saved session opens main screen immediately.
+     */
     @Test
     public void savedSessionOpensMainScreenImmediately() {
         Application context = RuntimeEnvironment.getApplication();
