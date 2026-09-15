@@ -61,7 +61,6 @@ public class ProfessorController {
         return professorService.getProfessor(professor_id);
     }
 
-
     /**
      * SECURED [NEEDS ADMIN]
      *
