@@ -83,6 +83,7 @@ public class LoginLocationService {
                     .uri(uriBuilder -> uriBuilder
                             .path("/")
                             .path(ip)
+                            .path("/json")
                             .queryParam("token", ipInfoToken)
                             .build()
                     )
