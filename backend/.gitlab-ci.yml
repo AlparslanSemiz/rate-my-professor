@@ -336,10 +336,10 @@ server:deploy:staging:
       "set -e; mkdir -p \"$DEPLOY_PATH\""
     - >
       scp -i "$SSH_PRIVATE_KEY" -P "$DEPLOY_PORT" docker-compose.prod.yml
-      "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/$DEPLOY_COMPOSE_FILE"
+      "$DEPLOY_USER@[$DEPLOY_HOST]:$DEPLOY_PATH/$DEPLOY_COMPOSE_FILE"
     - >
       scp -i "$SSH_PRIVATE_KEY" -P "$DEPLOY_PORT" .deploy.env
-      "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/.env"
+      "$DEPLOY_USER@[$DEPLOY_HOST]:$DEPLOY_PATH/.env"
     - >
       ssh -i "$SSH_PRIVATE_KEY" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST"
       "set -e;
