@@ -71,6 +71,8 @@ public class LoginLocationService {
 
         String ip = normalizeIp(rawIp);
 
+        LOGGER.info("Looking up normalized IP [{}]", ip);
+
         if (ip == null || ipInfoToken.isBlank()) {
             return new LoginLocation("Unknown", null, null);
         }
@@ -79,9 +81,10 @@ public class LoginLocationService {
             IpInfoResponse response = ipInfoClient
                     .get()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/{ip}/json")
+                            .path("/")
+                            .path(ip)
                             .queryParam("token", ipInfoToken)
-                            .build(ip)
+                            .build()
                     )
                     .retrieve()
                     .body(IpInfoResponse.class);
