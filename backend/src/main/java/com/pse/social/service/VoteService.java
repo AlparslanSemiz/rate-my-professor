@@ -49,7 +49,7 @@ public class VoteService {
     private final AuditWriter auditWriter;
 
     /**
-     * Creates VoteService.
+     * Creates VoteService. s
      *
      * @param commentRepository the commentRepository
      * @param answerRepository the answerRepository
