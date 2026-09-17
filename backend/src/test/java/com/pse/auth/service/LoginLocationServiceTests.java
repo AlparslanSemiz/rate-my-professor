@@ -24,14 +24,11 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.util.DefaultUriBuilderFactory;
-import org.springframework.web.util.UriBuilder;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
-import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -96,7 +93,7 @@ class LoginLocationServiceTests {
     @SuppressWarnings("unchecked")
     private void ipInfoReturns(IpInfoResponse response) {
         when(restClient.get()).thenReturn(uriSpec);
-        when(uriSpec.uri(any(Function.class))).thenReturn(headersSpec);
+        when(uriSpec.uri(any(URI.class))).thenReturn(headersSpec);
         when(headersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.body(IpInfoResponse.class)).thenReturn(response);
     }
@@ -104,7 +101,7 @@ class LoginLocationServiceTests {
     @SuppressWarnings("unchecked")
     private void ipInfoFailsWith(RuntimeException failure) {
         when(restClient.get()).thenReturn(uriSpec);
-        when(uriSpec.uri(any(Function.class))).thenReturn(headersSpec);
+        when(uriSpec.uri(any(URI.class))).thenReturn(headersSpec);
         when(headersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.body(IpInfoResponse.class)).thenThrow(failure);
     }
@@ -155,13 +152,11 @@ class LoginLocationServiceTests {
         // When
         serviceWith(TOKEN).getLoginLocation("203.0.113.42, 10.0.0.5");
 
-        // Then -- resolve the captured builder to see the URI that would actually be requested
-        ArgumentCaptor<Function<UriBuilder, URI>> uriFunction = ArgumentCaptor.captor();
-        verify(uriSpec).uri(uriFunction.capture());
-        URI requested = uriFunction.getValue()
-                .apply(new DefaultUriBuilderFactory("https://ipinfo.io").builder());
-        assertThat(requested.getPath()).isEqualTo("/203.0.113.42/json");
-        assertThat(requested.getQuery()).isEqualTo("token=" + TOKEN);
+        // Then
+        ArgumentCaptor<URI> uriCaptor = ArgumentCaptor.forClass(URI.class);
+        verify(uriSpec).uri(uriCaptor.capture());
+        assertThat(uriCaptor.getValue().toString())
+                .isEqualTo("https://ipinfo.io/203.0.113.42/json?token=" + TOKEN);
     }
 
     @Test

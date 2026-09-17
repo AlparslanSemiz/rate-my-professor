@@ -1,5 +1,6 @@
 package com.pse.auth.service;
 
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -77,18 +78,21 @@ public class LoginLocationService {
             return new LoginLocation("Unknown", null, null);
         }
 
+        String requestUrl = "https://ipinfo.io/"
+                + ip
+                + "/json?token="
+                + URLEncoder.encode(ipInfoToken, StandardCharsets.UTF_8);
+
+
+
         try {
             IpInfoResponse response = ipInfoClient
                     .get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/")
-                            .path(ip)
-                            .path("/json")
-                            .queryParam("token", ipInfoToken)
-                            .build()
-                    )
+                    .uri(URI.create(requestUrl))
                     .retrieve()
                     .body(IpInfoResponse.class);
+
+            LOGGER.info("IPinfo request path: https://ipinfo.io/{}/json", ip);
 
             if (response == null) {
                 return new LoginLocation("Unknown", null, null);
