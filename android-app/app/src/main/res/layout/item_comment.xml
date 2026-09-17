@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:background="@drawable/rounded_box"
+    android:padding="8dp"
+    android:layout_marginTop="8dp">
+
+    <TextView
+        android:id="@+id/user_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/rounded_box"
+        android:fontFamily="@font/inter_bold"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:text="username"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@+id/profile_picture"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/profile_picture"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+
+        android:background="@drawable/rounded_box_light"
+        android:clipToOutline="true"
+        android:outlineProvider="background"
+        android:scaleType="centerCrop"
+        android:src="@drawable/profile_icon"
+
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/content_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/rounded_box"
+        android:fontFamily="@font/inter"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:text="The quick brown fox jumps over the lazy dog"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/profile_picture"
+        app:layout_constraintTop_toBottomOf="@id/user_name" />
+
+    <ImageView
+        android:id="@+id/comments_icon"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginRight="16dp"
+        android:src="@drawable/comment_bubble_icon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/content_text" />
+
+    <TextView
+        android:id="@+id/comments_num"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:fontFamily="@font/inter_bold"
+        android:text="5"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="@+id/comments_icon"
+        app:layout_constraintEnd_toStartOf="@+id/comments_icon"
+        app:layout_constraintTop_toTopOf="@+id/comments_icon" />
+
+    <ImageView
+        android:id="@+id/upvote_icon"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginEnd="16dp"
+        android:src="@drawable/upvote_icon"
+        app:layout_constraintBottom_toBottomOf="@+id/comments_icon"
+        app:layout_constraintEnd_toStartOf="@id/comments_num"
+        app:layout_constraintTop_toTopOf="@+id/comments_icon" />
+
+    <TextView
+        android:id="@+id/upvotes_num"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:fontFamily="@font/inter_bold"
+        android:text="0"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="@+id/comments_icon"
+        app:layout_constraintEnd_toStartOf="@+id/upvote_icon"
+        app:layout_constraintTop_toTopOf="@+id/comments_icon" />
+
+    <ImageView
+        android:id="@+id/downvote_icon"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginEnd="16dp"
+        android:src="@drawable/downvote_icon"
+        app:layout_constraintBottom_toBottomOf="@+id/comments_icon"
+        app:layout_constraintEnd_toStartOf="@id/upvotes_num"
+        app:layout_constraintTop_toTopOf="@+id/comments_icon" />
+
+    <TextView
+        android:id="@+id/downvotes_num"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:fontFamily="@font/inter_bold"
+        android:text="17"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="@+id/comments_icon"
+        app:layout_constraintEnd_toStartOf="@+id/downvote_icon"
+        app:layout_constraintTop_toTopOf="@+id/comments_icon" />
+
+
+    <ImageButton
+        android:id="@+id/report_button"
+        android:layout_width="31dp"
+        android:layout_height="28dp"
+        android:layout_marginEnd="8dp"
+        android:background="#333333"
+        app:layout_constraintEnd_toStartOf="@+id/downvotes_num"
+        app:layout_constraintTop_toTopOf="@+id/comments_icon"
+        app:srcCompat="@android:drawable/stat_sys_warning" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

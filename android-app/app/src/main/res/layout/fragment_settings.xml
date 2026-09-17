@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/settings_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/surface">
+
+    <!--
+        The screen is drawn edge to edge, so the top padding that keeps the first setting clear
+        of the status bar is applied from the fragment, where the actual bar height is known.
+    -->
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/dark_mode_row"
+        android:layout_width="0dp"
+        android:layout_height="62dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="40dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/settings_button_background"
+        android:clickable="true"
+        android:focusable="true"
+        android:paddingStart="28dp"
+        android:paddingEnd="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/dark_mode_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter_bold"
+            android:labelFor="@id/dark_mode_switch"
+            android:text="@string/settings_dark_mode"
+            android:textColor="@color/text_primary"
+            android:textSize="21sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/dark_mode_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="64dp"
+            android:minHeight="48dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:thumbTint="@color/settings_switch_thumb"
+            app:trackTint="@color/settings_switch_track"
+            app:useMaterialThemeColors="false" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/bug_report"
+        style="@style/text_style"
+        android:layout_width="0dp"
+        android:layout_height="62dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="24dp"
+        android:backgroundTint="@color/surface_container"
+        android:gravity="center_vertical|start"
+        android:insetBottom="0dp"
+        android:insetTop="0dp"
+        android:letterSpacing="0"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:text="@string/settings_bug_report"
+        android:textColor="@color/text_primary"
+        android:textSize="21sp"
+        app:cornerRadius="31dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/dark_mode_row" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/logout_all_devices_button"
+        style="@style/text_style"
+        android:layout_width="0dp"
+        android:layout_height="62dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="24dp"
+        android:backgroundTint="@color/surface_container"
+        android:gravity="center_vertical|start"
+        android:insetBottom="0dp"
+        android:insetTop="0dp"
+        android:letterSpacing="0"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:text="@string/settings_logout_all_devices"
+        android:textColor="@color/text_primary"
+        android:textSize="21sp"
+        app:cornerRadius="31dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/bug_report" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/login_button"
+        style="@style/text_style"
+        android:layout_width="0dp"
+        android:layout_height="62dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="24dp"
+        android:backgroundTint="@color/surface_container"
+        android:gravity="center_vertical|start"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:letterSpacing="0"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:text="@string/settings_login"
+        android:textColor="@color/text_primary"
+        android:textSize="21sp"
+        android:visibility="gone"
+        app:cornerRadius="31dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/bug_report" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/delete_account_button"
+        style="@style/text_style"
+        android:layout_width="0dp"
+        android:layout_height="62dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="136dp"
+        android:backgroundTint="@color/surface_container"
+        android:gravity="center_vertical|start"
+        android:insetBottom="0dp"
+        android:insetTop="0dp"
+        android:letterSpacing="0"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:text="@string/settings_delete_account"
+        android:textColor="@color/danger"
+        android:textSize="21sp"
+        app:cornerRadius="31dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        Every colour the app draws with is named here, and values-night/colors.xml holds the
+        dark counterpart of the same name. Layouts and drawables only ever reference these
+        names, never a raw hex value, which is what makes the dark mode switch change the
+        whole app instead of just the theme attributes.
+
+        The values in this file are the light ones, the night file keeps the dark design the
+        app was originally built with.
+    -->
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Backgrounds, from the screen background up to the most raised element on it. -->
+    <color name="surface">#FFFFFFFF</color>
+    <color name="surface_container">#FFE8E8E8</color>
+    <color name="surface_container_high">#FFD0D0D0</color>
+    <color name="surface_container_low">#FFF7F7F7</color>
+
+    <!-- Background of elements that deliberately invert the screen, like the submit button. -->
+    <color name="surface_inverse">#FF1A1A1A</color>
+
+    <!-- Text. -->
+    <color name="text_primary">#FF101010</color>
+    <color name="text_muted">#FF5F5D5D</color>
+    <color name="text_hint">#FF8A8A8A</color>
+    <color name="text_on_inverse">#FFFFFFFF</color>
+
+    <!-- Input fields keep a filled look that contrasts with the screen background. -->
+    <color name="input_field_background">#FFEDEDED</color>
+    <color name="text_on_input_field">#FF2A2A2A</color>
+
+    <color name="icon_tint">#FF101010</color>
+    <color name="outline">#FFC4C4C4</color>
+
+    <!-- Accents. Destructive actions, positive ratings and the rating bars. -->
+    <color name="danger">#FFB3261E</color>
+    <color name="accent_positive">#FF2E7D32</color>
+    <color name="rating_good">#FF1B6B1B</color>
+    <color name="rating_bar">#FFB08400</color>
+
+    <!-- Floating chrome. The alpha keeps the content underneath slightly visible. -->
+    <color name="bottom_nav_background">#E6F2F2F2</color>
+    <color name="bottom_nav_icon">#FF101010</color>
+    <color name="circle_button_background">#1A101010</color>
+    <color name="search_button_background">#66C9C9C9</color>
+    <color name="glass_background">#80E4E4E4</color>
+
+    <!-- Dark mode switch. -->
+    <color name="switch_thumb_on">#FFFFFFFF</color>
+    <color name="switch_thumb_off">#FFFAFAFA</color>
+    <color name="switch_track_on">#FF30D158</color>
+    <color name="switch_track_off">#FFC6C6C6</color>
+
+    <!-- Search screen tabs. -->
+    <color name="selected_tab_color">#FFD9D9D9</color>
+    <color name="unselected_tab_color">#FFECECEC</color>
+    <color name="selected_tab_text_color">#FF101010</color>
+    <color name="unselected_tab_text_color">#FF101010</color>
+
+</resources>

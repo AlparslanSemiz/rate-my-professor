@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="text_style" parent="Widget.MaterialComponents.Button">
+        <item name="android:fontFamily">@font/inter_bold</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="BottomNavActiveIndicator">
+        <item name="android:width">93dp</item>
+        <item name="android:height">54dp</item>
+        <item name="color">#CC9D9D9D</item>
+        <item name="shapeAppearance">@style/BottomNavActiveIndicatorShape</item>
+    </style>
+
+    <style name="BottomNavActiveIndicatorShape">
+        <item name="cornerSize">27dp</item>
+    </style>
+
+</resources>
