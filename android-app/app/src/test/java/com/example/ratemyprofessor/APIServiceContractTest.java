@@ -33,7 +33,7 @@ public class APIServiceContractTest {
         Retrofit second = RetrofitClient.getClient();
 
         assertEquals(
-                "https://server.example.org/",
+                "http://[2001:db8::10]/",
                 first.baseUrl().toString()
         );
         assertSame(first, second);
