@@ -210,6 +210,11 @@ public class LoginLocationService {
             return null;
         }
 
+        // IPv6 may arrive surrounded by brackets: [2001:db8::1]
+        if (ip.startsWith("[") && ip.endsWith("]")) {
+            ip = ip.substring(1, ip.length() - 1);
+        }
+
         return ip;
     }
 
