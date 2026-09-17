@@ -28,7 +28,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
  */
 public class RetrofitClient {
 
-    private static final String BASE_URL = "https://server.example.org/";
+    private static final String BASE_URL = "http://[2001:db8::10]:8080/";
 
     /**
      * How long to wait for the connection to the server to be established.
