@@ -97,7 +97,7 @@ coverage:line-target:
     - java scripts/CheckLineCoverage.java --min "$COVERAGE_LINE_MIN" --target "$COVERAGE_LINE_TARGET" --fail-on-target
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: never
+    - when: never
     - when: on_success
 
 
@@ -160,7 +160,7 @@ server:postgres-integration:
       run_layer e2e EndToEndJourneyTests
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: never
+    - when: never
     - when: on_success
 
 server:package:
@@ -463,7 +463,7 @@ dependency:scan:
     expire_in: 1 month
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: never
+    - when: never
     - when: on_success
 
 # Mutation testing. Schedule-only and allow_failure, like every job here whose red is
