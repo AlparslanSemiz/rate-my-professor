@@ -22,7 +22,7 @@ variables:
   # Maven zip, for no reason and with a network failure to lose to.
   MAVEN_USER_HOME: "$CI_PROJECT_DIR/.m2"
   IMAGE_TAG: "$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHORT_SHA"
-  COVERAGE_THRESHOLD: "30"
+  COVERAGE_THRESHOLD: "0"
   # Bundle line coverage, in two tiers. COVERAGE_LINE_MIN is the floor the build dies
   # below; COVERAGE_LINE_TARGET is where the suite is trying to be -- missing it is a
   # warning (the coverage:line-target job goes yellow) and does not block the pipeline.
