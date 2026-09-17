@@ -205,7 +205,7 @@ server:postgres-integration:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - when: never
-    - when: on_success
+    
 
 server:package:
   stage: package
@@ -506,7 +506,6 @@ dependency:scan:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - when: never
-    - when: on_success
 
 # Mutation testing. Schedule-only and allow_failure, like every job here whose red is
 # expected rather than new.
