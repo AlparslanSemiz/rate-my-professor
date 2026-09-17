@@ -79,7 +79,7 @@ server:test:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - when: never
-    - when: on_success
+  
 
 # The optional tier. Marked allow_failure, so falling below COVERAGE_LINE_TARGET shows as a
 # yellow warning on the pipeline and still lets it pass -- the same shape backup:offsite uses
