@@ -1,0 +1,99 @@
+/*
+ * Hover and focus, in one place.
+ *
+ * Every one of these used to be a pair of onMouseEnter/onMouseLeave handlers writing straight
+ * to `element.style.background`. That fought the CSS transition declared next to it — a style
+ * attribute set in one frame has nothing to animate from — and the leave handler had to know
+ * the row's resting background as a literal, which drifted from the row's real one. Doing it
+ * in CSS means the browser owns the state, the transition actually runs, and a row that is
+ * also striped or selected returns to whatever it actually was.
+ */
+
+:root {
+  --row-hover: rgba(255, 255, 255, 0.045);
+  --nav-hover: rgba(255, 255, 255, 0.04);
+  --interactive-ease: 140ms ease;
+}
+
+/*
+ * The panel surface. Here rather than inline in `Panel.tsx` so that `:hover` rules can beat
+ * it — an inline style cannot be overridden by a class, which is what forced every hovering
+ * surface in this panel to be animated from JavaScript.
+ */
+.panel {
+  background: linear-gradient(180deg, #171b23 0%, #14171e 100%);
+  border: 1px solid #232935;
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 10px 28px rgba(0, 0, 0, 0.16);
+}
+
+/* Table rows and list items. `background-color`, not `background`, so a row that sets its own
+   gradient or stripe keeps it underneath. */
+.row-interactive {
+  transition: background-color var(--interactive-ease);
+}
+.row-interactive:hover {
+  background-color: var(--row-hover);
+}
+
+/* An answer nested under its comment: a stripe faint enough to read as indentation, and one
+   the hover rule above still wins over. */
+.row-reply {
+  background-color: rgba(255, 255, 255, 0.015);
+}
+
+/* Rows whose whole surface is the control. */
+.row-clickable {
+  cursor: pointer;
+}
+.row-clickable:focus-visible {
+  outline: 2px solid var(--mantine-color-green-4);
+  outline-offset: -2px;
+}
+
+/* Sidebar navigation. The active item is drawn in its section's colour and must not react to
+   hover at all — it is already where you are. */
+.nav-interactive {
+  transition: background-color var(--interactive-ease), box-shadow var(--interactive-ease);
+}
+.nav-interactive:not([aria-current='page']):hover {
+  background-color: var(--nav-hover);
+}
+
+/*
+ * The dashboard's module cards. `--accent` is set inline per card, so one class serves all of
+ * them; without it each card needed its own handler closing over its own colour.
+ */
+.card-interactive {
+  transition:
+    border-color 200ms ease,
+    background 200ms ease,
+    transform 200ms ease,
+    box-shadow 200ms ease;
+}
+.card-interactive:hover {
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  background: linear-gradient(180deg, #1c212b 0%, #181c25 100%);
+  transform: translateY(-2px);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 14px 32px rgba(0, 0, 0, 0.28),
+    0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.card-interactive:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-interactive,
+  .nav-interactive,
+  .card-interactive {
+    transition: none;
+  }
+  .card-interactive:hover {
+    transform: none;
+  }
+}

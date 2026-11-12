@@ -1,0 +1,75 @@
+:root {
+  --sans: system-ui, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font-family: var(--sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: dark;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* Hold the scrollbar's column open even when nothing is scrolling, so opening a dialog does
+   not widen the page underneath it.
+
+   Mantine locks the body while a modal is up (`body { overflow: hidden }`), which on a browser
+   with classic scrollbars takes the 9px gutter away and hands it back on close. Measured on the
+   catalogue at 1024 with a real session: `documentElement.clientWidth` goes 1015 -> 1024 -> 1015
+   and every panel's right edge, the tab strip's included, travels +10px out and back — on every
+   open and every close, of every one of the panel's dialogs. The left edges do not move, because
+   the layout is anchored left, which is why this reads as the right-hand side of the screen
+   jumping rather than as the page recentring.
+
+   `F-062` measured this before and could not reproduce it: that run used a Chromium with overlay
+   scrollbars, where the gutter is 0 and there is nothing to take away. The finding was left open
+   for want of "a browser with classic scrollbars to confirm first". This is that confirmation. */
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  /* KIT-Grün and Maigrün, at the alpha the old washes used — enough to warm the page, not
+     enough to tint what is drawn on it. */
+  background:
+    radial-gradient(1100px 620px at 12% -8%, rgba(0, 150, 130, 0.09), transparent 58%),
+    radial-gradient(900px 520px at 102% 4%, rgba(119, 162, 0, 0.05), transparent 55%),
+    linear-gradient(180deg, #0f1218 0%, #0b0d12 100%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(0, 150, 130, 0.34);
+  color: #f1f5f9;
+}
+
+/* Softer, calmer scrollbars — less "raw template" */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2b323d transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #262c37;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #333b47;
+  background-clip: padding-box;
+}

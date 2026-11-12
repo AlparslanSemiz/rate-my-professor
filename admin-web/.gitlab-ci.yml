@@ -1,0 +1,180 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+stages:
+  - check
+  - test
+  - e2e
+  - build
+  - image
+  - deploy
+
+# These are the deployed panel's build inputs: `web:build` bakes them into the bundle and
+# `web:image` passes them to Kaniko. They are global because three jobs read them, which also
+# means they reach `web:test` — where a pinned base is what the suite needs instead, since its
+# request assertions name absolute paths. `test.env` in vite.config.ts pins it, so the test job
+# is unaffected by whatever is set here; do not narrow these to per-job in the belief that it
+# is what makes the suite green.
+#
+# VITE_API_BASE_URL is empty on purpose, and the empty string is the whole fix. The panel is
+# served from https://ratemyprofessor.dev/admin/ and the backend answers on that same host, so
+# an empty base makes every call same-origin and CORS never runs. It used to hold the absolute
+# bw-cloud URL, which is a different origin: the browser preflighted, the backend's allow-list
+# did not contain ratemyprofessor.dev, and login died on 403 before any request reached a
+# controller.
+#
+# Not `/api`. The deployment host routes /admin/ to this container and hands everything else to
+# the backend UNCHANGED -- there is no location that strips a prefix. Measured, not assumed:
+# GET https://ratemyprofessor.dev/api/health answers 404 {"message":"Not found"}, which is the
+# backend's own body, so /api/auth/login would arrive at the backend as /api/auth/login and 404
+# the same way. `/api` only works behind the dev server, which rewrites it (vite.config.ts).
+#
+# Not `/` either: ApiRequestBuilder concatenates base and path, so `/` would build
+# `//auth/request-login`, and a browser reads a leading `//` as a protocol-relative host.
+variables:
+  VITE_API_BASE_URL: ""
+  VITE_BASE_PATH: "/admin/"
+
+.node-npm:
+  image: node:24-alpine
+  cache:
+    key: "npm-${CI_COMMIT_REF_SLUG}"
+    policy: pull-push
+    paths:
+      - .npm/
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+
+web:check:
+  extends: .node-npm
+  stage: check
+  script:
+    # The whole gate, not three of its four parts. `check:cycles` fails on a cyclic import
+    # anywhere in src/, and `check:docs` on a public service, hook or domain type with no
+    # doc comment — both were added because the claims they enforce had been checked once,
+    # by hand, and had since drifted.
+    - npm run check
+
+web:test:
+  extends: .node-npm
+  stage: test
+  script:
+    - npm run test
+
+# The end-to-end layer. It runs against the in-browser mock backend, so it needs no
+# deployment — but it drives a real browser, which makes it the slowest and least stable
+# thing in the pipeline.
+#
+# `when: manual` is about time, not trust. `allow_failure` already meant a flaky browser
+# could not block a merge, but the job still ran on every push, and its cost is paid before
+# a single test does: pulling the ~2GB `mcr.microsoft.com/playwright` image and running its
+# own `npm ci`, because it cannot share the Alpine image the other jobs use. That is minutes
+# added to every pipeline for a suite whose value is occasional. It stays one click away in
+# the pipeline view, and `npm run test:e2e` is the same command locally.
+#
+# `allow_failure` is kept explicitly. It is the default for a manual job, and spelling it out
+# is what stops someone reading the removal of `when: manual` later as "and now it gates".
+web:e2e:
+  image: mcr.microsoft.com/playwright:v1.63.0-noble
+  stage: e2e
+  when: manual
+  allow_failure: true
+  cache:
+    key: "npm-${CI_COMMIT_REF_SLUG}"
+    policy: pull
+    paths:
+      - .npm/
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run test:e2e
+  artifacts:
+    when: on_failure
+    expire_in: 1 week
+    paths:
+      - playwright-report/
+      - test-results/
+
+web:build:
+  extends: .node-npm
+  stage: build
+  script:
+    - npm run build
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - dist/
+
+# Builds the same web-prod image scripts/deploy-prod.ps1 builds on the server directly, and
+# pushes it to this project's GitLab Container Registry so the deploy stage never has to move
+# a 60MB+ tar over the pipeline.
+#
+# Uses Kaniko instead of docker-in-docker: this runner's Kubernetes executor doesn't grant
+# services a privileged container, so dockerd inside docker:dind never starts listening and
+# every DOCKER_HOST variant (unix socket, tcp://localhost) fails to connect. Kaniko builds
+# the image in userspace with no daemon involved, so it works regardless of that setting.
+web:image:
+  stage: image
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf '%s:%s' "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - >
+      /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --target web-prod
+      --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL"
+      --build-arg VITE_BASE_PATH="$VITE_BASE_PATH"
+      --destination "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
+      --destination "${CI_REGISTRY_IMAGE}:latest"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# SSHes into the production host, pulls the image the job above just pushed, and swaps the
+# running container for it. Mirrors the remote script in scripts/deploy-prod.ps1, just
+# pulling from the registry instead of `docker load`-ing a copied tar.
+web:deploy:
+  image: alpine:3.22
+  stage: deploy
+  variables:
+    IMAGE: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+  needs:
+    - job: web:image
+  before_script:
+    - apk add --no-cache openssh-client curl
+    - test -n "$DEPLOY_HOST"
+    - test -n "$DEPLOY_USER"
+    - test -n "$SSH_PRIVATE_KEY"
+    - test -n "$CI_DEPLOY_USER"
+    - test -n "$CI_DEPLOY_PASSWORD"
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - cp "$SSH_PRIVATE_KEY" ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
+    - ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh -p "${DEPLOY_PORT:-22}" "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<EOF
+      set -e
+      echo "$CI_DEPLOY_PASSWORD" | docker login -u "$CI_DEPLOY_USER" --password-stdin "$CI_REGISTRY"
+      docker pull "$IMAGE"
+      docker rm -f admin-web-prod >/dev/null 2>&1 || true
+      docker run -d --name admin-web-prod --restart unless-stopped -p 127.0.0.1:${WEB_PORT:-8081}:80 "$IMAGE"
+      sleep 2
+      code=\$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:${WEB_PORT:-8081}${VITE_BASE_PATH})
+      echo "container ${VITE_BASE_PATH} -> \$code"
+      test "\$code" = "200"
+      docker image prune -f >/dev/null
+      docker logout "$CI_REGISTRY" >/dev/null 2>&1 || true
+      EOF
+  environment:
+    name: production
+    url: "$PUBLIC_URL"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+      allow_failure: true

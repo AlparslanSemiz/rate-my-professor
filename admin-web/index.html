@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      The mark at the size a tab actually draws it. This pointed at the 512x512 Play Store
+      launcher icon in `src/assets`, which Vite hashed and served correctly at 136 KB - a tenth
+      of the whole bundle, to fill a 16 px square. `BrandMark` still imports the full-size file,
+      because it is the one place the mark is rendered large enough to need it.
+    -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RateMyProfessor Admin Panel</title>
+    <meta
+      name="description"
+      content="Internal admin panel for RateMyProfessor: moderation, user accounts, the lecture catalogue and the audit trail."
+    />
+    <!--
+      An internal tool on a public host. `public/robots.txt` refuses the crawl before the page
+      is fetched; this refuses the indexing of a page that was fetched anyway.
+    -->
+    <meta name="robots" content="noindex,nofollow" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
