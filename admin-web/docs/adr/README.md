@@ -15,15 +15,15 @@ Every record carries the same five headings, in this order:
 | **Context** | The situation that forced a choice. What was true before. |
 | **Alternatives considered** | The options that were genuinely weighed, each with its cost. An ADR with no alternatives is a description, not a decision. |
 | **Rationale** | Why this one. Named trade-offs, not adjectives. |
-| **Consequences** | What follows — including what got worse. A record that lists only benefits is not honest. |
+| **Consequences** | What follows: including what got worse. A record that lists only benefits is not honest. |
 
-Plus a **Status** (`Accepted`, `Accepted — not yet implemented`, `Superseded by
+Plus a **Status** (`Accepted`, `Accepted: not yet implemented`, `Superseded by
 NNNN`) and a **Date**.
 
 ## Two rules
 
 **Nothing here is invented.** Every record cites where its reasoning already
-existed — a `CHANGELOG.md` entry, a `README.md` paragraph, a comment at the code.
+existed: a `CHANGELOG.md` entry, a `README.md` paragraph, a comment at the code.
 Where a decision predates this folder, the record says so and reconstructs it from
 those sources rather than from memory.
 
@@ -41,12 +41,12 @@ The wrong turn is part of the reasoning.
 | [0005](0005-central-theme-no-hex-literals.md) | Colour, spacing and typography come from the theme; components carry no hex literals | Accepted |
 | [0006](0006-cursor-pagination.md) | Long lists page on an opaque cursor, not on an offset | Accepted |
 | [0007](0007-route-based-lazy-loading.md) | Code is split at route boundaries and nowhere else | Accepted |
-| [0008](0008-generated-schema-is-the-contract-authority.md) | The generated OpenAPI schema is the authority on the API contract | Accepted — not yet implemented |
-| [0009](0009-msw-slice-by-slice.md) | MSW is adopted one feature at a time, not in a big-bang rewrite | Accepted — implemented, amended twice |
+| [0008](0008-generated-schema-is-the-contract-authority.md) | The generated OpenAPI schema is the authority on the API contract | Accepted: not yet implemented |
+| [0009](0009-msw-slice-by-slice.md) | MSW is adopted one feature at a time, not in a big-bang rewrite | Accepted: implemented, amended twice |
 | [0010](0010-admin-email-list-in-the-bundle.md) | The admin address list ships in the frontend bundle | Accepted |
 | [0011](0011-session-in-browser-storage.md) | The session lives in browser storage, with the XSS surface that implies | Accepted |
 | [0012](0012-a-model-is-a-module-not-a-class.md) | A model is a module, not a class | Accepted |
-| [0013](0013-errors-are-types-not-status-codes.md) | Errors are types, not status codes | Accepted — applied twice since |
+| [0013](0013-errors-are-types-not-status-codes.md) | Errors are types, not status codes | Accepted: applied twice since |
 | [0014](0014-public-data-is-readonly.md) | Public data is readonly, and services get a narrow transport | Accepted |
 | [0015](0015-panel-test-layers-answer-the-panels-own-questions.md) | The panel's test layers answer the panel's questions, not the backend's | Accepted |
 | [0016](0016-the-activity-log-screen-returns.md) | The Activity Log screen returns, on the audit log's own code | Accepted |

@@ -36,7 +36,7 @@ presentation.
 ## What is missing
 
 Nothing else has been written yet. The Kolloquium notes and the presentation
-draft do not exist in this repository or anywhere near it — this folder is the
+draft do not exist in this repository or anywhere near it: this folder is the
 place they go when they do.
 
 The defence of the architecture is deliberately **not** here: it is

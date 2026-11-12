@@ -6,7 +6,7 @@ accounts, review community reports, process bug reports, and inspect an
 immutable history of administrative actions.
 
 This repository contains the React frontend only. It talks to the backend
-service over HTTP and holds no database or API of its own — point
+service over HTTP and holds no database or API of its own: point
 `VITE_API_BASE_URL` at a running backend and everything else follows from
 that.
 
@@ -36,8 +36,8 @@ that.
 | Authentication | Two-step email and login-code flow with protected admin routes |
 | Dashboard | At-a-glance user, administrator and report counters, read from `/system/status` |
 | Users | Search, filter and page through accounts on the server; inspect profiles and warning history, edit account fields, warn, block, unblock, or delete |
-| Comments | Browse every comment, edit or hide its text, delete it, and work the report queue — acting on the reported content from the queue itself |
-| Answers | Replies posted under comments — worked from the Comments screen rather than one of their own, with the parent thread as context |
+| Comments | Browse every comment, edit or hide its text, delete it, and work the report queue: acting on the reported content from the queue itself |
+| Answers | Replies posted under comments: worked from the Comments screen rather than one of their own, with the parent thread as context |
 | Lectures & Professors | Edit and remove lectures and professors, reassign who teaches what, and remove individual ratings |
 | Bug Reports | Review submitted problems, rewrite the title or description, update status or severity, delete, and open a GitLab issue |
 | Audit Logs | Filter and inspect administrative actions, including before/after values, and undo a field edit |
@@ -58,7 +58,7 @@ Additional engineering features include:
 | Layer | Technologies |
 | --- | --- |
 | Frontend | React 19, TypeScript, React Router, Mantine, Tabler Icons |
-| Data loading | TanStack Query — caching, cursor paging, refetch after a write |
+| Data loading | TanStack Query: caching, cursor paging, refetch after a write |
 | Forms and state | Mantine Form, Mantine Hooks |
 | Validation | Zod, for the stored session |
 | Errors | react-error-boundary |
@@ -88,7 +88,7 @@ build.
 
 In development, Vite serves the frontend and proxies `/api` to the backend, so
 the browser only ever talks to `localhost:5173`. In production, Nginx serves the
-static build under `VITE_BASE_PATH` with no API proxy — the browser calls the
+static build under `VITE_BASE_PATH` with no API proxy: the browser calls the
 backend directly (same-origin; see "Deploying the production image").
 
 Both arrangements are same-origin from the browser's point of view, which is
@@ -100,7 +100,7 @@ instead of a second one that only exists on developer machines.
 ### Prerequisites
 
 - Node.js 24 and npm
-- A reachable backend (see the backend repository for how to run one) — **except** for
+- A reachable backend (see the backend repository for how to run one): **except** for
   the test suites, which need none: both the Vitest integration tests and the
   Playwright specs run against an in-process mock of the API.
 - For `npm run test:e2e` only: a Chromium that Playwright can find. `npx playwright
@@ -114,11 +114,10 @@ instead of a second one that only exists on developer machines.
   | macOS | `~/Library/Caches/ms-playwright` |
   | Windows | `%USERPROFILE%\AppData\Local\ms-playwright` |
 
-  Playwright **1.63** wants `chromium-1243`. A directory from an earlier Playwright —
-  `chromium-1234`, say — sitting beside it is not a substitute and is not used; if
+  Playwright **1.63** wants `chromium-1243`. A directory from an earlier Playwright (  `chromium-1234`, say) sitting beside it is not a substitute and is not used; if
   both are present the suite still fails until 1243 is there. `PLAYWRIGHT_BROWSERS_PATH`
   overrides the location. CI does not install anything: the `web:e2e` job runs on the
-  `mcr.microsoft.com/playwright:v1.63.0-noble` image, which ships the matching browser —
+  `mcr.microsoft.com/playwright:v1.63.0-noble` image, which ships the matching browser:
   and that job is **manual**, so it runs only when somebody starts it. Pulling a browser
   image and running a second `npm ci` on every push cost more than the suite was worth
   there. Run it locally instead; it needs no backend.
@@ -152,7 +151,7 @@ six-character login code, which expires after five minutes.
 Because the dev server proxies the API, the browser makes same-origin requests
 and CORS never enters into it. If you would rather point `VITE_API_BASE_URL`
 straight at an absolute backend URL, add the panel's origin
-(`http://localhost:5173`) to the backend's `ADMIN_FRONTEND_ORIGINS` first —
+(`http://localhost:5173`) to the backend's `ADMIN_FRONTEND_ORIGINS` first:
 without it the backend answers `403 Invalid CORS request` to the preflight and
 no request reaches a controller.
 
@@ -201,7 +200,7 @@ VITE_API_TARGET=https://your-backend.example.org
 | `VITE_API_BASE_URL` | The bundle | Path or URL every request is prefixed with. Empty in production, `/api` in development |
 | `VITE_API_TARGET` | The dev server only | Backend the `/api` proxy forwards to |
 
-`VITE_API_TARGET` never reaches the browser — it configures the proxy in
+`VITE_API_TARGET` never reaches the browser: it configures the proxy in
 `vite.config.ts` and has no effect on a production build. Point it at a locally
 running backend when you have one.
 
@@ -213,7 +212,7 @@ editing `.env`.
 Do not put an absolute backend URL back in the production build. That is what
 was there before, and it is what made the panel unusable: the browser saw a
 different origin, preflighted, and the backend answered `403` because the
-panel's origin was not in its allowlist. `/api` is not a substitute either —
+panel's origin was not in its allowlist. `/api` is not a substitute either:
 the deployment host proxies everything below `/admin/` to the backend unchanged,
 so a `/api` prefix would reach the backend intact and `404`.
 
@@ -230,7 +229,7 @@ src/
 │   ├── client/       ApiClient, request building, response parsing, HttpService
 │   ├── auth/
 │   ├── users/
-│   ├── moderation/   Comments and answers — one generic service, two nouns
+│   ├── moderation/   Comments and answers: one generic service, two nouns
 │   ├── catalog/      Lectures, professors and ratings
 │   ├── logs/         Audit log
 │   ├── feedback/     Bug reports and the GitLab issue control
@@ -242,15 +241,15 @@ src/
 ├── features/     Feature-owned pages, components, hooks, model and tests
 │   ├── logs/            # both log screens, over one reader and one table
 │   ├── auth/
-│   ├── catalog/      model/ — display, edit and deletion rules
+│   ├── catalog/      model/: display, edit and deletion rules
 │   ├── comments/
 │   ├── dashboard/
-│   ├── feedback/     model/ — the queue split and the edit rules
-│   ├── help/         content/ — one file per documented screen
+│   ├── feedback/     model/ (the queue split and the edit rules
+│   ├── help/         content/) one file per documented screen
 │   ├── moderation/   Content and report screens shared by comments and answers;
-│   │                 model/ — the content rules and the report mapping
-│   └── users/        model/ — filters, counts, access, confirmation and edit rules
-├── hooks/        useSearch and useSelectedId — the two without feature ownership
+│   │                 model/ (the content rules and the report mapping
+│   └── users/        model/) filters, counts, access, confirmation and edit rules
+├── hooks/        useSearch and useSelectedId: the two without feature ownership
 ├── layouts/      Authenticated application shell and navigation
 ├── test/         Test setup, the JSON response helper and the query-client wrapper
 ├── theme/        Mantine theme: KIT palette, neutral chrome, component defaults
@@ -277,8 +276,8 @@ sends the token on protected requests:
 Authorization: Bearer <authToken>
 ```
 
-A stored token is a claim, not proof — it can be revoked while the tab is
-closed — so on load the panel confirms it with `GET /auth/me` before treating
+A stored token is a claim, not proof (it can be revoked while the tab is
+closed), so on load the panel confirms it with `GET /auth/me` before treating
 the session as valid, and holds protected routes on a loading state until it
 answers. A `401` from any request ends the session and returns to the login
 screen, which says the session expired rather than presenting a bare form. The
@@ -298,17 +297,17 @@ panel" and no code is ever sent. The check runs again before the code is
 exchanged, because the address can be edited between the two steps.
 
 To add or remove an administrator, edit that list and the backend's
-`ADMIN_BOOTSTRAP_EMAILS` together — the frontend decides who is offered a code,
+`ADMIN_BOOTSTRAP_EMAILS` together: the frontend decides who is offered a code,
 the backend decides who is actually authorized.
 
-One address is additionally allowed to **moderate other admin accounts** —
+One address is additionally allowed to **moderate other admin accounts**:
 warn, block, unblock, delete, and change an admin's status. The panel does not
 decide this and keeps no list of its own: the backend resolves it from
 `ADMIN_SUPERUSER_EMAILS` and reports it as `isSuperAdmin` on `/auth/me`, which
 is the only thing the panel reads. It stays a behavioural permission, not a
 role: the account is reported and rendered as `ADMIN` everywhere, `UserRole`
 remains `'STUDENT' | 'ADMIN'`, and there is no badge or label for it. Everything
-else — a username, biography, credibility score or a demotion to `STUDENT` — is
+else (a username, biography, credibility score or a demotion to `STUDENT`) is
 accepted from any admin, and nobody moderates their own account.
 
 This client-side gate is a usability boundary, not a security one. The backend
@@ -316,8 +315,8 @@ independently validates the token and requires an `admins` row for every
 protected endpoint; a valid non-admin token is answered with `403` regardless
 of what the frontend does.
 
-The reasoning behind both decisions — the address list living in the bundle, and
-the elevated operator staying a behaviour rather than a role — is in
+The reasoning behind both decisions (the address list living in the bundle, and
+the elevated operator staying a behaviour rather than a role) is in
 [ADR 0010](docs/adr/0010-admin-email-list-in-the-bundle.md) and
 [ADR 0004](docs/adr/0004-elevated-operator-is-behaviour-not-a-role.md). The rule
 itself is stated once, as the backend contract, in
@@ -373,7 +372,7 @@ parameter is a `400` with a usable message (`A cursor requires a limit`,
 `Invalid user status`), which the panel shows verbatim.
 
 A warning carries its own `id`, and `createdFrom` is `{ id, name, createdAt }`
-where `id` is the issuing admin's **student** id — the same value `/auth/me`
+where `id` is the issuing admin's **student** id: the same value `/auth/me`
 reports, so "did I issue this?" needs no second lookup. The issuer is taken from
 the auth token, so `POST /users/:id/warnings` sends `{ message }` and nothing
 else; the older body is still accepted.
@@ -395,14 +394,14 @@ else; the older body is still accepted.
 | `PATCH` | `/answers/reported/:id` | Update `{ "status": "..." }` |
 | `DELETE` | `/answers/reported/:id` | Withdraw the report |
 
-A report's own `id` addresses the report — its status and its withdrawal. The
+A report's own `id` addresses the report: its status and its withdrawal. The
 `commentId` / `answerId` beside it addresses the content the report is about,
 which is what the reports tab edits, hides or deletes.
 
 Report statuses are `OPEN`, `REVIEWED`, `DISMISSED`, and `ACTION_TAKEN`.
 `ACTION_TAKEN` is the only status that means the content was moderated, so it
 is the only one that hides it; any other status puts it back. Hiding keeps the
-content in the database — deleting does not.
+content in the database: deleting does not.
 
 ### Lectures & Professors
 
@@ -415,7 +414,7 @@ content in the database — deleting does not.
 | `PATCH` | `/data/professor/:id` | Edit `firstName`, `lastName`, `active`, `lectureIds` |
 | `DELETE` | `/data/professor/:id` | Delete the professor; the lectures stay |
 
-`professorIds` and `lectureIds` replace an assignment wholesale — send `[]` to
+`professorIds` and `lectureIds` replace an assignment wholesale: send `[]` to
 clear it. The catalogue reads report a lecture's `lectureType` and a
 professor's `active` flag, so both are shown with their current value and sent
 only when actually changed.
@@ -448,7 +447,7 @@ Supported severities are `LOW`, `MEDIUM`, `HIGH`, and `CRITICAL`. Bug report
 statuses use the same values as content reports.
 
 `issueState` is `NONE`, `CREATED` or `FAILED`, and `issueUrl` is set once an
-issue exists. Creating one is idempotent — a double press, two admins on the
+issue exists. Creating one is idempotent: a double press, two admins on the
 same queue, or a retry after a timeout all get the existing issue back. The
 endpoint answers `503` until the backend is given `GITLAB_BASE_URL`,
 `GITLAB_PROJECT_ID` and `GITLAB_TOKEN`, so the panel hides the control while
@@ -466,8 +465,7 @@ endpoint answers `503` until the backend is given `GITLAB_BASE_URL`,
 
 Both paths are one table split by `actor.type`, and they take the same
 parameters, page on the same cursor and return the same entry shape. Only
-`/audit-logs` offers a revert. Each returns its array under its own noun —
-`/audit-logs` under `auditLogs`, `/activity-logs` under `activityLogs` — which
+`/audit-logs` offers a revert. Each returns its array under its own noun (`/audit-logs` under `auditLogs`, `/activity-logs` under `activityLogs`) which
 is the one thing a single reader has to be told, and is why
 `src/api/logs/logResource.ts` writes both down:
 
@@ -484,11 +482,11 @@ is the one thing a single reader has to be told, and is why
 | `to` | Inclusive ISO date/time upper bound |
 
 Every audit entry also reports whether it can be undone: `revertible`,
-`revertBlockedReason` and `revertedByAuditId`. Only field edits are revertible —
+`revertBlockedReason` and `revertedByAuditId`. Only field edits are revertible:
 a creation, a deletion or a sign-in records that something happened, not what it
 contained. A refused revert is a `409` whose `reason` is one of
 `ACTION_NOT_REVERTIBLE`, `WINDOW_EXPIRED`, `VALUE_CHANGED`, `ALREADY_REVERTED`
-or `TARGET_MISSING` — the same vocabulary `revertBlockedReason` uses, so the
+or `TARGET_MISSING`: the same vocabulary `revertBlockedReason` uses, so the
 hidden button and the refused one are explained the same way. The success body
 is `{ message, success }` and nothing else, so the panel **re-reads** the log
 afterwards: that is where the reversal's own entry appears. The grace period is
@@ -496,8 +494,8 @@ a backend setting and is deliberately not recomputed here.
 
 The filter dropdowns are built from `/audit-logs/meta`, so an action added
 by the backend appears without a frontend release. `actors` is capped rather
-than exhaustive — every account that ever signed in is an actor in the shared
-log table — so `q` is what finds someone beyond the cap.
+than exhaustive (every account that ever signed in is an actor in the shared
+log table), so `q` is what finds someone beyond the cap.
 
 ### System status
 
@@ -538,19 +536,19 @@ from both user reads; `credibilityScore` is returned by both; and `/system/statu
 `counts.activeUsers` alongside `counts.users`.
 
 Two contract details worth knowing rather than rediscovering: `counts.admins` counts accounts
-holding the role, not the allowlist — an address in the backend's bootstrap list is re-promoted
+holding the role, not the allowlist: an address in the backend's bootstrap list is re-promoted
 on the next restart or sign-in, so demoting it in the panel does not stick until the address
 leaves that configuration. And `POST /users/{id}/warnings` accepts the old `userID` +
 `createdFrom` body permanently, not as a temporary shim, so the two repos deploy in any order.
 
 | Gap | Effect on the panel |
 | --- | --- |
-| A session that ends on **TTL expiry** writes no `ADMIN_LOGOUT` | The pair closes on an explicit sign-out — the panel calls `POST /auth/logout` — and a session the backend revokes itself is recorded on the action that caused it (`USER_UPDATED` with `metadata.sessionsRevoked`). Pure TTL expiry has no actor and no request, so nothing is written. A missing `ADMIN_LOGOUT` is normal and does **not** mean the session is still live. |
+| A session that ends on **TTL expiry** writes no `ADMIN_LOGOUT` | The pair closes on an explicit sign-out (the panel calls `POST /auth/logout`) and a session the backend revokes itself is recorded on the action that caused it (`USER_UPDATED` with `metadata.sessionsRevoked`). Pure TTL expiry has no actor and no request, so nothing is written. A missing `ADMIN_LOGOUT` is normal and does **not** mean the session is still live. |
 | `GET /users` orders differently with and without parameters | Unparameterised it is admins first, then newest. Any paginated call is strictly newest-first, because role is not a column it can sort on. The Users page changes order the moment it paginates. |
 | GitLab issue creation is inert until it is configured | Without `GITLAB_BASE_URL`, `GITLAB_PROJECT_ID` and `GITLAB_TOKEN` the backend reports `gitlabEnabled: false` and the endpoint answers `503`. The panel hides the control rather than offering one that cannot work. |
 | `/system/status` has **no total bug report counter** | `counts.openBugReports` is the open ones only. The dashboard's "of N bug reports" sub-line and its "Reports handled" percentage were removed rather than kept by reading the whole `/reports` table on a timer. Requested as F1 in `docs/backend-tasks.md`. |
 | `/system/status` has **no blocked account counter** | `counts` carries `users`, `activeUsers` and `admins`; `users - activeUsers` is blocked *plus* inactive, so blocked cannot be derived. With the Users table paginated it cannot be counted on screen either, so that stat card is not shown. Requested as F2 in `docs/backend-tasks.md`. |
-| The catalogue reads the panel calls return **active records only** | `GET /data/lectures` and `GET /data/professor` filter on `active = true`, but both `PATCH` routes accept `active` — so switching a lecture or professor off from the panel removes it from the only list the panel currently reads, with no way back from the UI. The edit forms warn before the switch is saved. **This is no longer a backend gap:** `/data/lectures/all` and `/data/professor/all` already return every record, active or not — on the legacy path the panel already uses — and the panel has not moved to them. Tracked as `F-006`, and as `G1` in `docs/backend-tasks.md`. |
+| The catalogue reads the panel calls return **active records only** | `GET /data/lectures` and `GET /data/professor` filter on `active = true`, but both `PATCH` routes accept `active`: so switching a lecture or professor off from the panel removes it from the only list the panel currently reads, with no way back from the UI. The edit forms warn before the switch is saved. **This is no longer a backend gap:** `/data/lectures/all` and `/data/professor/all` already return every record, active or not (on the legacy path the panel already uses) and the panel has not moved to them. Tracked as `F-006`, and as `G1` in `docs/backend-tasks.md`. |
 | A bug report has **no `statusChangedAt`** | It carries `reportedAt` only, so the Bug Reports History tab can show when a report was *filed* but not when it was closed. The subtitle says so rather than letting a filing date pass as a closing one. Requested as F3 in `docs/backend-tasks.md`. |
 
 ## Audit Log Design
@@ -586,22 +584,22 @@ they did, **which record** they affected, and **what changed**.
 ```
 
 One table holds both logs, split by the scope an action belongs to.
-`/audit-logs` serves what admins did through the panel — sign-in and sign-out,
+`/audit-logs` serves what admins did through the panel: sign-in and sign-out,
 user edits, warnings, blocks and deletions, content and report moderation,
 bug report changes, and catalogue edits. The other half, `/activity-logs`, is
 what students did in the app plus the two refusals, `LOGIN_REFUSED` and
 `ACCESS_REFUSED`.
 
 The panel reads both. It had no Activity Log screen between 2026-09-09 and
-2026-09-10 — see [ADR 0016](docs/adr/0016-the-activity-log-screen-returns.md) —
+2026-09-10. See [ADR 0016](docs/adr/0016-the-activity-log-screen-returns.md):
 and `src/domain/auditLog.ts` models both vocabularies again. Neither list is a
 filter: the dropdowns are built from `/…/meta` and the tables render whatever
 they are given, so a deployment logging something newer than the bundle shows
 the new action rather than failing.
 
 The two screens are one feature, `src/features/logs/`, over one reader, one
-filter bar, one table, one row and one details modal. What differs is a value —
-`logScreen.ts` — and not a shape. Undoing is the exception and is expressed by
+filter bar, one table, one row and one details modal. What differs is a value:
+`logScreen.ts`: and not a shape. Undoing is the exception and is expressed by
 type rather than by a flag: the activity screen is typed on `AuditEntry`, which
 carries no `revertible`, so an undo control cannot be drawn on it.
 
@@ -650,7 +648,7 @@ changed and reformatting destroys it. `npm run schema:types` then regenerates
 ## Documentation
 
 This README is the tour. Everything below is a document with one job, and each is
-authoritative for that job — where two disagree, the one named here wins on its
+authoritative for that job: where two disagree, the one named here wins on its
 own subject.
 
 | File | What is in it |
@@ -665,7 +663,7 @@ own subject.
 | [docs/testfindings.md](docs/testfindings.md) | Findings, the run log, and coverage. |
 | [docs/backend-tasks.md](docs/backend-tasks.md) | The file handed to the backend team: what the panel needs, and what it is only notifying them about. |
 | [docs/deployment.md](docs/deployment.md) | Docker, the deployed host, the `/admin/` base path. |
-| [docs/coursework/](docs/coursework/) | Course-delivery documents — Kolloquium and demo material. **Not part of the product**, tracked because the delivery has to be complete. |
+| [docs/coursework/](docs/coursework/) | Course-delivery documents: Kolloquium and demo material. **Not part of the product**, tracked because the delivery has to be complete. |
 | [wiki.md](wiki.md) | A self-contained copy for the GitLab wiki. Changed together with this file. |
 
 ## Quality Assurance
@@ -698,7 +696,7 @@ specs and 68 tests** in the end-to-end layer. The report in `coverage/` is
 the authority on those figures; a number written in a document is a dated
 snapshot of it.
 
-The suite is organised into **layers named for the questions this panel has** — call
+The suite is organised into **layers named for the questions this panel has**: call
 surface, contract, resilience, accessibility, real browser, end-to-end. They are
 deliberately *not* the backend's five;
 [ADR 0015](docs/adr/0015-panel-test-layers-answer-the-panels-own-questions.md) says why,
@@ -708,7 +706,7 @@ does not answer**, which is the column worth reading.
 One caveat belongs with those numbers rather than beneath them: the suite has failed
 once in ten full runs, in `src/App.integration.test.tsx:109`, and the end-to-end suite
 once in four. Both tests are identified; neither cause is. A suite that fails once in ten
-is not a green suite — `F-024` and `F-033` in
+is not a green suite: `F-024` and `F-033` in
 [docs/testfindings.md](docs/testfindings.md).
 
 
@@ -721,9 +719,9 @@ layer, and the difference matters enough to state rather than summarise:
 | --- | --- | --- |
 | Eight files | **Nothing.** MSW answers the real request, so the screen, its hooks, its services and `ApiClient` all run | The path, method, query string, JSON body and the `Authorization` and `Content-Type` headers a **screen** produces, and what it renders from the answer |
 | Remaining API service tests | `fetch` itself, so `ApiClient` and the service run for real | The request a **service** produces, not that any screen asks for it |
-| Three remaining page tests | The whole service module, via `vi.mock` — no request is constructed | What a **screen** renders, and which service method it called |
+| Three remaining page tests | The whole service module, via `vi.mock`: no request is constructed | What a **screen** renders, and which service method it called |
 | Model and utility tests | Nothing to replace | Rules in isolation |
-| End-to-end | Nothing — the same MSW handlers, in a real browser | That six flows work start to finish with no backend running, plus what only a real browser can measure: layout at 1024 and 1440, focus traps, touch-target sizes and colour contrast |
+| End-to-end | Nothing: the same MSW handlers, in a real browser | That six flows work start to finish with no backend running, plus what only a real browser can measure: layout at 1024 and 1440, focus traps, touch-target sizes and colour contrast |
 
 **The end-to-end suite really does contact nothing, and that is checked rather than
 assumed.** `e2e/mock-backend.spec.ts` reads `Response.fromServiceWorker()` on every
@@ -733,10 +731,10 @@ whose premise is that it contacts nothing.
 
 **Every Playwright spec runs in Chromium only, and against MSW only.** It has never run
 against the real backend, so a passing flow is evidence that the panel agrees with *this
-repository's* description of the backend — and where that description is wrong, both are
+repository's* description of the backend: and where that description is wrong, both are
 wrong together.
 
-**Six features touch HTTP now** — comments, routing and the session, sign-in, the
+**Six features touch HTTP now**: comments, routing and the session, sign-in, the
 audit log and users. A field the backend renames is the class of defect this
 closes; it once passed every test here and still signed the operator out on every
 reload (`F-002`). What the suite still cannot establish is that the panel's idea of
@@ -815,7 +813,7 @@ Deployment is driven by CI/CD (`.gitlab-ci.yml`):
 
 If the registry or CI is unreachable, `scripts/deploy-prod.ps1` is a fallback
 that builds and runs the image directly on the deployment host's Docker
-daemon over SSH — no local Docker daemon or registry needed:
+daemon over SSH: no local Docker daemon or registry needed:
 
 ```powershell
 pwsh scripts/deploy-prod.ps1
@@ -842,13 +840,13 @@ with `no-store` so a released build is picked up on the next page load.
 The panel asks not to be indexed: `index.html` carries
 `<meta name="robots" content="noindex,nofollow">` and `public/robots.txt` disallows
 everything. Note that `robots.txt` follows the bundle's base path, so on a
-deployment under `/admin/` it is served at `/admin/robots.txt` — where a crawler
+deployment under `/admin/` it is served at `/admin/robots.txt`: where a crawler
 does not look. Serving one at the domain root is the host proxy's job (`F-047`).
 
 **Security headers are incomplete, and this is recorded rather than fixed.**
 `nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: same-origin` are set on the
 HTML location only; the `assets/` location is a more specific prefix with its own
-`add_header`, and nginx does not inherit — so JS, CSS and images are served with none
+`add_header`, and nginx does not inherit: so JS, CSS and images are served with none
 of the three. There is no `Content-Security-Policy` and no `Strict-Transport-Security`
 in this repository, and because TLS terminates on a host-level proxy that is not in
 it, whether HTTPS is enforced cannot be verified from here. See `F-052` in
@@ -872,7 +870,7 @@ curl <api base>/health
 ```
 
 If `VITE_API_BASE_URL` was changed while Vite was running, restart the
-development server — the value is read at startup.
+development server: the value is read at startup.
 
 ### `403 Invalid CORS request` when requesting a login code
 
@@ -898,7 +896,7 @@ was requested. Add it there and to the backend's `ADMIN_BOOTSTRAP_EMAILS`.
 ### Login succeeds but admin requests return `403`
 
 The account authenticated but has no `admins` row on the backend. Admin
-membership comes from that table, not from the frontend — check
+membership comes from that table, not from the frontend: check
 `ADMIN_BOOTSTRAP_EMAILS` and sign in again so the account is provisioned.
 
 ### The login code never arrives

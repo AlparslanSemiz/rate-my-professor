@@ -1,4 +1,6 @@
-# Rate My Professor — KIT lecture-rating platform
+# RateMyProf
+
+A lecture-rating platform for KIT.
 
 A lecture- and professor-rating platform for students at the Karlsruhe Institute of Technology, built as a team project in KIT's **PSE (Praxis der Softwareentwicklung)** course. Students rate lectures and professors, ask and answer questions and report content from an Android app; administrators moderate everything from a web panel.
 
@@ -14,7 +16,7 @@ The whole system is in this repository:
 
 ## Highlights
 
-- **Two kinds of sessions from one API.** `/auth/**` and the app routes give the Android client year-long sessions; `/admin/**` gives the panel one-day sessions — decided by the endpoint, not the account ([backend/docs/admin-api.md](backend/docs/admin-api.md)).
+- **Two kinds of sessions from one API.** `/auth/**` and the app routes give the Android client year-long sessions; `/admin/**` gives the panel one-day sessions. The endpoint decides, not the account ([backend/docs/admin-api.md](backend/docs/admin-api.md)).
 - **Same-origin by design.** One nginx serves the panel under `/admin/` and the API on the same host, so the panel never needs CORS ([backend/docs/deployment.md](backend/docs/deployment.md)).
 - **Immutable audit log with undo.** Every administrative edit is recorded with before/after values and can be reverted from the panel.
 - **Tested.** `./mvnw verify` for the backend; six test layers with Vitest, Testing Library and `axe-core` accessibility checks for the panel.
@@ -37,11 +39,11 @@ Production secrets (database, mail, API keys, GitLab token) are read from enviro
 
 Built by a team of six KIT students in the PSE course (summer semester 2026):
 
-- **[Alparslan Semiz](https://github.com/AlparslanSemiz)** — built the admin panel (dashboards, users, moderation, bug reports, typed REST client with token auth) and Android settings features; also worked on the backend
-- **Luis Bauer** — backend
-- **Enno Leipe** — Android app and backend
-- **Philipp Schneider** — Android app
-- **[Mustafa Aslan](https://github.com/Mustafa-Aslan-1733)** — Android app, backend and admin panel
-- **[Yavuz Çağan](https://github.com/YavuzCaganDE)** — backend, admin panel and Android app
+- **[Alparslan Semiz](https://github.com/AlparslanSemiz)**: built the admin panel (dashboards, users, moderation, bug reports, typed REST client with token auth) and Android settings features; also worked on the backend
+- **Luis Bauer**: backend
+- **Enno Leipe**: Android app and backend
+- **Philipp Schneider**: Android app
+- **[Mustafa Aslan](https://github.com/Mustafa-Aslan-1733)**: Android app, backend and admin panel
+- **[Yavuz Çağan](https://github.com/YavuzCaganDE)**: backend, admin panel and Android app
 
 Development happened on KIT's GitLab; this is a cleaned-up portfolio copy of the final state (single commit, no history).

@@ -4,9 +4,9 @@ One file per decision, in the form **Decision / Context / Alternatives considere
 Consequences**, each closing with a **Sources** section naming where the reasoning already
 lived.
 
-**Every record here is extracted, not invented.** The reasoning already existed — in
+**Every record here is extracted, not invented.** The reasoning already existed: in
 `CHANGELOG` entries, in [test-findings.md](../test-findings.md), in
-[test-plan.md](../test-plan.md), and in comments inside `pom.xml` and `.gitlab-ci.yml` — it was
+[test-plan.md](../test-plan.md), and in comments inside `pom.xml` and `.gitlab-ci.yml`: it was
 just spread across the places the work happened. Each record cites where its reasoning lives so
 the citation can be checked rather than trusted. Where a decision's rationale was **not** in the
 record it was left out and written up as an open question in [worklog.md](../worklog.md)
