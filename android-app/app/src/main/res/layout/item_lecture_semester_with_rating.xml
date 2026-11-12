@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <TextView
+        android:id="@+id/header_background"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="-16dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="-16dp"
+        android:background="@drawable/rounded_box"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        app:layout_constraintBottom_toBottomOf="@+id/averageRatingBackground"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/averageRatingBackground" />
+
+    <TextView
+        android:id="@+id/averageRatingBackground"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/rounded_box_light"
+        android:fontFamily="@font/inter_bold"
+        android:text=" 0,0 "
+        android:textColor="@color/accent_positive"
+        android:textSize="60sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/header_background"
+        app:layout_constraintTop_toTopOf="parent"
+        android:paddingBottom="8dp"
+        android:paddingTop="8dp"/>
+
+    <TextView
+        android:id="@+id/lecture_name_for_profile"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:fontFamily="@font/inter_bold"
+        android:text="Lecture Name Zeilenumbruchstest"
+        android:textColor="@color/text_primary"
+        android:textSize="30sp"
+        app:layout_constraintBottom_toBottomOf="@+id/averageRatingBackground"
+        app:layout_constraintEnd_toStartOf="@+id/averageRatingBackground"
+        app:layout_constraintStart_toStartOf="@+id/header_background"
+        app:layout_constraintTop_toTopOf="@+id/averageRatingBackground" />
+</androidx.constraintlayout.widget.ConstraintLayout>

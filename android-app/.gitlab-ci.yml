@@ -1,0 +1,151 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+stages:
+  - check
+  - test
+  - sonar
+  - build
+  - package
+
+.android-gradle:
+  image: ghcr.io/cirruslabs/android-sdk:36
+  variables:
+    GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+  cache:
+    key: "android-gradle-${CI_COMMIT_REF_SLUG}"
+    policy: pull-push
+    paths:
+      - .gradle/caches/
+      - .gradle/wrapper/
+
+  before_script:
+    - chmod +x ./gradlew
+    - yes | sdkmanager --licenses >/dev/null || true
+    - sdkmanager --install "platforms;android-36.1"
+
+android:lint:
+  extends: .android-gradle
+  stage: check
+  script:
+    - ./gradlew app:lint --no-daemon
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - app/build/reports/lint-results-*.html
+      - app/build/reports/lint-results-*.xml
+
+android:test:
+  extends: .android-gradle
+  stage: test
+  script:
+    - ./gradlew app:debugUnitTestCoverage --no-daemon
+  artifacts:
+    when: always
+    expire_in: 1 week
+    reports:
+      junit: app/build/test-results/test*/TEST-*.xml
+    paths:
+      - app/build/reports/jacoco/debugUnitTestCoverage/
+      - app/build/reports/tests/
+      - app/build/test-results/
+
+android:instrumentation-test:
+  extends: .android-gradle
+  stage: test
+  variables:
+    AVD_NAME: "ci-api-36"
+    ANDROID_SYSTEM_IMAGE: "system-images;android-36;google_apis;x86_64"
+  rules:
+    - if: '$RUN_INSTRUMENTATION_TESTS == "true"'
+    - when: never
+  script:
+    - yes | sdkmanager --licenses >/dev/null || true
+    - sdkmanager --install "platform-tools" "emulator" "platforms;android-36" "$ANDROID_SYSTEM_IMAGE"
+    - yes | sdkmanager --licenses >/dev/null || true
+    - |
+      if ! sdkmanager --list | grep -F "$ANDROID_SYSTEM_IMAGE"; then
+        echo "Android system image package is not available: $ANDROID_SYSTEM_IMAGE"
+        exit 1
+      fi
+    - echo "no" | avdmanager create avd --force --name "$AVD_NAME" --package "$ANDROID_SYSTEM_IMAGE" --device "pixel"
+    - emulator -avd "$AVD_NAME" -no-window -no-audio -no-boot-anim -gpu off -accel off -no-snapshot -wipe-data &
+    - adb wait-for-device
+    - |
+      timeout 300 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 5; done'
+    - adb shell input keyevent 82 || true
+    - adb shell settings put global window_animation_scale 0 || true
+    - adb shell settings put global transition_animation_scale 0 || true
+    - adb shell settings put global animator_duration_scale 0 || true
+    - ./gradlew app:connectedDebugAndroidTest --no-daemon
+  artifacts:
+    when: always
+    expire_in: 1 week
+    reports:
+      junit: app/build/outputs/androidTest-results/connected/**/TEST-*.xml
+    paths:
+      - app/build/reports/androidTests/
+      - app/build/outputs/androidTest-results/
+
+      
+android:sonarcloud:
+  extends: .android-gradle
+  stage: sonar
+
+  variables:
+    GIT_DEPTH: "0"
+
+  script:
+    - ./gradlew app:debugUnitTestCoverage --no-daemon
+
+    - |
+      echo "=== JaCoCo reports ==="
+      find app/build/reports/jacoco -type f -print || true
+
+      echo "=== Expected report ==="
+      ls -lah app/build/reports/jacoco/debugUnitTestCoverage/ || true
+
+      echo "=== Java source examples ==="
+      find app/src/main/java -type f -name "*.java" | head -20 || true
+
+      echo "=== JaCoCo source entries ==="
+      grep -o '<sourcefile name="[^"]*"' \
+        app/build/reports/jacoco/debugUnitTestCoverage/debugUnitTestCoverage.xml \
+        | head -20 || true
+
+    - |
+      ./gradlew sonar \
+        --no-daemon \
+        --info \
+        -Dsonar.host.url="${SONAR_HOST_URL:-https://sonarcloud.io}" \
+        -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
+        -Dsonar.organization="$SONAR_ORGANIZATION" \
+        -Dsonar.coverage.jacoco.xmlReportPaths="$CI_PROJECT_DIR/app/build/reports/jacoco/debugUnitTestCoverage/debugUnitTestCoverage.xml"
+
+  rules:
+    - if: '$SONAR_TOKEN'
+
+android:build:
+  extends: .android-gradle
+  stage: build
+  script:
+    - ./gradlew app:assembleDebug --no-daemon
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - app/build/outputs/apk/debug/*.apk
+
+android:package:
+  extends: .android-gradle
+  stage: package
+  script:
+    - ./gradlew app:assembleRelease --no-daemon
+  artifacts:
+    expire_in: 1 month
+    paths:
+      - app/build/outputs/apk/release/*.apk
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'

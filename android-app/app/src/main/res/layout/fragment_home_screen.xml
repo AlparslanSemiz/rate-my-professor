@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/surface">
+
+
+    <TextView
+        android:id="@+id/profile"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="-8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="-8dp"
+        android:background="@drawable/rounded_box"
+        android:textAlignment="textEnd"
+        android:textColor="@color/text_primary"
+        app:layout_constraintBottom_toBottomOf="@id/profilePicture"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/profilePicture" />
+
+    <TextView
+        android:id="@+id/your_stats_background"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="-8dp"
+        android:background="@drawable/rounded_box"
+        android:fontFamily="@font/inter_bold"
+        android:textColor="@color/text_primary"
+        android:textSize="200sp"
+        app:layout_constraintBottom_toBottomOf="@+id/up_downvotes_num"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/profile" />
+
+    <TextView
+        android:id="@+id/your_stats"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/inter_bold"
+        android:text="Your Stats"
+        android:textColor="@color/text_primary"
+        android:textSize="24sp"
+        app:layout_constraintBottom_toTopOf="@+id/average_rating_given"
+        app:layout_constraintStart_toStartOf="@+id/your_stats_background"
+        app:layout_constraintTop_toTopOf="@+id/your_stats_background" />
+
+    <TextView
+        android:id="@+id/average_rating_given"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/inter_bold"
+        android:text="Average Rating Given"
+        android:textColor="@color/text_primary"
+        app:layout_constraintStart_toStartOf="@+id/your_stats_background"
+        app:layout_constraintTop_toBottomOf="@+id/your_stats" />
+
+    <TextView
+        android:id="@+id/average_rating_given_num"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/inter_bold"
+        android:text="-,-"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        app:layout_constraintStart_toStartOf="@+id/average_rating_given"
+        app:layout_constraintTop_toBottomOf="@+id/average_rating_given" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/list_of_my_ratings_button"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:backgroundTint="@color/surface_container"
+        android:clickable="true"
+        android:focusable="true"
+        style="@style/text_style"
+        android:letterSpacing="0"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:text="List of my ratings"
+        android:textAlignment="textStart"
+        android:textAllCaps="false"
+        android:textColor="@color/text_primary"
+        android:textSize="24sp"
+        android:typeface="normal"
+        app:cornerRadius="24dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/your_stats_background" />
+
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/notifications"
+        style="@style/text_style"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:backgroundTint="@color/surface_container"
+        android:clickable="true"
+        android:focusable="true"
+        android:letterSpacing="0"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:text="Notifications"
+        android:textAlignment="textStart"
+        android:textAllCaps="false"
+        android:textColor="@color/text_primary"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:typeface="normal"
+        app:cornerRadius="24dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/list_of_my_ratings_button" />
+
+    <TextView
+        android:id="@+id/professors_rated"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/inter_bold"
+        android:text="Professors Rated"
+        android:textColor="@color/text_primary"
+        app:layout_constraintStart_toStartOf="@+id/your_stats_background"
+        app:layout_constraintTop_toBottomOf="@+id/average_rating_given_num" />
+
+    <TextView
+        android:id="@+id/professors_rated_num"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/inter_bold"
+        android:text="-"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        app:layout_constraintStart_toStartOf="@+id/average_rating_given"
+        app:layout_constraintTop_toBottomOf="@+id/professors_rated" />
+
+    <TextView
+        android:id="@+id/comments_written"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/inter_bold"
+        android:text="Comments Written"
+        android:textColor="@color/text_primary"
+        app:layout_constraintStart_toStartOf="@+id/your_stats_background"
+        app:layout_constraintTop_toBottomOf="@+id/professors_rated_num" />
+
+    <TextView
+        android:id="@+id/comments_written_num"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/inter_bold"
+        android:text="-"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        app:layout_constraintStart_toStartOf="@+id/average_rating_given"
+        app:layout_constraintTop_toBottomOf="@+id/comments_written" />
+
+    <TextView
+        android:id="@+id/up_downvotes"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/inter_bold"
+        android:text="Up-/Downvotes"
+        android:textColor="@color/text_primary"
+        app:layout_constraintStart_toStartOf="@+id/your_stats_background"
+        app:layout_constraintTop_toBottomOf="@+id/comments_written_num" />
+
+    <TextView
+        android:id="@+id/up_downvotes_num"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/inter_bold"
+        android:text="-"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        app:layout_constraintStart_toStartOf="@+id/average_rating_given"
+        app:layout_constraintTop_toBottomOf="@+id/up_downvotes" />
+
+    <TextView
+        android:id="@+id/user_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:fontFamily="@font/inter_bold"
+        android:textColor="@color/text_primary"
+        android:textSize="40sp"
+        app:layout_constraintBottom_toBottomOf="@+id/profile"
+        app:layout_constraintEnd_toEndOf="@+id/profile"
+        app:layout_constraintStart_toEndOf="@+id/profilePicture"
+        app:layout_constraintTop_toTopOf="@+id/profile" />
+
+    <ImageView
+        android:id="@+id/profilePicture"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="8dp"
+
+        android:background="@drawable/rounded_box_light"
+        android:clipToOutline="true"
+        android:outlineProvider="background"
+        android:scaleType="centerCrop"
+        android:src="@drawable/profile_icon"
+
+        app:layout_constraintBottom_toTopOf="@id/your_stats_background"
+        app:layout_constraintStart_toStartOf="@id/profile"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.348" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

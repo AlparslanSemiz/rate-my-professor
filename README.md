@@ -4,14 +4,13 @@ A lecture- and professor-rating platform for students at the Karlsruhe Institute
 
 During the course it was deployed at **ratemyprofessor.dev**.
 
-This repository holds the two server-side parts I worked on:
+The whole system is in this repository:
 
 | Folder | What | Stack |
 | --- | --- | --- |
 | [`backend/`](backend/) | REST API for the Android app and the admin panel: sessions, ratings, Q&A, reports, moderation, audit log | Spring Boot 4, Java 21, PostgreSQL, Flyway, Docker |
+| [`android-app/`](android-app/) | The student app: browse and rate lectures and professors, ask and answer questions, report content, profile | Android, Java, Retrofit |
 | [`admin-web/`](admin-web/) | Moderation console: users, comments, answers, lectures & professors, bug reports (→ GitLab issues), audit & activity logs with undo | React 19, TypeScript, Mantine, TanStack Query, Vite, Vitest |
-
-The Android client lives in the team's own repository and is not included here.
 
 ## Highlights
 
@@ -28,18 +27,21 @@ cd backend && docker compose up -d
 
 # admin panel
 cd admin-web && npm ci && npm run dev
+
+# Android app: open android-app/ in Android Studio and run on an emulator
 ```
 
 Production secrets (database, mail, API keys, GitLab token) are read from environment variables only; nothing in this repository is a real credential.
 
 ## Team
 
-Built by a team of KIT students in the PSE course (summer semester 2026):
+Built by a team of six KIT students in the PSE course (summer semester 2026):
 
-- **[Alparslan Semiz](https://github.com/AlparslanSemiz)** — built most of the admin panel, and about half of the backend
+- **[Alparslan Semiz](https://github.com/AlparslanSemiz)** — built most of the admin panel, about half of the backend, and parts of the Android app
 - **Luis Bauer** — backend
-- **[Yavuz Çağan](https://github.com/YavuzCaganDE)** — backend and admin panel
-- **[Mustafa Aslan](https://github.com/Mustafa-Aslan-1733)** — backend and admin panel
-- **Enno Leipe** — backend
+- **Enno Leipe** — Android app and backend
+- **Philipp Schneider** — Android app
+- **[Mustafa Aslan](https://github.com/Mustafa-Aslan-1733)** — Android app, backend and admin panel
+- **[Yavuz Çağan](https://github.com/YavuzCaganDE)** — backend, admin panel and Android app
 
 Development happened on KIT's GitLab; this is a cleaned-up portfolio copy of the final state (single commit, no history).

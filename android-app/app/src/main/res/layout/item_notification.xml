@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/rounded_box"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    android:minHeight="120dp"
+    android:padding="16dp">
+
+    <View
+        android:id="@+id/unread_indicator"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:background="@drawable/notification_unread_indicator"
+        app:layout_constraintBottom_toBottomOf="@id/notification_title"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/notification_title" />
+
+    <TextView
+        android:id="@+id/notification_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:fontFamily="@font/inter_bold"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toStartOf="@id/notification_date"
+        app:layout_constraintStart_toEndOf="@id/unread_indicator"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="AdventuresRabbit replied to your comment" />
+
+    <TextView
+        android:id="@+id/notification_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:fontFamily="@font/inter"
+        android:textColor="@color/text_muted"
+        android:textSize="12sp"
+        app:layout_constraintBaseline_toBaselineOf="@id/notification_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:text="23/07/26, 12:30" />
+
+    <TextView
+        android:id="@+id/notification_offering"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:fontFamily="@font/inter_bold"
+        android:textColor="@color/text_muted"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/notification_title"
+        app:layout_constraintTop_toBottomOf="@id/notification_title"
+        tools:text="Kühnlein · LA1 · WS24/25" />
+
+    <TextView
+        android:id="@+id/notification_preview"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:fontFamily="@font/inter"
+        android:maxLines="2"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/notification_title"
+        app:layout_constraintTop_toBottomOf="@id/notification_offering"
+        tools:text="I found exercise sheet 7 especially helpful." />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

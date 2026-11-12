@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        One theme for both modes. Everything it points at is a name from colors.xml, and
+        values-night/colors.xml holds the dark value of each of those names, so there is no
+        second copy of this theme that could drift away from this one.
+    -->
+    <style name="Theme.RateMyProfessor" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!--
+            The app is drawn in greys, so its "brand" colour is simply the text colour. This is
+            what Material uses for dialog buttons, text cursors and input field accents.
+        -->
+        <item name="colorPrimary">@color/text_primary</item>
+        <item name="colorPrimaryVariant">@color/text_primary</item>
+        <item name="colorOnPrimary">@color/text_on_inverse</item>
+        <item name="colorSecondary">@color/text_primary</item>
+        <item name="colorSecondaryVariant">@color/text_primary</item>
+        <item name="colorOnSecondary">@color/text_on_inverse</item>
+
+        <!-- Surfaces that Material draws on its own, above all the dialogs. -->
+        <item name="android:windowBackground">@color/surface</item>
+        <item name="colorSurface">@color/surface_container</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorError">@color/danger</item>
+        <item name="colorOnError">@color/text_on_inverse</item>
+
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_muted</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+
+        <!--
+            The activities draw edge to edge and set the system bar appearance themselves, so
+            the bars stay transparent and the content decides what shows through them.
+        -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+</resources>
