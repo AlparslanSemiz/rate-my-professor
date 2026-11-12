@@ -37,7 +37,7 @@ Production secrets (database, mail, API keys, GitLab token) are read from enviro
 
 Built by a team of six KIT students in the PSE course (summer semester 2026):
 
-- **[Alparslan Semiz](https://github.com/AlparslanSemiz)** — built most of the admin panel, about half of the backend, and parts of the Android app
+- **[Alparslan Semiz](https://github.com/AlparslanSemiz)** — built the admin panel (dashboards, users, moderation, bug reports, typed REST client with token auth) and Android settings features; also worked on the backend
 - **Luis Bauer** — backend
 - **Enno Leipe** — Android app and backend
 - **Philipp Schneider** — Android app
