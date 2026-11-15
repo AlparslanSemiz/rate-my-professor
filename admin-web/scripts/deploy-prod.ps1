@@ -12,7 +12,7 @@ param(
     # Host alias from ~/.ssh/config, or user@host.
     [string]$SshHost = 'sose2026-android2',
     # Backend the panel calls. Baked into the bundle at build time.
-    [string]$ApiBaseUrl = 'https://server.example.org',
+    [string]$ApiBaseUrl = 'http://localhost:8080',
     # Public URL path the panel is served from. Must match the Nginx location on the server.
     [string]$BasePath = '/admin/',
     # Loopback port the container publishes on the server.

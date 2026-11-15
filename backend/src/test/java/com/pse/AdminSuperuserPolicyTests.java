@@ -14,10 +14,10 @@ class AdminSuperuserPolicyTests {
     @Test
     void addressesAreTrimmedAndLowercasedOnBothSides() {
         AdminSuperuserPolicy policy =
-                new AdminSuperuserPolicy("  u-kisi4@Student.KIT.edu , second@student.kit.edu ");
+                new AdminSuperuserPolicy("  U-KISI4@Student.KIT.edu , second@student.kit.edu ");
 
         assertThat(policy.isSuperuser("u-kisi4@student.kit.edu")).isTrue();
-        assertThat(policy.isSuperuser("  u-kisi4@student.kit.edu  ")).isTrue();
+        assertThat(policy.isSuperuser("  U-KISI4@student.kit.edu  ")).isTrue();
         assertThat(policy.isSuperuser("second@student.kit.edu")).isTrue();
         assertThat(policy.isSuperuser("someone-else@student.kit.edu")).isFalse();
     }

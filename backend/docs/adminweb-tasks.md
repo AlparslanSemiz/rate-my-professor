@@ -556,7 +556,7 @@ recorded so the next person does not have to re-derive it.
 **Why it is on this page:** your feature is what turns "inactive" from a flag nobody sets into a
 state an operator can see and choose, so the answer changes what your Inactive view means. If it
 means *retired*, an Inactive row should probably not be presented as something students can still
-reach. **Decision after submission**; recorded on the board in [TODO.md](TODO.md) as items 37
+reach. **Decision after submission**; recorded on the board in TODO.md as items 37
 (the defect) and 38 (this question), and pinned meanwhile by the five tests above.
 
 **Estimate once decided:** the pins are written, so the remaining cost is the rule itself —

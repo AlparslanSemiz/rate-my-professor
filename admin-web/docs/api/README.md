@@ -2,7 +2,7 @@
 
 `openapi.json` is the backend's own OpenAPI 3 document, produced by springdoc and
 committed here unchanged. It is the **authority** on the contract between this
-panel and the backend — see [ADR 0008](../adr/0008-generated-schema-is-the-contract-authority.md)
+panel and the backend. See [ADR 0008](../adr/0008-generated-schema-is-the-contract-authority.md)
 for the order of precedence and why it is that way.
 
 `src/types/api.generated.ts` is generated from this file by `npm run schema:types`
@@ -19,7 +19,7 @@ document already carries.
 
 ## Refreshing the schema
 
-The document is served at `/v3/api-docs`, behind `hasRole("ADMIN")` — the backend
+The document is served at `/v3/api-docs`, behind `hasRole("ADMIN")`: the backend
 locks the JSON, the YAML and the per-group documents separately, so a token is
 required for all of them. Run this against whichever backend is authoritative for
 the release being documented:
@@ -53,13 +53,13 @@ or hand-edit a field that looks wrong: the diff between two pulls is the record 
 what the backend changed, and a reformat destroys it. If a field looks wrong, that
 is a contract mismatch and belongs in `docs/backend-tasks.md`, not in this file.
 
-Mind the login rate limit while doing this — 3 attempts per address and 20 per IP
+Mind the login rate limit while doing this: 3 attempts per address and 20 per IP
 in 15 minutes. Two failed pulls can lock you out of a demo.
 
 ## What is not in here
 
 The backend repository's `docs/admin-api.md` is a much fuller prose description of
-the same API, including behaviour no schema can express — which refusals are `409`
+the same API, including behaviour no schema can express: which refusals are `409`
 rather than `403`, what `metadata.elevated` means, why `POST /reports` deliberately
 does not move under `/admin`. It is the **secondary** source: where the two
 disagree, this document wins on shape and `admin-api.md` wins on meaning.

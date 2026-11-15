@@ -161,7 +161,7 @@ accepted is reported as saved even when the re-read afterwards fails.
 Say it plainly, because the documents do: **no page test touches HTTP.** The
 integration tests replace the service module, so what a screen *sends* is asserted
 only in service unit tests. That is the gap `P1` and `P2` in
-[`docs/TODO.md`](../TODO.md) exist to close, and it is the gap that let `F-002`
+`docs/TODO.md` exist to close, and it is the gap that let `F-002`
 ship. Section 2 of [`docs/testplan.md`](../testplan.md) has the numbers.
 
 **"Why two log screens became one."**

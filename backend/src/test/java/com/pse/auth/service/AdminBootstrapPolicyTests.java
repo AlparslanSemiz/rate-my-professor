@@ -59,7 +59,7 @@ class AdminBootstrapPolicyTests {
     @Test
     void shouldBootstrap_configuredInUppercase_matchesTheLowercasedAddress() {
         // Given
-        AdminBootstrapPolicy policy = new AdminBootstrapPolicy("u-kisi4@Student.KIT.edu:Alparslan");
+        AdminBootstrapPolicy policy = new AdminBootstrapPolicy("U-KISI4@Student.KIT.edu:Alparslan");
 
         // When / Then
         assertThat(policy.shouldBootstrap("u-kisi4@student.kit.edu")).isTrue();
@@ -76,7 +76,7 @@ class AdminBootstrapPolicyTests {
         AdminBootstrapPolicy policy = new AdminBootstrapPolicy("u-kisi4@student.kit.edu");
 
         // When / Then
-        assertThat(policy.shouldBootstrap("u-kisi4@student.kit.edu")).isFalse();
+        assertThat(policy.shouldBootstrap("U-KISI4@student.kit.edu")).isFalse();
     }
 
     @Test

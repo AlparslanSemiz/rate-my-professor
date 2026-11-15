@@ -28,7 +28,11 @@ import retrofit2.converter.gson.GsonConverterFactory;
  */
 public class RetrofitClient {
 
-    private static final String BASE_URL = "http://[2001:db8::10]";
+    /**
+     * The emulator's alias for the host machine: run the backend locally on port 8080.
+     * The course server this pointed at is gone.
+     */
+    private static final String BASE_URL = "http://10.0.2.2:8080";
 
     /**
      * How long to wait for the connection to the server to be established.

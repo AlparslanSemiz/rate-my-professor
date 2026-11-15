@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: REDACTED
+      POSTGRES_PASSWORD: "local-dev-password"
     ports:
       - "5432:5432"
     volumes:
@@ -47,8 +47,8 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: REDACTED
-      AUTH_RATE_LIMIT_HMAC_KEY: local-development-rate-limit-key-32chars
+      SPRING_DATASOURCE_PASSWORD: "local-dev-password"
+      AUTH_RATE_LIMIT_HMAC_KEY: "local-dev-hmac-key-change-me-0123456789ab"
       # Two lines, not six. application.properties already defaults smtp.auth and
       # starttls.enable to false and the credentials to empty, which is exactly what an
       # unauthenticated catcher wants -- so only the address has to be said. These belong

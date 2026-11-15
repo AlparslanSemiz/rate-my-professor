@@ -8,7 +8,7 @@ import react from '@vitejs/plugin-react'
  * locally running backend instead of the deployed one.
  */
 const DEFAULT_API_TARGET =
-  'https://server.example.org'
+  'http://localhost:8080'
 
 /**
  * The base every test runs against, pinned rather than inherited.

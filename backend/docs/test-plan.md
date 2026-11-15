@@ -1116,7 +1116,7 @@ gaps that answered "nothing":
   honest. The same reasoning applies to `VoteService.voteComment`/`voteAnswer` and to the two
   methods in `ContentReportService`, and is written in each of those classes.
 - **No behaviour was corrected.** Everything the work turned up that is client-visible went to
-  the backlog in [TODO.md](TODO.md) instead, unfixed and named.
+  the backlog in TODO.md instead, unfixed and named.
 
 ## The consumer contract layer
 
@@ -1238,7 +1238,7 @@ which is deliberately unfixed, and each of those says so in its javadoc.
 
 **Every one was seen red first**, including the two that describe behaviour that already existed:
 the ordering test by asserting the reverse order, the others by asserting the state or the action
-a fix would produce. The reds are quoted in [worklog.md](worklog.md).
+a fix would produce. The reds are quoted in worklog.md.
 
 **Nothing here is in the integration layer.** None of the five asks a question H2 cannot answer,
 and three of them touch no database at all.

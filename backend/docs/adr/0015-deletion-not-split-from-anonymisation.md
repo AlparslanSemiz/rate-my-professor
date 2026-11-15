@@ -95,5 +95,5 @@ requirement; restoration was the proposed mechanism.
 ## Sources
 
 [adminweb-tasks.md §6](../adminweb-tasks.md) — the measurement of all four obstacles and the
-three costed options; F-46 in [TODO.md](../TODO.md); `CHANGELOG` `10.09 (18)`;
+three costed options; F-46 in TODO.md; `CHANGELOG` `10.09 (18)`;
 [ADR-0007](0007-characterization-and-inversion.md) for the two inverted tests.

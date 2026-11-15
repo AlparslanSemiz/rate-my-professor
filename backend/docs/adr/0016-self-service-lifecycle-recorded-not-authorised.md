@@ -23,7 +23,7 @@ That behaviour is [F-48](../test-findings.md) and is open by decision, not by om
 
 ## Context
 
-[F-46](../TODO.md) recorded that `PATCH /account/deleteAccount` writes no audit entry. Measuring
+F-46 recorded that `PATCH /account/deleteAccount` writes no audit entry. Measuring
 it confirmed the stronger form: **none of `AccountController`, `AccountService` or
 `StudentService` holds an `AuditWriter` at all**, and neither does `LoginCodeService`. So an
 account could leave and come back with nothing anywhere recording either, and `deletedAt` — the
@@ -64,7 +64,7 @@ capability nobody decided to add is worse than one that was argued for and decli
 **Fix the reactivation instead of recording it** — require the code to be entered, move the flip
 into `SessionIssuer`, or drop the behaviour. Out of scope by instruction and correctly so: the
 revival was added on purpose (commit `bf86ee6`), so removing or gating it is a product decision.
-The three options are costed under F-48 in [TODO.md](../TODO.md).
+The three options are costed under F-48 in TODO.md.
 
 ## Rationale
 
@@ -117,7 +117,7 @@ transaction to cover delivery would have fixed half of F-48 as a side effect of 
 
 ## Sources
 
-[TODO.md](../TODO.md) items 36 and 39 — the measurement of both gaps and the three costed
+TODO.md items 36 and 39 — the measurement of both gaps and the three costed
 options for F-48; [adminweb-tasks.md §6](../adminweb-tasks.md) — the panel's rule and what
 replaced it; `AuditActionScope`'s class note — the scope rule, quoted rather than invented;
 `ConsumerEnumContractTests:39-42` — why a new action is safe for both clients;

@@ -1101,7 +1101,7 @@ in the same process. `ProfessorResponse.lectureIds` has it the other way round, 
 `Professor.lectures`.
 
 **Why it matters now.** It was invisible while the field was only a list of names to render
-somewhere on a page. The open item in [TODO.md](TODO.md) — a rating titled
+somewhere on a page. The open item in TODO.md — a rating titled
 `SS26 Algorithmen 1 — Peter Sanders, Übungsleiter 1, …` — turns that list into a **string**,
 and an unstable order in a string is something a user sees: the same lecture is titled
 differently on two consecutive refreshes.
@@ -2321,7 +2321,7 @@ observation and the reason the branch could be this old and this unexamined.
 "Deleted User can login again", added the revival on purpose, so *that* signing in undoes your
 own deletion is settled and is not what is reported here. What was never decided is that it
 happens **before anyone proves they hold the address**. Four options are costed in
-[TODO.md](TODO.md) item 39 — move the flip to a completed login (~4–6 h, and it inverts
+TODO.md item 39 — move the flip to a completed login (~4–6 h, and it inverts
 `SessionIssuerTests:516-525`), remove the revival (~1–2 h), put it behind a mailed confirmation
 (~1–2 days), or leave it now that every revival is recorded. The decision is a product one and is
 taken after submission. All three tests invert rather than delete when it is.
@@ -3153,7 +3153,7 @@ scan's package list is identical to the old `trivy fs .` list except that it add
 `org.projectlombok:lombok`, which Trivy's pom parser dropped (107 packages, 0 findings, the same
 0); and rebuilding the SBOM against `spring-boot-starter-parent` 4.0.6 — the version 4.0.8
 replaced — still exits 1, on 13 HIGH. **Unverified in CI**, like everything here: no token.
-Item 10 in [TODO.md](TODO.md).
+Item 10 in TODO.md.
 
 ---
 

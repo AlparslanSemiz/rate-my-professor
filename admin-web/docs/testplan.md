@@ -24,7 +24,7 @@ Out of scope: the backend itself and the Android client. **No test in this
 repository contacts a backend**, so nothing here establishes that the backend
 agrees with the panel. Anything that depends on real backend behaviour is a manual
 scenario in section 6, and closing that gap by contract is `P1` in
-[TODO.md](TODO.md).
+TODO.md.
 
 ## 2. What actually touches HTTP
 
@@ -350,7 +350,7 @@ Stated so the matrix above is not mistaken for full coverage.
   **current** behaviour, so a green suite is not evidence any of it is acceptable. Every
   one of them is pinned in a way that goes red in *both* directions — a new defect of the
   same shape, and a fix — so none can be quietly resolved or quietly widened. All are in
-  [TODO.md](TODO.md) under *Known, measured, deliberately deferred*.
+  TODO.md under *Known, measured, deliberately deferred*.
 - **Detail views are not swept for degraded payloads.** Section 3a says this at length;
   it is repeated here because it is the round's largest stated gap.
 - **`src/constants`** — no tests, and none would be useful: the files are literals.
@@ -454,7 +454,7 @@ deployed backend, with each result written into [testfindings.md](testfindings.m
 
 The twelve-phase test strategy this section used to describe has been **replaced**.
 Its Phase 1 (coverage infrastructure) landed; the rest is superseded by the packages
-in [TODO.md](TODO.md), which are scoped to the time actually available:
+in TODO.md, which are scoped to the time actually available:
 
 | Package | What it adds here |
 | --- | --- |
@@ -483,7 +483,7 @@ finding is then marked resolved and points at the change.
 
 A one-off pass before the hand-in, run as **measure first, then fix only what carries no
 visual risk**. Everything it found is in [testfindings.md](testfindings.md) as `F-043`…`F-060`;
-everything it deliberately left is in [TODO.md](TODO.md) with an estimate. This section
+everything it deliberately left is in TODO.md with an estimate. This section
 records what was in scope and — the part worth writing down — what was not, and why.
 
 ### What it measured

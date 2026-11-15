@@ -24,7 +24,7 @@ could not report the defect.**
   per label: Lectures `ACTIVE` needs 39 and got **30**, `INACTIVE` needs 50 and got **38**,
   Professors `ACTIVE` needs 39 and got **32**. At 1024, `INACTIVE` got 33. Users clipped nothing,
   which is why it looked like a badge difference and was a column difference.
-- **What it costs, which is the question [TODO.md](docs/TODO.md) refused to answer blind:**
+- **What it costs, which is the question TODO.md refused to answer blind:**
   Status goes 88 to 96 (`ACTIVE`) and 96 to 107 (`INACTIVE`); Lecture pays 3-5px and Professors
   6px, both of which wrap; the table's own width stays at its `minWidth` and **nothing starts
   scrolling that did not scroll before**.
@@ -260,7 +260,7 @@ Re-derived from the runs rather than carried forward, per [testplan.md](docs/tes
 Items 4 to 7 of seven. **Measurement only, on the brief: the deviations and one proposed
 standard each, and the choice is the maintainer's.** Numbers in
 [docs/coursework/layout-audit.md](docs/coursework/layout-audit.md) §11.5 to §11.8, deferral
-entries with costs in [docs/TODO.md](docs/TODO.md).
+entries with costs in docs/TODO.md.
 
 **Opened**, most serious first:
 
@@ -325,7 +325,7 @@ is innocent. Reaching an Edit control at 1024 scrolls its table fully right (Com
 the catalogue 0 to 282) and **closing the dialog leaves it there**, with the columns that say
 what the row is off the left edge. Users and Audit Logs hold at 0, because they have no
 row-action column. Downstream of `F-036`; deferral entry with its cost in
-[docs/TODO.md](docs/TODO.md).
+docs/TODO.md.
 
 ### Unchanged on purpose
 
@@ -490,7 +490,7 @@ Re-derived from the runs rather than carried forward, per [testplan.md](docs/tes
 Measurement only. **Nothing on this list was fixed**, per the brief: each was measured at
 1440x900 first and then written down. Numbers in
 [docs/coursework/layout-audit.md](docs/coursework/layout-audit.md) §10, findings `F-075` to
-`F-083`, deferral entries with cost in [docs/TODO.md](docs/TODO.md).
+`F-083`, deferral entries with cost in docs/TODO.md.
 
 **Opened**, most serious first:
 
@@ -1056,7 +1056,7 @@ Three delivery-eve jobs, no behaviour change and no new tests.
 
 A pass before the hand-in, run as **measure first, fix only what carries no visual risk**.
 Eighteen findings recorded (`F-043`…`F-060`): **three fixed in the same round and fifteen
-deferred**, each with an estimate in [TODO.md](docs/TODO.md). `F-031`, which predates this
+deferred**, each with an estimate in TODO.md. `F-031`, which predates this
 pass, is closed as well — four fixes in all. What was in scope, and more usefully what was
 ruled out and why, is [testplan.md §11](docs/testplan.md).
 
@@ -1598,7 +1598,7 @@ glossed. Stryker is on the deferred list with the backend's `P-7` reading rule a
 ### Unchanged on purpose
 
 - **Twelve findings opened, none fixed by the layers.** `F-026` … `F-037`. Eleven are in
-  [docs/TODO.md](docs/TODO.md) under *Known, measured, deliberately deferred* with what it is, how
+  docs/TODO.md under *Known, measured, deliberately deferred* with what it is, how
   it was measured, why it was not fixed, and what fixing it costs. The twelfth, `F-030`, was fixed
   afterwards in a change of its own.
 - **`F-030` was the exception, and it was taken separately.** One line, one file, no visual

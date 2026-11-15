@@ -85,7 +85,7 @@ the same surface `docs/TODO.md` item 23 is waiting to delete.
 ## Sources
 
 [F-39](../test-findings.md#f-39--get-authme-was-unmapped-and-the-admin-panel-could-not-sign-anybody-in);
-[worklog.md](../worklog.md) — *`GET /auth/me` — gone, and it had locked the panel out*, which
+worklog.md — *`GET /auth/me` — gone, and it had locked the panel out*, which
 records "**Stopped and asked**, per the brief; the decision was to restore it as a legacy alias";
 `CHANGELOG` 9.09 (15), which carries the expiry condition; `docs/TODO.md` — the original
 deletion rationale under *Done recently*, and item 23.

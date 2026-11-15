@@ -20,7 +20,7 @@ copy, and the second copy is the one that goes stale without anybody noticing.
 | Pipeline, CI/CD variables, deployment | [docs/deployment.md](docs/deployment.md) |
 | Interface changes, for the app and panel teams | [CHANGELOG](CHANGELOG) |
 | The panel's work list | [docs/adminweb-tasks.md](docs/adminweb-tasks.md) |
-| What the team is working on | [docs/TODO.md](docs/TODO.md) |
+| What the team is working on | docs/TODO.md |
 
 The OpenAPI schema is generated from the controllers, not written by hand, and is served at
 `/v3/api-docs` to authenticated administrators.

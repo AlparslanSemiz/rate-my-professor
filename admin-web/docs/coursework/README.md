@@ -21,7 +21,7 @@ on somebody's laptop makes that claim false. Nothing in this folder is
 ## What does not
 
 Anything an operator or a maintainer of the panel would need. Architecture
-decisions go to [`docs/adr/`](../adr/), open work to [`docs/TODO.md`](../TODO.md),
+decisions go to [`docs/adr/`](../adr/), open work to `docs/TODO.md`,
 test scope to [`docs/testplan.md`](../testplan.md), and the reasoning behind a
 change to [`CHANGELOG.md`](../../CHANGELOG.md). A document that answers "why is
 the code like this?" is product documentation even when it was written for a
@@ -36,7 +36,7 @@ presentation.
 ## What is missing
 
 Nothing else has been written yet. The Kolloquium notes and the presentation
-draft do not exist in this repository or anywhere near it — this folder is the
+draft do not exist in this repository or anywhere near it: this folder is the
 place they go when they do.
 
 The defence of the architecture is deliberately **not** here: it is

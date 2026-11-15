@@ -1,7 +1,7 @@
 # Deployment host units
 
 The scheduled work on the deployment host: three systemd units and the scripts they run.
-Nothing in the pipeline installs these — they live on the host, and until this directory
+Nothing in the pipeline installs these: they live on the host, and until this directory
 existed they lived *only* there, so a rebuilt or replaced instance lost them silently.
 
 | Unit | Schedule | Script |
