@@ -1,0 +1,166 @@
+@startuml
+title RateMyProf - Home/Profile-Klassendiagramm
+
+skinparam classAttributeIconSize 0
+
+' -------------------------
+' UI-Klassen
+' -------------------------
+
+abstract class Fragment {
+    + onCreateView(): View
+}
+
+class HomeFragment {
+    - currentUser: User
+
+    + showUserProfile(user: User): void
+    + showUserStatistics(statistics: UserStatistics): void
+    + openNotifications(): void
+    + openMyReviews(): void
+}
+
+class NotificationFragment {
+    + showNotifications(user: User): void
+    + openNotification(notification: Notification): void
+}
+
+class MyReviewsFragment {
+    + showMyReviews(user: User): void
+    + openReview(review: Review): void
+}
+
+Fragment <|-- HomeFragment
+Fragment <|-- NotificationFragment
+Fragment <|-- MyReviewsFragment
+
+' -------------------------
+' Service-Klassen
+' -------------------------
+
+class UserService {
+    + getCurrentUser(): User
+    + getUserProfile(userId: String): UserProfile
+}
+
+class UserStatisticsService {
+    + calculateStatistics(user: User): UserStatistics
+    + getReviewCount(user: User): int
+    + getCommentCount(user: User): int
+    + getVoteRatio(user: User): double
+    + getAverageGivenGrade(user: User): double
+}
+
+class NotificationService {
+    + getNotifications(user: User): List<Notification>
+    + markAsRead(notification: Notification): void
+}
+
+class ReviewService {
+    + getReviewsByUser(user: User): List<Review>
+    + getReviewDetails(reviewId: String): Review
+}
+
+' -------------------------
+' Datenklassen
+' -------------------------
+
+class User {
+    - userId: String
+    - kitEmail: String
+    - kitUserCode: String
+    - displayName: String
+}
+
+class UserProfile {
+    - displayName: String
+    - profileImagePath: String
+    - kitUserCode: String
+}
+
+class UserStatistics {
+    - reviewCount: int
+    - commentCount: int
+    - upvoteDownvoteRatio: double
+    - averageGivenGrade: double
+
+    + calculateAverageGivenGrade(reviews: List<Review>): double
+    + calculateVoteRatio(votes: List<Vote>): double
+}
+
+class Review {
+    - reviewId: String
+    - text: String
+    - averageGrade: double
+    - createdAt: Date
+}
+
+class Comment {
+    - commentId: String
+    - text: String
+    - createdAt: Date
+}
+
+class Vote {
+    - voteId: String
+    - type: VoteType
+    - createdAt: Date
+}
+
+class Notification {
+    - notificationId: String
+    - message: String
+    - createdAt: Date
+    - isRead: boolean
+
+    + markAsRead(): void
+}
+
+enum VoteType {
+    UPVOTE
+    DOWNVOTE
+}
+
+' -------------------------
+' Beziehungen: UI
+' -------------------------
+
+HomeFragment --> UserService : lädt aktuellen Nutzer >
+HomeFragment --> UserStatisticsService : lädt Statistiken >
+HomeFragment --> NotificationFragment : öffnet >
+HomeFragment --> MyReviewsFragment : öffnet >
+
+NotificationFragment --> NotificationService : lädt Benachrichtigungen >
+MyReviewsFragment --> ReviewService : lädt bisherige Bewertungen >
+
+' -------------------------
+' Beziehungen: Nutzerprofil
+' -------------------------
+
+User "1" -- "1" UserProfile : besitzt >
+User "1" -- "1" UserStatistics : hat >
+
+UserService --> User : verwaltet >
+UserService --> UserProfile : lädt >
+
+UserStatisticsService --> UserStatistics : berechnet >
+UserStatisticsService --> Review : wertet aus >
+UserStatisticsService --> Comment : zählt >
+UserStatisticsService --> Vote : berechnet Verhältnis >
+
+' -------------------------
+' Beziehungen: Nutzeraktivität
+' -------------------------
+
+User "1" -- "0..*" Review : hat geschrieben >
+User "1" -- "0..*" Comment : hat geschrieben >
+User "1" -- "0..*" Vote : hat erhalten/ausgelöst >
+User "1" -- "0..*" Notification : erhält >
+
+NotificationService --> Notification : verwaltet >
+NotificationService --> User : für Nutzer >
+
+ReviewService --> Review : verwaltet >
+ReviewService --> User : Bewertungen von >
+
+@enduml

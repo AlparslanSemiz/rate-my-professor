@@ -1,0 +1,93 @@
+@startuml
+title RateMyProf - Login und KIT-Verifikation
+
+skinparam classAttributeIconSize 0
+
+class LoginActivity {
+    - emailInput: String
+    - codeInput: String
+
+    + enterKitEmail(email: String): void
+    + requestOneTimeCode(): void
+    + enterVerificationCode(code: String): void
+    + verifyLogin(): void
+}
+
+class EmailVerificationService {
+    + sendOneTimeCode(email: String): OneTimeCode
+    + verifyCode(email: String, code: String): boolean
+    + isValidKitEmail(email: String): boolean
+}
+
+class OneTimeCode {
+    - code: String
+    - createdAt: Date
+    - expiresAt: Date
+    - used: boolean
+
+    + isExpired(): boolean
+    + markAsUsed(): void
+}
+
+class User {
+    - userId: String
+    - kitEmail: String
+    - kitUserCode: String //u-kürzel
+    - displayName: String
+
+    + getKitUserCode(): String
+}
+
+class UserRepository {
+    + findByKitEmail(email: String): User
+    + createUser(email: String): User
+    + deleteUser(user: User): void
+}
+
+class SessionManager {
+    + createSession(user: User, deviceId: String): DeviceSession
+    + getCurrentSession(): DeviceSession
+    + isLoggedIn(): boolean
+    + logout(): void
+}
+
+class DeviceSession {
+    - sessionId: String
+    - deviceId: String
+    - createdAt: Date
+    - lastLoginAt: Date
+    - active: boolean
+
+    + isActive(): boolean
+    + updateLastLogin(): void
+    + invalidate(): void
+}
+
+class DeviceInfoProvider {
+    + getDeviceId(): String
+}
+
+class MainActivity {
+    + openHomeScreen(): void
+}
+
+' -------------------------
+' Beziehungen
+' -------------------------
+
+LoginActivity --> EmailVerificationService : nutzt >
+LoginActivity --> SessionManager : erstellt Session über >
+LoginActivity --> UserRepository : lädt/erstellt User >
+LoginActivity --> DeviceInfoProvider : liest Geräte-ID >
+LoginActivity --> MainActivity : öffnet nach Login >
+
+EmailVerificationService --> OneTimeCode : erzeugt und prüft >
+UserRepository --> User : verwaltet >
+
+SessionManager --> DeviceSession : erstellt/verwendet >
+SessionManager --> User : Session gehört zu >
+DeviceSession --> User : authentifiziert >
+
+DeviceInfoProvider --> DeviceSession : liefert deviceId für >
+
+@enduml

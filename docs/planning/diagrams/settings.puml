@@ -1,0 +1,119 @@
+@startuml
+title RateMyProf - Settings-Klassendiagramm
+
+skinparam classAttributeIconSize 0
+
+' -------------------------
+' UI-Klassen
+' -------------------------
+
+abstract class Fragment {
+    + onCreateView(): View
+}
+
+class SettingsFragment {
+    + showSettings(): void
+    + changeTheme(themeMode: ThemeMode): void
+    + openBugReport(): void
+    + deleteAccount(): void
+}
+
+class BugReportFragment {
+    - bugDescription: String
+
+    + showBugReportForm(): void
+    + enterBugDescription(description: String): void
+    + submitBugReport(): void
+}
+
+Fragment <|-- SettingsFragment
+Fragment <|-- BugReportFragment
+
+' -------------------------
+' Service-Klassen
+' -------------------------
+
+class ThemeManager {
+    - currentTheme: ThemeMode
+
+    + setTheme(themeMode: ThemeMode): void
+    + getCurrentTheme(): ThemeMode
+    + applyTheme(): void
+}
+
+class BugReportService {
+    + createBugReport(user: User, description: String): BugReport
+    + submitBugReport(bugReport: BugReport): void
+}
+
+class AccountService {
+    + deleteAccount(user: User): void
+    + logoutUser(user: User): void
+}
+
+class SessionManager {
+    + getCurrentUser(): User
+    + logout(): void
+    + clearSession(): void
+}
+
+' -------------------------
+' Datenklassen
+' -------------------------
+
+class User {
+    - userId: String
+    - kitEmail: String
+    - kitUserCode: String
+    - displayName: String
+}
+
+class BugReport {
+    - bugReportId: String
+    - description: String
+    - createdAt: Date
+    - status: BugReportStatus
+}
+
+enum ThemeMode {
+    LIGHT
+    DARK
+    SYSTEM
+}
+
+enum BugReportStatus {
+    OPEN
+    IN_PROGRESS
+    CLOSED
+}
+
+' -------------------------
+' Beziehungen: UI
+' -------------------------
+
+SettingsFragment --> ThemeManager : ändert Theme über >
+SettingsFragment --> BugReportFragment : öffnet >
+SettingsFragment --> AccountService : löscht Account über >
+SettingsFragment --> SessionManager : fragt aktuellen User ab >
+
+BugReportFragment --> BugReportService : sendet Bug Report >
+BugReportFragment --> SessionManager : fragt aktuellen User ab >
+
+' -------------------------
+' Beziehungen: Services
+' -------------------------
+
+ThemeManager --> ThemeMode : verwendet >
+
+BugReportService --> BugReport : erstellt >
+BugReportService --> User : Bug Report von >
+
+AccountService --> User : löscht >
+AccountService --> SessionManager : beendet Session >
+
+SessionManager --> User : aktueller Nutzer >
+
+BugReport --> BugReportStatus : hat Status >
+BugReport --> User : wurde erstellt von >
+
+@enduml

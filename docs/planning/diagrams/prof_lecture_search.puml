@@ -1,0 +1,169 @@
+@startuml
+title RateMyProf - Professor-/Lecture-Suche
+
+skinparam classAttributeIconSize 0
+
+' -------------------------
+' UI-Klassen
+' -------------------------
+
+abstract class Fragment {
+    + onCreateView(): View
+}
+
+class BrowseFragment {
+    - selectedTab: String
+
+    + showProfessorTab(): void
+    + showLectureTab(): void
+}
+
+class ProfessorListFragment {
+    - searchQuery: String
+
+    + showAllProfessors(): void
+    + searchProfessor(query: String): void
+    + openProfessorProfile(professor: Professor): void
+}
+
+class LectureListFragment {
+    - searchQuery: String
+
+    + showAllLectures(): void
+    + searchLecture(query: String): void
+    + openLectureProfile(lecture: Lecture): void
+}
+
+class ProfessorProfileFragment {
+    + showProfessorInformation(professor: Professor): void
+    + showLecturesOfProfessor(professor: Professor): void
+    + selectLecture(lecture: Lecture): void
+}
+
+class LectureProfileFragment {
+    + showLectureInformation(lecture: Lecture): void
+    + showProfessorsOfLecture(lecture: Lecture): void
+    + selectProfessor(professor: Professor): void
+}
+
+class SemesterSelectionFragment {
+    + showSemesters(professor: Professor, lecture: Lecture): void
+    + selectSemester(semester: Semester): void
+    + openReviewPage(offering: LectureOffering): void
+}
+
+class ReviewPageFragment {
+    + showAverageRatings(offering: LectureOffering): void
+    + writeOwnReview(offering: LectureOffering): void
+    + showCommentFeed(offering: LectureOffering): void
+}
+
+' -------------------------
+' Service-Klassen
+' -------------------------
+
+class SearchService {
+    + searchProfessors(query: String): List<Professor>
+    + searchLectures(query: String): List<Lecture>
+}
+
+class LectureOfferingService {
+    + findLecturesByProfessor(professor: Professor): List<Lecture>
+    + findProfessorsByLecture(lecture: Lecture): List<Professor>
+    + findSemesters(professor: Professor, lecture: Lecture): List<Semester>
+    + findOffering(professor: Professor, lecture: Lecture, semester: Semester): LectureOffering
+}
+
+' -------------------------
+' Datenklassen
+' -------------------------
+
+class Professor {
+    - professorId: String
+    - name: String
+    - department: String
+}
+
+class Lecture {
+    - lectureId: String
+    - title: String
+    - moduleCode: String
+}
+
+class Semester {
+    - semesterId: String
+    - name: String
+    - year: int
+}
+
+class LectureOffering {
+    - offeringId: String
+}
+
+' -------------------------
+' Vererbung
+' -------------------------
+
+Fragment <|-- BrowseFragment
+Fragment <|-- ProfessorListFragment
+Fragment <|-- LectureListFragment
+Fragment <|-- ProfessorProfileFragment
+Fragment <|-- LectureProfileFragment
+Fragment <|-- SemesterSelectionFragment
+Fragment <|-- ReviewPageFragment
+
+' -------------------------
+' Browse-Tab-Struktur
+' -------------------------
+
+BrowseFragment *-- ProfessorListFragment : Professoren-Reiter >
+BrowseFragment *-- LectureListFragment : Vorlesungs-Reiter >
+
+' -------------------------
+' Suche
+' -------------------------
+
+ProfessorListFragment --> SearchService : sucht Professoren über >
+LectureListFragment --> SearchService : sucht Vorlesungen über >
+
+SearchService --> Professor : findet >
+SearchService --> Lecture : findet >
+
+' -------------------------
+' Weg 1: Professor -> Lecture -> Semester -> Bewertung
+' -------------------------
+
+ProfessorListFragment --> ProfessorProfileFragment : öffnet bei Professor-Auswahl >
+ProfessorProfileFragment --> LectureOfferingService : lädt Vorlesungen >
+ProfessorProfileFragment --> SemesterSelectionFragment : nach Lecture-Auswahl >
+
+' -------------------------
+' Weg 2: Lecture -> Professor -> Semester -> Bewertung
+' -------------------------
+
+LectureListFragment --> LectureProfileFragment : öffnet bei Lecture-Auswahl >
+LectureProfileFragment --> LectureOfferingService : lädt Professoren >
+LectureProfileFragment --> SemesterSelectionFragment : nach Professor-Auswahl >
+
+' -------------------------
+' Gemeinsames Ziel
+' -------------------------
+
+SemesterSelectionFragment --> LectureOfferingService : lädt konkrete Veranstaltung >
+SemesterSelectionFragment --> ReviewPageFragment : öffnet Bewertungsseite >
+
+' -------------------------
+' Fachliche Beziehungen
+' -------------------------
+
+Professor "1" -- "0..*" LectureOffering : hält >
+Lecture "1" -- "0..*" LectureOffering : wird angeboten als >
+Semester "1" -- "0..*" LectureOffering : findet statt in >
+
+LectureOffering "1" --> "1" Professor
+LectureOffering "1" --> "1" Lecture
+LectureOffering "1" --> "1" Semester
+
+ReviewPageFragment --> LectureOffering : zeigt Bewertungen für >
+
+@enduml

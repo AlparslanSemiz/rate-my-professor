@@ -1,0 +1,153 @@
+@startuml
+title RateMyProf - Bewertungs-Klassendiagramm
+
+skinparam classAttributeIconSize 0
+
+' -------------------------
+' UI-Klasse
+' -------------------------
+
+abstract class Fragment {
+    + onCreateView(): View
+}
+
+class ReviewPageFragment {
+    - currentOffering: LectureOffering
+
+    + showAverageRatings(offering: LectureOffering): void
+    + showOwnReview(user: User): void
+    + openReviewForm(): void
+    + submitReview(review: Review): void
+    + updateReview(review: Review): void
+}
+
+Fragment <|-- ReviewPageFragment
+
+' -------------------------
+' Service-Klassen
+' -------------------------
+
+class ReviewService {
+    + getReviews(offering: LectureOffering): List<Review>
+    + getReviewByUser(user: User, offering: LectureOffering): Review
+    + saveReview(review: Review): void
+    + updateReview(review: Review): void
+    + calculateAverageRatings(offering: LectureOffering): AverageRatingSummary
+}
+
+class RatingCategoryService {
+    + getAllCategories(): List<RatingCategory>
+}
+
+' -------------------------
+' Datenklassen
+' -------------------------
+
+class User {
+    - userId: String
+    - kitEmail: String
+    - kitUserCode: String
+    - displayName: String
+}
+
+class Professor {
+    - professorId: String
+    - name: String
+    - department: String
+}
+
+class Lecture {
+    - lectureId: String
+    - title: String
+    - moduleCode: String
+}
+
+class Semester {
+    - semesterId: String
+    - name: String
+    - year: int
+    - type: SemesterType
+}
+
+class LectureOffering {
+    - offeringId: String
+
+    + getDisplayName(): String
+}
+
+class Review {
+    - reviewId: String
+    - text: String
+    - createdAt: Date
+    - updatedAt: Date
+    - averageGrade: double
+
+    + calculateAverageGrade(): double
+}
+
+class Rating {
+    - ratingId: String
+    - value: int
+
+    + isValid(): boolean
+}
+
+class RatingCategory {
+    - categoryId: String
+    - name: String
+    - description: String
+}
+
+class AverageRatingSummary {
+    - reviewCount: int
+    - overallAverage: double
+
+    + getAverageForCategory(category: RatingCategory): double
+}
+
+class CategoryAverage {
+    - averageValue: double
+    - ratingCount: int
+}
+
+enum SemesterType {
+    SUMMER
+    WINTER
+}
+
+' -------------------------
+' Beziehungen: konkrete Veranstaltung
+' -------------------------
+
+LectureOffering "1" --> "1" Professor : Professor >
+LectureOffering "1" --> "1" Lecture : Vorlesung >
+LectureOffering "1" --> "1" Semester : Semester >
+
+Professor "1" -- "0..*" LectureOffering : hält >
+Lecture "1" -- "0..*" LectureOffering : wird angeboten als >
+Semester "1" -- "0..*" LectureOffering : enthält >
+
+' -------------------------
+' Beziehungen: Bewertung
+' -------------------------
+
+User "1" -- "0..*" Review : erstellt >
+LectureOffering "1" -- "0..*" Review : hat Bewertungen >
+
+Review "1" *-- "1..*" Rating : enthält >
+Rating "1" --> "1" RatingCategory : gehört zu Kategorie >
+
+ReviewPageFragment --> ReviewService : nutzt >
+ReviewPageFragment --> RatingCategoryService : lädt Kategorien >
+ReviewPageFragment --> LectureOffering : zeigt Bewertung für >
+
+ReviewService --> Review : verwaltet >
+ReviewService --> AverageRatingSummary : berechnet >
+ReviewService --> LectureOffering : lädt Bewertungen für >
+
+RatingCategoryService --> RatingCategory : verwaltet >
+
+AverageRatingSummary "1" *-- "0..*" CategoryAverage : enthält >
+CategoryAverage "1" --> "1" RatingCategory : für Kategorie >
+
+@enduml

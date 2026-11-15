@@ -1,0 +1,186 @@
+@startuml
+title RateMyProf - Navigation und UI-Struktur
+
+skinparam classAttributeIconSize 0
+
+class MainActivity {
+    - bottomNavigation: BottomNavigationView
+
+    + onCreate(): void
+    + setupBottomNavigation(): void
+    + showHomeFragment(): void
+    + showSettingsFragment(): void
+    + showBrowseFragment(): void
+}
+
+class BottomNavigationView {
+    + selectHomeTab(): void
+    + selectSettingsTab(): void
+    + selectBrowseTab(): void
+}
+
+abstract class Fragment {
+    + onCreateView(): View
+}
+
+class HomeFragment {
+    + showUserProfile(): void
+    + showUserStatistics(): void
+    + openNotifications(): void
+    + openMyReviews(): void
+}
+
+class SettingsFragment {
+    + changeTheme(): void
+    + reportBug(): void
+    + deleteAccount(): void
+}
+
+class BrowseFragment {
+    - tabLayout: TabLayout
+    - viewPager: ViewPager
+
+    + setupTabs(): void
+    + showProfessorList(): void
+    + showLectureList(): void
+}
+
+class ProfessorListFragment {
+    - searchQuery: String
+
+    + showProfessors(): void
+    + searchProfessor(query: String): void
+    + openProfessorProfile(professor: Professor): void
+}
+
+class LectureListFragment {
+    - searchQuery: String
+
+    + showLectures(): void
+    + searchLecture(query: String): void
+    + openLectureProfile(lecture: Lecture): void
+}
+
+class ProfessorProfileFragment {
+    + showLecturesOfProfessor(professor: Professor): void
+    + openLectureSelection(lecture: Lecture): void
+}
+
+class LectureProfileFragment {
+    + showProfessorsOfLecture(lecture: Lecture): void
+    + openProfessorSelection(professor: Professor): void
+}
+
+class SemesterSelectionFragment {
+    + showSemesters(): void
+    + openReviewPage(offering: LectureOffering): void
+}
+
+class ReviewPageFragment {
+    + showAverageRatings(): void
+    + writeReview(): void
+    + showCommentFeed(): void
+}
+
+class NotificationFragment {
+    + showNotifications(): void
+}
+
+class MyReviewsFragment {
+    + showMyReviews(): void
+}
+
+class ThemeManager {
+    + setDarkMode(): void
+    + setLightMode(): void
+    + getCurrentTheme(): String
+}
+
+class BugReportFragment {
+    + submitBugReport(): void
+}
+
+class AccountService {
+    + deleteAccount(): void
+}
+
+class Professor {
+    - professorId: String
+    - name: String
+}
+
+class Lecture {
+    - lectureId: String
+    - title: String
+}
+
+class LectureOffering {
+    - offeringId: String
+}
+
+' -------------------------
+' Vererbung von Fragment
+' -------------------------
+
+Fragment <|-- HomeFragment
+Fragment <|-- SettingsFragment
+Fragment <|-- BrowseFragment
+Fragment <|-- ProfessorListFragment
+Fragment <|-- LectureListFragment
+Fragment <|-- ProfessorProfileFragment
+Fragment <|-- LectureProfileFragment
+Fragment <|-- SemesterSelectionFragment
+Fragment <|-- ReviewPageFragment
+Fragment <|-- NotificationFragment
+Fragment <|-- MyReviewsFragment
+Fragment <|-- BugReportFragment
+
+' -------------------------
+' Hauptnavigation
+' -------------------------
+
+MainActivity *-- BottomNavigationView : enthält >
+MainActivity --> HomeFragment : zeigt >
+MainActivity --> SettingsFragment : zeigt >
+MainActivity --> BrowseFragment : zeigt >
+
+BottomNavigationView --> HomeFragment : Home Tab >
+BottomNavigationView --> SettingsFragment : Settings Tab >
+BottomNavigationView --> BrowseFragment : Profs/Lectures Tab >
+
+' -------------------------
+' Home-Bereich
+' -------------------------
+
+HomeFragment --> NotificationFragment : öffnet >
+HomeFragment --> MyReviewsFragment : öffnet >
+
+' -------------------------
+' Settings-Bereich
+' -------------------------
+
+SettingsFragment --> ThemeManager : nutzt >
+SettingsFragment --> BugReportFragment : öffnet >
+SettingsFragment --> AccountService : löscht Account über >
+
+' -------------------------
+' Profs/Lectures-Bereich
+' -------------------------
+
+BrowseFragment *-- ProfessorListFragment : Professoren-Reiter >
+BrowseFragment *-- LectureListFragment : Vorlesungs-Reiter >
+
+ProfessorListFragment --> ProfessorProfileFragment : öffnet bei Auswahl >
+LectureListFragment --> LectureProfileFragment : öffnet bei Auswahl >
+
+ProfessorProfileFragment --> SemesterSelectionFragment : wählt Modul >
+LectureProfileFragment --> SemesterSelectionFragment : wählt Professor >
+
+SemesterSelectionFragment --> ReviewPageFragment : öffnet Bewertungsseite >
+
+ProfessorListFragment --> Professor : zeigt >
+LectureListFragment --> Lecture : zeigt >
+SemesterSelectionFragment --> LectureOffering : wählt >
+ReviewPageFragment --> LectureOffering : zeigt Bewertungen für >
+
+@enduml

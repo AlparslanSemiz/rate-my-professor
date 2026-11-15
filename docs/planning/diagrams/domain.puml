@@ -1,0 +1,141 @@
+@startuml
+title RateMyProf - Gesamt-Klassendiagramm / Domänenmodell
+
+skinparam classAttributeIconSize 0
+
+class User {
+    - userId: String
+    - kitEmail: String
+    - kitUserCode: String
+    - displayName: String
+    - profileImagePath: String
+
+    + createReview(review: Review): void
+    + writeComment(comment: Comment): void
+    + voteComment(comment: Comment, voteType: VoteType): void
+}
+
+class Professor {
+    - professorId: String
+    - name: String
+    - department: String
+
+    + getLectures(): List<Lecture>
+}
+
+class Lecture {
+    - lectureId: String
+    - title: String
+    - moduleCode: String
+    - description: String
+
+    + getProfessors(): List<Professor>
+}
+
+class Semester {
+    - semesterId: String
+    - name: String
+    - year: int
+    - type: SemesterType
+}
+
+class LectureOffering {
+    - offeringId: String
+
+    + getAverageRating(): double
+}
+
+class Review {
+    - reviewId: String
+    - createdAt: Date
+    - updatedAt: Date
+    - averageGrade: double
+    - text: String
+
+    + calculateAverageGrade(): double
+}
+
+class Rating {
+    - ratingId: String
+    - value: int
+}
+
+class RatingCategory {
+    - categoryId: String
+    - name: String
+    - description: String
+}
+
+class Comment {
+    - commentId: String
+    - text: String
+    - createdAt: Date
+    - updatedAt: Date
+
+    + addReply(reply: Comment): void
+    + getVoteScore(): int
+}
+
+class Vote {
+    - voteId: String
+    - createdAt: Date
+    - type: VoteType
+}
+
+class Notification {
+    - notificationId: String
+    - message: String
+    - createdAt: Date
+    - isRead: boolean
+
+    + markAsRead(): void
+}
+
+class UserStatistics {
+    - reviewCount: int
+    - commentCount: int
+    - upvoteDownvoteRatio: double
+    - averageGivenGrade: double
+
+    + calculateStatistics(): void
+}
+
+enum VoteType {
+    UPVOTE
+    DOWNVOTE
+}
+
+enum SemesterType {
+    SUMMER
+    WINTER
+}
+
+' -------------------------
+' Beziehungen
+' -------------------------
+
+User "1" -- "0..*" Review : erstellt >
+User "1" -- "0..*" Comment : schreibt >
+User "1" -- "0..*" Vote : vergibt >
+User "1" -- "0..*" Notification : erhält >
+User "1" -- "1" UserStatistics : besitzt >
+
+Professor "1" -- "0..*" LectureOffering : hält >
+Lecture "1" -- "0..*" LectureOffering : wird angeboten in >
+Semester "1" -- "0..*" LectureOffering : gehört zu >
+
+LectureOffering "1" -- "0..*" Review : hat Bewertungen >
+Review "1" -- "1..*" Rating : enthält >
+Rating "1" -- "1" RatingCategory : bewertet Kategorie >
+
+LectureOffering "1" -- "0..*" Comment : hat Kommentarfeed >
+Comment "1" -- "0..*" Comment : hat Antworten >
+Comment "0..1" -- "0..*" Comment : parent/replies
+
+Comment "1" -- "0..*" Vote : bekommt >
+Vote "1" -- "1" User : von Nutzer >
+Vote "1" -- "1" Comment : für Kommentar >
+
+Notification "0..*" -- "0..1" Comment : bezieht sich auf >
+
+@enduml

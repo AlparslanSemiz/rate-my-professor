@@ -1,0 +1,152 @@
+@startuml
+title RateMyProf - Kommentar- und Antwort-Klassendiagramm
+
+skinparam classAttributeIconSize 0
+
+' -------------------------
+' UI-Klassen
+' -------------------------
+
+abstract class Fragment {
+    + onCreateView(): View
+}
+
+class ReviewPageFragment {
+    - currentOffering: LectureOffering
+
+    + showCommentFeed(offering: LectureOffering): void
+    + writeComment(text: String): void
+    + openCommentThread(comment: Comment): void
+}
+
+class CommentThreadFragment {
+    - selectedComment: Comment
+
+    + showSelectedComment(comment: Comment): void
+    + showReplies(comment: Comment): void
+    + writeReply(parentComment: Comment, text: String): void
+    + openNestedThread(comment: Comment): void
+}
+
+Fragment <|-- ReviewPageFragment
+Fragment <|-- CommentThreadFragment
+
+' -------------------------
+' Service-Klassen
+' -------------------------
+
+class CommentService {
+    + getComments(offering: LectureOffering): List<Comment>
+    + getReplies(parentComment: Comment): List<Comment>
+    + createComment(user: User, offering: LectureOffering, text: String): Comment
+    + createReply(user: User, parentComment: Comment, text: String): Comment
+    + deleteComment(comment: Comment): void
+}
+
+class VoteService {
+    + voteComment(user: User, comment: Comment, voteType: VoteType): Vote
+    + removeVote(user: User, comment: Comment): void
+    + getVoteScore(comment: Comment): int
+    + getUserVote(user: User, comment: Comment): Vote
+}
+
+class NotificationService {
+    + notifyReply(parentComment: Comment, reply: Comment): Notification
+    + getNotifications(user: User): List<Notification>
+    + markAsRead(notification: Notification): void
+}
+
+' -------------------------
+' Datenklassen
+' -------------------------
+
+class User {
+    - userId: String
+    - kitEmail: String
+    - kitUserCode: String
+    - displayName: String
+}
+
+class LectureOffering {
+    - offeringId: String
+}
+
+class Comment {
+    - commentId: String
+    - text: String
+    - createdAt: Date
+    - updatedAt: Date
+    - deleted: boolean
+
+    + isReply(): boolean
+    + getVoteScore(): int
+}
+
+class Vote {
+    - voteId: String
+    - createdAt: Date
+    - type: VoteType
+}
+
+class Notification {
+    - notificationId: String
+    - message: String
+    - createdAt: Date
+    - isRead: boolean
+
+    + markAsRead(): void
+}
+
+enum VoteType {
+    UPVOTE
+    DOWNVOTE
+}
+
+' -------------------------
+' Beziehungen: UI
+' -------------------------
+
+ReviewPageFragment --> CommentService : lädt Kommentarfeed >
+ReviewPageFragment --> CommentThreadFragment : öffnet Kommentar-Thread >
+ReviewPageFragment --> LectureOffering : zeigt Kommentare für >
+
+CommentThreadFragment --> CommentService : lädt Antworten >
+CommentThreadFragment --> VoteService : bewertet Kommentare >
+CommentThreadFragment --> NotificationService : erzeugt Benachrichtigung >
+
+' -------------------------
+' Beziehungen: Kommentare
+' -------------------------
+
+LectureOffering "1" -- "0..*" Comment : hat Kommentarfeed >
+User "1" -- "0..*" Comment : schreibt >
+
+Comment "0..1" <-- "0..*" Comment : parent / replies
+
+CommentService --> Comment : verwaltet >
+CommentService --> User : Autor >
+CommentService --> LectureOffering : Kommentar gehört zu >
+
+' -------------------------
+' Beziehungen: Votes
+' -------------------------
+
+User "1" -- "0..*" Vote : vergibt >
+Comment "1" -- "0..*" Vote : erhält >
+
+Vote "1" --> "1" User : von Nutzer >
+Vote "1" --> "1" Comment : für Kommentar >
+VoteService --> Vote : verwaltet >
+
+' -------------------------
+' Beziehungen: Notifications
+' -------------------------
+
+User "1" -- "0..*" Notification : erhält >
+Notification "0..*" --> "0..1" Comment : bezieht sich auf >
+
+NotificationService --> Notification : erstellt >
+NotificationService --> User : benachrichtigt >
+NotificationService --> Comment : wegen Antwort >
+
+@enduml
