@@ -6,6 +6,8 @@ A lecture- and professor-rating platform for students at the Karlsruhe Institute
 
 During the course it was deployed at **ratemyprofessor.dev**.
 
+**Live demo of the admin panel: [demo.ratemyprofessor.dev](https://demo.ratemyprofessor.dev)** (runs in your browser with sample data, no backend).
+
 The whole system is in this repository:
 
 | Folder | What | Stack |
