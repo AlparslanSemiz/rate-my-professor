@@ -1,0 +1,12 @@
+// Public demo of the panel on Cloudflare Workers (static assets only, no server code).
+// Build with the mock backend and deploy: `npm run deploy:demo`.
+{
+  "name": "ratemyprof-demo",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [{ "pattern": "demo.ratemyprofessor.dev", "custom_domain": true }],
+  "workers_dev": false
+}

@@ -5,6 +5,7 @@ import Panel from '@/components/Panel'
 import { useAuth } from '@/context/useAuth'
 import LoginCardHeader from './components/LoginCardHeader'
 import LoginForms from './components/LoginForms'
+import DemoNotice from './components/DemoNotice'
 import { useLoginFlow } from './hooks/useLoginFlow'
 import { chrome } from '@/theme'
 import { LOGIN_CARD_MAX_WIDTH } from '@/constants/layout'
@@ -39,6 +40,7 @@ export default function LoginPage() {
     <Box style={pageStyle}>
       <Panel style={cardStyle}>
         <LoginCardHeader step={login.step} email={login.form.values.email} />
+        {import.meta.env.VITE_MOCK_BACKEND === 'true' && <DemoNotice />}
         <ErrorAlert message={login.error} mb={20} />
         <LoginForms
           form={login.form}

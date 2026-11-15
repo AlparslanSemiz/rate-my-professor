@@ -53,3 +53,6 @@ test-results/
 
 # Screenshot runs for review (docs/coursework/layout-audit.md). Produced on demand, never committed.
 docs/screenshots/
+
+# wrangler local state
+.wrangler
