@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
-import { loadEnv } from 'vite'
+import { loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
 /**
@@ -23,6 +23,28 @@ const DEFAULT_API_TARGET =
 const TEST_API_BASE_URL = '/api'
 
 /**
+ * Cloudflare Web Analytics for the public demo only: `deploy:demo` sets the site token, every
+ * other build (dev, tests, the real deployment) gets no beacon. Cookieless; the token is public.
+ */
+const cloudflareBeacon = (token: string | undefined): Plugin => ({
+  name: 'cloudflare-beacon',
+  transformIndexHtml: () =>
+    token
+      ? [
+          {
+            tag: 'script',
+            attrs: {
+              defer: true,
+              src: 'https://static.cloudflareinsights.com/beacon.min.js',
+              'data-cf-beacon': JSON.stringify({ token }),
+            },
+            injectTo: 'head',
+          },
+        ]
+      : [],
+})
+
+/**
  * The deployed panel is served from `/admin/` on the same host as the API, so production
  * builds need that prefix baked into their asset URLs. The dev server keeps serving from the
  * root. Override with VITE_BASE_PATH when deploying under a different path.
@@ -35,7 +57,7 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     base: command === 'build' ? (process.env.VITE_BASE_PATH ?? '/admin/') : '/',
-    plugins: [react()],
+    plugins: [react(), cloudflareBeacon(process.env.VITE_CF_BEACON_TOKEN)],
     /**
      * `@/` resolves to `src/`, so a module is imported by where it lives rather than by how
      * far the importing file happens to sit from it. Vitest reads this config, so the alias
