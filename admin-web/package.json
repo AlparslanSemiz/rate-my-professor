@@ -18,7 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "preview": "vite preview",
-    "deploy:demo": "VITE_MOCK_BACKEND=true VITE_BASE_PATH=/ VITE_CF_BEACON_TOKEN=8a7246ebbc8c48d69936ec6b49a74c95 npm run build && npx --yes wrangler@4 deploy"
+    "deploy:demo": "VITE_MOCK_BACKEND=true VITE_BASE_PATH=/ VITE_API_BASE_URL=/api VITE_CF_BEACON_TOKEN=8a7246ebbc8c48d69936ec6b49a74c95 npm run build && npx --yes wrangler@4 deploy"
   },
   "dependencies": {
     "@mantine/core": "^9.2.1",
