@@ -27,10 +27,13 @@ const TEST_API_BASE_URL = '/api'
  * other build (dev, tests, the real deployment) gets no beacon. Cookieless; the token is public.
  *
  * The beacon is added by a small inline script (the app sets no CSP) so it can skip visitors who
- * should not be counted: automated browsers (`navigator.webdriver`) and browsers with
- * `localStorage.notrack === '1'` (`?notrack=1` sets it, `?notrack=0` clears it). Storage can
+ * should not be counted as real: automated browsers (`navigator.webdriver`: tests, audits, CI) go
+ * to a separate "testler" site (TEST_BEACON_TOKEN) so test traffic is still measured, and browsers
+ * with `localStorage.notrack === '1'` load nothing (`?notrack=1` sets it, `?notrack=0` clears it). Storage can
  * throw in private mode; then the beacon loads as usual.
  */
+const TEST_BEACON_TOKEN = '0ead9632eeb34bfdbca243e769478158'
+
 const cloudflareBeacon = (token: string | undefined): Plugin => ({
   name: 'cloudflare-beacon',
   transformIndexHtml: () =>
@@ -38,7 +41,7 @@ const cloudflareBeacon = (token: string | undefined): Plugin => ({
       ? [
           {
             tag: 'script',
-            children: `(function(){try{var n=new URLSearchParams(location.search).get('notrack');if(n==='1')localStorage.setItem('notrack','1');else if(n==='0')localStorage.removeItem('notrack')}catch(e){}try{if(localStorage.getItem('notrack')==='1')return}catch(e){}if(navigator.webdriver)return;var s=document.createElement('script');s.defer=true;s.src='https://static.cloudflareinsights.com/beacon.min.js';s.setAttribute('data-cf-beacon',${JSON.stringify(JSON.stringify({ token })).replace(/</g, '\\u003c')});document.head.appendChild(s)})();`,
+            children: `(function(){try{var n=new URLSearchParams(location.search).get('notrack');if(n==='1')localStorage.setItem('notrack','1');else if(n==='0')localStorage.removeItem('notrack')}catch(e){}try{if(localStorage.getItem('notrack')==='1')return}catch(e){}var s=document.createElement('script');s.defer=true;s.src='https://static.cloudflareinsights.com/beacon.min.js';s.setAttribute('data-cf-beacon',navigator.webdriver?${JSON.stringify(JSON.stringify({ token: TEST_BEACON_TOKEN }))}:${JSON.stringify(JSON.stringify({ token })).replace(/</g, '\\u003c')});document.head.appendChild(s)})();`,
             injectTo: 'head',
           },
         ]
